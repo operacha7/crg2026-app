@@ -1,0 +1,74 @@
+[
+  {
+    "assistance": "Rent",
+    "main": true
+  },
+  {
+    "assistance": "Utilities",
+    "main": true
+  },
+  {
+    "assistance": "Food",
+    "main": true
+  },
+  {
+    "assistance": "Abuse",
+    "main": false
+  },
+  {
+    "assistance": "Animals",
+    "main": false
+  },
+  {
+    "assistance": "Childcare",
+    "main": false
+  },
+  {
+    "assistance": "Christmas",
+    "main": false
+  },
+  {
+    "assistance": "Clothing",
+    "main": false
+  },
+  {
+    "assistance": "Education",
+    "main": false
+  },
+  {
+    "assistance": "Handyman",
+    "main": false
+  },
+  {
+    "assistance": "Homeless",
+    "main": false
+  },
+  {
+    "assistance": "Immigration",
+    "main": false
+  },
+  {
+    "assistance": "Jobs",
+    "main": false
+  },
+  {
+    "assistance": "Legal",
+    "main": false
+  },
+  {
+    "assistance": "Medical",
+    "main": false
+  },
+  {
+    "assistance": "Other",
+    "main": false
+  },
+  {
+    "assistance": "Seniors",
+    "main": false
+  },
+  {
+    "assistance": "Transport",
+    "main": false
+  }
+]

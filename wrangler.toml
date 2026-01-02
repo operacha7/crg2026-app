@@ -1,0 +1,4 @@
+name = "crg2026-app"
+pages_build_output_dir = "build"
+
+[env.production]

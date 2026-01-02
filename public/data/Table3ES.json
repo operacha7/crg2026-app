@@ -1,0 +1,74 @@
+[
+  {
+    "id_no": "1",
+    "assistance": "Alquilar"
+  },
+  {
+    "id_no": "2",
+    "assistance": "Utilidades"
+  },
+  {
+    "id_no": "3",
+    "assistance": "Alimento"
+  },
+  {
+    "id_no": "4",
+    "assistance": "Abuso"
+  },
+  {
+    "id_no": "5",
+    "assistance": "Animales"
+  },
+  {
+    "id_no": "6",
+    "assistance": "Educación"
+  },
+  {
+    "id_no": "7",
+    "assistance": "Empleos"
+  },
+  {
+    "id_no": "8",
+    "assistance": "Factótum"
+  },
+  {
+    "id_no": "9",
+    "assistance": "Inmigración"
+  },
+  {
+    "id_no": "10",
+    "assistance": "Legal"
+  },
+  {
+    "id_no": "11",
+    "assistance": "Médico"
+  },
+  {
+    "id_no": "12",
+    "assistance": "Navidad"
+  },
+  {
+    "id_no": "13",
+    "assistance": "Niños"
+  },
+  {
+    "id_no": "14",
+    "assistance": "Otro"
+  },
+  {
+    "id_no": "15",
+    "assistance": "Pers Mayores"
+  },
+  {
+    "id_no": "16",
+    "assistance": "Ropa"
+  },
+  {
+    "id_no": "17",
+    "assistance": "Sin hogar"
+  },
+  {
+    "id_no": "18",
+    "assistance": "Transporte"
+  }
+]

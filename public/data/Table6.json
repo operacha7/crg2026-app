@@ -1,0 +1,65 @@
+[
+  {
+    "id_no": "1",
+    "registered_organization": "Christian Community Service Center (Central)",
+    "org_email": "",
+    "org_phone": "713-871-9741",
+    "org_default_language": "English",
+    "org_webpage": "https://ccschouston.org/",
+    "org_passcode": "he3aq6"
+  },
+  {
+    "id_no": "2",
+    "registered_organization": "Christian Community Service Center (SW)",
+    "org_email": "",
+    "org_phone": "713-871-9741",
+    "org_default_language": "English",
+    "org_webpage": "https://ccschouston.org/",
+    "org_passcode": "as5ks7"
+  },
+  {
+    "id_no": "3",
+    "registered_organization": "Holy Rosary (SVdP D5)",
+    "org_email": "",
+    "org_phone": "281-310-1925",
+    "org_default_language": "English",
+    "org_webpage": "https://holyrosarycatholic.org/",
+    "org_passcode": "gz6cf9"
+  },
+  {
+    "id_no": "4",
+    "registered_organization": "St Michael the Archangel (SVdP D3)",
+    "org_email": "svdpatstmichael@gmail.com",
+    "org_phone": "713-403-4102",
+    "org_default_language": "English",
+    "org_webpage": "https://www.stmichaelchurch.net/society-of-st-vincent-de-paul",
+    "org_passcode": "qx2jx0"
+  },
+  {
+    "id_no": "5",
+    "registered_organization": "St Theresa (SVdP D2) Sugar Land",
+    "org_email": "stcc.svdp@gmail.com",
+    "org_phone": "281-242-9149",
+    "org_default_language": "English",
+    "org_webpage": "https://www.sugarlandcatholic.com/ministry-spotlight--st-vincent-de-paul",
+    "org_passcode": "1157"
+  },
+  {
+    "id_no": "6",
+    "registered_organization": "St Vincent de Paul (SVdP D3)",
+    "org_email": "svdp77025@gmail.com",
+    "org_phone": "713-664-5350",
+    "org_default_language": "English",
+    "org_webpage": "https://www.svdp77025.org/resources/assistance-organizations",
+    "org_passcode": "SVdP77025!"
+  },
+  {
+    "id_no": "88",
+    "registered_organization": "Administrator",
+    "org_email": "",
+    "org_phone": "",
+    "org_default_language": "English",
+    "org_webpage": "",
+    "org_passcode": "flipper"
+  }
+]

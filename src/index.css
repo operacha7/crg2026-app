@@ -1,0 +1,61 @@
+@tailwind base;
+@layer base {
+    label {
+      @apply font-label;
+    }
+  }
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  @keyframes swing-forward {
+    0% {
+      transform: rotateX(120deg);
+      transform-origin: top center;
+      opacity: 0;
+    }
+    10% {
+      opacity: 1;
+    }
+    20% {
+      transform: rotateX(-40deg);
+    }
+    35% {
+      transform: rotateX(30deg);
+    }
+    50% {
+      transform: rotateX(-20deg);
+    }
+    65% {
+      transform: rotateX(10deg);
+    }
+    80% {
+      transform: rotateX(-5deg);
+    }
+    100% {
+      transform: rotateX(deg);
+    }
+  }
+
+  .animate-swing {
+    animation: swing-forward 5s ease-out both;
+  }
+}
+
+/* --- Always-visible scrollbar styles --- */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #b0b0b0;
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #8a8a8a;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #f0f0f0;
+}
