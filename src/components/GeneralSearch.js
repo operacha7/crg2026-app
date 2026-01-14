@@ -3,13 +3,11 @@ import React, { useState, useMemo } from "react";
 import PageLayout from "../layout/PageLayout";
 import SearchResults from "../components/SearchResults";
 import useFetchData from "../data/FetchData";
-import { useTranslate } from "../Utility/Translate"; // Add this import
 
 export default function GeneralSearchPage() {
   const { records, expandedRows, setExpandedRows } = useFetchData();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRows, setSelectedRows] = useState([]);
-  const { translate } = useTranslate(); // Add this hook
 
   const normalized = (str) => (str || "").toLowerCase();
 
@@ -36,7 +34,7 @@ export default function GeneralSearchPage() {
       <div className="p-6 max-w-4xl mx-auto">
         <input
           type="text"
-          placeholder={translate("tSearchAnyField")}
+          placeholder="Search any field..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full px-4 py-2 border rounded shadow-md text-lg"

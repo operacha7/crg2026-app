@@ -1,8 +1,7 @@
 // src/components/AssistanceSidebar.js
 import React from "react";
 import { X } from "lucide-react";
-import { getMainAssistance } from "./AssistanceTypes"; // Updated import
-import { useTranslate } from "../Utility/Translate";
+import { getMainAssistance } from "./AssistanceTypes";
 
 export default function AssistanceSidebar({
   sidebarRef,
@@ -12,25 +11,22 @@ export default function AssistanceSidebar({
   clearMore,
   onClose,
 }) {
-  
-  const { translate } = useTranslate();
-  
   // Get main assistance types dynamically
   const mainAssistance = getMainAssistance(assistanceTypes);
-  
+
   // Add console logs to debug
   console.log("AssistanceSidebar - assistanceTypes:", assistanceTypes);
   console.log("AssistanceSidebar - mainAssistance:", mainAssistance);
   console.log("AssistanceSidebar - selectedMore:", selectedMore);
-  
+
   // Make sure we have valid data to work with
   const validAssistanceTypes = Array.isArray(assistanceTypes) ? assistanceTypes : [];
-  
+
   // Filter out main assistance types - new version for the new structure
-  const moreAssistanceTypes = validAssistanceTypes.filter(item => 
+  const moreAssistanceTypes = validAssistanceTypes.filter(item =>
     item && item.main === false
   );
-  
+
   console.log("AssistanceSidebar - filtered types:", moreAssistanceTypes);
 
   return (
@@ -42,7 +38,7 @@ export default function AssistanceSidebar({
       onKeyDown={(e) => { if (e.key === 'Escape') onClose?.(); }}
     >
       <div className="flex justify-between items-center px-4 py-3 border-b sticky top-0 bg-white z-10">
-        <h2 className="text-lg font-bold">{translate("tMoreAssistance")}</h2>
+        <h2 className="text-lg font-bold">More Assistance</h2>
         <X className="w-5 h-5 cursor-pointer" onClick={onClose} />
       </div>
       <div className="flex-1 overflow-y-scroll px-4 py-3 pr-5">
@@ -51,9 +47,9 @@ export default function AssistanceSidebar({
             // With the new structure, displayText and value are simpler
             const displayText = item.assistance;
             const value = item.assistance;
-            
+
             const isSelected = selectedMore.includes(value);
-            
+
             return (
               <label key={i} className="block mb-2 py-1">
                 <input
@@ -67,7 +63,7 @@ export default function AssistanceSidebar({
             );
           })
         ) : (
-          <p>{translate("tNoAdditionalAssistance")}</p>
+          <p>No additional assistance types available.</p>
         )}
       </div>
       <div className="px-4 py-3 border-t sticky bottom-0 bg-white">
@@ -75,7 +71,7 @@ export default function AssistanceSidebar({
           onClick={clearMore}
           className="text-lg text-blue-600 hover:underline"
         >
-          {translate("tClearAll")}
+          Clear All
         </button>
       </div>
     </div>

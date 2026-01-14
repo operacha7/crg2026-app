@@ -5,15 +5,12 @@ import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { LanguageProvider } from './Contexts/LanguageContext';
-import { TourProvider } from './Contexts/TourProvider';
-import TourOverlay from './Contexts/TourOverlay';
-
 // Import Announcement components
 import AnnouncementManager from './components/AnnouncementManager';
 import ScheduledReload from './Utility/ScheduledReload';
 
-import useFetchCRGData from "./data/FetchDataSupabase";
+// LEGACY: useFetchCRGData removed - now using AppDataContext
+import { AppDataProvider, useAppData } from "./Contexts/AppDataContext";
 import GeneralSearchPage from "./views/GeneralSearchPage";
 import OrganizationPage from "./views/OrganizationPage";
 import ZipCodePage from "./views/ZipCodePage";
@@ -21,11 +18,10 @@ import StatisticsPage from "./views/StatisticsPage.js";
 import PrivacyPolicy from "./views/PrivacyPolicy";
 import TermsOfService from "./views/TermsOfService";
 import SupportPage from "./views/SupportPage";
-import MessagesPage from "./views/MessagesPage"; // Import the new MessagesPage
+import MessagesPage from "./views/MessagesPage";
 
-const supabaseUrl = "https://ycxepglcrqhwwlfufyhk.supabase.co";
-const supabaseKey =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljeGVwZ2xjcnFod3dsZnVmeWhrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU3Njg1OTQsImV4cCI6MjA2MTM0NDU5NH0.ZmLjfJ-biPSs8E5OYYJD8Fv9Cme2Njuug04b2N--fyM";
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+const supabaseKey = process.env.REACT_APP_SUPABASE_PUBLISHABLE_KEY;
 
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
@@ -82,29 +78,44 @@ useEffect(() => {
 }, []);
 
   return (
-    <TourProvider>
-      <LanguageProvider loggedInUser={loggedInUser}>
-        {/* Add ScheduledReload component */}
-        <ScheduledReload />
-        {/* Add AnnouncementManager */}
-        {loggedInUser && <AnnouncementManager loggedInUser={loggedInUser} />}
-        <AppContent loggedInUser={loggedInUser} />
-        <TourOverlay />
-      </LanguageProvider>
-    </TourProvider>
+    <AppDataProvider>
+      {/* Add ScheduledReload component */}
+      <ScheduledReload />
+      {/* Add AnnouncementManager */}
+      {loggedInUser && <AnnouncementManager loggedInUser={loggedInUser} />}
+      <AppContent loggedInUser={loggedInUser} />
+    </AppDataProvider>
   );
 }
 
 // Separate component for the app content
 function AppContent({ loggedInUser }) {
-  // Use the data fetching hook
-  const { records, zips, assistanceTypes, neighborhoodData } = useFetchCRGData();
-  
-  // Debug log
-  React.useEffect(() => {
-    console.log("MainApp received neighborhoodData:", neighborhoodData);
-  }, [neighborhoodData]);
-  
+  // Use the new AppDataContext (replaces legacy useFetchCRGData)
+  const { directory, assistance, organizations, zipCodes, loading, error } = useAppData();
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="text-xl font-semibold text-gray-600">Loading data...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center text-red-600">
+          <div className="text-xl font-semibold">Error loading data</div>
+          <div className="text-sm mt-2">{error}</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <Toaster position="top-center" />
@@ -113,9 +124,9 @@ function AppContent({ loggedInUser }) {
           path="/"
           element={
             <ZipCodePage
-              records={records}
-              zips={zips}
-              assistanceTypes={assistanceTypes}
+              records={directory}
+              zips={zipCodes}
+              assistanceTypes={assistance}
               loggedInUser={loggedInUser}
             />
           }
@@ -128,15 +139,15 @@ function AppContent({ loggedInUser }) {
           path="/search"
           element={
             <GeneralSearchPage
-              records={records}
-              neighborhoodData={neighborhoodData}
-              assistanceTypes={assistanceTypes}
+              records={directory}
+              neighborhoodData={[]}
+              assistanceTypes={assistance}
               loggedInUser={loggedInUser}
             />
           }
         />
         <Route
-          path="/messages" // Add new route for Messages page
+          path="/messages"
           element={<MessagesPage loggedInUser={loggedInUser} />}
         />
         <Route path="*" element={<Navigate to="/" replace />} />

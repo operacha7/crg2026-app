@@ -1,32 +1,19 @@
 // src/components/AnnouncementPopup.js
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useTranslate } from '../Utility/Translate';
-import { useLanguage } from '../Contexts/LanguageContext';
 
 const AnnouncementPopup = ({ announcement, onClose, onNext }) => {
-  const { translate } = useTranslate();
-  const { language } = useLanguage(); // Use the same language context as FetchDataSupabase
-  
-  // Get title and message based on current language from context
-  const isSpanish = language === 'Español';
-  
-  const title = isSpanish ? 
-    (announcement.title_es || announcement.title_en) : 
-    (announcement.title_en || announcement.title_es);
-    
-  const message = isSpanish ? 
-    (announcement.message_es || announcement.message_en) : 
-    (announcement.message_en || announcement.message_es);
-  
+  // Use English content
+  const title = announcement.title_en;
+  const message = announcement.message_en;
+
   // Check if this is a high priority announcement
   const isHighPriority = announcement.priority === 1;
-  
+
   // Format the date to display in a user-friendly way
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    const locale = isSpanish ? 'es-ES' : 'en-US';
-    return new Date(dateString).toLocaleDateString(locale, options);
+    return new Date(dateString).toLocaleDateString('en-US', options);
   };
 
   return (
@@ -45,10 +32,10 @@ const AnnouncementPopup = ({ announcement, onClose, onNext }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col">
-          <h2 
+          <h2
             className="text-xl md:text-3xl font-bold mb-2"
-            style={{ 
-              color: isHighPriority ? '#000000' : '#4A4E69' 
+            style={{
+              color: isHighPriority ? '#000000' : '#4A4E69'
             }}
           >
             {title}
@@ -59,22 +46,22 @@ const AnnouncementPopup = ({ announcement, onClose, onNext }) => {
             <span className="text-green-500">{formatDate(announcement.expiration_date)}</span>
           </div>
 
-          <div 
+          <div
             className="mb-4 md:mb-6 text-base md:text-xl prose max-w-none"
-            style={{ 
+            style={{
               whiteSpace: 'pre-line',
               color: isHighPriority ? '#FF0000' : 'inherit'
             }}
           >
             {message}
           </div>
-          
+
           <div className="flex justify-end">
             <button
               className="bg-[#4A4E69] text-white text-base md:text-xl px-4 md:px-6 py-2 rounded hover:bg-[#117299f2] transition"
               onClick={onClose}
             >
-              {translate("tOK")}
+              OK
             </button>
           </div>
         </div>

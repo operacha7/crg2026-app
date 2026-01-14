@@ -11,7 +11,7 @@ async function incrementEmailCount(env, organization) {
     );
 
     const supabaseUrl = env.SUPABASE_URL;
-    const supabaseServiceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseServiceKey = env.SUPABASE_SECRET_KEY;
 
     if (!supabaseUrl || !supabaseServiceKey) {
       console.warn("[incrementEmailCount] Missing Supabase credentials");
@@ -82,7 +82,7 @@ export async function onRequest({ request, env }) {
       await request.json();
 
     const payload = {
-      from: '"Community Resources Guide" <info@crghouston.org>',
+      from: '"Community Resources Guide" <info@crghouston.operacha.org>',
       to: recipient,
       subject,
       html: htmlBody,

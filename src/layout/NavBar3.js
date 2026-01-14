@@ -1,0 +1,582 @@
+// src/layout/NavBar3.js
+// Assistance type filter bar
+// Shows Assistance button + selected assistance type chips + dropdown panel
+// Fetches assistance types from Supabase for dynamic/evergreen groups
+
+import { useState, useEffect, useRef } from "react";
+import { dataService } from "../services/dataService";
+import { getIconByName } from "../icons/iconMap";
+import { HelpIcon } from "../icons";
+import Tooltip from "../components/Tooltip";
+import { useAppData } from "../Contexts/AppDataContext";
+
+const MAX_INDIVIDUAL_SELECTIONS = 3;
+
+// Group colors for the 6 groups (unselected state)
+const GROUP_COLORS = {
+  1: "var(--color-assistance-group1)",
+  2: "var(--color-assistance-group2)",
+  3: "var(--color-assistance-group3)",
+  4: "var(--color-assistance-group4)",
+  5: "var(--color-assistance-group5)",
+  6: "var(--color-assistance-group6)",
+};
+
+// Chevron down icon for the assistance button
+function ChevronDownIcon({ className = "" }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+// Assistance button - changes text based on whether chips exist
+function AssistanceButton({ hasSelections, onClick, buttonRef }) {
+  return (
+    <button
+      ref={buttonRef}
+      onClick={onClick}
+      className={`
+        font-opensans transition-all duration-200 flex items-center gap-2
+        ${hasSelections
+          ? "bg-navbar2-btn-active-bg text-navbar2-btn-active-text hover:brightness-125"
+          : "bg-transparent text-navbar2-btn-inactive-text hover:bg-white/10"
+        }
+      `}
+      style={{
+        height: "var(--height-navbar3-btn)",
+        paddingLeft: "var(--padding-navbar2-btn-x)",
+        paddingRight: "var(--padding-navbar2-btn-x)",
+        borderRadius: "var(--radius-navbar2-btn)",
+        fontSize: "var(--font-size-navbar2-btn)",
+        fontWeight: "var(--font-weight-navbar2-btn)",
+        letterSpacing: "var(--letter-spacing-navbar2-btn)",
+      }}
+    >
+      {hasSelections ? "Change Assistance" : "Select Assistance"}
+      <ChevronDownIcon />
+    </button>
+  );
+}
+
+// Chip component for NavBar3
+// States: inactive (white bg, black text, black border) or active (teal bg, white text, white border)
+function AssistanceChip({ name, icon, isActive, onClick }) {
+  const IconComponent = icon ? getIconByName(icon) : null;
+
+  return (
+    <button
+      onClick={onClick}
+      className="font-opensans transition-all duration-200 hover:brightness-110 flex items-center gap-2"
+      style={{
+        height: "var(--height-navbar3-btn)",
+        paddingLeft: "12px",
+        paddingRight: "12px",
+        borderRadius: "var(--radius-assistance-chip)",
+        fontSize: "var(--font-size-assistance-chip)",
+        letterSpacing: "var(--letter-spacing-assistance-chip)",
+        fontWeight: "500",
+        backgroundColor: isActive
+          ? "var(--color-navbar3-chip-active-bg)"
+          : "var(--color-navbar3-chip-inactive-bg)",
+        color: isActive
+          ? "var(--color-navbar3-chip-active-text)"
+          : "var(--color-navbar3-chip-inactive-text)",
+        border: `1px solid ${isActive
+          ? "var(--color-navbar3-chip-active-border)"
+          : "var(--color-navbar3-chip-inactive-border)"}`,
+      }}
+    >
+      {IconComponent && <IconComponent size={25} />}
+      {name}
+    </button>
+  );
+}
+
+// Panel type button - shows in dropdown panel
+// States: unselected (group color) or selected (white bg, black border)
+function PanelTypeButton({ name, icon, groupColor, isSelected, onClick, disabled }) {
+  const IconComponent = icon ? getIconByName(icon) : null;
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`
+        font-opensans transition-all duration-200 flex items-center gap-2
+        ${disabled ? "opacity-50 cursor-not-allowed" : "hover:brightness-110 cursor-pointer"}
+      `}
+      style={{
+        backgroundColor: isSelected ? "var(--color-assistance-selected-bg)" : groupColor,
+        color: "var(--color-assistance-text)",
+        padding: "8px 12px",
+        borderRadius: "var(--radius-assistance-chip)",
+        fontSize: "var(--font-size-assistance-chip)",
+        letterSpacing: "var(--letter-spacing-assistance-chip)",
+        fontWeight: "500",
+        border: isSelected ? "1px solid var(--color-assistance-selected-border)" : "1px solid transparent",
+        width: "100%",
+        textAlign: "left",
+      }}
+    >
+      {IconComponent && <IconComponent size={25} />}
+      {name}
+    </button>
+  );
+}
+
+// Group button - toggles all items in group
+function GroupButton({ name, color, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="font-opensans transition-all duration-200 hover:brightness-110"
+      style={{
+        backgroundColor: color,
+        color: "var(--color-assistance-text)",
+        width: "var(--width-assistance-group-btn)",
+        height: "var(--height-assistance-group-btn)",
+        borderRadius: "var(--radius-assistance-chip)",
+        fontSize: "var(--font-size-assistance-chip)",
+        letterSpacing: "var(--letter-spacing-assistance-chip)",
+        fontWeight: "700",
+      }}
+    >
+      {name}
+    </button>
+  );
+}
+
+// Helper: Group assistance data by group number
+function groupAssistanceData(assistanceList) {
+  const groups = {};
+
+  assistanceList.forEach((item) => {
+    const groupNum = item.group;
+    if (!groups[groupNum]) {
+      groups[groupNum] = {
+        id: groupNum,
+        name: `Group ${groupNum}`,
+        color: GROUP_COLORS[groupNum] || GROUP_COLORS[1],
+        types: [],
+      };
+    }
+    // Use assist_id from assistance table - matches directory.assist_id (both text)
+    groups[groupNum].types.push({
+      id: item.assist_id, // Text field, matches directory.assist_id
+      name: item.assistance,
+      icon: item.icon,
+    });
+  });
+
+  // Convert to array and sort by group number
+  return Object.values(groups).sort((a, b) => a.id - b.id);
+}
+
+// Helper: Check if selections represent a full single group
+function isFullGroupSelected(selectedIds, groups) {
+  for (const group of groups) {
+    const groupTypeIds = group.types.map((t) => t.id);
+    const allSelected = groupTypeIds.every((id) => selectedIds.includes(id));
+    const onlyThisGroup = selectedIds.every((id) => groupTypeIds.includes(id));
+    if (allSelected && onlyThisGroup && groupTypeIds.length > 0) {
+      return group.id;
+    }
+  }
+  return null;
+}
+
+// Dropdown Panel Component
+function AssistancePanel({
+  isOpen,
+  groups,
+  selectedIds,
+  onTypeToggle,
+  onGroupToggle,
+  onSave,
+  onCancel,
+  panelRef,
+}) {
+  if (!isOpen) return null;
+
+  const fullGroupId = isFullGroupSelected(selectedIds, groups);
+  const isInFullGroupMode = fullGroupId !== null;
+  const selectionCount = selectedIds.length;
+
+  return (
+    <div
+      ref={panelRef}
+      className="absolute top-full left-20 mt-2 shadow-xl z-50 overflow-hidden"
+      style={{
+        borderRadius: "var(--radius-panel)",
+        minWidth: "800px",
+        border: "var(--width-panel-border) solid var(--color-panel-border)",
+      }}
+    >
+      {/* Header */}
+      <div
+        className="flex flex-col items-center justify-center"
+        style={{
+          backgroundColor: "var(--color-panel-header-bg)",
+          height: "var(--height-panel-header)",
+          padding: "0 20px",
+        }}
+      >
+        <h3
+          className="font-opensans"
+          style={{
+            color: "var(--color-panel-title)",
+            fontSize: "var(--font-size-panel-title)",
+            fontWeight: "var(--font-weight-panel-title)",
+            letterSpacing: "var(--letter-spacing-panel-title)",
+          }}
+        >
+          Assistance Types
+        </h3>
+        <p
+          className="font-opensans"
+          style={{
+            color: "var(--color-panel-subtitle)",
+            fontSize: "var(--font-size-panel-subtitle)",
+            fontWeight: "var(--font-weight-panel-subtitle)",
+            letterSpacing: "var(--letter-spacing-panel-subtitle)",
+          }}
+        >
+          (Select one Group or up to three Assistance Types)
+        </p>
+      </div>
+
+      {/* Body */}
+      <div
+        style={{
+          backgroundColor: "var(--color-panel-body-bg)",
+          padding: "20px",
+        }}
+      >
+        {/* Groups grid */}
+        <div className="flex gap-4 justify-center">
+          {groups.map((group) => {
+            // Determine if this group's items should be disabled
+            const isGroupDisabled = isInFullGroupMode && fullGroupId !== group.id;
+
+            return (
+              <div key={group.id} className="flex flex-col items-center" style={{ minWidth: "140px" }}>
+                <GroupButton
+                  name={group.name}
+                  color={group.color}
+                  onClick={() => onGroupToggle(group.id)}
+                />
+                <div className="mt-3 space-y-2 w-full">
+                  {group.types.map((type) => {
+                    const isSelected = selectedIds.includes(type.id);
+
+                    // Can select if:
+                    // 1. Already selected (can always deselect)
+                    // 2. In full group mode for THIS group
+                    // 3. Not in full group mode and under the limit
+                    const canSelect = isSelected ||
+                      (isInFullGroupMode && fullGroupId === group.id) ||
+                      (!isInFullGroupMode && selectionCount < MAX_INDIVIDUAL_SELECTIONS);
+
+                    const isDisabled = isGroupDisabled || (!isSelected && !canSelect);
+
+                    return (
+                      <PanelTypeButton
+                        key={type.id}
+                        name={type.name}
+                        icon={type.icon}
+                        groupColor={group.color}
+                        isSelected={isSelected}
+                        onClick={() => onTypeToggle(type.id, group.id)}
+                        disabled={isDisabled}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer with buttons */}
+        <div className="flex justify-center items-center gap-36 mt-16">
+          <button
+            onClick={onCancel}
+            className="font-opensans transition-all duration-200 hover:brightness-110"
+            style={{
+              backgroundColor: "var(--color-panel-btn-cancel-bg)",
+              color: "var(--color-panel-btn-text)",
+              width: "var(--width-panel-btn)",
+              height: "var(--height-panel-btn)",
+              borderRadius: "var(--radius-panel-btn)",
+              fontSize: "var(--font-size-panel-btn)",
+              letterSpacing: "var(--letter-spacing-panel-btn)",
+            }}
+          >
+            Cancel
+          </button>
+
+          <Tooltip text="Help">
+            <HelpIcon size={40} className="cursor-pointer hover:brightness-110 transition-all duration-200" />
+          </Tooltip>
+
+          <button
+            onClick={onSave}
+            className="font-opensans transition-all duration-200 hover:brightness-110"
+            style={{
+              backgroundColor: "var(--color-panel-btn-ok-bg)",
+              color: "var(--color-panel-btn-text)",
+              width: "var(--width-panel-btn)",
+              height: "var(--height-panel-btn)",
+              borderRadius: "var(--radius-panel-btn)",
+              fontSize: "var(--font-size-panel-btn)",
+              letterSpacing: "var(--letter-spacing-panel-btn)",
+            }}
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function NavBar3() {
+  // Get shared state from context
+  const { activeAssistanceChips, setActiveAssistanceChips } = useAppData();
+
+  // Assistance data from Supabase
+  const [assistanceData, setAssistanceData] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Saved selections (what's shown in NavBar3 chips)
+  const [savedSelections, setSavedSelections] = useState([]);
+  // Panel state
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  // Temporary selections while panel is open
+  const [tempSelections, setTempSelections] = useState([]);
+
+  // Ref for the panel to detect outside clicks
+  const panelRef = useRef(null);
+  const buttonRef = useRef(null);
+
+  // Fetch assistance data on mount
+  useEffect(() => {
+    async function fetchAssistance() {
+      try {
+        const data = await dataService.getAssistance();
+        setAssistanceData(data);
+        setGroups(groupAssistanceData(data));
+      } catch (error) {
+        console.error("Error fetching assistance data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchAssistance();
+  }, []);
+
+  // Handle click outside to close panel (acts as Cancel)
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (!isPanelOpen) return;
+
+      // Check if click is outside both the panel and the button
+      const isOutsidePanel = panelRef.current && !panelRef.current.contains(event.target);
+      const isOutsideButton = buttonRef.current && !buttonRef.current.contains(event.target);
+
+      if (isOutsidePanel && isOutsideButton) {
+        // Cancel - revert to previous selections
+        setTempSelections([]);
+        setIsPanelOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isPanelOpen]);
+
+  // Get type info by assist_id (text field that matches directory.assist_id)
+  const getTypeInfo = (typeId) => {
+    const item = assistanceData.find((a) => a.assist_id === typeId);
+    if (item) {
+      return {
+        id: item.assist_id,
+        name: item.assistance,
+        icon: item.icon,
+        group: item.group,
+      };
+    }
+    return null;
+  };
+
+  // Handle opening the panel
+  const handleOpenPanel = () => {
+    setTempSelections([...savedSelections]);
+    setIsPanelOpen(true);
+  };
+
+  // Handle type toggle in panel
+  const handleTypeToggle = (typeId, groupId) => {
+    setTempSelections((prev) => {
+      const isCurrentlySelected = prev.includes(typeId);
+
+      if (isCurrentlySelected) {
+        return prev.filter((id) => id !== typeId);
+      } else {
+        const fullGroupId = isFullGroupSelected(prev, groups);
+
+        if (fullGroupId) {
+          if (groupId !== fullGroupId) {
+            return prev;
+          }
+          return [...prev, typeId];
+        } else {
+          if (prev.length >= MAX_INDIVIDUAL_SELECTIONS) {
+            return prev;
+          }
+          return [...prev, typeId];
+        }
+      }
+    });
+  };
+
+  // Handle group toggle in panel
+  const handleGroupToggle = (groupId) => {
+    const group = groups.find((g) => g.id === groupId);
+    if (!group) return;
+
+    const groupTypeIds = group.types.map((t) => t.id);
+    const allInGroupSelected = groupTypeIds.every((id) => tempSelections.includes(id));
+
+    if (allInGroupSelected) {
+      // Deselect all in this group
+      setTempSelections((prev) => prev.filter((id) => !groupTypeIds.includes(id)));
+    } else {
+      // Check if we're in full group mode for another group
+      const fullGroupId = isFullGroupSelected(tempSelections, groups);
+      if (fullGroupId && fullGroupId !== groupId) {
+        return;
+      }
+      // Select all in this group (replaces current selections)
+      setTempSelections(groupTypeIds);
+    }
+  };
+
+  // Handle save
+  const handleSave = () => {
+    setSavedSelections(tempSelections);
+    // If only one selection, auto-activate it (update shared context)
+    if (tempSelections.length === 1) {
+      // assist_id is already text, use directly
+      setActiveAssistanceChips(new Set(tempSelections));
+    } else {
+      // Multiple selections: all start inactive
+      setActiveAssistanceChips(new Set());
+    }
+    setIsPanelOpen(false);
+  };
+
+  // Handle cancel
+  const handleCancel = () => {
+    setTempSelections([]);
+    setIsPanelOpen(false);
+  };
+
+  // Handle chip click in NavBar3 - updates shared context state
+  const handleChipClick = (typeId) => {
+    setActiveAssistanceChips((prev) => {
+      const newSet = new Set(prev);
+      // assist_id is already text, use directly
+      if (newSet.has(typeId)) {
+        newSet.delete(typeId);
+      } else {
+        newSet.add(typeId);
+      }
+      return newSet;
+    });
+  };
+
+  if (loading) {
+    return (
+      <nav
+        className="bg-navbar3-bg flex items-center"
+        style={{
+          height: "var(--height-navbar3)",
+          paddingLeft: "var(--padding-navbar3-left)",
+        }}
+      >
+        <span className="text-white font-opensans">Loading...</span>
+      </nav>
+    );
+  }
+
+  return (
+    <nav
+      className="bg-navbar3-bg flex items-center relative"
+      style={{
+        height: "var(--height-navbar3)",
+        paddingLeft: "var(--padding-navbar3-left)",
+      }}
+    >
+      {/* Assistance button */}
+      <AssistanceButton
+        hasSelections={savedSelections.length > 0}
+        onClick={handleOpenPanel}
+        buttonRef={buttonRef}
+      />
+
+      {/* Chips */}
+      {savedSelections.length > 0 && (
+        <div
+          className="flex items-center"
+          style={{
+            marginLeft: "var(--gap-navbar3-button-chips)",
+            gap: "var(--gap-navbar3-chips)",
+          }}
+        >
+          {savedSelections.map((typeId) => {
+            const typeInfo = getTypeInfo(typeId);
+            if (!typeInfo) return null;
+            return (
+              <AssistanceChip
+                key={typeId}
+                name={typeInfo.name}
+                icon={typeInfo.icon}
+                isActive={activeAssistanceChips.has(typeId)}
+                onClick={() => handleChipClick(typeId)}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {/* Dropdown Panel */}
+      <AssistancePanel
+        isOpen={isPanelOpen}
+        groups={groups}
+        selectedIds={tempSelections}
+        onTypeToggle={handleTypeToggle}
+        onGroupToggle={handleGroupToggle}
+        onSave={handleSave}
+        onCancel={handleCancel}
+        panelRef={panelRef}
+      />
+    </nav>
+  );
+}

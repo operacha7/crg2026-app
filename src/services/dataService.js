@@ -1,7 +1,14 @@
 // src/services/dataService.js
-import { supabase } from "../MainApp"; // Import from MainApp.js
+// Data service for CRG 2026 - connects to Supabase tables
+// Tables: directory, assistance, organizations, zip_codes, registered_organizations
 
-// Helper function to calculate distance using Haversine formula
+import { supabase } from "../MainApp";
+
+// ============================================================
+// HELPER FUNCTIONS
+// ============================================================
+
+// Calculate distance using Haversine formula
 const calculateDistance = (lat1, lng1, lat2, lng2) => {
   const R = 3959; // Earth's radius in miles
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -15,321 +22,162 @@ const calculateDistance = (lat1, lng1, lat2, lng2) => {
   return R * c; // Distance in miles
 };
 
-// Helper function to parse coordinates string
+// Parse coordinates string "lat, lng" to object { lat, lng }
 const parseCoordinates = (coordString) => {
   if (!coordString) return null;
-  // Handle both "lat,lng" and "lat, lng" formats
   const coords = coordString.split(',').map(c => parseFloat(c.trim()));
   if (coords.length !== 2 || coords.some(isNaN)) return null;
   return { lat: coords[0], lng: coords[1] };
 };
 
+// ============================================================
+// DATA SERVICE
+// ============================================================
 
-
-// Main data service object with functions for all tables
 export const dataService = {
-  // ======= REGISTERED ORGANIZATIONS (Table6.json) =======
-  async getRegisteredOrganizations() {
+  // ======= DIRECTORY (main resources table) =======
+  // ~836 records, expect ~1000
+  async getDirectory() {
     const { data, error } = await supabase
-      .from('registered_organizations')
+      .from('directory')
       .select('*')
-      .order('registered_organization', { ascending: true });
-    
+      .order('organization', { ascending: true });
+
     if (error) {
-      console.error("Error fetching registered organizations:", error);
-      return [];
-    }
-    return data;
-  },
-  
-  async getOrganizationById(id) {
-    const { data, error } = await supabase
-      .from('registered_organizations')
-      .select('*')
-      .eq('id_no', id)
-      .single();
-    
-    if (error) {
-      console.error(`Error fetching organization with id ${id}:`, error);
-      return null;
-    }
-    return data;
-  },
-  
-  // ======= ASSISTANCE TYPES (Table3EN.json and Table3ES.json) =======
-  async getAssistanceTypesEn() {
-    const { data, error } = await supabase
-      .from('assistance_types_en')
-      .select('*');
-    
-    if (error) {
-      console.error("Error fetching English assistance types:", error);
-      return [];
-    }
-    return data;
-  },
-  
-  async getAssistanceTypesEs() {
-    const { data, error } = await supabase
-      .from('assistance_types_es')
-      .select('*');
-    
-    if (error) {
-      console.error("Error fetching Spanish assistance types:", error);
-      return [];
-    }
-    return data;
-  },
-  
-  // ======= ZIP CODES (Table1.json) =======
-  async getZipCodes() {
-    const { data, error } = await supabase
-      .from('zip_codes')
-      .select('*');
-    
-    if (error) {
-      console.error("Error fetching zip codes:", error);
-      return [];
-    }
-    return data;
-  },
-  
-  async getZipCodeByZip(zip_code) {
-    const { data, error } = await supabase
-      .from('zip_codes')
-      .select('*')
-      .eq('zip_code', zip_code)
-      .single();
-    
-    if (error) {
-      console.error(`Error fetching zip code ${zip_code}:`, error);
-      return null;
-    }
-    return data;
-  },
-  
-  // ======= RESOURCES (Sheet1.json and Sheet2.json) =======
-  async getResourcesEn() {
-    const { data, error } = await supabase
-      .from('resources_en')
-      .select('*')
-      .order('priority', { ascending: true })
-      .order('organization', { ascending: true })
-      .order('assistance', { ascending: true });
-  
-    if (error) {
-      console.error("Error fetching English resources:", error);
-      return [];
-    }
-    return data;
-  },
-  
-  async getResourcesEs() {
-    const { data, error } = await supabase
-      .from('resources_es')
-      .select('*')
-      .order('priority', { ascending: true })
-      .order('organization', { ascending: true })
-      .order('assistance', { ascending: true });
-    
-    if (error) {
-      console.error("Error fetching Spanish resources:", error);
+      console.error("Error fetching directory:", error);
       return [];
     }
     return data;
   },
 
-  // ======= NEW: RESOURCES WITH DISTANCE CALCULATION =======
-  async getResourcesWithDistanceEn(zipCoordinates) {
+  // Get directory with calculated distance from a reference point
+  async getDirectoryWithDistance(referenceCoordinates) {
     try {
-      // Get all resources first
-      const resources = await this.getResourcesEn();
-      
-      // Parse the zip coordinates
-      const zipCoords = parseCoordinates(zipCoordinates);
-      if (!zipCoords) {
-        console.error("Invalid zip coordinates provided:", zipCoordinates);
-        return resources; // Return without distance if coordinates are invalid
+      const directory = await this.getDirectory();
+
+      const refCoords = parseCoordinates(referenceCoordinates);
+      if (!refCoords) {
+        console.error("Invalid reference coordinates:", referenceCoordinates);
+        return directory;
       }
 
-      // Calculate distance for each resource and add distance property
-      const resourcesWithDistance = resources.map(resource => {
-        const resourceCoords = parseCoordinates(resource.coordinates);
-        if (!resourceCoords) {
-          return { ...resource, distance: 999999 }; // Put resources with invalid coordinates at the end
+      // Calculate distance for each record
+      const directoryWithDistance = directory.map(record => {
+        const recordCoords = parseCoordinates(record.org_coordinates);
+        if (!recordCoords) {
+          return { ...record, distance: 999999 };
         }
 
         const distance = calculateDistance(
-          zipCoords.lat, zipCoords.lng,
-          resourceCoords.lat, resourceCoords.lng
+          refCoords.lat, refCoords.lng,
+          recordCoords.lat, recordCoords.lng
         );
 
         return {
-          ...resource,
-          distance: parseFloat(distance.toFixed(1)) // Round to 1 decimal place
+          ...record,
+          distance: parseFloat(distance.toFixed(1))
         };
       });
 
-      // Sort by status first (Active, Limited, Inactive), then by distance
-      resourcesWithDistance.sort((a, b) => {
-        // First sort by status priority
-        const getStatusPriority = (status) => {
-          const upperStatus = status?.toUpperCase() || '';
-          if (upperStatus === 'ACTIVE' || upperStatus === 'ACTIVO') return 1;
-          if (upperStatus === 'LIMITED' || upperStatus === 'LIMITADO') return 2;
-          if (upperStatus === 'INACTIVE' || upperStatus === 'INACTIVO') return 3;
-          return 4; // Unknown status goes last
-        };
-
-        const statusDiff = getStatusPriority(a.status) - getStatusPriority(b.status);
+      // Sort by status_id (1=Active, 2=Limited, 3=Inactive), then by distance
+      directoryWithDistance.sort((a, b) => {
+        const statusDiff = (a.status_id || 4) - (b.status_id || 4);
         if (statusDiff !== 0) return statusDiff;
-
-        // Then sort by distance
-        return a.distance - b.distance;
+        return (a.distance || 999999) - (b.distance || 999999);
       });
 
-      return resourcesWithDistance;
+      return directoryWithDistance;
     } catch (error) {
-      console.error("Error calculating distances for English resources:", error);
-      return await this.getResourcesEn(); // Fallback to original method
+      console.error("Error calculating distances:", error);
+      return await this.getDirectory();
     }
   },
 
-  async getResourcesWithDistanceEs(zipCoordinates) {
-    try {
-      // Get all resources first
-      const resources = await this.getResourcesEs();
-      
-      // Parse the zip coordinates
-      const zipCoords = parseCoordinates(zipCoordinates);
-      if (!zipCoords) {
-        console.error("Invalid zip coordinates provided:", zipCoordinates);
-        return resources; // Return without distance if coordinates are invalid
-      }
+  // ======= ASSISTANCE (28 records - static) =======
+  async getAssistance() {
+    const { data, error } = await supabase
+      .from('assistance')
+      .select('id_no, assistance, group, icon, assist_id')
+      .order('id_no', { ascending: true });
 
-      // Calculate distance for each resource and add distance property
-      const resourcesWithDistance = resources.map(resource => {
-        const resourceCoords = parseCoordinates(resource.coordinates);
-        if (!resourceCoords) {
-          return { ...resource, distance: 999999 }; // Put resources with invalid coordinates at the end
-        }
-
-        const distance = calculateDistance(
-          zipCoords.lat, zipCoords.lng,
-          resourceCoords.lat, resourceCoords.lng
-        );
-
-        return {
-          ...resource,
-          distance: parseFloat(distance.toFixed(1)) // Round to 1 decimal place
-        };
-      });
-
-      // Sort by status first (Active, Limited, Inactive), then by distance
-      resourcesWithDistance.sort((a, b) => {
-        // First sort by status priority
-        const getStatusPriority = (status) => {
-          const upperStatus = status?.toUpperCase() || '';
-          if (upperStatus === 'ACTIVE' || upperStatus === 'ACTIVO') return 1;
-          if (upperStatus === 'LIMITED' || upperStatus === 'LIMITADO') return 2;
-          if (upperStatus === 'INACTIVE' || upperStatus === 'INACTIVO') return 3;
-          return 4; // Unknown status goes last
-        };
-
-        const statusDiff = getStatusPriority(a.status) - getStatusPriority(b.status);
-        if (statusDiff !== 0) return statusDiff;
-
-        // Then sort by distance
-        return a.distance - b.distance;
-      });
-
-      return resourcesWithDistance;
-    } catch (error) {
-      console.error("Error calculating distances for Spanish resources:", error);
-      return await this.getResourcesEs(); // Fallback to original method
+    if (error) {
+      console.error("Error fetching assistance:", error);
+      return [];
     }
+    return data;
   },
-  
-  // ======= ORGANIZATIONS (Table2.json) =======
+
+  // ======= ORGANIZATIONS (~452 records) =======
   async getOrganizations() {
     const { data, error } = await supabase
       .from('organizations')
-      .select('*');
-    
+      .select('*')
+      .order('organization', { ascending: true });
+
     if (error) {
       console.error("Error fetching organizations:", error);
       return [];
     }
     return data;
   },
-  
-  // ======= NEIGHBORHOODS (Table5.json) =======
-  async getNeighborhoods() {
+
+  // ======= ZIP CODES (269 records - static) =======
+  async getZipCodes() {
     const { data, error } = await supabase
-      .from('neighborhoods')
-      .select('*');
-    
-    if (error) {
-      console.error("Error fetching neighborhoods:", error);
-      return [];
-    }
-    return data;
-  },
-  
-  // Advanced queries
-  async getResourcesByZipCode(zip_code) {
-    const { data, error } = await supabase
-      .from('resources_en')
+      .from('zip_codes')
       .select('*')
-      .eq('zip_codes', zip_code);
-    
+      .order('zip_code', { ascending: true });
+
     if (error) {
-      console.error(`Error fetching resources for zip code ${zip_code}:`, error);
+      console.error("Error fetching zip codes:", error);
       return [];
     }
     return data;
   },
-  
-  async getResourcesByAssistanceType(assistanceType, language = 'en') {
-    const table = language.toLowerCase() === 'es' ? 'resources_es' : 'resources_en';
-    
+
+  // Get single zip code by zip
+  async getZipCodeByZip(zipCode) {
     const { data, error } = await supabase
-      .from(table)
+      .from('zip_codes')
       .select('*')
-      .eq('assistance', assistanceType);
-    
+      .eq('zip_code', zipCode)
+      .single();
+
     if (error) {
-      console.error(`Error fetching resources for assistance type ${assistanceType}:`, error);
+      console.error(`Error fetching zip code ${zipCode}:`, error);
+      return null;
+    }
+    return data;
+  },
+
+  // ======= REGISTERED ORGANIZATIONS (auth - implement last) =======
+  async getRegisteredOrganizations() {
+    const { data, error } = await supabase
+      .from('registered_organizations')
+      .select('*')
+      .order('reg_organization', { ascending: true });
+
+    if (error) {
+      console.error("Error fetching registered organizations:", error);
       return [];
     }
     return data;
   },
-  
-  // Function to get resources filtered by multiple criteria
-  async getFilteredResources(filters = {}, language = 'en') {
-    const table = language.toLowerCase() === 'es' ? 'resources_es' : 'resources_en';
-    let query = supabase.from(table).select('*');
-    
-    // Apply filters if provided
-    if (filters.zip_code) {
-      query = query.eq('zip_codes', filters.zip_code);
-    }
-    
-    if (filters.assistance) {
-      query = query.eq('assistance', filters.assistance);
-    }
-    
-    if (filters.organization) {
-      query = query.eq('organization', filters.organization);
-    }
-    
-    // Execute the query
-    const { data, error } = await query;
-    
+
+  async getRegisteredOrgByPasscode(passcode) {
+    const { data, error } = await supabase
+      .from('registered_organizations')
+      .select('*')
+      .eq('org_passcode', passcode)
+      .single();
+
     if (error) {
-      console.error("Error fetching filtered resources:", error);
-      return [];
+      console.error("Error fetching registered org by passcode:", error);
+      return null;
     }
     return data;
-  }
+  },
 };
+
+// Export helper functions for use elsewhere if needed
+export { calculateDistance, parseCoordinates };

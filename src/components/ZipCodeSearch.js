@@ -1,19 +1,16 @@
 // src/components/ZipCodeSearch.js
 import React, { useEffect, useMemo, useState } from "react";
-import { useTranslate } from "../Utility/Translate";
 import { supabase } from "../MainApp";
 import { ArrowRight } from "lucide-react";
 
-export default function ZipCodeSearch({ 
-  zips = [], 
-  selectedZip = "", 
+export default function ZipCodeSearch({
+  zips = [],
+  selectedZip = "",
   setSelectedZip,
   zipDefaultCoordinates = "",
   overrideCoordinates = "",
   onCoordinateOverride
 }) {
-  const { translate } = useTranslate();
-
   const [neighborhood, setNeighborhood] = useState("");
   const [neighborhoodLink, setNeighborhoodLink] = useState("");
   const [showCoordinates, setShowCoordinates] = useState(false);
@@ -26,8 +23,9 @@ export default function ZipCodeSearch({
     return zips
       .map(zip => {
         const zipCode = typeof zip === "object" ? zip.zip_code : zip;
-        return { zip_code: zipCode.trim() };
+        return { zip_code: zipCode ? String(zipCode).trim() : "" };
       })
+      .filter(zip => zip.zip_code) // Remove empty entries
       .sort((a, b) => a.zip_code.localeCompare(b.zip_code));
   }, [zips]);
 
@@ -43,15 +41,15 @@ export default function ZipCodeSearch({
       if (autoCloseTimeout) {
         clearTimeout(autoCloseTimeout);
       }
-      
+
       // Set new timeout to auto-close after 5 seconds of inactivity
       const timeout = setTimeout(() => {
         setShowCoordinates(false);
       }, 5000);
-      
+
       setAutoCloseTimeout(timeout);
     }
-    
+
     // Cleanup timeout on component unmount or when coordinates are hidden
     return () => {
       if (autoCloseTimeout) {
@@ -83,7 +81,7 @@ export default function ZipCodeSearch({
 
   const handleCoordinateClick = () => {
     setShowCoordinates(!showCoordinates);
-    
+
     // If opening the coordinates field, clear any auto-close timeout
     if (!showCoordinates && autoCloseTimeout) {
       clearTimeout(autoCloseTimeout);
@@ -94,7 +92,7 @@ export default function ZipCodeSearch({
   const handleCoordinateInputChange = (e) => {
     const value = e.target.value;
     setCoordinateInput(value);
-    
+
     // Reset auto-close timer when user is typing
     if (autoCloseTimeout) {
       clearTimeout(autoCloseTimeout);
@@ -107,7 +105,7 @@ export default function ZipCodeSearch({
       // Clear the input field and trigger the override
       setCoordinateInput('');
       onCoordinateOverride(coordinateInput);
-      
+
       // Wait a beat, then close the coordinates field
       setTimeout(() => {
         setShowCoordinates(false);
@@ -120,7 +118,7 @@ export default function ZipCodeSearch({
     if (coordinateInput.trim()) {
       onCoordinateOverride(coordinateInput);
     }
-    
+
     // Close after a short delay
     setTimeout(() => {
       setShowCoordinates(false);
@@ -134,9 +132,9 @@ export default function ZipCodeSearch({
   return (
     <div className="relative w-full md:w-[16rem]">
       <label className="block mb-0 mt-1 font-medium text-[0.9rem] md:text-base">
-        {translate("tZipCode")}
+        Zip Code
       </label>
-      
+
       <div className="flex items-center gap-2">
         {/* Zip Code Dropdown */}
         <select
@@ -148,7 +146,7 @@ export default function ZipCodeSearch({
               : "bg-[#ffffff] border-gray-300 shadow-sm"
           }`}
         >
-          <option value="">{translate("tSelectZipCode")}</option>
+          <option value="">Select Zip Code</option>
           {zipArray.map((zipObj, idx) => (
             <option key={idx} value={zipObj.zip_code}>
               {zipObj.zip_code}
@@ -175,8 +173,8 @@ export default function ZipCodeSearch({
       {/* Sliding Coordinate Override Field - slides right from behind zip code */}
       <div
         className={`absolute top-0 left-0 transition-all duration-300 ease-in-out ${
-          showCoordinates 
-            ? 'transform translate-x-full opacity-100 z-10' 
+          showCoordinates
+            ? 'transform translate-x-full opacity-100 z-10'
             : 'transform translate-x-0 opacity-0 z-0 pointer-events-none'
         }`}
         style={{ width: '100%' }}
@@ -216,7 +214,7 @@ export default function ZipCodeSearch({
         </a>
       )}
 
-    
+
     </div>
   );
 }

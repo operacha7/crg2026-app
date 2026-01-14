@@ -95,7 +95,7 @@ export async function onRequest({ request, env }) {
 
     // Prepare payload for Resend API
     const payload = {
-      from: '"CRG Support" <info@crghouston.org>',
+      from: '"CRG Support" <info@crghouston.operacha.org>',
       to: "operacha@sbcglobal.net",
       reply_to: email,
       subject: emailSubject,

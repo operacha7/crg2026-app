@@ -5,18 +5,12 @@ import OrganizationSearch from "../components/OrganizationSearch";
 import SearchResults from "../components/SearchResults";
 import useFetchCRGData from "../data/FetchDataSupabase";
 import EmailDialog from "../components/EmailDialog";
-import SwingingSign from "../components/SwingingSign";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { Toaster, toast } from "react-hot-toast";
 import { supabase } from "../MainApp";
 import { logUserAction } from "../Utility/UserAction";
-import { useTranslate } from "../Utility/Translate"; // Add this import
-import { useLanguage } from "../Contexts/LanguageContext"; // Add this import
 
 export default function OrganizationPage({ loggedInUser }) {
-  // Add these hooks
-  const { language } = useLanguage();
-  const { translate } = useTranslate();
 
   const { records, organizations, expandedRows, setExpandedRows } =
     useFetchCRGData(); // Remove loggedInUser?.language as it now comes from context
@@ -80,7 +74,7 @@ export default function OrganizationPage({ loggedInUser }) {
 
     logUserAction({
       reg_organization: loggedInUser?.registered_organization,
-      language,
+      language: 'English',
       nav_item: "Organization",
       search_field: "organization",
       search_value: org,
@@ -95,7 +89,7 @@ export default function OrganizationPage({ loggedInUser }) {
     // Close dialog and reset selections
     setShowEmailDialog(false);
     setSelectedRows([]);
-    showAnimatedToast("✅ " + translate("tEmailSentSuccessfully"), "success");
+    showAnimatedToast("✅ Email sent successfully.", "success");
 
     try {
       // Only keep essential logs
@@ -106,7 +100,7 @@ export default function OrganizationPage({ loggedInUser }) {
         .from("app_usage_logs")
         .insert({
           reg_organization: loggedInUser?.registered_organization,
-          language,
+          language: 'English',
           nav_item: "Organization",
           search_field: "Send Email",
           search_value: `${selectedData.length} records`,
@@ -140,7 +134,7 @@ export default function OrganizationPage({ loggedInUser }) {
             organization: orgName,
             assistance_type: assistanceType,
             reg_organization: loggedInUser?.registered_organization,
-            language: language,
+            language: 'English',
             delivery_method: "email",
           });
 
@@ -168,7 +162,7 @@ export default function OrganizationPage({ loggedInUser }) {
     // Close dialog and reset selections
     setShowPdfDialog(false);
     setSelectedRows([]);
-    showAnimatedToast("✅ " + translate("tPdfCreatedSuccessfully"), "success");
+    showAnimatedToast("✅ PDF created successfully in your Download Folder.", "success");
 
     try {
       console.log("Starting PDF logging process");
@@ -178,7 +172,7 @@ export default function OrganizationPage({ loggedInUser }) {
         .from("app_usage_logs")
         .insert({
           reg_organization: loggedInUser?.registered_organization,
-          language,
+          language: 'English',
           nav_item: "Organization",
           search_field: "Create Pdf",
           search_value: `${selectedData.length} records`,
@@ -211,7 +205,7 @@ export default function OrganizationPage({ loggedInUser }) {
             organization: orgName,
             assistance_type: assistanceType,
             reg_organization: loggedInUser?.registered_organization,
-            language: language,
+            language: 'English',
             delivery_method: "pdf",
           });
 
@@ -255,7 +249,7 @@ export default function OrganizationPage({ loggedInUser }) {
         onSendEmail={() => {
           if (!selectedRows || selectedRows.length === 0) {
             showAnimatedToast(
-              `\u26A0\uFE0F ${translate("tSelectRecordsForEmail")}`,
+              "⚠️ Please select at least one record to send email.",
               "error"
             );
           } else {
@@ -265,7 +259,7 @@ export default function OrganizationPage({ loggedInUser }) {
         onCreatePdf={() => {
           if (!selectedRows || selectedRows.length === 0) {
             showAnimatedToast(
-              `\u26A0\uFE0F ${translate("tSelectRecordsForPdf")}`,
+              "⚠️ Please select at least one record to create a PDF.",
               "error"
             );
           } else {
@@ -333,11 +327,6 @@ export default function OrganizationPage({ loggedInUser }) {
                 </div>
               </div>
 
-              <div className="flex items-center">
-                <SwingingSign
-                  organizationName={loggedInUser?.registered_organization}
-                />
-              </div>
             </div>
           </div>
 
@@ -345,10 +334,10 @@ export default function OrganizationPage({ loggedInUser }) {
             {!selectedOrg ? (
               <div className="flex flex-col items-center justify-center h-full text-center p-6">
                 <div className="text-xl font-medium text-gray-600 mb-4">
-                  {translate("tPleaseSelectOrganization")}
+                  Please Select an Organization
                 </div>
                 <div className="text-gray-500 max-w-md">
-                  {translate("tResultsWillAppearAfterSelectionOrg")}
+                  Results will appear here after you select an organization.
                 </div>
               </div>
             ) : (

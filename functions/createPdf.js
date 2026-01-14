@@ -11,7 +11,7 @@ async function incrementPdfCount(env, organization) {
     );
 
     const supabaseUrl = env.SUPABASE_URL;
-    const supabaseServiceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseServiceKey = env.SUPABASE_SECRET_KEY;
 
     if (!supabaseUrl || !supabaseServiceKey) {
       console.warn("[incrementPdfCount] Missing Supabase credentials");
@@ -75,7 +75,7 @@ export async function onRequest({ request, env }) {
   }
 
   try {
-    const { htmlBody, headerHtml, footer, filename, margin, organization } =
+    const { htmlBody, header, headerHtml, footer, filename, margin, organization } =
       await request.json();
 
     if (!htmlBody) {
@@ -88,20 +88,32 @@ export async function onRequest({ request, env }) {
       );
     }
 
-    // Build the PDFShift payload (same shape as your Netlify version)
+    // Build the PDFShift payload
     const pdfShiftPayload = {
       source: htmlBody,
       // sandbox: true,
     };
 
-    if (headerHtml) {
+    // Support both new 'header' object and legacy 'headerHtml' string
+    if (header?.source) {
+      pdfShiftPayload.header = {
+        source: header.source,
+        spacing: header.spacing || "10px",
+      };
+    } else if (headerHtml) {
       pdfShiftPayload.header = {
         source: headerHtml,
         height: "1in",
       };
     }
 
-    if (footer) {
+    if (footer?.source) {
+      pdfShiftPayload.footer = {
+        source: footer.source,
+        spacing: footer.spacing || "10px",
+      };
+    } else if (footer) {
+      // Legacy: footer passed directly
       pdfShiftPayload.footer = footer;
     }
 
@@ -114,6 +126,7 @@ export async function onRequest({ request, env }) {
       headers: {
         "Content-Type": "application/json",
         "X-API-Key": env.PDFSHIFT_API_KEY,
+        "X-Processor-Version": "142", // Use new Chromium engine (becomes default Jan 20, 2026)
       },
       body: JSON.stringify(pdfShiftPayload),
     });

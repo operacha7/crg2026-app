@@ -1,8 +1,6 @@
 // src/components/SearchResults.js
 import React, { useState, useEffect, useRef } from "react";
 import { ChevronDown, ChevronUp, Phone, Globe, MapPin, Clock, Info, CheckCircle, Navigation } from "lucide-react";
-import { useTranslate } from "../Utility/Translate";
-import { useTour } from "../Contexts/TourProvider";
 
 export default function SearchResults({
   filtered = [],
@@ -12,16 +10,7 @@ export default function SearchResults({
   selectedRows = [],
   setSelectedRows,
 }) {
-  const { translate } = useTranslate(); 
 
-  // Get tour functions
-  const { registerRef } = useTour();
-
-  // Register refs for tour targets
-  const recordRef = registerRef("record");
-  const statusRef = registerRef("status");
-  const requirementsRef = registerRef("requirements");
-  
   // Toggle row selection
   const toggleRow = (index) => {
     setSelectedRows((prev) =>
@@ -162,7 +151,7 @@ export default function SearchResults({
           <div className="mb-3 relative w-full">
             <div className="flex items-center gap-1 mb-1">
               <CheckCircle className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-medium">{translate("tStatus")}:</span>
+              <span className="text-sm font-medium">Status:</span>
             </div>
             <button
               onMouseDown={(e) => e.stopPropagation()}
@@ -187,7 +176,7 @@ export default function SearchResults({
         <div className="mb-3">
           <div className="flex items-center gap-1 mb-1">
             <Info className="w-4 h-4 text-gray-600" />
-            <span className="text-sm font-medium">{translate("tAssistance")}:</span>
+            <span className="text-sm font-medium">Assistance:</span>
           </div>
           <div className="text-sm px-1">{r.assistance}</div>
         </div>
@@ -196,7 +185,7 @@ export default function SearchResults({
         <div className="mb-3">
           <div className="flex items-center gap-1 mb-1">
             <MapPin className="w-4 h-4 text-gray-600" />
-            <span className="text-sm font-medium">{translate("tAddress")}:</span>
+            <span className="text-sm font-medium">Address:</span>
           </div>
           <div className="text-sm px-1">
             {r.google_maps ? (
@@ -218,7 +207,7 @@ export default function SearchResults({
         <div className="mb-3">
           <div className="flex items-center gap-1 mb-1">
             <Phone className="w-4 h-4 text-gray-600" />
-            <span className="text-sm font-medium">{translate("tTelephone")}:</span>
+            <span className="text-sm font-medium">Telephone:</span>
           </div>
           <div className="text-sm px-1">{r.telephone}</div>
         </div>
@@ -227,7 +216,7 @@ export default function SearchResults({
         <div className="mb-3">
           <div className="flex items-center gap-1 mb-1">
             <Clock className="w-4 h-4 text-gray-600" />
-            <span className="text-sm font-medium">{translate("tHours")}:</span>
+            <span className="text-sm font-medium">Hours:</span>
           </div>
           <div className="text-sm px-1">
             <div>{r.hours}</div>
@@ -242,7 +231,7 @@ export default function SearchResults({
           <div className="mb-3">
             <div className="flex items-center gap-1 mb-1">
               <Globe className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-medium">{translate("tRequirements")}:</span>
+              <span className="text-sm font-medium">Requirements:</span>
             </div>
             <div 
               className={`transition-all duration-300 ${
@@ -280,13 +269,13 @@ export default function SearchResults({
         <tr>
           <th className="p-0 w-[50px] text-[75%] font-normal">Email</th>
           <th className="p-0 w-[40px] text-[75%] font-normal">Dist</th>
-          <th className="w-[17%] p-2 font-normal">{translate("tOrganization")}</th>
-          <th className="w-[17%] p-2 font-normal">{translate("tAddress")}</th>
-          <th className="w-[8%] p-2 font-normal">{translate("tTelephone")}</th>
-          <th className="w-[12%] p-2 font-normal">{translate("tHours")}</th>
-          <th className="w-[7%] p-2 font-normal">{translate("tAssistance")}</th>
-          <th className="w-[5%] p-2 font-normal">{translate("tStatus")}</th>
-          <th className="w-[29%] p-2 font-normal">{translate("tRequirements")}</th>
+          <th className="w-[17%] p-2 font-normal">Organization</th>
+          <th className="w-[17%] p-2 font-normal">Address</th>
+          <th className="w-[8%] p-2 font-normal">Telephone</th>
+          <th className="w-[12%] p-2 font-normal">Hours</th>
+          <th className="w-[7%] p-2 font-normal">Assistance</th>
+          <th className="w-[5%] p-2 font-normal">Status</th>
+          <th className="w-[29%] p-2 font-normal">Requirements</th>
           <th className="w-[3%] p-2 text-[75%] font-normal">Zip</th>
         </tr>
       </thead>
@@ -315,7 +304,6 @@ export default function SearchResults({
                   checked={isSelected}
                   onChange={() => toggleRow(i)}
                   className={`mx-auto h-5 w-5 ${getCheckboxClasses(r.status, isSelected)}`}
-                  ref={i === 0 ? recordRef : null}
                 />
               </td>
 
@@ -374,7 +362,7 @@ export default function SearchResults({
 
               {/* Status + Tooltip */}
               <td className="p-1 border">
-                <div className="relative w-full status" ref={i === 0 ? statusRef : null}>
+                <div className="relative w-full status">
                   {status ? (
                     <button
                       onMouseDown={(e) => e.stopPropagation()}
@@ -425,7 +413,7 @@ export default function SearchResults({
                         : "max-h-24 overflow-hidden"
                     }`}
                   >
-                    <ul className="list-disc pl-4" ref={i === 0 ? requirementsRef : null}>
+                    <ul className="list-disc pl-4">
                       {reqs.map((req, idx) => (
                         <li key={idx}>{req}</li>
                       ))}

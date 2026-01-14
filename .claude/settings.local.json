@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(grep:*)",
+      "Bash(xargs cat:*)",
+      "Bash(cat:*)",
+      "Bash(npm run build:*)",
+      "Bash(curl:*)"
+    ]
+  }
+}

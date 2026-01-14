@@ -8,9 +8,6 @@ import { Toaster, toast } from "react-hot-toast";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { supabase } from "../MainApp";
 import { logUserAction } from "../Utility/UserAction";
-import SwingingSign from "../components/SwingingSign";
-import { useTranslate } from "../Utility/Translate";
-import { useLanguage } from "../Contexts/LanguageContext";
 import useFetchCRGData from "../data/FetchDataSupabase";
 
 export default function GeneralSearchPage({
@@ -19,9 +16,6 @@ export default function GeneralSearchPage({
   assistanceTypes = [],
   loggedInUser,
 }) {
-  // Language and translation hooks
-  const { language } = useLanguage();
-  const { translate } = useTranslate();
 
   // Search criteria states
   const [query, setQuery] = useState("");
@@ -59,12 +53,6 @@ export default function GeneralSearchPage({
   const count = useMotionValue(0);
   const rounded = useTransform(count, (v) => Math.round(v));
 
-  // Add this useEffect to both ZipCodePage and GeneralSearchPage
-  useEffect(() => {
-    // Clear assistance selections when language changes
-
-    setSelectedAssist(""); // GeneralSearchPage only
-  }, [language]);
 
   // Load neighborhoods from neighborhoodData
   useEffect(() => {
@@ -268,14 +256,14 @@ export default function GeneralSearchPage({
 
       logUserAction({
         reg_organization: loggedInUser?.registered_organization,
-        language: language,
+        language: 'English',
         nav_item: "General Search",
         search_field: "zip code",
         search_value: zip_code,
         action_type: "select",
       }).catch((err) => console.error("Failed to log zip search:", err));
     },
-    [loggedInUser, language]
+    [loggedInUser]
   );
 
   // UPDATED: Only log assistance selection, not deselection
@@ -285,14 +273,14 @@ export default function GeneralSearchPage({
 
       logUserAction({
         reg_organization: loggedInUser?.registered_organization,
-        language: language,
+        language: 'English',
         nav_item: "General Search",
         search_field: "assistance",
         search_value: assistance,
         action_type: "select",
       }).catch((err) => console.error("Failed to log assistance search:", err));
     },
-    [loggedInUser, language]
+    [loggedInUser]
   );
 
   const logDaySearch = useCallback(
@@ -301,14 +289,14 @@ export default function GeneralSearchPage({
 
       logUserAction({
         reg_organization: loggedInUser?.registered_organization,
-        language: language,
+        language: 'English',
         nav_item: "General Search",
         search_field: "day",
         search_value: day,
         action_type: "select",
       }).catch((err) => console.error("Failed to log day search:", err));
     },
-    [loggedInUser, language]
+    [loggedInUser]
   );
 
   // Handler functions with logging
@@ -321,7 +309,7 @@ export default function GeneralSearchPage({
       if (loggedInUser) {
         logUserAction({
           reg_organization: loggedInUser?.registered_organization,
-          language: language,
+          language: 'English',
           nav_item: "General Search",
           search_field: "requirements",
           search_value: null,
@@ -332,7 +320,7 @@ export default function GeneralSearchPage({
       }
       setExcludeRequirements(value);
     },
-    [loggedInUser, language]
+    [loggedInUser]
   );
 
   const setAndLogSelectedZip = useCallback(
@@ -377,7 +365,7 @@ export default function GeneralSearchPage({
     // Close dialog and reset selections
     setShowEmailDialog(false);
     setSelectedRows([]);
-    showAnimatedToast("✅ " + translate("tEmailSentSuccessfully"), "success");
+    showAnimatedToast("✅ Email sent successfully.", "success");
 
     try {
       // Log the main email event
@@ -385,7 +373,7 @@ export default function GeneralSearchPage({
         .from("app_usage_logs")
         .insert({
           reg_organization: loggedInUser?.registered_organization,
-          language,
+          language: 'English',
           nav_item: "General Search",
           search_field: "Send Email",
           search_value: `${selectedData.length} records`,
@@ -413,7 +401,7 @@ export default function GeneralSearchPage({
             organization: orgName,
             assistance_type: assistanceType,
             reg_organization: loggedInUser?.registered_organization,
-            language: language,
+            language: 'English',
             delivery_method: "email",
           });
 
@@ -434,7 +422,7 @@ export default function GeneralSearchPage({
     // Close dialog and reset selections
     setShowPdfDialog(false);
     setSelectedRows([]);
-    showAnimatedToast("✅ " + translate("tPdfCreatedSuccessfully"), "success");
+    showAnimatedToast("✅ PDF created successfully in your Download Folder.", "success");
 
     try {
       console.log("Starting PDF logging process");
@@ -444,7 +432,7 @@ export default function GeneralSearchPage({
         .from("app_usage_logs")
         .insert({
           reg_organization: loggedInUser?.registered_organization,
-          language,
+          language: 'English',
           nav_item: "General Search",
           search_field: "Create Pdf",
           search_value: `${selectedData.length} records`,
@@ -477,7 +465,7 @@ export default function GeneralSearchPage({
             organization: orgName,
             assistance_type: assistanceType,
             reg_organization: loggedInUser?.registered_organization,
-            language: language,
+            language: 'English',
             delivery_method: "pdf",
           });
 
@@ -512,7 +500,7 @@ export default function GeneralSearchPage({
       if (loggedInUser) {
         logUserAction({
           reg_organization: loggedInUser?.registered_organization,
-          language: language,
+          language: 'English',
           nav_item: "General Search",
           search_field: "neighborhood",
           search_value: null,
@@ -525,7 +513,7 @@ export default function GeneralSearchPage({
       setSearchInput(n);
       setShowDropdown(false);
     },
-    [loggedInUser, language]
+    [loggedInUser]
   );
 
   // Clear all filters
@@ -587,18 +575,16 @@ export default function GeneralSearchPage({
     ]
   );
 
-  // For translated days of week
-  const translatedDaysOfWeek = () => {
-    return [
-      { en: "Monday", es: translate("tMonday") },
-      { en: "Tuesday", es: translate("tTuesday") },
-      { en: "Wednesday", es: translate("tWednesday") },
-      { en: "Thursday", es: translate("tThursday") },
-      { en: "Friday", es: translate("tFriday") },
-      { en: "Saturday", es: translate("tSaturday") },
-      { en: "Sunday", es: translate("tSunday") },
-    ];
-  };
+  // Days of week
+  const daysOfWeek = [
+    { en: "Monday", es: "Monday" },
+    { en: "Tuesday", es: "Tuesday" },
+    { en: "Wednesday", es: "Wednesday" },
+    { en: "Thursday", es: "Thursday" },
+    { en: "Friday", es: "Friday" },
+    { en: "Saturday", es: "Saturday" },
+    { en: "Sunday", es: "Sunday" },
+  ];
 
   // Calculate selected data for display
   const selectedData = selectedRows?.map((i) => filtered[i]).filter(Boolean);
@@ -614,7 +600,7 @@ export default function GeneralSearchPage({
           setShowSidebar={setShowSidebar}
           zip_codes={zips}
           assistanceTypes={assistanceTypes}
-          daysOfWeek={translatedDaysOfWeek()}
+          daysOfWeek={daysOfWeek}
           selectedZip={selectedZip}
           setSelectedZip={setAndLogSelectedZip}
           selectedAssist={selectedAssist}
@@ -633,7 +619,7 @@ export default function GeneralSearchPage({
         onSendEmail={() => {
           if (selectedRows.length === 0) {
             showAnimatedToast(
-              "\u26A0\uFE0F " + translate("tSelectRecordsForEmail"),
+              "⚠️ Please select at least one record to send email.",
               "error"
             );
           } else {
@@ -643,7 +629,7 @@ export default function GeneralSearchPage({
         onCreatePdf={() => {
           if (!selectedRows || selectedRows.length === 0) {
             showAnimatedToast(
-              `\u26A0\uFE0F ${translate("tSelectRecordsForPdf")}`,
+              "⚠️ Please select at least one record to create a PDF.",
               "error"
             );
           } else {
@@ -687,12 +673,12 @@ export default function GeneralSearchPage({
           <div className="flex items-center justify-between">
             <div className="flex flex-col w-[50rem] relative">
               <label className="block text-sm font-medium mb-1">
-                {translate("tSearchRequirements")}
+                Search Requirements
               </label>
               <input
                 value={requirementsQuery}
                 onChange={(e) => setAndLogRequirementsQuery(e.target.value)}
-                placeholder={translate("tSearchByRquirementsPlaceholder")}
+                placeholder="FreeForm search of the Requirements Column"
                 className={`border-2 px-3 py-2 text-lg rounded w-full ${
                   requirementsQuery
                     ? "bg-[#efedd1] border-[#b5b270] font-medium shadow-md"
@@ -712,7 +698,7 @@ export default function GeneralSearchPage({
                   }
                 />
                 <span className="text-sm text-gray-700">
-                  {translate("tExcludeMatchingRecords")}
+                  Exclude matching records
                 </span>
               </div>
             </div>
@@ -743,13 +729,6 @@ export default function GeneralSearchPage({
                 )}
               </div>
 
-              {loggedInUser?.registered_organization && (
-                <div className="flex items-center">
-                  <SwingingSign
-                    organizationName={loggedInUser?.registered_organization}
-                  />
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -760,14 +739,14 @@ export default function GeneralSearchPage({
             <div className="flex flex-col w-[50rem] relative">
               <div ref={wrapperRef} className="w-full">
                 <label className="block text-sm font-medium mb-1">
-                  {translate("tSearchByOrgLocation")}
+                  Search By Organization Location
                 </label>
                 <input
                   value={searchInput}
                   onChange={handleInputChange}
                   onFocus={() => setShowDropdown(true)}
                   onKeyDown={handleKeyDown}
-                  placeholder={translate("tSearchByOrgLocationPlaceholder")}
+                  placeholder="Search By Org Location (Zip Code, City or Neighborhood)"
                   className={`border-2 px-3 py-2 text-lg rounded w-full ${
                     searchInput
                       ? "bg-[#efedd1] border-[#b5b270] font-medium shadow-md"
@@ -806,7 +785,7 @@ export default function GeneralSearchPage({
                 onClick={() => setShowSidebar(true)}
                 className="text-blue-600 underline text-sm text-left mt-0"
               >
-                {translate("tMoreOptions")}
+                More options
               </button>
             </div>
           </div>
@@ -821,10 +800,10 @@ export default function GeneralSearchPage({
           !requirementsQuery ? (
             <div className="flex flex-col items-center justify-center h-full text-center p-6">
               <div className="text-xl font-medium text-gray-600 mb-4">
-                {translate("tPleaseSelectSearchCriteria")}
+                Please Enter at Least One Search Criteria
               </div>
               <div className="text-gray-500 max-w-md">
-                {translate("tResultsWillAppearAfterSelectionGeneral")}
+                Results will appear here after you make at least one search criteria.
               </div>
             </div>
           ) : (

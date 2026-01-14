@@ -24,7 +24,7 @@ export async function onRequest({ request, env }) {
 
   // Initialize Supabase client
   const supabaseUrl = env.SUPABASE_URL;
-  const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseKey = env.SUPABASE_SECRET_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
     return new Response(

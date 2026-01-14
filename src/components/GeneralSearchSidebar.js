@@ -1,7 +1,5 @@
 // src/components/GeneralSearchSidebar.js
 import React from "react";
-import { useTranslate } from "../Utility/Translate";
-import { useLanguage } from "../Contexts/LanguageContext";
 
 export default function GeneralSearchSidebar({
   sidebarRef,
@@ -18,11 +16,8 @@ export default function GeneralSearchSidebar({
   setSelectedDay,
   clearAllFilters,
 }) {
-  const { translate } = useTranslate();
-  const { language } = useLanguage();
-
   console.log("GeneralSearchSidebar received zip_codes:", zip_codes);
-  
+
   if (!showSidebar) return null;
 
   return (
@@ -31,7 +26,7 @@ export default function GeneralSearchSidebar({
       className="fixed right-0 top-0 h-full w-80 bg-[#f9f9f6] shadow-xl z-50 p-4 overflow-y-auto"
     >
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">{translate("tFilters")}</h2>
+        <h2 className="text-xl font-semibold">Filters</h2>
         <button
           onClick={() => setShowSidebar(false)}
           className="text-gray-600 text-2xl hover:text-black"
@@ -40,15 +35,15 @@ export default function GeneralSearchSidebar({
         </button>
       </div>
 
-            {/* Zip Code Filter */}
-            <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">{translate("tZipCode")}</label>
+      {/* Zip Code Filter */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Zip Code</label>
         <select
           value={selectedZip || ""}
           onChange={(e) => setSelectedZip(e.target.value)}
           className="w-full border border-gray-300 rounded px-2 py-1"
         >
-          <option value="">{translate("tAllZipCodes")}</option>
+          <option value="">All Zip Codes</option>
           {Array.isArray(zip_codes) && zip_codes.map((zipObj, idx) => (
             <option key={idx} value={zipObj.zip_code}>
               {zipObj.zip_code}
@@ -59,13 +54,13 @@ export default function GeneralSearchSidebar({
 
       {/* Assistance Filter */}
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">{translate("tAssistance")}</label>
+        <label className="block text-sm font-medium mb-1">Assistance</label>
         <select
           value={selectedAssist || ""}
           onChange={(e) => setSelectedAssist(e.target.value)}
           className="w-full border border-gray-300 rounded px-2 py-1"
         >
-          <option value="">{translate("tAllAssistance")}</option>
+          <option value="">All Assistance</option>
           {Array.isArray(assistanceTypes) && assistanceTypes.map((type, index) => (
             <option key={index} value={type.assistance}>
               {type.assistance}
@@ -76,18 +71,18 @@ export default function GeneralSearchSidebar({
 
       {/* Day of Week Filter */}
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">{translate("tDayOfOperation")}</label>
+        <label className="block text-sm font-medium mb-1">Day of Operation</label>
         <select
           value={selectedDay || ""}
           onChange={(e) => setSelectedDay(e.target.value)}
           className="w-full border border-gray-300 rounded px-2 py-1"
         >
-          <option value="">{translate("tAllDays")}</option>
+          <option value="">All Days</option>
           {Array.isArray(daysOfWeek) && daysOfWeek.map((day, index) => {
             if (day && typeof day === 'object' && day.en) {
               return (
                 <option key={`day-${index}`} value={day.en}>
-                  {language === "Español" ? day.es : day.en}
+                  {day.en}
                 </option>
               );
             } else {
@@ -106,7 +101,7 @@ export default function GeneralSearchSidebar({
         onClick={clearAllFilters}
         className="mt-4 text-lg text-blue-600 hover:underline"
       >
-        {translate("tClearAll")}
+        Clear All
       </button>
     </div>
   );

@@ -1,181 +1,217 @@
 // src/views/ZipCodePage.js
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import PageLayout from "../layout/PageLayout";
-import ZipCodeSearch from "../components/ZipCodeSearch";
 import AssistanceSidebar from "../components/AssistanceSidebar";
-import SearchResults from "../components/SearchResults";
-import EmailDialog from "../components/EmailDialog";
-import SwingingSign from "../components/SwingingSign";
-import { logUserAction } from '../Utility/UserAction';
-import { useTranslate } from "../Utility/Translate";
-import { useLanguage } from "../Contexts/LanguageContext";
-import { useTour } from "../Contexts/TourProvider";
-import TourStep from "../Contexts/TourStep";
-import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import ResultsList from "../components/ResultsList";
+import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { supabase } from "../MainApp";
-import { dataService } from "../services/dataService"; // Add this import
+import { calculateDistance, parseCoordinates } from "../services/dataService";
+import { useAppData } from "../Contexts/AppDataContext";
+import { sendEmail, createPdf, fetchOrgPhone } from "../services/emailService";
 
 export default function ZipCodePage({
-  records = [],
-  zips = [],
-  assistanceTypes = [],
+  assistanceTypes = [], // Legacy prop - used by AssistanceSidebar
   loggedInUser,
 }) {
-  // Get language from context
-  const { language } = useLanguage();
-  // Use translation utility without passing language
-  const { translate } = useTranslate();
-  // Get tour functions
-  const { registerRef } = useTour();
-
-  // Register refs for tour targets
-  const zipCodeRef = registerRef("zipCode");
-  const assistanceRef = registerRef("assistance");
-  const resultsRef = registerRef("results");
-  const statusRef = registerRef("status");
-  const languageToggleRef = registerRef("languageToggle");
-  const footerLinksRef = registerRef("footerLinks");
-
-  // Get main assistance types dynamically
-  const mainAssistance = assistanceTypes
-    .filter(type => type.main === true)
-    .map(type => type.assistance);
+  // Get real data and filter state from AppDataContext
+  const {
+    directory,
+    assistance,
+    zipCodes,
+    orgAssistanceMap,
+    loading,
+    error,
+    activeSearchMode,
+    selectedZipCode,
+    selectedParentOrg,
+    selectedChildOrg,
+    selectedLocationZip,
+    selectedLocationCounty,
+    selectedLocationCity,
+    activeAssistanceChips,
+    // Client coordinates override for distance calculations
+    clientCoordinates,
+  } = useAppData();
 
   // State management
-  const [selectedZip, setSelectedZip] = useState("");
-  const [filtered, setFiltered] = useState([]);
-  const [selectedMain, setSelectedMain] = useState([]);
-  const [selectedMore, setSelectedMore] = useState([]);
-  const [expandedRows, setExpandedRows] = useState({});
   const [selectedRows, setSelectedRows] = useState([]);
   const [showSidebar, setShowSidebar] = useState(false);
-  const [showEmailDialog, setShowEmailDialog] = useState(false);
-  
-  // PDF STATES
-  const [showPdfDialog, setShowPdfDialog] = useState(false);
+  const [orgPhone, setOrgPhone] = useState("");
 
-  // NEW: Coordinate override states
-  const [overrideCoordinates, setOverrideCoordinates] = useState("");
-  const [zipDefaultCoordinates, setZipDefaultCoordinates] = useState("");
+  // Legacy state - kept for sidebar compatibility, will be removed
+  const [selectedMore, setSelectedMore] = useState([]);
 
-  // Refs
-  const sidebarRef = useRef(null);
-  const rowRefs = useRef({});
+  // Fetch org phone on mount
+  useEffect(() => {
+    const loadOrgPhone = async () => {
+      if (loggedInUser?.registered_organization) {
+        const phone = await fetchOrgPhone(loggedInUser.registered_organization);
+        setOrgPhone(phone);
+      }
+    };
+    loadOrgPhone();
+  }, [loggedInUser]);
 
-  // Animation values
-  const count = useMotionValue(0);
-  const rounded = useTransform(count, (v) => Math.round(v));
-
-  // UPDATED: Consolidated assistance logging function
-  const logAssistanceSearch = useCallback(() => {
-    const allSelected = [...selectedMain, ...selectedMore];
-    if (allSelected.length > 0) {
-      logUserAction({
-        reg_organization: loggedInUser?.registered_organization,
-        language,
-        nav_item: 'Zip Code',
-        search_field: 'assistance',
-        search_value: allSelected.join(', '), // "Food, Housing, Utilities"
-        action_type: 'search',
-      }).catch(err => console.error('Failed to log assistance search:', err));
+  // Determine if we have an active filter based on search mode
+  const hasActiveFilter = useMemo(() => {
+    switch (activeSearchMode) {
+      case "zipcode":
+        return !!selectedZipCode;
+      case "organization":
+        return !!selectedParentOrg || !!selectedChildOrg;
+      case "location":
+        return !!selectedLocationZip || !!selectedLocationCity || !!selectedLocationCounty;
+      case "llm":
+        return false; // LLM mode not yet implemented
+      default:
+        return false;
     }
-  }, [selectedMain, selectedMore, loggedInUser, language]);
+  }, [activeSearchMode, selectedZipCode, selectedParentOrg, selectedChildOrg, selectedLocationZip, selectedLocationCity, selectedLocationCounty]);
 
-// Add this useEffect to both ZipCodePage and GeneralSearchPage
-useEffect(() => {
-  // Clear assistance selections when language changes
-  setSelectedMain([]);        // ZipCodePage only
-  setSelectedMore([]);        // ZipCodePage only  
-}, [language]);
-
-// NEW: Function to get zip coordinates (default or override)
-const getEffectiveCoordinates = useCallback(async () => {
-  if (overrideCoordinates) {
-    return overrideCoordinates;
-  }
-  
-  if (zipDefaultCoordinates) {
-    return zipDefaultCoordinates;
-  }
-  
-  if (selectedZip) {
-    try {
-      const zipData = await dataService.getZipCodeByZip(selectedZip);
-      if (zipData && zipData.coordinates) {
-        setZipDefaultCoordinates(zipData.coordinates);
-        return zipData.coordinates;
-      }
-    } catch (error) {
-      console.error("Error fetching zip coordinates:", error);
-    }
-  }
-  
-  return null;
-}, [selectedZip, overrideCoordinates, zipDefaultCoordinates]);
-
-// UPDATED: Filter records with distance calculation
-useEffect(() => {
-  const picks = [...selectedMain, ...selectedMore];
-  
-  // Only show results if a zip code is selected
-  if (!selectedZip) {
-    setFiltered([]);
-    return;
-  }
-
-  const filterWithDistance = async () => {
-    try {
-      const coordinates = await getEffectiveCoordinates();
-      if (!coordinates) {
-        console.error("No coordinates available for distance calculation");
-        setFiltered([]);
-        return;
-      }
-
-      // Get resources with distance calculation
-      const resourcesWithDistance = language === "Español" 
-        ? await dataService.getResourcesWithDistanceEs(coordinates)
-        : await dataService.getResourcesWithDistanceEn(coordinates);
-
-      // Apply zip code and assistance filters
-      const newFiltered = resourcesWithDistance.filter((r) => {
-        const zipMatch = r.zip_codes?.includes(selectedZip) || r.zip_codes?.includes("99999");
-        const assistMatch = picks.length ? picks.includes(r.assistance) : true;
-        return zipMatch && assistMatch;
-      });
-
-      setFiltered(newFiltered);
-        
-      // Log assistance search when results are filtered
-      if (selectedZip && picks.length > 0) {
-        logAssistanceSearch();
-      }
-    } catch (error) {
-      console.error("Error filtering resources with distance:", error);
-      // Fallback to original filtering without distance
-      const newFiltered = records.filter((r) => {
-        const zipMatch = r.zip_codes?.includes(selectedZip) || r.zip_codes?.includes("99999");
-        const assistMatch = picks.length ? picks.includes(r.assistance) : true;
-        return zipMatch && assistMatch;
-      });
-      setFiltered(newFiltered);
+  // Get the appropriate prompt message based on search mode
+  const getPromptMessage = () => {
+    switch (activeSearchMode) {
+      case "zipcode":
+        return {
+          title: "Please Select a Zip Code to Initiate a Search",
+          subtitle: "Results will appear here after you select a zip code from the dropdown above."
+        };
+      case "organization":
+        return {
+          title: "Please Select an Organization to View Results",
+          subtitle: "Choose a parent or child organization from the dropdowns above."
+        };
+      case "location":
+        return {
+          title: "Please Select a Location to View Results",
+          subtitle: "Choose a county, city, or zip code to see organizations in that area."
+        };
+      case "llm":
+        return {
+          title: "Enter a Search Query",
+          subtitle: "Type your search in the text box above (e.g., 'food pantry open Thursday')."
+        };
+      default:
+        return {
+          title: "Please Make a Selection",
+          subtitle: "Use the filters above to search for resources."
+        };
     }
   };
 
-  filterWithDistance();
-  setExpandedRows({});
-}, [records, selectedZip, selectedMain, selectedMore, language, overrideCoordinates, getEffectiveCoordinates, logAssistanceSearch]);
+  // Filter directory based on active search mode and filters
+  const filteredDirectory = useMemo(() => {
+    // If no filter is active, return empty array (show prompt)
+    if (!hasActiveFilter) {
+      return [];
+    }
 
-  // Handle animation for the results counter
-  useEffect(() => {
-    const anim = animate(count, filtered.length, {
-      duration: 0.5,
-      ease: "easeOut",
-    });
-    return () => anim.stop();
-  }, [filtered.length, count]);
+    let filtered = [...directory];
+    let refCoords = null;
+
+    // Apply mode-specific filtering
+    switch (activeSearchMode) {
+      case "zipcode":
+        // Filter by client zip codes (orgs that SERVE this zip)
+        filtered = filtered.filter(record => {
+          const hasZip = record.client_zip_codes?.includes(selectedZipCode);
+          const hasAllZips = record.client_zip_codes?.includes("99999");
+          return hasZip || hasAllZips;
+        });
+        
+        // Get coordinates for distance calculation
+        // Priority: clientCoordinates (user override) > zip centroid
+        if (clientCoordinates) {
+          refCoords = parseCoordinates(clientCoordinates);
+        } else {
+          const zipData = zipCodes.find(z => z.zip_code === selectedZipCode);
+          refCoords = zipData ? parseCoordinates(zipData.coordinates) : null;
+        }
+        break;
+
+      case "organization":
+        // Filter by organization name
+        if (selectedChildOrg) {
+          filtered = filtered.filter(record => record.organization === selectedChildOrg);
+        } else if (selectedParentOrg) {
+          filtered = filtered.filter(record => record.org_parent === selectedParentOrg);
+        }
+        break;
+
+      case "location":
+        // Filter by org's physical location (where org IS LOCATED)
+        // Apply most specific filter available: zip > city > county
+        if (selectedLocationZip) {
+          filtered = filtered.filter(record => record.org_zip_code === selectedLocationZip);
+        } else if (selectedLocationCity) {
+          filtered = filtered.filter(record => record.org_city === selectedLocationCity);
+        } else if (selectedLocationCounty) {
+          filtered = filtered.filter(record => record.org_county === selectedLocationCounty);
+        }
+
+        // Get coordinates for distance calculation
+        // Priority: clientCoordinates (user override) > zip centroid (if zip selected)
+        if (clientCoordinates) {
+          refCoords = parseCoordinates(clientCoordinates);
+        } else if (selectedLocationZip) {
+          const locZipData = zipCodes.find(z => z.zip_code === selectedLocationZip);
+          refCoords = locZipData ? parseCoordinates(locZipData.coordinates) : null;
+        }
+        break;
+
+      case "llm":
+        // LLM mode not yet implemented
+        filtered = [];
+        break;
+
+      default:
+        break;
+    }
+
+    // Filter by active assistance chips (if any are selected)
+    if (activeAssistanceChips.size > 0) {
+      // Debug: Log what we're filtering with
+      const chipsArray = [...activeAssistanceChips];
+      console.log('🎯 Assistance filter:', {
+        activeChips: chipsArray,
+        activeChipsFirstValue: chipsArray[0],
+        activeChipsFirstValueType: typeof chipsArray[0],
+        sampleRecordAssistId: filtered[0]?.assist_id,
+        sampleRecordAssistIdType: typeof filtered[0]?.assist_id,
+        wouldMatch: chipsArray[0] === filtered[0]?.assist_id,
+      });
+
+      filtered = filtered.filter(record => {
+        const matches = activeAssistanceChips.has(record.assist_id);
+        return matches;
+      });
+
+      console.log(`🎯 After assistance filter: ${filtered.length} records`);
+    }
+
+    // Calculate distance for each record (if we have reference coordinates)
+    if (refCoords) {
+      filtered = filtered.map(record => {
+        const recordCoords = parseCoordinates(record.org_coordinates);
+        if (!recordCoords) {
+          return { ...record, distance: 999999 };
+        }
+        const distance = calculateDistance(
+          refCoords.lat, refCoords.lng,
+          recordCoords.lat, recordCoords.lng
+        );
+        return { ...record, distance: parseFloat(distance.toFixed(1)) };
+      });
+    }
+
+    // Sorting is handled by ResultsList (status_id, assist_id, miles)
+    return filtered;
+  }, [directory, zipCodes, activeSearchMode, selectedZipCode, selectedParentOrg, selectedChildOrg, selectedLocationZip, selectedLocationCity, selectedLocationCounty, activeAssistanceChips, hasActiveFilter, clientCoordinates]);
+
+  // Refs
+  const sidebarRef = useRef(null);
 
   // Helper function for animated toast
   const showAnimatedToast = (msg, type = "success") => {
@@ -194,118 +230,51 @@ useEffect(() => {
     ));
   };
 
-  // UPDATED: Logging function for zip code selection with coordinate management
-  const logAndSetSelectedZip = async (zip) => {
-    setSelectedZip(zip);
-    
-    // Reset override coordinates when zip code changes
-    setOverrideCoordinates("");
-    setZipDefaultCoordinates("");
-
-    // Fetch and store default coordinates for the new zip code
-    if (zip) {
-      try {
-        const zipData = await dataService.getZipCodeByZip(zip);
-        if (zipData && zipData.coordinates) {
-          setZipDefaultCoordinates(zipData.coordinates);
-        }
-      } catch (error) {
-        console.error("Error fetching zip coordinates:", error);
-      }
-    }
-
-    logUserAction({
-      reg_organization: loggedInUser?.registered_organization,
-      language,
-      nav_item: 'Zip Code',
-      search_field: 'zip code',
-      search_value: zip,
-      action_type: 'select',
-    }).catch(err => console.error('Failed to log zip selection:', err));
-  };
-
-  // NEW: Function to handle coordinate override
-  const handleCoordinateOverride = (newCoordinates) => {
-    // Validate coordinates format (basic check)
-    if (newCoordinates) {
-      const coords = newCoordinates.split(',').map(c => parseFloat(c.trim()));
-      if (coords.length === 2 && !coords.some(isNaN)) {
-        // Normalize format with space after comma
-        const normalized = `${coords[0]}, ${coords[1]}`;
-        setOverrideCoordinates(normalized);
-      } else {
-        // Invalid coordinates, reset to default
-        setOverrideCoordinates("");
-      }
-    } else {
-      // Empty input, clear override
-      setOverrideCoordinates("");
-    }
-  };
-
-  // UPDATED: Remove individual logging from main assistance selection
-  const logAndToggleMain = (a) => {
-    setSelectedMain((prev) =>
-      prev.includes(a) ? prev.filter((v) => v !== a) : [...prev, a]
-    );
-    // Individual assistance logging removed - now handled in useEffect
-  };
+  // Legacy logging functions removed - zip code selection now handled by NavBar2
+  // Assistance selection now handled by NavBar3
 
   // UPDATED: Remove individual logging from more assistance selection
   const logAndToggleMore = (a) => {
     setSelectedMore((prev) =>
       prev.includes(a) ? prev.filter((v) => v !== a) : [...prev, a]
     );
-    // Individual assistance logging removed - now handled in useEffect
   };
 
-  // Email sending handler with logging
-  const handleEmailSent = async () => {
-    const selectedData = selectedRows?.map((i) => filtered[i]).filter(Boolean);
-
-    // Close dialog and reset selections
-    setShowEmailDialog(false);
-    setSelectedRows([]);
-    showAnimatedToast("✅ " + translate("tEmailSentSuccessfully"), "success");
-
+  // Helper to log referrals to database
+  const logReferrals = async (selectedDataToLog, deliveryMethod) => {
     try {
-      // Only keep essential logs
-      console.log('Starting email logging process');
+      console.log(`Starting ${deliveryMethod} logging process`);
 
-    
-      // Log the main email event
+      // Log the main event
       const { data: mainLogData, error: mainLogError } = await supabase
         .from('app_usage_logs')
         .insert({
           reg_organization: loggedInUser?.registered_organization,
-          language,
+          language: 'English',
           nav_item: 'Zip Code',
-          search_field: 'Send Email',
-          search_value: `${selectedData.length} records`,
-          action_type: 'email',
+          search_field: deliveryMethod === 'email' ? 'Send Email' : 'Create Pdf',
+          search_value: `${selectedDataToLog.length} records`,
+          action_type: deliveryMethod,
           date: new Date().toISOString().split('T')[0]
         })
         .select('id')
         .single();
-    
+
       if (mainLogError) {
-        console.error('Error creating main log:', mainLogError);
+        console.error(`Error creating main ${deliveryMethod} log:`, mainLogError);
         return;
       }
-    
-      // Log individual referrals if we have selected data
-      if (selectedData.length > 0 && mainLogData?.id) {
+
+      // Log individual referrals
+      if (selectedDataToLog.length > 0 && mainLogData?.id) {
         const logId = mainLogData.id;
-    
-        for (const record of selectedData) {
+
+        for (const record of selectedDataToLog) {
           const orgName = record?.organization;
           const assistanceType = record?.assistance || 'general';
-    
-          // This delay might be helping with async timing
-          // Keep one log point that includes the crucial data
-          console.log(`Processing: ${orgName} with type ${assistanceType} for ${loggedInUser?.registered_organization}`);
-          
-          // Use the direct insertion approach
+
+          console.log(`Processing ${deliveryMethod} referral: ${orgName} with type ${assistanceType}`);
+
           const { error } = await supabase
             .from('email_referrals')
             .insert({
@@ -313,121 +282,112 @@ useEffect(() => {
               organization: orgName,
               assistance_type: assistanceType,
               reg_organization: loggedInUser?.registered_organization,
-              language: language,
-              delivery_method: 'email'
+              language: 'English',
+              delivery_method: deliveryMethod
             });
-        
+
           if (error) {
-            console.error('Error inserting referral:', error);
+            console.error(`Error inserting ${deliveryMethod} referral:`, error);
           }
         }
-    
-        console.log(`Completed logging ${selectedData.length} organization referrals`);
-      } else {
-        console.log('No selected data to log or main log ID not available');
+
+        console.log(`Completed logging ${selectedDataToLog.length} ${deliveryMethod} referrals`);
       }
     } catch (err) {
-      console.error('Failed to log email sent:', err);
-      console.error('Error details:', err.message, err.stack);
+      console.error(`Failed to log ${deliveryMethod}:`, err);
     }
   };
 
-  // PDF CREATION HANDLER with logging
-  const handlePdfCreated = async () => {
-    const selectedData = selectedRows?.map((i) => filtered[i]).filter(Boolean);
+  // Build search context for email/PDF headers based on current search mode
+  const buildSearchContext = () => ({
+    searchMode: activeSearchMode,
+    selectedZip: selectedZipCode,
+    selectedParentOrg,
+    selectedChildOrg,
+    selectedLocationZip,
+    selectedLocationCity,
+    selectedLocationCounty,
+    // Future: add llmQuery when LLM search is implemented
+  });
 
-    // Close dialog and reset selections
-    setShowPdfDialog(false);
+  // Email success handler - called from NavBar1 panel
+  const handleEmailSuccess = async (recipient) => {
+    const dataToSend = selectedRows?.map((i) => filteredDirectory[i]).filter(Boolean);
+
+    // Send the email using the service
+    await sendEmail({
+      recipient,
+      selectedData: dataToSend,
+      searchContext: buildSearchContext(),
+      loggedInUser,
+      orgPhone,
+    });
+
+    // Reset selections and show toast
     setSelectedRows([]);
-    showAnimatedToast("✅ " + translate("tPdfCreatedSuccessfully"), "success");
+    showAnimatedToast("✅ Email sent successfully.", "success");
 
-    try {
-      console.log('Starting PDF logging process');
-
-      // Log the main PDF event
-      const { data: mainLogData, error: mainLogError } = await supabase
-        .from('app_usage_logs')
-        .insert({
-          reg_organization: loggedInUser?.registered_organization,
-          language,
-          nav_item: 'Zip Code',
-          search_field: 'Create Pdf',
-          search_value: `${selectedData.length} records`,
-          action_type: 'pdf',
-          date: new Date().toISOString().split('T')[0]
-        })
-        .select('id')
-        .single();
-    
-      if (mainLogError) {
-        console.error('Error creating main PDF log:', mainLogError);
-        return;
-      }
-    
-      // Log individual referrals if we have selected data
-      if (selectedData.length > 0 && mainLogData?.id) {
-        const logId = mainLogData.id;
-    
-        for (const record of selectedData) {
-          const orgName = record?.organization;
-          const assistanceType = record?.assistance || 'general';
-    
-          console.log(`Processing PDF referral: ${orgName} with type ${assistanceType} for ${loggedInUser?.registered_organization}`);
-          
-          // Insert into email_referrals table with delivery_method = 'pdf'
-          const { error } = await supabase
-            .from('email_referrals')
-            .insert({
-              email_log_id: logId,
-              organization: orgName,
-              assistance_type: assistanceType,
-              reg_organization: loggedInUser?.registered_organization,
-              language: language,
-              delivery_method: 'pdf'
-            });
-        
-          if (error) {
-            console.error('Error inserting PDF referral:', error);
-          }
-        }
-    
-        console.log(`Completed logging ${selectedData.length} PDF organization referrals`);
-      } else {
-        console.log('No selected data to log or main log ID not available');
-      }
-    } catch (err) {
-      console.error('Failed to log PDF created:', err);
-      console.error('Error details:', err.message, err.stack);
-    }
+    // Log to database
+    await logReferrals(dataToSend, 'email');
   };
 
-  // Calculate selected data for display
-  const selectedData = selectedRows?.map((i) => filtered[i]).filter(Boolean);
+  // PDF success handler - called from NavBar1 panel
+  const handlePdfSuccess = async () => {
+    const dataToSend = selectedRows?.map((i) => filteredDirectory[i]).filter(Boolean);
+
+    // Create the PDF using the service
+    await createPdf({
+      selectedData: dataToSend,
+      searchContext: buildSearchContext(),
+      loggedInUser,
+      orgPhone,
+    });
+
+    // Reset selections and show toast
+    setSelectedRows([]);
+    showAnimatedToast("✅ PDF created successfully in your Download Folder.", "success");
+
+    // Log to database
+    await logReferrals(dataToSend, 'pdf');
+  };
+
+  // Validation handlers - return true if valid, false if not
+  const validateEmailSelection = () => {
+    if (!selectedRows || selectedRows.length === 0) {
+      showAnimatedToast(
+        "⚠️ Please select at least one record to send email.",
+        "error"
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const validatePdfSelection = () => {
+    if (!selectedRows || selectedRows.length === 0) {
+      showAnimatedToast(
+        "⚠️ Please select at least one record to create a PDF.",
+        "error"
+      );
+      return false;
+    }
+    return true;
+  };
+
+  // Calculate selected data for email/PDF panels
+  const selectedData = selectedRows?.map((i) => filteredDirectory[i]).filter(Boolean);
 
   return (
     <PageLayout
-      languageToggleRef={languageToggleRef}
-      footerLinksRef={footerLinksRef} 
-      onSendEmail={() => {
-        if (!selectedRows || selectedRows.length === 0) {
-          showAnimatedToast(
-            `\u26A0\uFE0F ${translate("tSelectRecordsForEmail")}`,
-            "error"
-          );
-        } else {
-          setShowEmailDialog(true);
-        }
-      }}
-      onCreatePdf={() => {
-        if (!selectedRows || selectedRows.length === 0) {
-          showAnimatedToast(
-            `\u26A0\uFE0F ${translate("tSelectRecordsForPdf")}`,
-            "error"
-          );
-        } else {
-          setShowPdfDialog(true);
-        }
-      }}
+      filteredCount={filteredDirectory.length}
+      selectedCount={selectedRows.length}
+      onSendEmail={validateEmailSelection}
+      onCreatePdf={validatePdfSelection}
+      selectedData={selectedData}
+      loggedInUser={loggedInUser}
+      selectedZip={selectedZipCode}
+      onEmailSuccess={handleEmailSuccess}
+      onPdfSuccess={handlePdfSuccess}
     >
 
    <Helmet>
@@ -449,151 +409,69 @@ useEffect(() => {
         />
       )}
 
-      {showEmailDialog && (
-        <EmailDialog
-          onClose={() => setShowEmailDialog(false)}
-          onSuccess={handleEmailSent}
-          selectedData={selectedData}
-          userDetails={loggedInUser}
-          selectedZip={selectedZip}
-          loggedInUser={loggedInUser}
-        />
-      )}
-
-      {showPdfDialog && (
-        <EmailDialog
-          isPdfMode={true}
-          onClose={() => setShowPdfDialog(false)}
-          onSuccess={handlePdfCreated}
-          selectedData={selectedData}
-          userDetails={loggedInUser}
-          selectedZip={selectedZip}
-          loggedInUser={loggedInUser}
-        />
-      )}
-
       <div className="flex flex-col flex-1 overflow-hidden">
-        <div className="flex-none bg-gray-50 p-2 md:p-4 z-10">
-          {/* Modified grid layout for responsiveness */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-6 items-start">
-            {/* UPDATED: Zip Code Search with coordinate override */}
-            <div className="zip-search-container mb-3 md:mb-0" ref={zipCodeRef}>
-              <ZipCodeSearch
-                zips={Array.isArray(zips) ? zips : []}
-                selectedZip={selectedZip}
-                setSelectedZip={logAndSetSelectedZip}
-                zipDefaultCoordinates={zipDefaultCoordinates}
-                overrideCoordinates={overrideCoordinates}
-                onCoordinateOverride={handleCoordinateOverride}
-              />
-            </div>
+        {/* Legacy controls removed - now handled by NavBar1 (counters), NavBar2 (zip dropdown), NavBar3 (assistance) */}
 
-            {/* Assistance Selection with ref */}
-            <div className="assistance-selection mb-3 md:mb-0" ref={assistanceRef}>
-              <label className="block mb-0 mt-1 font-label">{translate("tAssistance")}</label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {mainAssistance.map((a) => {
-                  // No need for translation since the data is already in the correct language
-                  return (
-                    <button
-                      key={a}
-                      onClick={() => logAndToggleMain(a)}
-                      className={`border-2 px-2 py-1 rounded text-[0.9rem] md:text-[1.2rem] ${
-                        (selectedMain || []).includes(a)
-                          ? "bg-[#FFF5DC] border-[#FFC857] font-medium text-[#4A4E69] shadow-md"
-                          : "bg-[#ffffff] border-gray-300 shadow-sm"
-                      }`}
-                    >
-                      {a} {(selectedMain || []).includes(a) && "\u2713"}
-                    </button>
-                  );
-                })}
-                <button
-                  onClick={() => setShowSidebar(true)}
-                  className="col-span-2 md:col-span-3 mt-1 text-xs underline text-blue-600 text-left"
-                >
-                  {translate("tMoreOptions")}
-                </button>
-              </div>
+        {/* Results list with filtered Supabase data */}
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-gray-500">Loading resources...</div>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-red-500">Error loading data: {error}</div>
+          </div>
+        ) : !hasActiveFilter ? (
+          <div className="flex flex-col items-center justify-center h-64 text-center p-6">
+            <div className="text-xl font-medium text-gray-600 mb-4">
+              {getPromptMessage().title}
             </div>
-
-            {/* Results Counter with ref - now in a flex row on mobile */}
-            <div className="flex justify-center items-center results-counter mb-3 md:mb-0" ref={resultsRef}>
-              <div className="flex flex-row items-center gap-4">
-                <motion.div
-                  key={filtered.length}
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.4, ease: "easeOut" }}
-                  className="w-16 h-16 md:w-20 md:h-20 bg-[#EB6E1F] text-[#002D62] text-[28px] md:text-[36px] font-comfortaa font-bold rounded-full flex items-center justify-center"
-                >
-                  <motion.span>{rounded}</motion.span>
-                </motion.div>
-
-                {selectedData.length > 0 && (
-                  <div className="flex flex-col items-center">
-                    <div className="text-sm font-medium text-gray-700">
-                    </div>
-                    <motion.div
-                      key={selectedData.length}
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ duration: 0.4, ease: "easeOut" }}
-                      className="w-16 h-16 md:w-20 md:h-20 bg-[#002D62] text-[#EB6E1F] text-[28px] md:text-[36px] font-comfortaa font-bold rounded-full flex items-center justify-center"
-                    >
-                      <motion.span>{selectedData.length}</motion.span>
-                    </motion.div>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* SwingingSign - centered on mobile */}
-            <div className="flex justify-center items-center mb-2 md:mb-0" >
-              <SwingingSign organizationName={loggedInUser?.registered_organization} />
+            <div className="text-gray-500 max-w-md">
+              {getPromptMessage().subtitle}
             </div>
           </div>
-        </div>
+        ) : (
+          <ResultsList
+            records={filteredDirectory}
+            assistanceData={assistance}
+            orgAssistanceMap={orgAssistanceMap}
+            selectedIds={new Set(selectedRows.map(i => filteredDirectory[i]?.id).filter(Boolean))}
+            onSelectionChange={(newSelectedIds) => {
+              // Convert Set of IDs back to array of indices for compatibility
+              const newSelectedRows = filteredDirectory
+                .map((r, i) => newSelectedIds.has(r.id) ? i : -1)
+                .filter(i => i >= 0);
+              setSelectedRows(newSelectedRows);
+            }}
+          />
+        )}
 
-
-
+        {/* LEGACY: Original SearchResults - hidden for now
         <div className="flex-1 overflow-y-auto pb-6">
-  {!selectedZip ? (
-    <div className="flex flex-col items-center justify-center h-full text-center p-6">
-      <div className="text-xl font-medium text-gray-600 mb-4">
-        {translate("tPleaseSelectZipCode")}
+          {!selectedZip ? (
+            <div className="flex flex-col items-center justify-center h-full text-center p-6">
+              <div className="text-xl font-medium text-gray-600 mb-4">
+                Please Select a Zip Code to Initiate a Search
+              </div>
+              <div className="text-gray-500 max-w-md">
+                Results will appear here after you select a zip code.
+              </div>
+            </div>
+          ) : (
+            <SearchResults
+              filtered={filtered || []}
+              expandedRows={expandedRows || {}}
+              rowRefs={rowRefs}
+              toggleExpand={(i) =>
+                setExpandedRows((prev) => ({ ...prev, [i]: !prev[i] }))
+              }
+              selectedRows={selectedRows || []}
+              setSelectedRows={setSelectedRows}
+            />
+          )}
+        </div>
+        */}
       </div>
-      <div className="text-gray-500 max-w-md">
-        {translate("tResultsWillAppearAfterSelection")}
-      </div>
-    </div>
-  ) : (
-    <SearchResults
-      filtered={filtered || []}
-      expandedRows={expandedRows || {}}
-      rowRefs={rowRefs}
-      toggleExpand={(i) =>
-        setExpandedRows((prev) => ({ ...prev, [i]: !prev[i] }))
-      }
-      selectedRows={selectedRows || []}
-      setSelectedRows={setSelectedRows}
-      statusRef={statusRef}
-    />
-  )}
-</div>
-      </div>
-
-      {/* Tour Steps - now properly separated from components */}
-      <TourStep tourName="zipCodeTour" targetRef="zipCode" content="tourDescriptionZipCode" placement="bottom"/>
-      <TourStep tourName="zipCodeTour" targetRef="assistance" content="tourDescriptionAssistance" placement="bottom"/>
-      <TourStep tourName="zipCodeTour" targetRef="results" content="tourDescriptionResults" placement="bottom"/>
-
-      <TourStep tourName="zipCodeTour" targetRef="record" content="tourDescriptionRecord" placement="right"/>
-      <TourStep tourName="zipCodeTour" targetRef="status" content="tourDescriptionStatus" placement="bottom"/>
-      <TourStep tourName="zipCodeTour" targetRef="requirements" content="tourDescriptionRequirements" placement="bottom"/>
-
-      <TourStep tourName="zipCodeTour" targetRef="languageToggle" content="tourDescriptionLanguageToggle" placement="top-high1"/>
-      <TourStep tourName="zipCodeTour" targetRef="footerLinks" content="tourDescriptionFooterLinks" placement="top-high"/>
 
     </PageLayout>
   );

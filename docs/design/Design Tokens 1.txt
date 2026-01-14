@@ -1,0 +1,463 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;}
+{\*\expandedcolortbl;;\cssrgb\c0\c0\c0;}
+\margl1440\margr1440\vieww19560\viewh18740\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 Nav Bar 1\
+Frame 494\
+\
+This frame is \
+\
+W = 2080\
+H = 80\
+bg color = \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 #222831\
+\
+Frame 494 has two frames inside.\
+\
+The 1st frame is aligned to the left has two items inside with a gap of 12 between the items\
+\
+left padding = 20px\
+right padding = 0\
+\
+Logo195.png located in /build/ size = 40 x 40\
+\
+Title = \'93Community Resources Guide Houston\'94\
+font-family = Comfortaa\
+font size = 28\
+weight = Semibold\
+Letter spacing = 10%\
+\
+The title is the only thing that uses the Comfortaa font-family.  Everything else is in Lexend.\
+\
+\
+The 2nd frame is aligned to the right and itself has two frames\
+\
+The gap between the two frames is 30px\
+\
+The first frame has two circles with the gap between the two = 15px.  Both circles are counters.  The first counts the number of records filtered and the 2nd counts the number of records selected. However, we are not going to wire this right now.\
+\
+font-family = Lexend (universal except for the Title.\
+font-size = 20\
+weight = Regular\
+font-color = #\outl0\strokewidth0 222831\
+both circles size = 45 x 45\
+\
+Circle 1 bg-color = #EB6E1F\
+Circle 2 bg-color = #00A8A8\
+\
+2nd frame has\
+ left-padding = 0\
+right-padding = 20 px\
+\
+It has  two buttons  with a gap of 15px  between the two\
+The buttons are\
+W = 150\
+H = 38\
+\
+Button 1\
+bg-color = #FFC857\
+Label = \'93Send Email\'94 centered in button\
+font-color = #222831\
+font-size = 22px\
+font-weight = Semibold\
+letter-spacing = 2%\outl0\strokewidth0 \strokec2 \
+\
+Button 2\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 \outl0\strokewidth0 bg-color = #228B22\
+Label = \'93Create Pdf\'94 centered in button\
+font-color = #ffffff\
+font-size = 22px\
+font-weight = Semibold\
+\
+}
+
+
+
+
+
+
+
+
+------------------------------------------------------------------
+
+Frame 496 NavBar 2
+
+font-family = Open Sans
+
+This image shows the four different states of NavBar 2 depending on which button is active
+
+NavBar 2:
+
+bg-color = 393E46
+W = 2080
+H = 70
+
+
+There are two frames.  
+
+Frame Aligned to the Right determines what you see in Frame to the left
+
+left-padding = 0
+right-padding = 20
+
+There are four buttons in this frame that define the four ways to search the database.  The four images show what ha
+
+1)  Zip Code
+2)  Organization
+3)  Location
+4)  LLM Search
+
+Only one button can be active at any one time and Zip Code is the default
+
+All States
+
+W = depending on the length of the label with 20 px left and right padding
+H = 38
+corner radius = 10
+label font size = 20
+label font weight = Medium
+label font letter spacing = 5%
+
+Inactive State
+
+bg-color = none.  Take the color of the frame background
+stroke-color = ffffff, stroke weight = 1 px on the inside, only on the bottom
+label font color = ffffff
+
+Active State
+
+bg-color = 652C57
+label font color = FFC857
+
+
+Frame Aligned to the Left changes based on which of the four buttons in the Right Frame is clicked.
+
+Dropdown lists in Left Frame
+
+W = depends on the content.  left and right padding of 20px
+bg-color = 005C72
+Label = 20px
+font-color = ffffff
+font-weight = medium
+letter spacing = 5%
+stroke weight = 1 px, inside
+
+The next item is only displayed if a zip code is selected.  This is a hyperlink.  IT does not do anything other than link to a URL.  The regular bright blue normally used for hyperlinks doesn't show up against this background, so I used
+
+label font-color = 8FB6FF
+font size = 14
+font-weight = regular
+
+
+The final item in this frame is the distanceIcon.  IT follows the same style as the Zip Code, ORganization, Location and LLM Search buttons.  The icon is white, has the same stroke just on the bottom, same corner radius, and is the same color for active and inactive.  Clicking it popup a modal for entry.  FI the user enters something, this icon is active otherwise it is inactive.
+
+I do want a hover effect on all the buttons that do something, i.e. dropdowns and active/inactive.
+
+
+
+-------------------------------------------
+NavBar 3
+
+font-family = Open Sans
+
+This is the image for NavBar 3
+
+bg-color = 948979
+W = 2080
+H = 60
+
+
+There is only one frame in the NavBar and it is aligned to the left.
+
+left-padding = 20px
+right-padding = 0
+
+The Assistance button will have the same style as the Zip Code, Organization, Location and LLM Search buttons withe following exceptions
+
+H = 35px
+Add a down chevron to make it clear that there is a drop panel
+The label will change depending on whether it is active or not.  The label is Select Assistance for inactive and Change Assistance for Active
+Otherwise everything else is the same
+
+There is a 20px left padding from Change Assistance and 40 px gap between Assistance and the first Assistance type chip.  There is a 15px gap between the chips.  
+
+When the assistance type is selected after it is brought into the NavBar 3
+
+bg-color = 005C72
+font-color = fffffff
+icon color = ffffff
+border = ffffff
+
+
+
+Assistance Type Drop Down Panel
+
+All the drop down panels or popup modals in this app will have the following color palette.
+
+Two sections.  A heading  bar with a H = 70.  The width is going to vary.  The bg-color = 4A4F56
+The body with a bg - color = 948979.  The H and W for this will vary by the content but obviously the W is going to be the same as the heading above.
+The corner radius = 5%
+The title in the heading should be font-color = FFC857, font-weight = semibold, font-size = 18px, letter spacing = 5%
+And subheading should be font-size = 14 and font-color = D7D5D1, font-weight = regular, letter spacing = 2%
+
+Also, the buttons at the bottom will also be standard in all drop panels or modals.
+
+Cancel
+bg-color = FF0000
+
+OK
+bg-color = 3DB800
+
+
+Both have the following
+
+font-color = 000000
+font-size = 20
+letter-spacing = 2%
+corner radius = 5
+W = 100
+H = 38
+
+Help icon in middle, between the Cancel and OK buttons
+
+size = 40 x 40
+
+
+I have expanded this to six groups
+
+Here is the bg-color for each group when an assistance type is unselected
+
+Group 1 = E5E292
+Group 2 = B592E5
+Group 3 = E592A6
+Group 4 = C2E592
+Group 5 = 92DEE5
+Group 6 = E5C392
+
+All the Group heading buttons should be the same size
+
+W = 100
+H = 35
+
+When an assistance type is selected it should make the following changes to the chip
+
+bg-color = ffffff
+border = 000000
+border-weight = 1 px
+
+All the chips, including the Group headings should have a corner radius of 15%
+
+font-color = 000000
+font-size = 14px
+letter-spacing = 2%
+icon-color = 000000
+
+How the assistance types are grouped and the order they are listed in each group is not hardcoded.  It is assigned based on data in the assistance table in Supabase.  I have added an image of the schema to /docs/design/Supabase Schema.png.  There you will that the assistance table has 
+
+id_no
+assistance
+group
+icon
+
+assistance is the name that should appear in the chip.  group is a value from 1 through 6 which indicates which group that assistance falls under.  And finally, assistances are listed under each group based on id_no which is a two digit value.  And icon contains the jsx filename of the corresponding icon.
+
+I want groups to be evergreen.  The code should be able to handle expansion or contraction of groups not just of movement of assistance from one group to another.  So, if I decide to put all 28 assistance types under one group the drop down panel should automatically reflect that without requiring any change in code.  Conversely, if I add groups, the same should happen
+
+Here is the assistance table but I wonder if in this instance we should go ahead and build the panel out so that it is getting real data from the supabase table
+
+id_no	Group	assistance	icon
+11	1	Rent	RentIcon
+12	1	Utilities	UtilitiesIcon
+13	1	Food	FoodPantriesIcon
+14	1	Clothing	ClothingIcon
+21	2	Homeless - Shelters	HomelessSheltersIcon
+22	2	Homeless - Day Centers	HomelessDayCentersIcon
+23	2	Homeless - Other	HomelessOtherIcon
+24	2	Housing	HousingIcon
+31	3	Medical - Primary Care	MedicalPrimaryCareIcon
+32	3	Medical - Equipment	MedicalEquipmentIcon
+33	3	Medical - Mental Health	MedicalMentalHealthIcon
+34	3	Medical - Addiction Recovery	MedicalAddictionRecoveryIcon
+35	3	Medical - Program Enrollment	MedicalProgramEnrollmentIcon
+36	3	Medical - Bill Payment	MedicalBillPaymentIcon
+41	4	Domestic Abuse - Shelters	DomesticAbuseSheltersIcon
+42	4	Domestic Abuse - Other	DomesticAbuseOtherIcon
+43	4	Education - Children	EducationChildrenIcon
+44	4	Childcare	ChildcareIcon
+51	5	Education - Adults	EducationAdultsIcon
+52	5	Jobs	JobsIcon
+53	5	Transportation	TransportationIcon
+54	5	Legal	LegalIcon
+55	5	Immigration	ImmigrationIcon
+61	6	Seniors	SeniorsIcon
+62	6	Handyman	HandymanIcon
+63	6	Animals	AnimalsIcon
+64	6	Christmas	ChristmasIcon
+65	6	Other	OtherIcon
+
+
+
+
+
+-----------------------------------------------------------------------------
+Results Header
+
+font-family = Open Sans
+
+W = the horizontal NavBars and footer
+H = 30
+
+bg-color = B8001F
+font-color = ffffff
+font-size = 14
+font-weight = regular
+letter-spacing = 2%
+
+
+The headings will be centered over the respective columns
+
+
+
+
+---------------------------------------------------------------
+
+Results Header
+
+font-family = Open Sans
+
+W = the horizontal NavBars and footer
+
+
+bg-color = transparent
+font-color = 000000
+font-size = 20 for organization, 14 for Zip and 18 for everything else
+font-weight = semibold for Organization, regular for everything else
+letter-spacing = 2% for Organization, 1% for everything else
+
+Each record should 5 lines or so that the Hours column is visible whichever is greater.  I want all columns to be visible except Requirements.  Requirements can be quite long, so I want to have a limit on what is visible as default.  So, if the Hours column is 2 line and Requirements is 3 lines, then the that record is 5 lines.  IF the Hours column is 6 lines and Requirements is 4 lines, then that record is 6 lines long.  If the Hours column is 3 lines and Requirements is 15, then that record will be 5 lines but with only 4 lines of Requirements visible by default because the 5th line will the following double chevron to indicate click to expand
+
+Given the above conditions, the only columns that should require expansion are Requirements and Zip.  The down chevron should appear whenever there are more than 5 records in either Requirements or Zip.  However, if it has more than 5, then only 4 lines should be displayed because the 5th line will be needed for the chevron.
+
+For the Requirements column only the down chevron should have a label that says "More Info".  
+in font-size = 12 and weight = regular.  The Zip chevron has no label.
+
+Each record is separated by a 0.5px line running across the bottom the length of the width.
+
+There are two hover conditions on a record.  
+One is when the cursor is over the record, then the bg-color = F0F8FF
+The other when the record is selected then the bg-color = #f8fff0
+
+
+The sort order of the records is 
+
+1.  Assistance id_no (for selected assistance only)
+2.  status_id
+3.  Miles
+
+All are in ascending order.
+
+
+Here is an explanation of each column
+
+1.  Select
+The first column combines two items the icon for the assistance and a checkbox to indicate selection for sending in an email or including in a Pdf.  The Assistance is represented by the icon, not the label.  The icon is in B8001F and is 25 x 25.  The checkbox is gray border and transparent.  IT should be slightly smaller than the icon,  perhaps 80 percent.  The gap between the two should 5px.  This should be centered under the column heading.
+
+2. Miles
+This is a calculated field and is the distance between the selected zip codes centroid and the organization's location.  My image shows "mi" underneath the distance.  This is redundant because the column heading is already "Miles".  We can leave the "mi" out.  This should be centered under the column heading.
+
+3.  Organziation
+This is made up of three components.  The first is the favicon from the organization's website.  The size is 30 x 30.  There is a 10px gap between the favicon and the organization name.  The Organization in results is always the child organization.  At the bottom of the record are the icons of all the assistance type that that organization provides listed by id_no but aligned to the right.  These icons are in black and are 20 x 20.
+
+4.  Hours
+This is made up of two components.  The hours and hours_notes, with the hours on top and the hour_notes below it.  Only the hours_notes has a bg-color = FFB302
+
+5.  Status
+While the record is sorted by status_id, it is the status that is displayed.  Currently there are the following three with their background colors
+
+status_id = 1	Active		bg-color = 8FBC8F
+status_id = 2	Limited		bg-color = FFDA6A
+status_id = 3	Inactive	bg-color = E74C3E
+
+All three are pill shaped with a corner radius of 25px
+
+6.  Telephone
+This is straightforward
+
+7.  Address
+In the Supabase table this is stored in 5 separate fields - org_address1, org_address2, org_city, org_state, org_zip_code.  This is consolidated in following manner to be included in the single column in results
+
+org_address1
+org_address2 (only if not blank.  IF blank, skip)
+org_city, org_state  org_zip_code
+
+8.  Requirements
+Displayed as a bullet list.
+
+9.  Zip
+This is the list of zip codes that the organization supports.
+
+Note that the results only scroll up and down.  Not left to right.
+
+------------------------------------------------------------------------
+
+
+UPDATE #1
+
+1.  Can we place the icon and checkbox sit side by side.
+2.  Let's make the values under miles smaller - font-size = 16 and let's add back the "mi" underneath the value
+3.  The icons under organization aligned to the right look strange.  Let's left justify them but they should start aligned to the organization
+ name, not the favicon.  Also, let's have them skip 2 lines after the org name and start there rather than the last line.
+4.  The chevron for expansion and contraction should be a double chevron and in color = FF0004.  IT should centered in the column.
+5.  On hover, all icons should display the icon label.  
+
+For column widths:
+
+1.  Select, minimum amount required to shows icon and checkbox side to side with a 5px gap in between
+2.  Miles, minimum amount to display contents
+3.  Organization, let's make  this fixed = 450 and let it wrap for any that are longer.
+4.  Hours, let's make this flexible
+
+Hours are stored as json, for example.  I would like each "days" and the open and close hours to be on a single line.  And then have the hours_notes follow below with just a small gap between hours and hours_notes.  By small I mean 2px.  Otherwise, we can set it fixed = 260 px.
+
+{"regular":[{"days":["Mo"],"open":"08:00","close":"19:00"},{"days":["Tu","We","Th"],"open":"08:00","close":"17:00"},{"days":["Fr"],"open":"08:00","close":"12:00"}],"exceptions":[{"type":"closed","start":"12:00","end":"13:00"}]}
+
+5.  Status, fine as is
+6.  Telephone, is fine.
+7.  Address, let's make this fixed = 275.  Allow address lines 1 and 2 to wrap.
+8.  Requirements is the most flexible in terms of making this smaller if other columns need more space.  Let's also test the expansion chevron with a Requirements field that has more than five lines so we can test the double chevron with "More info"
+9.  Zip, lets make this smaller also reduce the font-size of the values to 12 and make the column width the minimum amount needed to fit on zip code
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

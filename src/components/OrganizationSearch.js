@@ -1,10 +1,7 @@
 // src/components/OrganizationSearch.js
 import React, { useMemo } from "react";
-import { useTranslate } from "../Utility/Translate";
 
 export default function OrganizationSearch({ organizations = [], selectedOrg = "", setSelectedOrg }) {
-  const { translate } = useTranslate();
-
   // Ensure organizations is always an array and properly formatted
   const orgArray = useMemo(() => {
     if (!Array.isArray(organizations)) return [];
@@ -14,7 +11,7 @@ export default function OrganizationSearch({ organizations = [], selectedOrg = "
   return (
     <div>
       <label className="block ml-10 mt-1 font-medium text-[0.9rem] md:text-base">
-        {translate("tOrganization")}
+        Organization
       </label>
       <select
         value={selectedOrg}
@@ -25,7 +22,7 @@ export default function OrganizationSearch({ organizations = [], selectedOrg = "
             : "bg-[#efefef] border-gray-300 shadow-sm"
         }`}
       >
-        <option value="">{translate("tSelectOrganization")}</option>
+        <option value="">Select Organization</option>
         {orgArray.map((org, i) => (
           <option key={i} value={org.organization}>
             {org.organization}

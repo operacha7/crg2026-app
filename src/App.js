@@ -4,10 +4,21 @@ import { HelmetProvider } from "react-helmet-async";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import LoginPage from "./auth/Login";
 import MainApp from "./MainApp";
-import { LanguageProvider } from "./Contexts/LanguageContext";
+
+// DEV BYPASS: Skip login in development OR when running with wrangler (production build locally)
+const DEV_BYPASS_LOGIN = process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost';
+
+// Mock user for development
+const DEV_USER = {
+  id: 'dev-user',
+  organization: 'Development Mode',
+  canEmail: true,
+  canPdf: true,
+};
 
 export default function App() {
-  const [user, setUser] = useState(null);
+  // In dev mode with bypass enabled, start with mock user
+  const [user, setUser] = useState(DEV_BYPASS_LOGIN ? DEV_USER : null);
   const location = useLocation();
 
   // Preserve UTM parameters during redirect
@@ -32,11 +43,7 @@ export default function App() {
           {/* Login Route */}
           <Route
             path="/login"
-            element={
-              <LanguageProvider loggedInUser={null}>
-                <LoginPage onLoginSuccess={setUser} />
-              </LanguageProvider>
-            }
+            element={<LoginPage onLoginSuccess={setUser} />}
           />
 
           {/* Main App Route (requires login) */}

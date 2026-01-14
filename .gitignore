@@ -5,12 +5,10 @@ node_modules
 .env
 .env.local
 .env.production
+.dev.vars
 
 # Cloudflare
 .wrangler
-
-# Netlify (legacy - can remove later)
-.netlify
 
 # Storybook
 *storybook.log
@@ -22,3 +20,6 @@ dist
 
 # OS files
 .DS_Store
+
+# Credentials
+scripts/google-credentials.json

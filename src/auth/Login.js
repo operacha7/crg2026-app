@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import PageLayout from "../layout/PageLayout";
-import { useTranslate } from "../Utility/Translate";
 import { dataService } from "../services/dataService"; // Import the data service
 import useFetchCRGData from "../data/FetchDataSupabase"; // Import for total record count
 import ContactForm from "../components/ContactForm"; // Add this import
@@ -32,8 +31,7 @@ export default function LoginPage({ onLoginSuccess }) {
   }, []);
 
   // Use translation utility
-  const { translate } = useTranslate();
-
+  
   // Fetch organizations using the data service
   useEffect(() => {
     const fetchOrganizations = async () => {
@@ -174,7 +172,7 @@ export default function LoginPage({ onLoginSuccess }) {
               <form ref={formRef} 
                     onSubmit={handleLogin} autoComplete="on" key={org || 'no-org'}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4 mb-0">
-                  <label className="text-[0.9rem] md:text-[1rem]">{translate("tSelectOrganization")}</label>
+                  <label className="text-[0.9rem] md:text-[1rem]">Select Organization</label>
                   <label className="text-[0.9rem] md:text-[1rem] text-right hidden md:block">
                     
                   </label>
@@ -191,7 +189,7 @@ export default function LoginPage({ onLoginSuccess }) {
                       setOrg(e.target.value);
                     }}
                   >
-                    <option value="">-- {translate("tSelectOrganization")} --</option>
+                    <option value="">-- Select Organization --</option>
                     {orgList.map((o, i) => (
                       <option key={i} value={o}>
                         {o}
@@ -213,7 +211,7 @@ export default function LoginPage({ onLoginSuccess }) {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4 mb-0">
-                  <label className="text-[0.9rem] md:text-[1rem]">{translate("tEnterPassCode")}</label>
+                  <label className="text-[0.9rem] md:text-[1rem]">Enter Passcode</label>
                   <label className="text-[0.9rem] md:text-[1rem] text-right hidden md:block">
                     
                   </label>
@@ -245,7 +243,7 @@ export default function LoginPage({ onLoginSuccess }) {
                   type="submit"
                   className="w-full bg-[#002D62] text-white py-2 rounded-lg text-[1rem] md:text-[1.18rem] hover:bg-[#557c96] hover:opacity-100 transition"
                 >
-                  {translate("tLogin")}
+                  Login
                 </button>
               </form>
               {error && <div className="text-red-500 mt-4">{error}</div>}

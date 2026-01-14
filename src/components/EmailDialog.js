@@ -1,13 +1,23 @@
 // src/components/EmailDialog.js
 import React, { useState, useEffect } from "react";
 import { LOGO_URL_Email } from "../data/constants";
-import { useTranslate } from "../Utility/Translate";
 import { supabase } from "../MainApp";
+import {
+  formatAddress,
+  formatHoursFromJson,
+  formatDistance,
+  parseRequirements,
+} from "../utils/formatters";
 
 // Fixed usage tracking utility functions - NO AUTO-RESET
-const checkPdfLimit = async (orgName, translate) => {
+const checkPdfLimit = async (orgName) => {
+  // Skip check if no organization (dev mode / login bypass)
+  if (!orgName) {
+    console.warn("No organization provided - skipping PDF limit check (dev mode)");
+    return { allowed: true, remaining: 999 };
+  }
+
   try {
-    // Get current organization data
     const { data: org, error } = await supabase
       .from("registered_organizations")
       .select("pdf_mo_limit, pdf_mo_actual")
@@ -22,22 +32,17 @@ const checkPdfLimit = async (orgName, translate) => {
     const limit = org.pdf_mo_limit || 0;
     const currentActual = org.pdf_mo_actual || 0;
 
-    // Check if limit allows PDF creation
     if (limit === 0) {
       return {
         allowed: false,
-        message:
-          translate("tPdfNotAuthorized") ||
-          "PDF creation not authorized. Please contact support.",
+        message: "Authorization required to create a PDF. Please contact Support.",
       };
     }
 
     if (currentActual >= limit) {
       return {
         allowed: false,
-        message:
-          translate("tPdfLimitReached") ||
-          `Monthly PDF limit of ${limit} reached. Please contact support.`,
+        message: "Monthly PDF limits reached. Please contact Support.",
       };
     }
 
@@ -51,7 +56,13 @@ const checkPdfLimit = async (orgName, translate) => {
   }
 };
 
-const checkEmailLimit = async (orgName, translate) => {
+const checkEmailLimit = async (orgName) => {
+  // Skip check if no organization (dev mode / login bypass)
+  if (!orgName) {
+    console.warn("No organization provided - skipping email limit check (dev mode)");
+    return { allowed: true, remaining: 999 };
+  }
+
   try {
     const { data: org, error } = await supabase
       .from("registered_organizations")
@@ -70,18 +81,14 @@ const checkEmailLimit = async (orgName, translate) => {
     if (limit === 0) {
       return {
         allowed: false,
-        message:
-          translate("tEmailNotAuthorized") ||
-          "Email sending not authorized. Please contact support.",
+        message: "Authorization required to send an email. Please contact Support.",
       };
     }
 
     if (currentActual >= limit) {
       return {
         allowed: false,
-        message:
-          translate("tEmailLimitReached") ||
-          `Monthly email limit of ${limit} reached. Please contact support.`,
+        message: "Monthly email limits reached. Please contact Support.",
       };
     }
 
@@ -95,6 +102,55 @@ const checkEmailLimit = async (orgName, translate) => {
   }
 };
 
+/**
+ * Format hours data to HTML for email display
+ * Uses the shared formatHoursFromJson utility
+ */
+function formatHoursHtml(record) {
+  const formattedHours = formatHoursFromJson(record.org_hours);
+  if (!formattedHours) return "";
+
+  let html = "";
+
+  // Legacy format (non-JSON string)
+  if (formattedHours.legacy) {
+    return `<div>${formattedHours.legacy}</div>`;
+  }
+
+  // Regular and special hours in two-column layout
+  if (formattedHours.rows?.length > 0 || formattedHours.special?.length > 0) {
+    const allRows = [...(formattedHours.rows || []), ...(formattedHours.special || [])];
+    html += `<table cellpadding="0" cellspacing="0" border="0" style="font-size: 14px;">`;
+    allRows.forEach((row) => {
+      html += `<tr>
+        <td style="text-align: right; padding-right: 15px; white-space: nowrap;">${row.days}</td>
+        <td style="text-align: right; white-space: nowrap;">${row.hours}</td>
+      </tr>`;
+    });
+    html += `</table>`;
+  }
+
+  // Labeled hours (Office, Shelter, etc.)
+  if (formattedHours.labeled?.length > 0) {
+    formattedHours.labeled.forEach((item) => {
+      html += `<div style="margin-top: 4px;">
+        <strong>${item.label}:</strong>
+        <span style="margin-left: 8px;">${item.days} ${item.hours}</span>
+      </div>`;
+    });
+  }
+
+  return html;
+}
+
+/**
+ * Format hours notes in red italics
+ */
+function formatHoursNotesHtml(hoursNotes) {
+  if (!hoursNotes) return "";
+  return `<div style="color: #e74c3c; font-style: italic; margin-top: 8px;">${hoursNotes}</div>`;
+}
+
 export default function EmailDialog({
   onClose,
   onSuccess,
@@ -104,7 +160,6 @@ export default function EmailDialog({
   loggedInUser,
   isPdfMode = false,
 }) {
-  const { translate } = useTranslate();
   console.log("EmailDialog props:", { isPdfMode, selectedData, selectedZip });
   const [recipient, setRecipient] = useState("");
   const [sending, setSending] = useState(false);
@@ -133,14 +188,14 @@ export default function EmailDialog({
     fetchOrgPhone();
   }, [loggedInUser]);
 
-  // Check if any selected records have Limited or Inactive status
+  // Check if any selected records have Inactive status
   useEffect(() => {
-    const hasLimitedOrInactive = selectedData.some((item) => {
+    const hasInactive = selectedData.some((item) => {
       const status = item.status?.toUpperCase();
       return status === "INACTIVE" || status === "INACTIVO";
     });
 
-    if (hasLimitedOrInactive) {
+    if (hasInactive) {
       setShowWarningDialog(true);
       setShowEmailForm(false);
     }
@@ -156,96 +211,109 @@ export default function EmailDialog({
     onClose();
   };
 
-  // Format distance for email display
-  const formatEmailDistance = (distance) => {
-    if (distance === null || distance === undefined) return "";
-    return `${distance} mi`;
+  /**
+   * Sort selected data by assist_id then distance
+   */
+  const getSortedData = () => {
+    return [...selectedData].sort((a, b) => {
+      // Sort by assist_id first
+      const aAssistId = parseInt(a.assist_id, 10) || 999;
+      const bAssistId = parseInt(b.assist_id, 10) || 999;
+      if (aAssistId !== bAssistId) {
+        return aAssistId - bAssistId;
+      }
+      // Then by distance (nearest first)
+      const aMiles = a.distance ?? Infinity;
+      const bMiles = b.distance ?? Infinity;
+      return aMiles - bMiles;
+    });
   };
 
+  /**
+   * Format resource data as HTML for email/PDF
+   * Single column layout for mobile-friendly display
+   * Groups by assist_id, displays assistance label as header
+   */
   const formatHtml = () => {
-    // Group by the lowercase `assistance` field
-    const grouped = selectedData.reduce((acc, item) => {
-      const type = item.assistance;
-      if (!acc[type]) acc[type] = [];
-      acc[type].push(item);
+    const sortedData = getSortedData();
+
+    // Group by assist_id (but display assistance label)
+    const grouped = sortedData.reduce((acc, item) => {
+      const assistId = item.assist_id || "999";
+      if (!acc[assistId]) {
+        acc[assistId] = {
+          label: item.assistance || "Other",
+          items: [],
+        };
+      }
+      acc[assistId].items.push(item);
       return acc;
     }, {});
 
-    return Object.entries(grouped)
-      .map(([type, entries]) => {
-        // Build each section's HTML
-        const sectionRows = entries
+    return Object.values(grouped)
+      .map((group) => {
+        const sectionRows = group.items
           .map((e, idx) => {
-            // Split requirements into bullet items
-            const reqs =
-              e.requirements?.split("\n").filter(Boolean).slice(0, 4) || [];
+            // Format address using shared utility
+            const addressLines = formatAddress(e);
+            const addressHtml = addressLines.join("<br/>");
+
+            // Format requirements using shared utility
+            const reqs = parseRequirements(e.requirements);
             const bullets =
               reqs.length > 0
                 ? reqs.map((r) => `<li>${r}</li>`).join("\n")
-                : "<li>N/A</li>";
+                : "";
 
-            // Format distance for display
-            const distanceText = formatEmailDistance(e.distance);
+            // Format distance
+            const distanceText = formatDistance(e.distance);
+
+            // Format hours
+            const hoursHtml = formatHoursHtml(e);
+            const hoursNotesHtml = formatHoursNotesHtml(e.hours_notes);
 
             return `
-              <table
-  width="100%"
-  cellpadding="0"
-  cellspacing="0"
-  border="0"
-  style="
-    table-layout: fixed;
-    border-collapse: collapse;
-    font-family: Arial, sans-serif;
-  "
->
-  <colgroup>
-    <col style="width: 4ch;" />
-    <col style="width: 70ch;" />
-    <col style="width: auto;" />
-  </colgroup>
+<div style="font-family: Arial, sans-serif; margin-bottom: 24px; padding-left: 8px;">
+  <!-- Number and Org Name -->
+  <div style="font-size: 16px; font-weight: bold;">
+    ${idx + 1}.&nbsp;&nbsp;<a href="${e.webpage || "#"}" target="_blank" style="color: #0066cc; text-decoration: underline;">${e.organization || "N/A"}</a>
+  </div>
 
-  <tr valign="top">
-    <td style="padding-left:5px; white-space:nowrap;">
-      ${idx + 1}.
-    </td>
+  <!-- Phone -->
+  <div style="font-size: 16px; font-weight: bold; margin-top: 4px; padding-left: 24px;">
+    ${e.org_telephone || ""}
+  </div>
 
-    <td style="vertical-align:top; padding:0;">
-      <strong>
-        <a href="${e.webpage || "#"}" target="_blank">${
-              e.organization || "N/A"
-            }</a>
-      </strong><br/>
-      ${e.hours || "N/A"}<br/>
-      ${
-        e.hours_notes
-          ? `<div style="font-style:italic; color:#e74c3c; margin-top:2px;">${e.hours_notes}</div>`
-          : ""
-      }
-      <a href="${e.google_maps || "#"}" target="_blank">
-        ${e.address || "N/A"}
-      </a><br/>
-      <br/>
-      <strong>${translate("tNote")}:</strong>
-      <ul style="margin:0; padding-left:16px;">${bullets}</ul>
-      <br>
-    </td>
+  <!-- Distance -->
+  ${distanceText ? `<div style="font-size: 14px; margin-top: 12px; padding-left: 24px;">${distanceText}</div>` : ""}
 
-    <td style="padding-left:8px; vertical-align:top; font-weight:bold; white-space:nowrap;">
-      ${e.status ? `${translate("tStatus")}: ${e.status}<br/>` : ""}
-      ${e.telephone || "N/A"}
-      ${distanceText ? `<br/>${distanceText}` : ""}
-    </td>
-  </tr>
-</table>
-            `;
+  <!-- Address -->
+  <div style="font-size: 14px; margin-top: 4px; padding-left: 24px;">
+    <a href="${e.googlemaps || "#"}" target="_blank" style="color: #0066cc; text-decoration: underline;">
+      ${addressHtml}
+    </a>
+  </div>
+
+  <!-- Hours -->
+  <div style="font-size: 14px; margin-top: 12px; padding-left: 24px;">
+    ${hoursHtml}
+    ${hoursNotesHtml}
+  </div>
+
+  <!-- Important Details -->
+  ${bullets ? `
+  <div style="margin-top: 12px; padding-left: 24px;">
+    <u style="font-size: 14px;">Important Details:</u>
+    <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 14px;">${bullets}</ul>
+  </div>
+  ` : ""}
+</div>`;
           })
           .join("\n");
 
         return `
-          <h3 style="font-family:Arial,sans-serif; text-decoration:underline;">${type}</h3>
-          ${sectionRows}
-        `;
+<h3 style="font-family: Arial, sans-serif; text-decoration: underline; margin-top: 24px; margin-bottom: 16px;">Assistance:&nbsp;&nbsp;${group.label}</h3>
+${sectionRows}`;
       })
       .join("\n");
   };
@@ -258,11 +326,7 @@ export default function EmailDialog({
   const handleCreatePdf = async () => {
     console.log("=== PDF CREATION STARTED ===");
 
-    // Check PDF limit before creating
-    const limitCheck = await checkPdfLimit(
-      loggedInUser?.registered_organization,
-      translate
-    );
+    const limitCheck = await checkPdfLimit(loggedInUser?.registered_organization);
     if (!limitCheck.allowed) {
       setStatus(limitCheck.message || limitCheck.error);
       return;
@@ -318,25 +382,15 @@ export default function EmailDialog({
             <img src="${LOGO_URL_Email}" alt="CRG Logo" style="height:40px; vertical-align:middle; margin-right:12px;" />
             <span class="title">Community Resources Guide Houston</span>
             <div style="margin-top: 0px;">
-              <div class="subtitle">${translate(
-                "tSearchCriteria"
-              )}:  ${selectedZip}</div>
-              <div class="subtitle">${translate(
-                "tGenerated"
-              )}:  ${new Date().toLocaleDateString()}</div>
-              <div class="subtitle">${translate("tBy")}:  ${
-        loggedInUser?.registered_organization || "Unknown Organization"
-      }</div>
-              <div class="subtitle">${translate(
-                "tTelephone"
-              )}:  ${orgPhone}</div>
+              <div class="subtitle">Selection:  ${selectedZip}</div>
+              <div class="subtitle">Generated:  ${new Date().toLocaleDateString()}</div>
+              <div class="subtitle">By:  ${loggedInUser?.registered_organization || "Unknown Organization"}</div>
+              <div class="subtitle">Telephone:  ${orgPhone}</div>
             </div>
           </div>
-          
+
           <div style="background-color: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center;">
-            <strong style="color: #856404; font-size: 14px;">${translate(
-              "tPdfWarning"
-            )}</strong>
+            <strong style="color: #856404; font-size: 14px;">IMPORTANT: This information was current as of the generated date listed above. For the most up-to-date resources, hours, and contact information, please visit the online Community Resources Guide website.</strong>
           </div>
 
           <div class="content">
@@ -345,20 +399,16 @@ export default function EmailDialog({
         </body>
         </html>`;
 
-      const rightsReservedText = translate("tRightsReservedPdf");
-      const pageText = translate("tPage");
-
       const pdfPayload = {
         htmlBody: pdfHtml,
         filename: `CRG - ${selectedZip} - ${getCurrentDate()}.pdf`,
         organization: loggedInUser?.registered_organization,
         footer: {
-          source: `<div style="width: 100%; padding: 8px 0.75in; font-size: 8px; color: #666; font-family: Arial, sans-serif; box-sizing: border-box;"><div style="border-top: 1px solid #000; padding-top: 8px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="text-align: left; width: 50%; font-size: 8px;">© 2025 O Peracha. ${rightsReservedText}</td><td style="text-align: right; width: 50%; font-size: 8px;">${pageText} {{page}} of {{total}}</td></tr></table></div></div>`,
+          source: `<div style="width: 100%; padding: 8px 0.75in; font-size: 8px; color: #666; font-family: Arial, sans-serif; box-sizing: border-box;"><div style="border-top: 1px solid #000; padding-top: 8px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="text-align: left; width: 50%; font-size: 8px;">© 2025 O Peracha. All Rights Reserved. crghouston.operacha.org</td><td style="text-align: right; width: 50%; font-size: 8px;">Page {{page}} of {{total}}</td></tr></table></div></div>`,
           spacing: "10px",
         },
       };
 
-      // Route to Wrangler dev server on localhost:8788 during dev, otherwise use relative path
       const pdfServiceUrl =
         window.location.hostname === "localhost"
           ? "http://localhost:8788/createPdf"
@@ -376,7 +426,6 @@ export default function EmailDialog({
         throw new Error(`Failed to create PDF: ${res.status} - ${errorText}`);
       }
 
-      // Handle PDF download
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -397,17 +446,12 @@ export default function EmailDialog({
   };
 
   const handleSend = async () => {
-    // Handle PDF creation
     if (isPdfMode) {
       await handleCreatePdf();
       return;
     }
 
-    // Check email limit before sending
-    const limitCheck = await checkEmailLimit(
-      loggedInUser?.registered_organization,
-      translate
-    );
+    const limitCheck = await checkEmailLimit(loggedInUser?.registered_organization);
     if (!limitCheck.allowed) {
       setStatus(limitCheck.message || limitCheck.error);
       return;
@@ -416,30 +460,36 @@ export default function EmailDialog({
     setSending(true);
     try {
       const emailHtml = `
-        <div style="font-family:Arial,sans-serif;">
-          <p style="color:red;font-weight:bold;">
-            ***   ${translate("tDoNotReply")}   ***<br>
-          </p>
-          <p><strong>${translate("tZipCode")}: ${selectedZip || ""}</strong></p>
-          <p><br>
-            ${translate("tGreetings")},<br/><br/>
-            ${translate("tEmailIntroduction")}
-          </p>
-          ${formatHtml()}
-          <p>${translate("tHopeThisHelps")}</p>
-          <p>${loggedInUser?.registered_organization}</p>
-          ${orgPhone ? `<p>${orgPhone}</p>` : ""}
-        <div style="margin-top: 30px; text-align: center;">
-<hr style="border: none; border-top: 1px solid #ccc; margin-bottom: 10px; width: 60%;" />
-<a href="https://crghouston.operacha.org?utm_source=email&utm_medium=email&utm_campaign=resource_list" target="_blank" style="text-decoration: none; color: inherit;">
-<img src="${LOGO_URL_Email}" alt="CRG Logo" style="height:25px; vertical-align:middle; margin-right:8px;" />
-<span style="font-size: 12px; font-family: 'Verdana'; font-weight: 500; color: #4A4E69; vertical-align: middle;">Community Resources Guide Houston</span>
-</a>
-        </div>`;
+<div style="font-family: Arial, sans-serif; max-width: 700px; margin-left: 20px;">
+  <p style="font-size: 16px; margin-bottom: 20px;">
+    <strong>Resources for Zip Code:&nbsp;&nbsp;${selectedZip || ""}</strong>
+  </p>
+
+  <p style="font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+    Thank you for reaching out to us. Here is the information that you requested. Please note while we strive to ensure that our information is current and accurate, funding levels and eligibility requirements can change at any time. This is an automated message and is unmonitored, please <span style="color: red; font-style: italic;">do not reply</span>.
+  </p>
+
+  <p style="font-size: 14px; margin-bottom: 24px;">
+    You can also access the same information at <a href="https://crghouston.operacha.org?utm_source=email&utm_medium=email&utm_campaign=resource_list" target="_blank">crghouston.operacha.org</a>.
+  </p>
+
+  ${formatHtml()}
+
+  <p style="font-size: 14px; margin-top: 30px; line-height: 1.6;">
+    We hope this information helps you secure the assistance you need. Please call us back at ${orgPhone || "[phone number]"} if we can provide any other resources.
+  </p>
+
+  <div style="margin-top: 40px; text-align: center; border-top: 1px solid #ccc; padding-top: 20px;">
+    <a href="https://crghouston.operacha.org?utm_source=email&utm_medium=email&utm_campaign=resource_list" target="_blank" style="text-decoration: none; color: inherit;">
+      <img src="${LOGO_URL_Email}" alt="CRG Logo" style="height: 25px; vertical-align: middle; margin-right: 8px;" />
+      <span style="font-size: 14px; font-family: Verdana, sans-serif; font-weight: 500; color: #4A4E69; vertical-align: middle;">Community Resources Guide Houston</span>
+    </a>
+  </div>
+</div>`;
 
       const payload = {
         recipient,
-        subject: translate("tCommunityResources"),
+        subject: "Resources & Support Information",
         htmlBody: emailHtml,
         organization: loggedInUser?.registered_organization,
         headers: {
@@ -448,7 +498,6 @@ export default function EmailDialog({
         },
       };
 
-      // Route to Wrangler dev server on localhost:8788 during dev, otherwise use relative path
       const emailServiceUrl =
         window.location.hostname === "localhost"
           ? "http://localhost:8788/sendEmail"
@@ -464,10 +513,10 @@ export default function EmailDialog({
       if (result.success) {
         onSuccess(recipient, selectedData.length);
       } else {
-        setStatus(translate("tEmailFailedToSend"));
+        setStatus("Email failed to send.");
       }
     } catch (err) {
-      setStatus(`${translate("tErrorSendingEmail")}: ${err.message}`);
+      setStatus(`Error sending email: ${err.message}`);
     } finally {
       setSending(false);
     }
@@ -479,23 +528,23 @@ export default function EmailDialog({
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000] p-4">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-auto p-6">
           <h3 className="text-lg font-bold mb-4 text-left text-red-600">
-            {translate("tLimitedInactiveResources")}
+            Inactive Resources
           </h3>
           <p className="text-left mb-6 text-gray-700">
-            {translate("tLimitedInactiveWarning")}
+            You have selected an organization listed as Inactive. Please Return and correct.
           </p>
           <div className="flex justify-between gap-4">
             <button
               onClick={handleWarningContinue}
               className="flex-1 px-4 py-2 bg-gray-300 rounded"
             >
-              {translate("tContinue")}
+              Continue
             </button>
             <button
               onClick={handleWarningReturn}
               className="flex-1 px-4 py-2 bg-[#4A4E69] text-white rounded"
             >
-              {translate("tReturn")}
+              Return
             </button>
           </div>
         </div>
@@ -510,15 +559,13 @@ export default function EmailDialog({
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000] p-4">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-auto p-5">
           <h3 className="text-lg font-bold mb-3">
-            {isPdfMode
-              ? translate("tCreatePdf")
-              : translate("tSendSelectedResources")}
+            {isPdfMode ? "Create PDF" : "Send Selected Resources"}
           </h3>
 
           {!isPdfMode && (
             <input
               type="email"
-              placeholder={translate("tRecipientEmail")}
+              placeholder="Recipient Email"
               value={recipient}
               onChange={(e) => setRecipient(e.target.value)}
               className="w-full p-2 border rounded mb-3"
@@ -531,7 +578,7 @@ export default function EmailDialog({
               disabled={sending}
               className="px-4 py-2 bg-gray-300 rounded text-sm md:text-base"
             >
-              {translate("tCancel")}
+              Cancel
             </button>
             <button
               onClick={handleSend}
@@ -540,11 +587,11 @@ export default function EmailDialog({
             >
               {sending
                 ? isPdfMode
-                  ? translate("tCreatingPdf")
-                  : translate("tSending")
+                  ? "Creating ..."
+                  : "Sending ..."
                 : isPdfMode
-                ? translate("tCreate")
-                : translate("tSend")}
+                ? "Create"
+                : "Send"}
             </button>
           </div>
           {status && <p className="mt-3 text-sm text-red-600">{status}</p>}
