@@ -30,7 +30,7 @@ Community Resources Guide (CRG) Houston - a React application that helps organiz
 **New features planned:**
 - **Google Geocoding**: Users can enter a client address directly in the app to get lat/long (previously required manual copy from Google Maps). Resources sorted by distance from client location.
 - **LLM Search (Anthropic)**: Natural language queries like "food pantry within 5 miles open Thursday morning" or "food pantry that delivers to 77027"
-- **Public access**: Users without accounts can search but cannot email/PDF
+- ✅ **Public access**: Users without accounts can browse but cannot email/PDF (implemented via "Browse Without Account" button)
 
 **Infrastructure:**
 - Hosted on Cloudflare (migrated from Netlify)
@@ -76,7 +76,7 @@ Results display format is consistent regardless of filters applied.
 
 ## Current Development Status
 
-**Login bypass active** for development - app loads directly to main view.
+**Login page redesign complete** - see Login Page section below for details.
 
 **Design tokens system established:**
 - `src/styles/tokens.css` - CSS custom properties (single source of truth)
@@ -284,6 +284,43 @@ The following legacy UI elements have been removed from `src/views/ZipCodePage.j
 - Used by: NavBar1 counters, NavBar2 distance icon, NavBar3 help icon, VerticalNavBar icons, ResultRow assistance icons
 - All styling uses design tokens
 
+### Login Page (`src/auth/Login.js`)
+- Full-screen background image with login panel overlay
+- Background: `CRG Background NEW 2025.webp` aligned left, dark fallback (`#1a1a2e`) on right
+- Panel: max-width 500px, positioned top-right on desktop (80px top, 60px right), centered on mobile
+
+**Panel Structure:**
+- Header: Logo (30x30) + title "Community Resources Guide Houston" (Comfortaa, 18px, gold)
+  - Title nudged down 4px to optically center with logo
+- Body: Tan background (`--color-login-panel-bg`)
+  - "Browse Without Account" button (teal `--color-login-btn-guest-bg`)
+  - "Registered Organizations" section with dropdown + passcode input
+  - Passcode input has Chrome autofill override (maintains design colors)
+
+**Responsive Behavior:**
+- Desktop (`md:` 768px+): Panel top-right with padding
+- Mobile: Panel centered both horizontally and vertically
+
+**Chrome Autofill Fix:**
+- Uses `-webkit-box-shadow` inset trick to override Chrome's autofill background
+- Uses `-webkit-text-fill-color` to maintain text color
+- Class: `.login-passcode-input:-webkit-autofill`
+
+**Easter Egg:**
+- Floating sparkle emojis (✨) in dark right area on wide screens (`xl:` 1280px+)
+- Hidden "You found me! 🎉" message that fades in/out
+- Uses Framer Motion for animations
+
+**Design Tokens for Login:**
+- `--color-login-panel-header-bg` - Panel header background
+- `--color-login-panel-bg` - Panel body background
+- `--color-login-panel-title` - Gold title text
+- `--color-login-input-bg: #2C4146` - Input field background
+- `--color-login-input-text: #F3EED9` - Input field text
+- `--color-login-btn-guest-bg` - Browse Without Account button
+- `--color-login-btn-login-bg` - Log in button
+- `--radius-login-btn` - Button border radius
+
 **Design assets location:** `/docs/design/`
 - `ZipCode.png` - Overall page layout
 - `Footer.png` - Footer specs
@@ -291,6 +328,8 @@ The following legacy UI elements have been removed from `src/views/ZipCodePage.j
 - `Frame 494 NavBar 1.png` - NavBar1 specs
 - `Frame 496 NavBar 2.png` - NavBar2 specs (shows all 4 search modes)
 - `Frame 505 NavBar 3.png` - NavBar3 with assistance panel
+- `Login Panel.png` - Login page design
+- `Design Tokens Login.txt` - Login page design specs
 - `Supabase Schema.png` - Database schema reference
 - `Design Tokens.txt` - NavBar1 design specs (RTF format)
 - `Design Tokens NavBar 2.txt` - NavBar2 design specs
@@ -385,6 +424,9 @@ These files exist from the original `crg-app` and should be ignored or used only
 - Organizations authenticate with passcodes stored in `registered_organizations` table
 - User object passed as `loggedInUser` prop throughout the app
 - Controls email/PDF permissions
+- **Guest access:** Users can browse without login via "Browse Without Account" button
+  - Guest user object: `{ id: 'guest', organization: 'Guest', isGuest: true, canEmail: false, canPdf: false }`
+  - Guests can search and view results but cannot send emails or create PDFs
 
 ### Main Routes
 - `/` - Main app (single page, no routing for search modes)

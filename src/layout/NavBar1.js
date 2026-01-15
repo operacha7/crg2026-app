@@ -67,8 +67,16 @@ export default function NavBar1({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showEmailPanel, showPdfPanel]);
 
+  // Check if user is a guest (not logged in with registered org)
+  const isGuest = !loggedInUser;
+
   // Handle Send Email button click
   const handleEmailButtonClick = () => {
+    // Block guest users from using email
+    if (isGuest) {
+      alert("Email feature requires a registered account.\n\nContact Support to register your organization.");
+      return;
+    }
     if (onSendEmail) {
       // Check if selection validation passes
       const canProceed = onSendEmail();
@@ -82,6 +90,11 @@ export default function NavBar1({
 
   // Handle Create PDF button click
   const handlePdfButtonClick = () => {
+    // Block guest users from using PDF
+    if (isGuest) {
+      alert("PDF feature requires a registered account.\n\nContact Support to register your organization.");
+      return;
+    }
     if (onCreatePdf) {
       // Check if selection validation passes
       const canProceed = onCreatePdf();
@@ -189,7 +202,7 @@ export default function NavBar1({
           style={{ gap: 'var(--gap-navbar1-counters)' }}
         >
           {/* Filtered count */}
-          <Tooltip text="Filtered records">
+          <Tooltip text="Filtered records" position="bottom-left">
             <div
               className="bg-navbar1-counter-filtered text-navbar1-counter-text rounded-full flex items-center justify-center font-opensans"
               style={{
@@ -204,7 +217,7 @@ export default function NavBar1({
           </Tooltip>
 
           {/* Selected count */}
-          <Tooltip text="Selected records">
+          <Tooltip text="Selected records" position="bottom-left">
             <div
               className="bg-navbar1-counter-selected text-navbar1-counter-text rounded-full flex items-center justify-center font-opensans"
               style={{
@@ -226,20 +239,27 @@ export default function NavBar1({
         >
           {/* Send Email button with dropdown panel */}
           <div className="relative">
-            <button
-              ref={emailButtonRef}
-              onClick={handleEmailButtonClick}
-              className="bg-navbar1-btn-email-bg text-navbar1-btn-email-text rounded font-opensans hover:brightness-125 transition-all"
-              style={{
-                width: 'var(--width-navbar1-btn)',
-                height: 'var(--height-navbar1-btn)',
-                fontSize: 'var(--font-size-navbar1-btn)',
-                fontWeight: 'var(--font-weight-navbar1-btn)',
-                letterSpacing: 'var(--letter-spacing-navbar1-btn)',
-              }}
-            >
-              Send Email
-            </button>
+            <Tooltip text={isGuest ? "Requires registered account" : ""} position="bottom">
+              <button
+                ref={emailButtonRef}
+                onClick={handleEmailButtonClick}
+                className={`rounded font-opensans transition-all ${
+                  isGuest
+                    ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                    : "bg-navbar1-btn-email-bg text-navbar1-btn-email-text hover:brightness-125"
+                }`}
+                style={{
+                  width: 'var(--width-navbar1-btn)',
+                  height: 'var(--height-navbar1-btn)',
+                  fontSize: 'var(--font-size-navbar1-btn)',
+                  fontWeight: 'var(--font-weight-navbar1-btn)',
+                  letterSpacing: 'var(--letter-spacing-navbar1-btn)',
+                  opacity: isGuest ? 0.6 : 1,
+                }}
+              >
+                Send Email
+              </button>
+            </Tooltip>
 
             {/* Email Panel */}
             <EmailPanel
@@ -256,20 +276,27 @@ export default function NavBar1({
 
           {/* Create PDF button with dropdown panel */}
           <div className="relative">
-            <button
-              ref={pdfButtonRef}
-              onClick={handlePdfButtonClick}
-              className="bg-navbar1-btn-pdf-bg text-navbar1-btn-pdf-text rounded font-opensans hover:brightness-125 transition-all"
-              style={{
-                width: 'var(--width-navbar1-btn)',
-                height: 'var(--height-navbar1-btn)',
-                fontSize: 'var(--font-size-navbar1-btn)',
-                fontWeight: 'var(--font-weight-navbar1-btn)',
-                letterSpacing: 'var(--letter-spacing-navbar1-btn)',
-              }}
-            >
-              Create Pdf
-            </button>
+            <Tooltip text={isGuest ? "Requires registered account" : ""} position="bottom">
+              <button
+                ref={pdfButtonRef}
+                onClick={handlePdfButtonClick}
+                className={`rounded font-opensans transition-all ${
+                  isGuest
+                    ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                    : "bg-navbar1-btn-pdf-bg text-navbar1-btn-pdf-text hover:brightness-125"
+                }`}
+                style={{
+                  width: 'var(--width-navbar1-btn)',
+                  height: 'var(--height-navbar1-btn)',
+                  fontSize: 'var(--font-size-navbar1-btn)',
+                  fontWeight: 'var(--font-weight-navbar1-btn)',
+                  letterSpacing: 'var(--letter-spacing-navbar1-btn)',
+                  opacity: isGuest ? 0.6 : 1,
+                }}
+              >
+                Create Pdf
+              </button>
+            </Tooltip>
 
             {/* PDF Panel */}
             <EmailPanel

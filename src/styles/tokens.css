@@ -19,31 +19,31 @@
 
   /* NavBar 1 */
   --color-navbar1-bg: #222831;
-  --color-navbar1-title: #FFFFFF;
+  --color-navbar1-title: #F3EED9;
   --color-navbar1-counter-text: #222831;
   --color-navbar1-counter-filtered: #EB6E1F;
   --color-navbar1-counter-selected: #00A8A8;
   --color-navbar1-btn-email-bg: #FFC857;
   --color-navbar1-btn-email-text: #222831;
   --color-navbar1-btn-pdf-bg: #228B22;
-  --color-navbar1-btn-pdf-text: #FFFFFF;
+  --color-navbar1-btn-pdf-text: #F3EED9;
 
   /* NavBar 2 */
   --color-navbar2-bg: #4A4F56;
-  --color-navbar2-btn-inactive-text: #FFFFFF;
-  --color-navbar2-btn-inactive-border: #FFFFFF;
+  --color-navbar2-btn-inactive-text: #F3EED9;
+  --color-navbar2-btn-inactive-border: #F3EED9;
   --color-navbar2-btn-active-bg: #652C57;
   --color-navbar2-btn-active-text: #FFC857;
   --color-navbar2-dropdown-bg: #005C72;
-  --color-navbar2-dropdown-text: #FFFFFF;
+  --color-navbar2-dropdown-text: #F3EED9;
   --color-navbar2-link: #F0F8FF;
 
   /* NavBar 3 */
   --color-navbar3-bg: #948979;
   --color-navbar3-chip-active-bg: #005C72;
-  --color-navbar3-chip-active-text: #FFFFFF;
-  --color-navbar3-chip-active-border: #FFFFFF;
-  --color-navbar3-chip-inactive-bg: #FFFFFF;
+  --color-navbar3-chip-active-text: #F3EED9;
+  --color-navbar3-chip-active-border: #F3EED9;
+  --color-navbar3-chip-inactive-bg: #F3EED9;
   --color-navbar3-chip-inactive-text: #000000;
   --color-navbar3-chip-inactive-border: #000000;
 
@@ -58,7 +58,7 @@
 
   /* Results Header */
   --color-results-header-bg: #B8001F;
-  --color-results-header-text: #FFFFFF;
+  --color-results-header-text: #F3EED9;
 
   /* Results Row */
   --color-results-row-bg: transparent;
@@ -89,9 +89,23 @@
   --color-assistance-group4: #C2E592;
   --color-assistance-group5: #92DEE5;
   --color-assistance-group6: #E5C392;
-  --color-assistance-selected-bg: #FFFFFF;
+  --color-assistance-selected-bg: #F3EED9;
   --color-assistance-selected-border: #000000;
   --color-assistance-text: #000000;
+
+  /* Login Panel */
+  --color-login-panel-bg: #948979; /* Same as panel body */
+  --color-login-panel-header-bg: #4A4F56; /* Same as panel header */
+  --color-login-panel-title: #F3EED9;
+  --color-login-btn-guest-bg: #F3EED9;
+  --color-login-btn-guest-text: #2C4146;
+  --color-login-label-bg: #F3EED9;
+  --color-login-label-text: #2C4146;
+  --color-login-input-bg: #2C4146;
+  --color-login-input-text: #F3EED9;
+  --color-login-btn-login-bg: #739B61;
+  --color-login-btn-login-text: #2C4146;
+  --radius-login-btn: 5px;
 
   /* ==========================================
    * TYPOGRAPHY
@@ -203,7 +217,7 @@
   --height-panel-btn: 38px;
   --radius-panel-btn: 5px;
   --size-panel-help-icon: 40px;
-  --color-panel-border: #FFFFFF;
+  --color-panel-border: #F3EED9;
   --width-panel-border: 2px;
 
   /* Assistance Panel */

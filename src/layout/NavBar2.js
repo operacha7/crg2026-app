@@ -71,7 +71,7 @@ function FilterDropdown({ placeholder, options = [], value, onChange, allowReset
         className={`font-opensans appearance-none cursor-pointer ${
           hasValue
             ? "bg-navbar2-dropdown-bg text-navbar2-dropdown-text"
-            : "bg-transparent text-white"
+            : "bg-transparent text-navbar2-btn-inactive-text"
         }`}
         style={{
           height: "var(--height-navbar2-btn)",
@@ -129,7 +129,7 @@ function ZipCodeDropdown({ value, onChange, options = [] }) {
         className={`font-opensans appearance-none cursor-pointer ${
           hasValue
             ? "bg-navbar2-dropdown-bg text-navbar2-dropdown-text"
-            : "bg-transparent text-white"
+            : "bg-transparent text-navbar2-btn-inactive-text"
         }`}
         style={{
           height: "var(--height-navbar2-btn)",

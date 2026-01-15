@@ -1,11 +1,10 @@
 // src/auth/Login.js
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
-import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import PageLayout from "../layout/PageLayout";
-import { dataService } from "../services/dataService"; // Import the data service
-import useFetchCRGData from "../data/FetchDataSupabase"; // Import for total record count
-import ContactForm from "../components/ContactForm"; // Add this import
+import { dataService } from "../services/dataService";
+import ContactForm from "../components/ContactForm";
 
 export default function LoginPage({ onLoginSuccess }) {
   const [orgList, setOrgList] = useState([]);
@@ -14,59 +13,31 @@ export default function LoginPage({ onLoginSuccess }) {
   const [error, setError] = useState("");
   const [isAnimating, setIsAnimating] = useState(false);
   const [orgData, setOrgData] = useState([]);
-  const [showContactForm, setShowContactForm] = useState(false); // Add this state
+  const [showContactForm, setShowContactForm] = useState(false);
   const navigate = useNavigate();
   const formRef = useRef(null);
-  
-  // Reference to the passcode input field
   const passcodeInputRef = useRef(null);
-
-  // Add counter animation setup
-  const { records } = useFetchCRGData(); // Get all records for total record count
-  const count = useMotionValue(0);
-  const rounded = useTransform(count, (v) => Math.round(v));
 
   useEffect(() => {
     setPasscode("");
   }, []);
 
-  // Use translation utility
-  
   // Fetch organizations using the data service
   useEffect(() => {
     const fetchOrganizations = async () => {
       try {
         const data = await dataService.getRegisteredOrganizations();
-        
         const uniqueOrgs = [
-          ...new Set(data.map((item) => item.registered_organization)),
+          ...new Set(data.map((item) => item.reg_organization)),
         ];
-        
         setOrgList(uniqueOrgs);
         setOrgData(data);
       } catch (err) {
         console.error("Error loading organizations:", err);
       }
     };
-
     fetchOrganizations();
   }, []);
-
-  // Animate counter when records are loaded
-  useEffect(() => {
-    if (records.length > 0) {
-      // Small delay to let the component settle, then animate
-      const timer = setTimeout(() => {
-        const anim = animate(count, records.length, { 
-          duration: 0.7, 
-          ease: "easeOut" 
-        });
-        return () => anim.stop();
-      }, 300);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [records.length, count]);
 
   // Focus on passcode field when organization is selected
   useEffect(() => {
@@ -76,178 +47,326 @@ export default function LoginPage({ onLoginSuccess }) {
   }, [org]);
 
   useEffect(() => {
-    // Clear passcode input manually if no organization is selected
     if (!org && passcodeInputRef.current) {
       passcodeInputRef.current.value = "";
     }
   }, [org]);
 
-  const handleLogin = (e) => {
-  if (e) e.preventDefault();
-
-  const enteredPasscode = passcodeInputRef.current?.value || "";
-
-  const matched = orgData.find(
-    (entry) =>
-      entry.registered_organization === org &&
-      entry.org_passcode === enteredPasscode
-  );
-
-  if (matched) {
-    setError("");
+  // Handle guest access - bypass login with guest user object
+  const handleGuestAccess = () => {
     setIsAnimating(true);
     setTimeout(() => {
-      onLoginSuccess(matched);
-      
-      // Preserve UTM parameters from login URL
+      // Pass guest user object (no email/PDF access)
+      onLoginSuccess({
+        id: 'guest',
+        organization: 'Guest',
+        isGuest: true,
+        canEmail: false,
+        canPdf: false,
+      });
+
+      // Preserve UTM parameters
       const searchParams = new URLSearchParams(window.location.search);
       const utmParams = new URLSearchParams();
-      
-      // Extract all UTM parameters
       for (const [key, value] of searchParams.entries()) {
         if (key.startsWith('utm_')) {
           utmParams.append(key, value);
         }
       }
-      
-      // Navigate with UTM parameters if they exist
       const utmString = utmParams.toString();
       navigate(utmString ? `/?${utmString}` : '/');
-    }, 1000);
-  } else {
-    // Modified error message with ContactForm link
-    setError(
-      <div>
-        ❌ Invalid credentials. Please try again or . . .{" "}
-        <button
-          type="button"
-          onClick={() => setShowContactForm(true)}
-          className="text-blue-600 underline hover:text-blue-800 ml-1"
-        >
-          Contact Support for Help or Access
-        </button>
-      </div>
-    );
-  }
-};
+    }, 600);
+  };
 
-  // Handle key press for Enter key
+  const handleLogin = (e) => {
+    if (e) e.preventDefault();
+
+    const enteredPasscode = passcodeInputRef.current?.value || "";
+
+    const matched = orgData.find(
+      (entry) =>
+        entry.reg_organization === org &&
+        entry.org_passcode === enteredPasscode
+    );
+
+    if (matched) {
+      setError("");
+      setIsAnimating(true);
+      setTimeout(() => {
+        onLoginSuccess(matched);
+
+        // Preserve UTM parameters from login URL
+        const searchParams = new URLSearchParams(window.location.search);
+        const utmParams = new URLSearchParams();
+        for (const [key, value] of searchParams.entries()) {
+          if (key.startsWith('utm_')) {
+            utmParams.append(key, value);
+          }
+        }
+        const utmString = utmParams.toString();
+        navigate(utmString ? `/?${utmString}` : '/');
+      }, 600);
+    } else {
+      setError(
+        <div className="text-center">
+          Invalid credentials.{" "}
+          <button
+            type="button"
+            onClick={() => setShowContactForm(true)}
+            className="underline hover:opacity-80"
+            style={{ color: "var(--color-login-btn-guest-bg)" }}
+          >
+            Contact Support
+          </button>
+        </div>
+      );
+    }
+  };
+
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       handleLogin();
     }
   };
 
-  // Modified JSX with responsive classes
   return (
     <PageLayout showNav={false}>
       <AnimatePresence>
         {!isAnimating && (
           <motion.div
-            className="flex flex-col items-center bg-cover mt-[-1rem] md:mt-[-1rem] bg-center min-h-[calc(100vh-110px)]"
-            style={{ backgroundImage: `url('images/CRG Background NEW 2025.webp')` }}
+            className="flex flex-col items-center justify-center md:items-end md:justify-start md:pt-[80px] md:pr-[60px] bg-no-repeat relative"
+            style={{
+              backgroundImage: `url('images/CRG Background NEW 2025.webp')`,
+              minHeight: 'calc(100vh - var(--height-footer))',
+              backgroundSize: 'contain',
+              backgroundPosition: 'left center', // Align image to left, easter egg space on right
+              backgroundColor: '#1a1a2e', // Dark fallback / easter egg area
+            }}
             initial={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ duration: 0.6 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.4 }}
           >
-            {/* Animated Counter */}
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5, ease: "easeOut", delay: 0.2 }}
-              className="w-[6rem] h-[6rem] bg-[#002e62] text-[#EB6E1F] text-[36px] font-comfortaa font-bold rounded-full flex items-center justify-center mb-1 mt-12 md:mt-44"
-              style={{ boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.3)' }}
-            >
-              <motion.span>{rounded}</motion.span>
-            </motion.div>
+            {/* Easter Egg - Floating elements visible on wide screens */}
+            <div className="absolute right-0 top-0 bottom-0 w-[200px] overflow-hidden pointer-events-none hidden xl:block">
+              {/* Floating stars/sparkles */}
+              {[...Array(8)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute text-2xl"
+                  style={{
+                    left: `${20 + (i * 20) % 160}px`,
+                    top: `${10 + (i * 80) % 500}px`,
+                  }}
+                  animate={{
+                    y: [0, -20, 0],
+                    opacity: [0.3, 0.8, 0.3],
+                    scale: [0.8, 1.2, 0.8],
+                  }}
+                  transition={{
+                    duration: 3 + (i % 3),
+                    repeat: Infinity,
+                    delay: i * 0.5,
+                    ease: "easeInOut",
+                  }}
+                >
+                  ✨
+                </motion.div>
+              ))}
+              {/* Hidden message */}
+              <motion.div
+                className="absolute bottom-20 right-4 text-xs text-white/30 font-mono"
+                animate={{ opacity: [0.1, 0.3, 0.1] }}
+                transition={{ duration: 4, repeat: Infinity }}
+              >
+                You found me! 🎉
+              </motion.div>
+            </div>
 
-            <div 
-              className="bg-[#fef6e4] p-4 md:p-8 rounded-lg w-[90%] md:w-full max-w-[600px] border-[.2rem] mt-8 md:mt-10 relative"
+            {/* Login Panel */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="w-[90%] max-w-[500px] rounded-lg overflow-hidden"
               style={{
-                backgroundImage: 'linear-gradient(to bottom, rgba(247, 242, 233, 0.9), #f7f2e9)',
-                boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.55)'
+                boxShadow: '0px 8px 32px rgba(0, 0, 0, 0.4)',
               }}
             >
-              {/* Wrap form elements in a form tag */}
-              <form ref={formRef} 
-                    onSubmit={handleLogin} autoComplete="on" key={org || 'no-org'}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4 mb-0">
-                  <label className="text-[0.9rem] md:text-[1rem]">Select Organization</label>
-                  <label className="text-[0.9rem] md:text-[1rem] text-right hidden md:block">
-                    
-                  </label>
-                </div>
-                <div className="relative w-full mb-6 md:mb-10">
-                  <select
-                    className="appearance-none w-full px-3 py-2 border-2 border-[#2B5D7D] bg-[#f7f2e9] rounded-lg text-[1rem] md:text-[1.18rem]
-                    text-[#002D62]"
-                    style={{ boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.2)' }}
-                    value={org}
-                    name={`organization-${org}`}
-                    autoComplete="organization"
-                    onChange={(e) => {
-                      setOrg(e.target.value);
+              {/* Panel Header - Logo + Title */}
+              <div
+                className="flex items-center justify-center gap-3 px-4"
+                style={{
+                  backgroundColor: "var(--color-login-panel-header-bg)",
+                  height: "var(--height-panel-header)",
+                }}
+              >
+                <img
+                  src="images/CRG Logo 2025.webp"
+                  alt="CRG Logo"
+                  className="w-[30px] h-[30px]"
+                />
+                <span
+                  className="font-comfortaa"
+                  style={{
+                    color: "var(--color-login-panel-title)",
+                    fontSize: "18px",
+                    fontWeight: 600,
+                    letterSpacing: "0.05em",
+                    marginTop: "4px",
+                  }}
+                >
+                  Community Resources Guide Houston
+                </span>
+              </div>
+
+              {/* Panel Body */}
+              <div
+                className="px-6 py-6"
+                style={{ backgroundColor: "var(--color-login-panel-bg)" }}
+              >
+                {/* Browse Without Account Button */}
+                <button
+                  type="button"
+                  onClick={handleGuestAccess}
+                  className="w-full py-3 font-opensans hover:brightness-95 transition-all"
+                  style={{
+                    backgroundColor: "var(--color-login-btn-guest-bg)",
+                    color: "var(--color-login-btn-guest-text)",
+                    borderRadius: "var(--radius-login-btn)",
+                    fontSize: "16px",
+                    letterSpacing: "0.05em",
+                    fontWeight: 500,
+                  }}
+                >
+                  Browse Without Account
+                </button>
+
+                {/* Registered Organizations Section */}
+                <div
+                  className="mt-6 px-4 py-4 rounded"
+                  style={{
+                    backgroundColor: "var(--color-login-label-bg)",
+                    borderRadius: "var(--radius-login-btn)",
+                  }}
+                >
+                  {/* Section Label */}
+                  <div
+                    className="text-center mb-4 font-opensans"
+                    style={{
+                      color: "var(--color-login-label-text)",
+                      fontSize: "14px",
+                      letterSpacing: "0.05em",
                     }}
                   >
-                    <option value="">-- Select Organization --</option>
-                    {orgList.map((o, i) => (
-                      <option key={i} value={o}>
-                        {o}
-                      </option>
-                    ))}
-                  </select>
-
-                  <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                    <svg
-                      className="w-4 h-4 text-[#002D62]"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                    Registered Organizations
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4 mb-0">
-                  <label className="text-[0.9rem] md:text-[1rem]">Enter Passcode</label>
-                  <label className="text-[0.9rem] md:text-[1rem] text-right hidden md:block">
-                    
-                  </label>
-                </div>
-                {/* Hidden username field for password manager */}
-                <input
-                  type="text"
-                  name="username"
-                  autoComplete="username"
-                  value={org}
-                  onChange={() => {}} // Controlled by the select above
-                  style={{ display: 'none' }}
-                  tabIndex="-1"
-                />
-                
-                <input
-                  ref={passcodeInputRef}
-                  type="password"
-                 
-                  autoComplete="current-password"
-                  placeholder=""
-                  className="w-full px-3 py-2 border-2 border-[#2B5D7D] bg-[#FCF7F0] text-[#002D62] rounded-lg text-[1rem] md:text-[1.18rem] mb-6 md:mb-10
-                    focus:ring-5 focus:ring-[#2B5D7D] focus:outline-none"
-                  style={{boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.2)'}}
-                  onKeyPress={handleKeyPress}
-                />
+                  <form ref={formRef} onSubmit={handleLogin} autoComplete="on" key={org || 'no-org'}>
+                    {/* Select Organization Dropdown */}
+                    <div className="relative mb-3">
+                      <select
+                        className="w-full px-4 py-2 font-opensans appearance-none cursor-pointer"
+                        style={{
+                          backgroundColor: "var(--color-login-input-bg)",
+                          color: "var(--color-login-input-text)",
+                          borderRadius: "var(--radius-login-btn)",
+                          fontSize: "14px",
+                          letterSpacing: "0.05em",
+                        }}
+                        value={org}
+                        name={`organization-${org}`}
+                        autoComplete="organization"
+                        onChange={(e) => setOrg(e.target.value)}
+                      >
+                        <option value="">Select Organization</option>
+                        {orgList.map((o, i) => (
+                          <option key={i} value={o}>{o}</option>
+                        ))}
+                      </select>
+                      {/* Dropdown Arrow */}
+                      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="var(--color-login-input-text)"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                    </div>
 
-                <button
-                  type="submit"
-                  className="w-full bg-[#002D62] text-white py-2 rounded-lg text-[1rem] md:text-[1.18rem] hover:bg-[#557c96] hover:opacity-100 transition"
-                >
-                  Login
-                </button>
-              </form>
-              {error && <div className="text-red-500 mt-4">{error}</div>}
-            </div>
+                    {/* Hidden username field for password manager */}
+                    <input
+                      type="text"
+                      name="username"
+                      autoComplete="username"
+                      value={org}
+                      onChange={() => {}}
+                      style={{ display: 'none' }}
+                      tabIndex="-1"
+                    />
+
+                    {/* Enter Passcode Input */}
+                    <style>
+                      {`
+                        .login-passcode-input:-webkit-autofill,
+                        .login-passcode-input:-webkit-autofill:hover,
+                        .login-passcode-input:-webkit-autofill:focus,
+                        .login-passcode-input:-webkit-autofill:active {
+                          -webkit-box-shadow: 0 0 0 30px var(--color-login-input-bg) inset !important;
+                          -webkit-text-fill-color: var(--color-login-input-text) !important;
+                          caret-color: var(--color-login-input-text) !important;
+                          transition: background-color 5000s ease-in-out 0s;
+                        }
+                      `}
+                    </style>
+                    <input
+                      ref={passcodeInputRef}
+                      type="password"
+                      autoComplete="current-password"
+                      placeholder="Enter Passcode"
+                      className="login-passcode-input w-full px-4 py-2 font-opensans mb-4"
+                      style={{
+                        backgroundColor: "var(--color-login-input-bg)",
+                        color: "var(--color-login-input-text)",
+                        borderRadius: "var(--radius-login-btn)",
+                        fontSize: "14px",
+                        letterSpacing: "0.05em",
+                      }}
+                      onKeyPress={handleKeyPress}
+                    />
+
+                    {/* Login Button */}
+                    <button
+                      type="submit"
+                      className="w-full py-2 font-opensans hover:brightness-95 transition-all"
+                      style={{
+                        backgroundColor: "var(--color-login-btn-login-bg)",
+                        color: "var(--color-login-btn-login-text)",
+                        borderRadius: "var(--radius-login-btn)",
+                        fontSize: "14px",
+                        letterSpacing: "0.05em",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Log in
+                    </button>
+                  </form>
+
+                  {/* Error Message */}
+                  {error && (
+                    <div
+                      className="mt-3 text-sm"
+                      style={{ color: "#B8001F" }}
+                    >
+                      {error}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -265,7 +384,7 @@ export default function LoginPage({ onLoginSuccess }) {
                 ×
               </button>
             </div>
-            <ContactForm 
+            <ContactForm
               loginError="Invalid credentials - unable to access account"
               onClose={() => setShowContactForm(false)}
             />

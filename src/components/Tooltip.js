@@ -6,24 +6,28 @@ export default function Tooltip({ children, text, position = "top" }) {
   if (!text) return children;
 
   // Position classes for the tooltip
+  // Uses "left-0" for counters to prevent off-screen overflow
   const positionClasses = {
-    top: "bottom-full left-1/2 -translate-x-1/2 mb-1",
-    bottom: "top-full left-1/2 -translate-x-1/2 mt-1",
-    left: "right-full top-1/2 -translate-y-1/2 mr-1",
-    right: "left-full top-1/2 -translate-y-1/2 ml-1",
+    top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
+    bottom: "top-full left-1/2 -translate-x-1/2 mt-2",
+    left: "right-full top-1/2 -translate-y-1/2 mr-2",
+    right: "left-full top-1/2 -translate-y-1/2 ml-2",
+    // Special position for elements near right edge of screen
+    "bottom-left": "top-full right-0 mt-2",
   };
 
   return (
     <span className="relative inline-flex group">
       {children}
       <span
-        className={`absolute ${positionClasses[position]} px-2 py-1 rounded whitespace-nowrap
+        className={`absolute ${positionClasses[position] || positionClasses.top} px-2 py-1 rounded whitespace-nowrap
                    opacity-0 group-hover:opacity-100 transition-opacity duration-100
-                   pointer-events-none z-50`}
+                   pointer-events-none`}
         style={{
           backgroundColor: "var(--color-tooltip-bg)",
           color: "var(--color-tooltip-text)",
           fontSize: "var(--font-size-tooltip)",
+          zIndex: 9999,
         }}
       >
         {text}

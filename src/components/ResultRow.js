@@ -67,10 +67,16 @@ function StatusPill({ statusId, status }) {
 
 // Icon wrapper component with instant CSS tooltip
 // Uses CSS color property which icons inherit via fill="currentColor"
-function IconWithTooltip({ IconComponent, size, iconName, color, className }) {
+// position: "top" (default) or "bottom" for first row to avoid header overlap
+function IconWithTooltip({ IconComponent, size, iconName, color, className, position = "top" }) {
   if (!IconComponent) return null;
 
   const tooltipText = formatIconName(iconName);
+
+  // Position classes - top shows above icon, bottom shows below
+  const positionClasses = position === "bottom"
+    ? "top-full mt-2 left-1/2 -translate-x-1/2"
+    : "bottom-full mb-2 left-1/2 -translate-x-1/2";
 
   return (
     <span
@@ -82,13 +88,14 @@ function IconWithTooltip({ IconComponent, size, iconName, color, className }) {
       {/* Instant CSS tooltip */}
       {tooltipText && (
         <span
-          className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 rounded whitespace-nowrap
+          className={`absolute ${positionClasses} px-2 py-1 rounded whitespace-nowrap
                      opacity-0 group-hover:opacity-100 transition-opacity duration-100
-                     pointer-events-none z-50"
+                     pointer-events-none`}
           style={{
             backgroundColor: "var(--color-tooltip-bg)",
             color: "var(--color-tooltip-text)",
             fontSize: "var(--font-size-tooltip)",
+            zIndex: 9999,
           }}
         >
           {tooltipText}
@@ -176,6 +183,7 @@ export default function ResultRow({
           size={25}
           iconName={assistanceIcon}
           color="var(--color-results-assistance-icon)"
+          position={rowIndex === 0 ? "bottom" : "top"}
         />
         <input
           type="checkbox"
@@ -248,6 +256,7 @@ export default function ResultRow({
               size={20}
               iconName={at.icon}
               color="var(--color-results-assistance-icon-secondary)"
+              position={rowIndex === 0 ? "bottom" : "top"}
             />
           );
         })}

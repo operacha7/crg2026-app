@@ -6,8 +6,8 @@ import LoginPage from "./auth/Login";
 import MainApp from "./MainApp";
 
 // DEV BYPASS: Skip login in development OR when running with wrangler (production build locally)
-const DEV_BYPASS_LOGIN = process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost';
-
+// Set to false to test login flow, true to skip login during development
+const DEV_BYPASS_LOGIN = false; // TEMPORARILY DISABLED - set back to true when done testing login
 // Mock user for development
 const DEV_USER = {
   id: 'dev-user',
