@@ -184,11 +184,11 @@ function LLMSearchInput() {
 }
 
 // Neighborhood link component - wraps at 80 characters
+// Note: This is display-only text, not a clickable link, so we use a span
 function NeighborhoodLink({ text = "Braeswood Place, Knollwood Village" }) {
   return (
-    <a
-      href="#"
-      className="text-navbar2-link hover:underline hover:brightness-125 transition-all"
+    <span
+      className="text-navbar2-link"
       style={{
         fontSize: "var(--font-size-navbar2-link)",
         fontWeight: "var(--font-weight-navbar2-link)",
@@ -198,7 +198,7 @@ function NeighborhoodLink({ text = "Braeswood Place, Knollwood Village" }) {
       }}
     >
       {text}
-    </a>
+    </span>
   );
 }
 

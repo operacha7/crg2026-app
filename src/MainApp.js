@@ -91,7 +91,7 @@ useEffect(() => {
 // Separate component for the app content
 function AppContent({ loggedInUser }) {
   // Use the new AppDataContext (replaces legacy useFetchCRGData)
-  const { directory, assistance, organizations, zipCodes, loading, error } = useAppData();
+  const { directory, assistance, zipCodes, loading, error } = useAppData();
 
   // Show loading state
   if (loading) {
