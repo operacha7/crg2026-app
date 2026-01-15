@@ -139,23 +139,41 @@ export default function LoginPage({ onLoginSuccess }) {
               backgroundImage: `url('images/CRG Background NEW 2025.webp')`,
               minHeight: 'calc(100vh - var(--height-footer))',
               backgroundSize: 'contain',
-              backgroundPosition: 'left center', // Align image to left, easter egg space on right
-              backgroundColor: '#1a1a2e', // Dark fallback / easter egg area
+              backgroundPosition: 'left center',
+              backgroundColor: '#5d0504',
             }}
             initial={{ opacity: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.4 }}
           >
-            {/* Easter Egg - Floating elements visible on wide screens */}
-            <div className="absolute right-0 top-0 bottom-0 w-[200px] overflow-hidden pointer-events-none hidden xl:block">
-              {/* Floating stars/sparkles */}
-              {[...Array(8)].map((_, i) => (
+            {/* Easter Egg - Only visible in the dark area to the right of the background image */}
+            {/* Uses aspect-ratio calculation: image is ~1200x800, so at viewport height H, image width = H * 1.5 */}
+            {/* This container starts where the image ends and fills the remaining space */}
+            <div
+              className="absolute top-0 bottom-0 right-0 overflow-hidden pointer-events-none flex flex-col items-center justify-center"
+              style={{
+                left: 'calc((100vh - var(--height-footer)) * 1.5)', // Image aspect ratio ~1.5:1
+                minWidth: '150px', // Only show if there's enough space
+              }}
+            >
+              {/* Animated logo video */}
+              <video
+                src="images/GPT-Image-15-Medium-dfb214ea.mp4"
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-32 h-32 object-contain opacity-70"
+              />
+
+              {/* Floating sparkles - spread across full height */}
+              {[...Array(12)].map((_, i) => (
                 <motion.div
                   key={i}
                   className="absolute text-2xl"
                   style={{
-                    left: `${20 + (i * 20) % 160}px`,
-                    top: `${10 + (i * 80) % 500}px`,
+                    left: `${20 + (i * 15) % 160}px`,
+                    top: `${5 + (i * 8)}%`,
                   }}
                   animate={{
                     y: [0, -20, 0],
@@ -165,13 +183,14 @@ export default function LoginPage({ onLoginSuccess }) {
                   transition={{
                     duration: 3 + (i % 3),
                     repeat: Infinity,
-                    delay: i * 0.5,
+                    delay: i * 0.4,
                     ease: "easeInOut",
                   }}
                 >
                   ✨
                 </motion.div>
               ))}
+
               {/* Hidden message */}
               <motion.div
                 className="absolute bottom-20 right-4 text-xs text-white/30 font-mono"
@@ -190,6 +209,7 @@ export default function LoginPage({ onLoginSuccess }) {
               className="w-[90%] max-w-[500px] rounded-lg overflow-hidden"
               style={{
                 boxShadow: '0px 8px 32px rgba(0, 0, 0, 0.4)',
+                border: 'var(--width-panel-border) solid var(--color-panel-border)',
               }}
             >
               {/* Panel Header - Logo + Title */}
@@ -208,7 +228,7 @@ export default function LoginPage({ onLoginSuccess }) {
                 <span
                   className="font-comfortaa"
                   style={{
-                    color: "var(--color-login-panel-title)",
+                    color: "var(--color-panel-title)",
                     fontSize: "18px",
                     fontWeight: 600,
                     letterSpacing: "0.05em",
