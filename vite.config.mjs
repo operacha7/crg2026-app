@@ -26,6 +26,15 @@ export default defineConfig({
   ],
   server: {
     port: 3000,
+    proxy: {
+      // Proxy API requests to Wrangler dev server
+      '/geocode': 'http://localhost:8788',
+      '/llm-search': 'http://localhost:8788',
+      '/sendEmail': 'http://localhost:8788',
+      '/createPdf': 'http://localhost:8788',
+      '/log-usage': 'http://localhost:8788',
+      '/sendSupportEmail': 'http://localhost:8788',
+    },
   },
   build: {
     outDir: 'build',

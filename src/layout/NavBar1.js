@@ -67,18 +67,17 @@ export default function NavBar1({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showEmailPanel, showPdfPanel]);
 
-  // Check if user is a guest (not logged in with registered org)
-  const isGuest = !loggedInUser;
+  // Check if user is a guest (browsing without account)
+  const isGuest = loggedInUser?.isGuest === true;
 
   // Handle Send Email button click
   const handleEmailButtonClick = () => {
-    // Block guest users from using email
     if (isGuest) {
-      alert("Email feature requires a registered account.\n\nContact Support to register your organization.");
+      alert("You need an account. Contact Support.");
       return;
     }
     if (onSendEmail) {
-      // Check if selection validation passes
+      // Check if selection validation passes (shows toast if no selection)
       const canProceed = onSendEmail();
       if (canProceed !== false) {
         setShowEmailPanel(true);
@@ -90,13 +89,12 @@ export default function NavBar1({
 
   // Handle Create PDF button click
   const handlePdfButtonClick = () => {
-    // Block guest users from using PDF
     if (isGuest) {
-      alert("PDF feature requires a registered account.\n\nContact Support to register your organization.");
+      alert("You need an account. Contact Support.");
       return;
     }
     if (onCreatePdf) {
-      // Check if selection validation passes
+      // Check if selection validation passes (shows toast if no selection)
       const canProceed = onCreatePdf();
       if (canProceed !== false) {
         setShowPdfPanel(true);
@@ -204,7 +202,7 @@ export default function NavBar1({
           {/* Filtered count */}
           <Tooltip text="Filtered records" position="bottom-left">
             <div
-              className="bg-navbar1-counter-filtered text-navbar1-counter-text rounded-full flex items-center justify-center font-opensans"
+              className="bg-navbar1-counter-filtered text-navbar1-counter-text-filtered rounded-full flex items-center justify-center font-opensans"
               style={{
                 width: 'var(--size-navbar1-counter)',
                 height: 'var(--size-navbar1-counter)',
@@ -219,7 +217,7 @@ export default function NavBar1({
           {/* Selected count */}
           <Tooltip text="Selected records" position="bottom-left">
             <div
-              className="bg-navbar1-counter-selected text-navbar1-counter-text rounded-full flex items-center justify-center font-opensans"
+              className="bg-navbar1-counter-selected text-navbar1-counter-text-selected rounded-full flex items-center justify-center font-opensans"
               style={{
                 width: 'var(--size-navbar1-counter)',
                 height: 'var(--size-navbar1-counter)',
@@ -239,7 +237,7 @@ export default function NavBar1({
         >
           {/* Send Email button with dropdown panel */}
           <div className="relative">
-            <Tooltip text={isGuest ? "Requires registered account" : ""} position="bottom">
+            <Tooltip text={isGuest ? "You need an account. Contact Support." : ""} position="bottom">
               <button
                 ref={emailButtonRef}
                 onClick={handleEmailButtonClick}
@@ -276,7 +274,7 @@ export default function NavBar1({
 
           {/* Create PDF button with dropdown panel */}
           <div className="relative">
-            <Tooltip text={isGuest ? "Requires registered account" : ""} position="bottom">
+            <Tooltip text={isGuest ? "You need an account. Contact Support." : ""} position="bottom">
               <button
                 ref={pdfButtonRef}
                 onClick={handlePdfButtonClick}

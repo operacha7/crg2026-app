@@ -109,7 +109,7 @@ export default function DropPanel({
           <button
             onClick={onSave}
             disabled={okDisabled}
-            className="font-opensans transition-all duration-200 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="font-opensans transition-all duration-200 hover:brightness-110"
             style={{
               backgroundColor: "var(--color-panel-btn-ok-bg)",
               color: "var(--color-panel-btn-text)",

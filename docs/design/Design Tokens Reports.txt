@@ -1,0 +1,58 @@
+Design Tokens Reports
+
+font-family = Open Sans
+
+File:  Reports.png has a Figma Design image of what this page will look like.  Access to this page is via the Reports icon in the vertical bar.
+
+We are going to go from the current 8 reports to the following reports.  This list maps to the current report
+
+1)  Zip Code --->   Number of Zip Code Searches Per Day
+2)  Emails Sent   --->  number of Emails Per Day
+3)  Pdfs Created   --->   Number of Pdfs Created Per Day
+4)  Usage Data Table  --->  The Data Tables from Monthly Usage:  Email/Pdf, Search Term and Assistance
+
+
+The pages related to the icons in the vertical NavBar will have non-standard horizontal Navbars.  Here are the changes 
+
+NavBar 1:  No change to the left side.  Same logo and title.  The right side has been removed, i.e. the two counters and the two buttons to send email and create Pdfs.  In it's place is a Reports button.  Clicking it causes a dropdown panel with the four rports listed above.  I do not an chevron of triangle or anything to designate this as a dropdown.
+
+NavBar 2:  The left side has a button for selecting a registered organization.  Previously this was only for the monthly usage report but we will now apply it to all reports.
+On the right side is a slider allowing the user to go back and forth between daily or monthly aggregation of data
+
+Below this, the first three reports are identical to what has been mapped out above.
+
+
+The Usage Data Tables is shown in the 2nd image in the Reports.png file
+This page has a red header similar in dimension to the main app results header.  It shows the information as shown in the image.  Note there are two columns at the end of the table
+
+1)  Da/Mo = This will have the percentage for the last column
+2)  Mo/Yr = This will have the percentage for all the columns being displayed.
+
+If Daily is selected and this applies to all four charts, then the data points are every day.  For the first three charts, this would be as they are now.  You have the daily average doughnut chart on the top left and daily actual numbers on the top right and on the bottom is the daily bar chart.  For the usage data tables, which in the legacy system is only by month this would show days across the page in the header.  We should be able to fit a full month because we can with the column chart in the first three pages.  But if a full month doesn't fit we will have to do something different.
+
+
+If monthly is selected the the Usage Data Tables don't change but the first 3 charts would have the same information but aggregated by month
+
+Here a month means calendar month.  Neither the days or months are rolling.
+
+Everything has the normal hover and the same active/inactive state as the other NavBar buttons.
+
+Reports button
+All sizes similar to other NavBar buttons
+bg-color = none
+text-color = F3EED9
+
+Dropdown panel
+bg-color = F3EED9
+font-size = 16px
+text-color = 222831
+
+heading
+bg-color, text color, weight, etc is the same as the main header.
+Three sections - 1)  Communication, 2) Search and 3)  Assistance.  Each section has a Total row.  There should be a gap between each of the three sections.  And a gray horizontal line separating each.  For Assistance I want everything listed even if it is zero.  Sort order is assist_id.  total row is a darker shade of gray
+
+ 
+
+
+
+If Monthly is selected then the data points are monthly.

@@ -9,6 +9,7 @@ import { getIconByName } from "../icons/iconMap";
 import { HelpIcon } from "../icons";
 import Tooltip from "../components/Tooltip";
 import { useAppData } from "../Contexts/AppDataContext";
+import { logUsage } from "../services/usageService";
 
 const MAX_INDIVIDUAL_SELECTIONS = 3;
 
@@ -22,27 +23,8 @@ const GROUP_COLORS = {
   6: "var(--color-assistance-group6)",
 };
 
-// Chevron down icon for the assistance button
-function ChevronDownIcon({ className = "" }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  );
-}
-
 // Assistance button - changes text based on whether chips exist
+// No chevron - panel opens on hover
 function AssistanceButton({ hasSelections, onClick, buttonRef }) {
   return (
     <button
@@ -66,7 +48,6 @@ function AssistanceButton({ hasSelections, onClick, buttonRef }) {
       }}
     >
       {hasSelections ? "Change Assistance" : "Select Assistance"}
-      <ChevronDownIcon />
     </button>
   );
 }
@@ -127,7 +108,8 @@ function PanelTypeButton({ name, icon, groupColor, isSelected, onClick, disabled
         letterSpacing: "var(--letter-spacing-assistance-chip)",
         fontWeight: "500",
         border: isSelected ? "1px solid var(--color-assistance-selected-border)" : "1px solid transparent",
-        width: "100%",
+        whiteSpace: "nowrap", // Prevent text wrapping
+        width: "100%", // Fill column width (all chips same width within group)
         textAlign: "left",
       }}
     >
@@ -146,7 +128,7 @@ function GroupButton({ name, color, onClick }) {
       style={{
         backgroundColor: color,
         color: "var(--color-assistance-text)",
-        width: "var(--width-assistance-group-btn)",
+        width: "100%", // Match column width (widest chip determines size)
         height: "var(--height-assistance-group-btn)",
         borderRadius: "var(--radius-assistance-chip)",
         fontSize: "var(--font-size-assistance-chip)",
@@ -206,7 +188,7 @@ function AssistancePanel({
   onTypeToggle,
   onGroupToggle,
   onSave,
-  onCancel,
+  onClear,
   panelRef,
 }) {
   if (!isOpen) return null;
@@ -218,10 +200,13 @@ function AssistancePanel({
   return (
     <div
       ref={panelRef}
-      className="absolute top-full left-20 mt-2 shadow-xl z-50 overflow-hidden"
+      className="fixed mt-2 shadow-xl z-50 overflow-hidden"
       style={{
         borderRadius: "var(--radius-panel)",
-        minWidth: "800px",
+        width: "1300px", // Wide enough for longest chip text without wrapping
+        left: "20px", // Aligned with left edge of nav
+        right: "100px", // Add right padding (space for vertical nav)
+        top: "210px", // Below NavBar1 (80px) + NavBar2 (70px) + NavBar3 (60px)
         border: "var(--width-panel-border) solid var(--color-panel-border)",
       }}
     >
@@ -272,13 +257,13 @@ function AssistancePanel({
             const isGroupDisabled = isInFullGroupMode && fullGroupId !== group.id;
 
             return (
-              <div key={group.id} className="flex flex-col items-center" style={{ minWidth: "140px" }}>
+              <div key={group.id} className="flex flex-col items-stretch">
                 <GroupButton
                   name={group.name}
                   color={group.color}
                   onClick={() => onGroupToggle(group.id)}
                 />
-                <div className="mt-3 space-y-2 w-full">
+                <div className="mt-3 space-y-2">
                   {group.types.map((type) => {
                     const isSelected = selectedIds.includes(type.id);
 
@@ -313,7 +298,7 @@ function AssistancePanel({
         {/* Footer with buttons */}
         <div className="flex justify-center items-center gap-36 mt-16">
           <button
-            onClick={onCancel}
+            onClick={onClear}
             className="font-opensans transition-all duration-200 hover:brightness-110"
             style={{
               backgroundColor: "var(--color-panel-btn-cancel-bg)",
@@ -325,7 +310,7 @@ function AssistancePanel({
               letterSpacing: "var(--letter-spacing-panel-btn)",
             }}
           >
-            Cancel
+            Clear
           </button>
 
           <Tooltip text="Help">
@@ -355,7 +340,21 @@ function AssistancePanel({
 
 export default function NavBar3() {
   // Get shared state from context
-  const { activeAssistanceChips, setActiveAssistanceChips } = useAppData();
+  const { activeAssistanceChips, setActiveAssistanceChips, loggedInUser, activeSearchMode } = useAppData();
+
+  // Get organization name for logging
+  const regOrgName = loggedInUser?.reg_organization || 'Guest';
+
+  // Map search mode to display name for logging
+  const getSearchModeDisplay = () => {
+    switch (activeSearchMode) {
+      case 'zipcode': return 'Zip Code';
+      case 'organization': return 'Organization';
+      case 'location': return 'Location';
+      case 'llm': return 'LLM Search';
+      default: return 'Zip Code';
+    }
+  };
 
   // Assistance data from Supabase
   const [assistanceData, setAssistanceData] = useState([]);
@@ -366,12 +365,15 @@ export default function NavBar3() {
   const [savedSelections, setSavedSelections] = useState([]);
   // Panel state
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [isLocked, setIsLocked] = useState(false); // Click locks panel open
   // Temporary selections while panel is open
   const [tempSelections, setTempSelections] = useState([]);
 
   // Ref for the panel to detect outside clicks
   const panelRef = useRef(null);
   const buttonRef = useRef(null);
+  const containerRef = useRef(null);
+  const closeTimeoutRef = useRef(null);
 
   // Fetch assistance data on mount
   useEffect(() => {
@@ -389,7 +391,7 @@ export default function NavBar3() {
     fetchAssistance();
   }, []);
 
-  // Handle click outside to close panel (acts as Cancel)
+  // Handle click outside to close panel (acts as Save)
   useEffect(() => {
     function handleClickOutside(event) {
       if (!isPanelOpen) return;
@@ -399,9 +401,15 @@ export default function NavBar3() {
       const isOutsideButton = buttonRef.current && !buttonRef.current.contains(event.target);
 
       if (isOutsidePanel && isOutsideButton) {
-        // Cancel - revert to previous selections
-        setTempSelections([]);
+        // Auto-save current selections
+        setSavedSelections(tempSelections);
+        if (tempSelections.length === 1) {
+          setActiveAssistanceChips(new Set(tempSelections));
+        } else {
+          setActiveAssistanceChips(new Set());
+        }
         setIsPanelOpen(false);
+        setIsLocked(false);
       }
     }
 
@@ -409,7 +417,14 @@ export default function NavBar3() {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isPanelOpen]);
+  }, [isPanelOpen, tempSelections, setActiveAssistanceChips]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    };
+  }, []);
 
   // Get type info by assist_id (text field that matches directory.assist_id)
   const getTypeInfo = (typeId) => {
@@ -425,9 +440,35 @@ export default function NavBar3() {
     return null;
   };
 
-  // Handle opening the panel
+  // Hover handlers for panel
+  const handleMouseEnter = () => {
+    if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    if (!isLocked) {
+      setTempSelections([...savedSelections]);
+      setIsPanelOpen(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (!isLocked) {
+      // Small delay before closing, then auto-save
+      closeTimeoutRef.current = setTimeout(() => {
+        // Auto-save current selections when leaving
+        setSavedSelections(tempSelections);
+        if (tempSelections.length === 1) {
+          setActiveAssistanceChips(new Set(tempSelections));
+        } else {
+          setActiveAssistanceChips(new Set());
+        }
+        setIsPanelOpen(false);
+      }, 150);
+    }
+  };
+
+  // Click handler locks the panel open
   const handleOpenPanel = () => {
     setTempSelections([...savedSelections]);
+    setIsLocked(!isLocked);
     setIsPanelOpen(true);
   };
 
@@ -490,16 +531,20 @@ export default function NavBar3() {
       setActiveAssistanceChips(new Set());
     }
     setIsPanelOpen(false);
+    setIsLocked(false);
   };
 
-  // Handle cancel
-  const handleCancel = () => {
+  // Handle clear - clears all selections but keeps panel open
+  const handleClear = () => {
     setTempSelections([]);
-    setIsPanelOpen(false);
+    // Panel stays open - selections will be saved when user leaves panel
   };
 
-  // Handle chip click in NavBar3 - updates shared context state
+  // Handle chip click in NavBar3 - updates shared context state and logs usage
   const handleChipClick = (typeId) => {
+    const typeInfo = getTypeInfo(typeId);
+    const isActivating = !activeAssistanceChips.has(typeId);
+
     setActiveAssistanceChips((prev) => {
       const newSet = new Set(prev);
       // assist_id is already text, use directly
@@ -510,6 +555,16 @@ export default function NavBar3() {
       }
       return newSet;
     });
+
+    // Log when activating an assistance chip (not when deactivating)
+    if (isActivating && typeInfo) {
+      logUsage({
+        reg_organization: regOrgName,
+        action_type: 'search',
+        search_mode: getSearchModeDisplay(),
+        assistance_type: typeInfo.name,
+      });
+    }
   };
 
   if (loading) {
@@ -534,12 +589,30 @@ export default function NavBar3() {
         paddingLeft: "var(--padding-navbar3-left)",
       }}
     >
-      {/* Assistance button */}
-      <AssistanceButton
-        hasSelections={savedSelections.length > 0}
-        onClick={handleOpenPanel}
-        buttonRef={buttonRef}
-      />
+      {/* Assistance button with hover container */}
+      <div
+        ref={containerRef}
+        className="relative"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <AssistanceButton
+          hasSelections={savedSelections.length > 0}
+          onClick={handleOpenPanel}
+          buttonRef={buttonRef}
+        />
+        {/* Dropdown Panel - inside hover container */}
+        <AssistancePanel
+          isOpen={isPanelOpen}
+          groups={groups}
+          selectedIds={tempSelections}
+          onTypeToggle={handleTypeToggle}
+          onGroupToggle={handleGroupToggle}
+          onSave={handleSave}
+          onClear={handleClear}
+          panelRef={panelRef}
+        />
+      </div>
 
       {/* Chips */}
       {savedSelections.length > 0 && (
@@ -565,18 +638,6 @@ export default function NavBar3() {
           })}
         </div>
       )}
-
-      {/* Dropdown Panel */}
-      <AssistancePanel
-        isOpen={isPanelOpen}
-        groups={groups}
-        selectedIds={tempSelections}
-        onTypeToggle={handleTypeToggle}
-        onGroupToggle={handleGroupToggle}
-        onSave={handleSave}
-        onCancel={handleCancel}
-        panelRef={panelRef}
-      />
     </nav>
   );
 }

@@ -2,16 +2,17 @@
 // Vertical navigation bar with accent stripe and icon buttons
 // Icons have active/inactive states with hover effects
 
-import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   InformationIcon,
   ReportsIcon,
   AnnouncementsIcon,
   PrivacyPolicyIcon,
   ContactSupportIcon,
-  USFlagIcon,
+  HomeIcon,
 } from "../icons";
 import Tooltip from "../components/Tooltip";
+import { useAppData } from "../Contexts/AppDataContext";
 
 const navItems = [
   { id: "information", Icon: InformationIcon, label: "Information" },
@@ -21,11 +22,65 @@ const navItems = [
   { id: "contact", Icon: ContactSupportIcon, label: "Contact Support" },
 ];
 
+// Map nav item ids to their routes
+const navRoutes = {
+  reports: "/reports",
+  privacy: "/privacy",
+  contact: "/support",
+  announcements: "/messages",
+};
+
 export default function VerticalNavBar() {
-  const [activeItem, setActiveItem] = useState(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get context setters for resetting state on Home click
+  const {
+    setActiveSearchMode,
+    setSelectedZipCode,
+    setSelectedParentOrg,
+    setSelectedChildOrg,
+    setSelectedLocationCounty,
+    setSelectedLocationCity,
+    setSelectedLocationZip,
+    setClientAddress,
+    setClientCoordinates,
+  } = useAppData();
+
+  // Home is active when we're on the root path
+  const isHomeActive = location.pathname === "/";
+
+  // Determine active item based on current route
+  const getActiveItem = () => {
+    for (const [id, route] of Object.entries(navRoutes)) {
+      if (location.pathname === route) {
+        return id;
+      }
+    }
+    return null;
+  };
 
   const handleClick = (id) => {
-    setActiveItem(activeItem === id ? null : id);
+    const route = navRoutes[id];
+    if (route) {
+      navigate(route);
+    }
+    // "information" - could open a modal or navigate to an info page
+  };
+
+  const handleHomeClick = () => {
+    // Reset to Zip Code mode and clear all selections except assistance
+    setActiveSearchMode("zipcode");
+    setSelectedZipCode("");
+    setSelectedParentOrg("");
+    setSelectedChildOrg("");
+    setSelectedLocationCounty("");
+    setSelectedLocationCity("");
+    setSelectedLocationZip("");
+    setClientAddress("");
+    setClientCoordinates("");
+    // Note: Assistance selections are NOT cleared - they persist until session restart
+    navigate("/");
   };
 
   return (
@@ -43,9 +98,17 @@ export default function VerticalNavBar() {
           width: "var(--width-vertical-nav-main)",
         }}
       >
-        {/* US Flag at top */}
+        {/* Home icon at top */}
         <div className="flex justify-center mt-[10px]">
-          <USFlagIcon size={30} />
+          <Tooltip text="Home" position="left">
+            <button
+              onClick={handleHomeClick}
+              className="transition-all duration-200 hover:brightness-125 focus:outline-none"
+              aria-label="Home"
+            >
+              <HomeIcon size={35} active={isHomeActive} />
+            </button>
+          </Tooltip>
         </div>
 
         {/* Spacer to push icons to bottom */}
@@ -68,7 +131,7 @@ export default function VerticalNavBar() {
               >
                 <Icon
                   size={35}
-                  active={activeItem === id}
+                  active={getActiveItem() === id}
                 />
               </button>
             </Tooltip>

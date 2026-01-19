@@ -6,10 +6,11 @@ import AssistanceSidebar from "../components/AssistanceSidebar";
 import ResultsList from "../components/ResultsList";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
-import { supabase } from "../MainApp";
 import { calculateDistance, parseCoordinates } from "../services/dataService";
 import { useAppData } from "../Contexts/AppDataContext";
 import { sendEmail, createPdf, fetchOrgPhone } from "../services/emailService";
+import { logUsage } from "../services/usageService";
+import { applyLLMFilters } from "../services/llmSearchService";
 
 export default function ZipCodePage({
   assistanceTypes = [], // Legacy prop - used by AssistanceSidebar
@@ -30,9 +31,13 @@ export default function ZipCodePage({
     selectedLocationZip,
     selectedLocationCounty,
     selectedLocationCity,
+    selectedLocationNeighborhood,
     activeAssistanceChips,
     // Client coordinates override for distance calculations
     clientCoordinates,
+    // LLM Search state
+    llmSearchFilters,
+    llmSearchQuery,
   } = useAppData();
 
   // State management
@@ -46,8 +51,8 @@ export default function ZipCodePage({
   // Fetch org phone on mount
   useEffect(() => {
     const loadOrgPhone = async () => {
-      if (loggedInUser?.registered_organization) {
-        const phone = await fetchOrgPhone(loggedInUser.registered_organization);
+      if (loggedInUser?.reg_organization) {
+        const phone = await fetchOrgPhone(loggedInUser.reg_organization);
         setOrgPhone(phone);
       }
     };
@@ -62,13 +67,13 @@ export default function ZipCodePage({
       case "organization":
         return !!selectedParentOrg || !!selectedChildOrg;
       case "location":
-        return !!selectedLocationZip || !!selectedLocationCity || !!selectedLocationCounty;
+        return !!selectedLocationZip || !!selectedLocationCity || !!selectedLocationCounty || !!selectedLocationNeighborhood;
       case "llm":
-        return false; // LLM mode not yet implemented
+        return !!llmSearchFilters; // LLM mode has filters when search has been performed
       default:
         return false;
     }
-  }, [activeSearchMode, selectedZipCode, selectedParentOrg, selectedChildOrg, selectedLocationZip, selectedLocationCity, selectedLocationCounty]);
+  }, [activeSearchMode, selectedZipCode, selectedParentOrg, selectedChildOrg, selectedLocationZip, selectedLocationCity, selectedLocationCounty, selectedLocationNeighborhood, llmSearchFilters]);
 
   // Get the appropriate prompt message based on search mode
   const getPromptMessage = () => {
@@ -142,13 +147,19 @@ export default function ZipCodePage({
 
       case "location":
         // Filter by org's physical location (where org IS LOCATED)
-        // Apply most specific filter available: zip > city > county
+        // Apply most specific filter available: neighborhood > zip > city > county
+        // Neighborhood filter is applied AFTER the zip/city/county hierarchy
         if (selectedLocationZip) {
           filtered = filtered.filter(record => record.org_zip_code === selectedLocationZip);
         } else if (selectedLocationCity) {
           filtered = filtered.filter(record => record.org_city === selectedLocationCity);
         } else if (selectedLocationCounty) {
           filtered = filtered.filter(record => record.org_county === selectedLocationCounty);
+        }
+
+        // Apply neighborhood filter (can be combined with zip/city/county or used alone)
+        if (selectedLocationNeighborhood) {
+          filtered = filtered.filter(record => record.org_neighborhood === selectedLocationNeighborhood);
         }
 
         // Get coordinates for distance calculation
@@ -162,8 +173,25 @@ export default function ZipCodePage({
         break;
 
       case "llm":
-        // LLM mode not yet implemented
-        filtered = [];
+        // Apply LLM-generated filters
+        if (llmSearchFilters) {
+          // Build assistance lookup map: assistance name -> assist_id
+          const assistanceLookup = {};
+          assistance.forEach(a => {
+            assistanceLookup[a.assistance] = a.assist_id;
+          });
+
+          // Apply filters from LLM
+          filtered = applyLLMFilters(filtered, llmSearchFilters, assistanceLookup);
+
+          // Get coordinates for distance calculation if client address is set
+          // This enables distance column even without max_miles filter
+          if (clientCoordinates) {
+            refCoords = parseCoordinates(clientCoordinates);
+          }
+        } else {
+          filtered = [];
+        }
         break;
 
       default:
@@ -172,23 +200,7 @@ export default function ZipCodePage({
 
     // Filter by active assistance chips (if any are selected)
     if (activeAssistanceChips.size > 0) {
-      // Debug: Log what we're filtering with
-      const chipsArray = [...activeAssistanceChips];
-      console.log('🎯 Assistance filter:', {
-        activeChips: chipsArray,
-        activeChipsFirstValue: chipsArray[0],
-        activeChipsFirstValueType: typeof chipsArray[0],
-        sampleRecordAssistId: filtered[0]?.assist_id,
-        sampleRecordAssistIdType: typeof filtered[0]?.assist_id,
-        wouldMatch: chipsArray[0] === filtered[0]?.assist_id,
-      });
-
-      filtered = filtered.filter(record => {
-        const matches = activeAssistanceChips.has(record.assist_id);
-        return matches;
-      });
-
-      console.log(`🎯 After assistance filter: ${filtered.length} records`);
+      filtered = filtered.filter(record => activeAssistanceChips.has(record.assist_id));
     }
 
     // Calculate distance for each record (if we have reference coordinates)
@@ -206,9 +218,15 @@ export default function ZipCodePage({
       });
     }
 
+    // Apply max_miles filter after distance calculation (for LLM search)
+    if (llmSearchFilters?.max_miles && refCoords) {
+      const maxMiles = llmSearchFilters.max_miles;
+      filtered = filtered.filter(record => record.distance && record.distance <= maxMiles);
+    }
+
     // Sorting is handled by ResultsList (status_id, assist_id, miles)
     return filtered;
-  }, [directory, zipCodes, activeSearchMode, selectedZipCode, selectedParentOrg, selectedChildOrg, selectedLocationZip, selectedLocationCity, selectedLocationCounty, activeAssistanceChips, hasActiveFilter, clientCoordinates]);
+  }, [directory, zipCodes, assistance, activeSearchMode, selectedZipCode, selectedParentOrg, selectedChildOrg, selectedLocationZip, selectedLocationCity, selectedLocationCounty, selectedLocationNeighborhood, activeAssistanceChips, hasActiveFilter, clientCoordinates, llmSearchFilters]);
 
   // Refs
   const sidebarRef = useRef(null);
@@ -240,59 +258,13 @@ export default function ZipCodePage({
     );
   };
 
-  // Helper to log referrals to database
-  const logReferrals = async (selectedDataToLog, deliveryMethod) => {
+  // Helper to log email/pdf actions to database (simplified for new schema)
+  const logDeliveryAction = async (deliveryMethod) => {
     try {
-      console.log(`Starting ${deliveryMethod} logging process`);
-
-      // Log the main event
-      const { data: mainLogData, error: mainLogError } = await supabase
-        .from('app_usage_logs')
-        .insert({
-          reg_organization: loggedInUser?.registered_organization,
-          language: 'English',
-          nav_item: 'Zip Code',
-          search_field: deliveryMethod === 'email' ? 'Send Email' : 'Create Pdf',
-          search_value: `${selectedDataToLog.length} records`,
-          action_type: deliveryMethod,
-          date: new Date().toISOString().split('T')[0]
-        })
-        .select('id')
-        .single();
-
-      if (mainLogError) {
-        console.error(`Error creating main ${deliveryMethod} log:`, mainLogError);
-        return;
-      }
-
-      // Log individual referrals
-      if (selectedDataToLog.length > 0 && mainLogData?.id) {
-        const logId = mainLogData.id;
-
-        for (const record of selectedDataToLog) {
-          const orgName = record?.organization;
-          const assistanceType = record?.assistance || 'general';
-
-          console.log(`Processing ${deliveryMethod} referral: ${orgName} with type ${assistanceType}`);
-
-          const { error } = await supabase
-            .from('email_referrals')
-            .insert({
-              email_log_id: logId,
-              organization: orgName,
-              assistance_type: assistanceType,
-              reg_organization: loggedInUser?.registered_organization,
-              language: 'English',
-              delivery_method: deliveryMethod
-            });
-
-          if (error) {
-            console.error(`Error inserting ${deliveryMethod} referral:`, error);
-          }
-        }
-
-        console.log(`Completed logging ${selectedDataToLog.length} ${deliveryMethod} referrals`);
-      }
+      await logUsage({
+        reg_organization: loggedInUser?.reg_organization || 'Guest',
+        action_type: deliveryMethod, // "email" or "pdf"
+      });
     } catch (err) {
       console.error(`Failed to log ${deliveryMethod}:`, err);
     }
@@ -307,7 +279,7 @@ export default function ZipCodePage({
     selectedLocationZip,
     selectedLocationCity,
     selectedLocationCounty,
-    // Future: add llmQuery when LLM search is implemented
+    llmQuery: llmSearchQuery,
   });
 
   // Email success handler - called from NavBar1 panel
@@ -328,7 +300,7 @@ export default function ZipCodePage({
     showAnimatedToast("✅ Email sent successfully.", "success");
 
     // Log to database
-    await logReferrals(dataToSend, 'email');
+    await logDeliveryAction('email');
   };
 
   // PDF success handler - called from NavBar1 panel
@@ -348,7 +320,7 @@ export default function ZipCodePage({
     showAnimatedToast("✅ PDF created successfully in your Download Folder.", "success");
 
     // Log to database
-    await logReferrals(dataToSend, 'pdf');
+    await logDeliveryAction('pdf');
   };
 
   // Validation handlers - return true if valid, false if not

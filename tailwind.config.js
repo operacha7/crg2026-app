@@ -14,7 +14,8 @@ module.exports = {
         // NavBar 1
         'navbar1-bg': 'var(--color-navbar1-bg)',
         'navbar1-title': 'var(--color-navbar1-title)',
-        'navbar1-counter-text': 'var(--color-navbar1-counter-text)',
+        'navbar1-counter-text-filtered': 'var(--color-navbar1-counter-text-filtered)',
+        'navbar1-counter-text-selected': 'var(--color-navbar1-counter-text-selected)',
         'navbar1-counter-filtered': 'var(--color-navbar1-counter-filtered)',
         'navbar1-counter-selected': 'var(--color-navbar1-counter-selected)',
         'navbar1-btn-email-bg': 'var(--color-navbar1-btn-email-bg)',
@@ -61,6 +62,7 @@ module.exports = {
         'results-row-even-bg': 'var(--color-results-row-even-bg)',
         'results-row-odd-bg': 'var(--color-results-row-odd-bg)',
         'results-row-selected-bg': 'var(--color-results-row-selected-bg)',
+        'results-row-hover-bg': 'var(--color-results-row-hover-bg)',
         'results-row-border': 'var(--color-results-row-border)',
         'results-row-text': 'var(--color-results-row-text)',
         'results-hours-notes-bg': 'var(--color-results-hours-notes-bg)',
@@ -68,6 +70,8 @@ module.exports = {
         'results-status-limited-bg': 'var(--color-results-status-limited-bg)',
         'results-status-inactive-bg': 'var(--color-results-status-inactive-bg)',
         'results-assistance-icon': 'var(--color-results-assistance-icon)',
+        // Reports
+        'reports-row-hover': 'var(--color-reports-row-hover)',
       },
       fontFamily: {
         body: ["Lexend", "sans-serif"],

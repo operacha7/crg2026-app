@@ -16,6 +16,7 @@ export { PrivacyPolicyIcon } from './PrivacyPolicyIcon';
 export { ContactSupportIcon } from './ContactSupportIcon';
 export { DistanceIcon } from './DistanceIcon';
 export { HelpIcon } from './HelpIcon';
+export { HomeIcon } from './HomeIcon';
 
 // currentColor icons (inherit color from CSS)
 export { RentIcon } from './RentIcon';
@@ -34,6 +35,7 @@ export { MedicalMentalHealthIcon } from './MedicalMentalHealthIcon';
 export { MedicalAddictionRecoveryIcon } from './MedicalAddictionRecoveryIcon';
 export { MedicalProgramEnrollmentIcon } from './MedicalProgramEnrollmentIcon';
 export { MedicalBillPaymentIcon } from './MedicalBillPaymentIcon';
+export { MedicalHousingIcon } from './MedicalHousingIcon';
 export { EducationAdultsIcon } from './EducationAdultsIcon';
 export { EducationChildrenIcon } from './EducationChildrenIcon';
 export { ChildcareIcon } from './ChildcareIcon';

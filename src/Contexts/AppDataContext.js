@@ -84,7 +84,7 @@ function buildOrganizationsList(directoryData) {
   return [...orgMap.values()].sort((a, b) => a.organization.localeCompare(b.organization));
 }
 
-export const AppDataProvider = ({ children }) => {
+export const AppDataProvider = ({ children, loggedInUser }) => {
   // Data state - loaded once on mount
   const [directory, setDirectory] = useState([]);
   const [assistance, setAssistance] = useState([]);
@@ -103,10 +103,11 @@ export const AppDataProvider = ({ children }) => {
   const [selectedZipCode, setSelectedZipCode] = useState("");
   const [selectedParentOrg, setSelectedParentOrg] = useState("");
   const [selectedChildOrg, setSelectedChildOrg] = useState("");
-  // Location mode filters (county/city/zip hierarchy)
+  // Location mode filters (county/city/zip/neighborhood hierarchy)
   const [selectedLocationCounty, setSelectedLocationCounty] = useState("");
   const [selectedLocationCity, setSelectedLocationCity] = useState("");
   const [selectedLocationZip, setSelectedLocationZip] = useState("");
+  const [selectedLocationNeighborhood, setSelectedLocationNeighborhood] = useState("");
   const [activeAssistanceChips, setActiveAssistanceChips] = useState(new Set());
 
   // Client location override - for distance calculations
@@ -114,6 +115,13 @@ export const AppDataProvider = ({ children }) => {
   // Cleared when zip code changes
   const [clientAddress, setClientAddress] = useState("");
   const [clientCoordinates, setClientCoordinates] = useState("");
+
+  // LLM Search state
+  const [llmSearchQuery, setLlmSearchQuery] = useState("");
+  const [llmSearchFilters, setLlmSearchFilters] = useState(null); // Filters returned from LLM
+  const [llmSearchInterpretation, setLlmSearchInterpretation] = useState(""); // Human-readable interpretation
+  const [llmSearchLoading, setLlmSearchLoading] = useState(false);
+  const [llmSearchError, setLlmSearchError] = useState("");
 
   // Clear client coordinates when zip code changes
   useEffect(() => {
@@ -211,6 +219,9 @@ export const AppDataProvider = ({ children }) => {
     organizations, // Derived from directory for NavBar2 dropdowns
     orgAssistanceMap, // org name → array of assist_ids (for Assistance column icons)
 
+    // Auth
+    loggedInUser, // Passed from App level for logging
+
     // Status
     loading,
     error,
@@ -226,13 +237,15 @@ export const AppDataProvider = ({ children }) => {
     setSelectedParentOrg,
     selectedChildOrg,
     setSelectedChildOrg,
-    // Location mode filters (county/city/zip hierarchy)
+    // Location mode filters (county/city/zip/neighborhood hierarchy)
     selectedLocationCounty,
     setSelectedLocationCounty,
     selectedLocationCity,
     setSelectedLocationCity,
     selectedLocationZip,
     setSelectedLocationZip,
+    selectedLocationNeighborhood,
+    setSelectedLocationNeighborhood,
     activeAssistanceChips,
     setActiveAssistanceChips,
 
@@ -241,6 +254,18 @@ export const AppDataProvider = ({ children }) => {
     setClientAddress,
     clientCoordinates,
     setClientCoordinates,
+
+    // LLM Search state
+    llmSearchQuery,
+    setLlmSearchQuery,
+    llmSearchFilters,
+    setLlmSearchFilters,
+    llmSearchInterpretation,
+    setLlmSearchInterpretation,
+    llmSearchLoading,
+    setLlmSearchLoading,
+    llmSearchError,
+    setLlmSearchError,
   };
 
   return (

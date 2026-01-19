@@ -163,7 +163,7 @@ export default function ResultRow({
 
   return (
     <div
-      className="border-b border-results-row-border font-opensans transition-colors duration-150"
+      className="border-b border-results-row-border font-opensans transition-colors duration-150 results-row-hover"
       style={{
         display: "grid",
         gridTemplateColumns: GRID_COLUMNS,

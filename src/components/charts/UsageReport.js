@@ -307,9 +307,9 @@ const UsageReport = () => {
                     // Only show row if it has data
                     if (grandTotal > 0) {
                       return (
-                        <tr 
+                        <tr
                           key={category}
-                          className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}
+                          className={`${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-reports-row-hover transition-colors duration-150 cursor-pointer`}
                         >
                           <td className="p-4 font-medium text-gray-800">
                             {category}

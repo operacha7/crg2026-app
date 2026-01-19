@@ -20,27 +20,28 @@
   /* NavBar 1 */
   --color-navbar1-bg: #222831;
   --color-navbar1-title: #F3EED9;
-  --color-navbar1-counter-text: #222831;
+  --color-navbar1-counter-text-filtered: #002E62;
+  --color-navbar1-counter-text-selected: #EB6E1F;
   --color-navbar1-counter-filtered: #EB6E1F;
-  --color-navbar1-counter-selected: #00A8A8;
-  --color-navbar1-btn-email-bg: #FFC857;
+  --color-navbar1-counter-selected: #002E62;
+  --color-navbar1-btn-email-bg: #E5BA66;
   --color-navbar1-btn-email-text: #222831;
-  --color-navbar1-btn-pdf-bg: #228B22;
-  --color-navbar1-btn-pdf-text: #F3EED9;
+  --color-navbar1-btn-pdf-bg: #6678e5;
+  --color-navbar1-btn-pdf-text: #F3EE222831D9;
 
   /* NavBar 2 */
   --color-navbar2-bg: #4A4F56;
   --color-navbar2-btn-inactive-text: #F3EED9;
   --color-navbar2-btn-inactive-border: #F3EED9;
-  --color-navbar2-btn-active-bg: #652C57;
+  --color-navbar2-btn-active-bg: #222831;
   --color-navbar2-btn-active-text: #FFC857;
-  --color-navbar2-dropdown-bg: #005C72;
+  --color-navbar2-dropdown-bg: #2d6552;
   --color-navbar2-dropdown-text: #F3EED9;
   --color-navbar2-link: #F0F8FF;
 
   /* NavBar 3 */
   --color-navbar3-bg: #948979;
-  --color-navbar3-chip-active-bg: #005C72;
+  --color-navbar3-chip-active-bg: #2d6552;
   --color-navbar3-chip-active-text: #F3EED9;
   --color-navbar3-chip-active-border: #F3EED9;
   --color-navbar3-chip-inactive-bg: #F3EED9;
@@ -56,6 +57,9 @@
   --color-panel-btn-ok-bg: #3DB800;
   --color-panel-btn-text: #000000;
 
+  /* Reports / Usage Table */
+  --color-reports-row-hover: #f2f3cc;
+
   /* Results Header */
   --color-results-header-bg: #B8001F;
   --color-results-header-text: #F3EED9;
@@ -63,15 +67,16 @@
   /* Results Row */
   --color-results-row-bg: transparent;
   --color-results-row-even-bg: #ffffff;
-  --color-results-row-odd-bg: #e7f3f8;
+  --color-results-row-odd-bg: #f4f3f1;
   --color-results-row-selected-bg: #ebd9b6;
+  --color-results-row-hover-bg: #f2f3cc; /* Same as reports row hover */
   --color-results-row-border: #9b9b9b;
   --color-results-row-text: #000000;
   --color-results-hours-notes-bg: #FFB302;
   --color-results-status-active-bg: #8FBC8F;
   --color-results-status-limited-bg: #FFDA6A;
   --color-results-status-inactive-bg: #E74C3E;
-  --color-results-assistance-icon: #B8001F;
+  --color-results-assistance-icon: #2d6552;
   --color-results-assistance-icon-secondary: #050500;
   --color-results-expand-chevron: #FF0004;
   --color-results-distance-label: #666666;
@@ -182,8 +187,8 @@
 
   /* NavBar 1 */
   --height-navbar1: 80px;
-  --padding-navbar1-left: 20px;
-  --padding-navbar1-right: 20px;
+  --padding-navbar1-left: 40px;
+  --padding-navbar1-right: 40px;
   --gap-navbar1-logo-title: 12px;
   --gap-navbar1-counters: 15px;
   --gap-navbar1-buttons: 15px;
@@ -195,8 +200,8 @@
 
   /* NavBar 2 */
   --height-navbar2: 70px;
-  --padding-navbar2-left: 20px;
-  --padding-navbar2-right: 20px;
+  --padding-navbar2-left: 40px;
+  --padding-navbar2-right: 40px;
   --height-navbar2-btn: 38px;
   --padding-navbar2-btn-x: 20px;
   --radius-navbar2-btn: 10px;
@@ -210,6 +215,19 @@
   --gap-navbar3-chips: 15px;
   --height-navbar3-btn: 35px;
 
+  /* NavBar 3 Reports */
+  --height-navbar3-reports: 90px;
+  --color-navbar3-reports-card-bg: #fefefe;
+  --color-navbar3-reports-heading: #666666;
+  --color-navbar3-reports-value: #222831;
+  --color-navbar3-reports-percentage: #228B22;
+  --font-size-navbar3-reports-heading: 12px;
+  --font-size-navbar3-reports-value: 20px;
+  --font-size-navbar3-reports-percentage: 12px;
+  --radius-navbar3-reports-card: 5px;
+  --gap-navbar3-reports-value-pct: 15px;
+  --gap-navbar3-reports-cards: 300px;
+
   /* Dropdown Panel / Modal (standard for all panels) */
   --height-panel-header: 70px;
   --radius-panel: 5px;
@@ -219,6 +237,12 @@
   --size-panel-help-icon: 40px;
   --color-panel-border: #F3EED9;
   --width-panel-border: 2px;
+
+  /* LLM Search Panel */
+  --width-llm-panel: 650px;
+  --height-llm-panel-header: 50px;
+  --margin-llm-panel-left: 200px;
+  --min-height-llm-panel: 280px;
 
   /* Assistance Panel */
   --width-assistance-group-btn: 100px;

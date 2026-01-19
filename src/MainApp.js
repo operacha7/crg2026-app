@@ -14,7 +14,7 @@ import { AppDataProvider, useAppData } from "./Contexts/AppDataContext";
 import GeneralSearchPage from "./views/GeneralSearchPage";
 import OrganizationPage from "./views/OrganizationPage";
 import ZipCodePage from "./views/ZipCodePage";
-import StatisticsPage from "./views/StatisticsPage.js";
+import ReportsPage from "./views/ReportsPage";
 import PrivacyPolicy from "./views/PrivacyPolicy";
 import TermsOfService from "./views/TermsOfService";
 import SupportPage from "./views/SupportPage";
@@ -78,7 +78,7 @@ useEffect(() => {
 }, []);
 
   return (
-    <AppDataProvider>
+    <AppDataProvider loggedInUser={loggedInUser}>
       {/* Add ScheduledReload component */}
       <ScheduledReload />
       {/* Add AnnouncementManager */}
@@ -153,7 +153,7 @@ function AppContent({ loggedInUser }) {
         <Route path="*" element={<Navigate to="/" replace />} />
         <Route
           path="/reports"
-          element={<StatisticsPage loggedInUser={loggedInUser} />}
+          element={<ReportsPage />}
         />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />

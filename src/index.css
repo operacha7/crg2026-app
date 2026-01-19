@@ -42,6 +42,17 @@
   }
 }
 
+/* --- Reports table row hover --- */
+tr.reports-row-hover:hover,
+tr.reports-row-hover:hover td {
+  background-color: #E8E4DF !important;
+}
+
+/* --- Results row hover --- */
+.results-row-hover:hover {
+  background-color: var(--color-results-row-hover-bg) !important;
+}
+
 /* --- Always-visible scrollbar styles --- */
 ::-webkit-scrollbar {
   width: 10px;

@@ -12,103 +12,7 @@ import {
 } from "../utils/formatters";
 
 /**
- * Check if organization has PDF credits remaining
- */
-export async function checkPdfLimit(orgName) {
-  if (!orgName) {
-    console.warn("No organization provided - skipping PDF limit check (dev mode)");
-    return { allowed: true, remaining: 999 };
-  }
-
-  try {
-    const { data: org, error } = await supabase
-      .from("registered_organizations")
-      .select("pdf_mo_limit, pdf_mo_actual")
-      .eq("registered_organization", orgName)
-      .single();
-
-    if (error) {
-      console.error("Error checking PDF limit:", error);
-      return { allowed: false, error: "Database error" };
-    }
-
-    const limit = org.pdf_mo_limit || 0;
-    const currentActual = org.pdf_mo_actual || 0;
-
-    if (limit === 0) {
-      return {
-        allowed: false,
-        message: "Authorization required to create a PDF. Please contact Support.",
-      };
-    }
-
-    if (currentActual >= limit) {
-      return {
-        allowed: false,
-        message: "Monthly PDF limits reached. Please contact Support.",
-      };
-    }
-
-    return {
-      allowed: true,
-      remaining: limit - currentActual,
-    };
-  } catch (err) {
-    console.error("Error in checkPdfLimit:", err);
-    return { allowed: false, error: err.message };
-  }
-}
-
-/**
- * Check if organization has email credits remaining
- */
-export async function checkEmailLimit(orgName) {
-  if (!orgName) {
-    console.warn("No organization provided - skipping email limit check (dev mode)");
-    return { allowed: true, remaining: 999 };
-  }
-
-  try {
-    const { data: org, error } = await supabase
-      .from("registered_organizations")
-      .select("email_mo_limit, email_mo_actual")
-      .eq("registered_organization", orgName)
-      .single();
-
-    if (error) {
-      console.error("Error checking email limit:", error);
-      return { allowed: false, error: "Database error" };
-    }
-
-    const limit = org.email_mo_limit || 0;
-    const currentActual = org.email_mo_actual || 0;
-
-    if (limit === 0) {
-      return {
-        allowed: false,
-        message: "Authorization required to send an email. Please contact Support.",
-      };
-    }
-
-    if (currentActual >= limit) {
-      return {
-        allowed: false,
-        message: "Monthly email limits reached. Please contact Support.",
-      };
-    }
-
-    return {
-      allowed: true,
-      remaining: limit - currentActual,
-    };
-  } catch (err) {
-    console.error("Error in checkEmailLimit:", err);
-    return { allowed: false, error: err.message };
-  }
-}
-
-/**
- * Fetch organization phone number
+ * Fetch organization phone number from registered_organizations table
  */
 export async function fetchOrgPhone(orgName) {
   if (!orgName) return "";
@@ -117,7 +21,7 @@ export async function fetchOrgPhone(orgName) {
     const { data, error } = await supabase
       .from("registered_organizations")
       .select("org_phone")
-      .eq("registered_organization", orgName)
+      .eq("reg_organization", orgName)
       .single();
 
     if (error) {
@@ -456,11 +360,6 @@ export async function sendEmail({
   // Legacy prop - still supported for backwards compatibility
   selectedZip,
 }) {
-  const limitCheck = await checkEmailLimit(loggedInUser?.registered_organization);
-  if (!limitCheck.allowed) {
-    throw new Error(limitCheck.message || limitCheck.error);
-  }
-
   // Use searchContext if provided, otherwise fall back to legacy selectedZip
   const headerText = searchContext
     ? generateSearchHeader(searchContext)
@@ -500,7 +399,7 @@ export async function sendEmail({
     recipient,
     subject: "Resources & Support Information",
     htmlBody: emailHtml,
-    organization: loggedInUser?.registered_organization,
+    organization: loggedInUser?.reg_organization,
     headers: {
       "X-Entity-Ref-ID": "logo-signature",
       "Content-Type": "text/html; charset=UTF-8",
@@ -534,14 +433,9 @@ export async function createPdf({
   selectedData,
   searchContext,
   loggedInUser,
-  orgPhone,
   // Legacy prop - still supported for backwards compatibility
   selectedZip,
 }) {
-  const limitCheck = await checkPdfLimit(loggedInUser?.registered_organization);
-  if (!limitCheck.allowed) {
-    throw new Error(limitCheck.message || limitCheck.error);
-  }
 
   // Use searchContext if provided, otherwise fall back to legacy selectedZip
   const headerText = searchContext
@@ -569,7 +463,7 @@ export async function createPdf({
   };
 
   // Registered org name for "By:" line (blank/dummy for now since not wired)
-  const registeredOrgName = loggedInUser?.registered_organization || "";
+  const registeredOrgName = loggedInUser?.reg_organization || "";
 
   const pdfHtml = `<!DOCTYPE html>
 <html>
@@ -609,7 +503,7 @@ ${htmlContent}
   const pdfPayload = {
     htmlBody: pdfHtml,
     filename,
-    organization: loggedInUser?.registered_organization,
+    organization: loggedInUser?.reg_organization,
     footer: {
       source: pdfFooter,
       spacing: "10px",

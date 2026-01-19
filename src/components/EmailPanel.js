@@ -132,7 +132,7 @@ export default function EmailPanel({
               onClick={handleCancel}
               className="font-opensans transition-all duration-200 hover:brightness-110"
               style={{
-                backgroundColor: "var(--color-panel-btn-cancel-bg)",
+                backgroundColor: "var(--color-panel-btn-ok-bg)",
                 color: "var(--color-panel-btn-text)",
                 width: "var(--width-panel-btn)",
                 height: "var(--height-panel-btn)",

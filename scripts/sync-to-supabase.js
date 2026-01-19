@@ -4,8 +4,8 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 // Debug - let's see what's loaded
-console.log('REACT_APP_SUPABASE_URL:', process.env.REACT_APP_SUPABASE_URL);
-console.log('REACT_APP_SUPABASE_SECRET_KEY:', process.env.REACT_APP_SUPABASE_SECRET_KEY ? 'Found (hidden)' : 'NOT FOUND');
+console.log('VITE_SUPABASE_URL:', process.env.VITE_APP_SUPABASE_URL);
+console.log('VITE_SUPABASE_SECRET_KEY:', process.env.VITE_APP_SUPABASE_SECRET_KEY ? 'Found (hidden)' : 'NOT FOUND');
 
 // Configuration
 const SPREADSHEET_ID = '1m3-OHykdj7S_9fGdyJmFkgjNMQ9FA4BAmuyf4khMm7w';
@@ -23,8 +23,8 @@ const JSON_COLUMNS = ['org_hours'];
 
 // Initialize Supabase
 const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_SECRET_KEY
+  process.env.VITE_SUPABASE_URL,
+  process.env.VITE_SUPABASE_SECRET_KEY
 );
 
 // Initialize Google Sheets
