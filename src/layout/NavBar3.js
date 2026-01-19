@@ -451,7 +451,7 @@ export default function NavBar3() {
 
   const handleMouseLeave = () => {
     if (!isLocked) {
-      // Small delay before closing, then auto-save
+      // Delay before closing to allow user to return if they accidentally move off
       closeTimeoutRef.current = setTimeout(() => {
         // Auto-save current selections when leaving
         setSavedSelections(tempSelections);
@@ -461,7 +461,7 @@ export default function NavBar3() {
           setActiveAssistanceChips(new Set());
         }
         setIsPanelOpen(false);
-      }, 150);
+      }, 300);
     }
   };
 

@@ -14,6 +14,8 @@ export default function Tooltip({ children, text, position = "top" }) {
     right: "left-full top-1/2 -translate-y-1/2 ml-2",
     // Special position for elements near right edge of screen
     "bottom-left": "top-full right-0 mt-2",
+    // Special position for elements near left edge of screen
+    "bottom-right": "top-full left-0 mt-2",
   };
 
   return (

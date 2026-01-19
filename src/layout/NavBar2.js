@@ -89,10 +89,10 @@ function HoverDropdown({ placeholder, options = [], value, onChange, allowReset 
 
   const handleMouseLeave = () => {
     if (!isLocked) {
-      // Small delay before closing to allow moving to dropdown
+      // Delay before closing to allow user to return if they accidentally move off
       closeTimeoutRef.current = setTimeout(() => {
         setIsOpen(false);
-      }, 150);
+      }, 300);
     }
   };
 
@@ -239,10 +239,11 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
 
   const handleMouseLeave = () => {
     if (!isLocked) {
+      // Delay before closing to allow user to return if they accidentally move off
       closeTimeoutRef.current = setTimeout(() => {
         setIsOpen(false);
         setSearchText("");
-      }, 150);
+      }, 300);
     }
   };
 
@@ -371,21 +372,30 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
   );
 }
 
-// Zip Code dropdown - hover to open version
+// Zip Code dropdown - hover to open version with type-to-search
 // Has slight delay before closing to allow time to move to dropdown
 function ZipCodeDropdown({ value, onChange, options = [] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [hoveredOption, setHoveredOption] = useState(null);
+  const [searchText, setSearchText] = useState("");
   const containerRef = useRef(null);
+  const inputRef = useRef(null);
   const closeTimeoutRef = useRef(null);
   const hasValue = value && value !== "";
+
+  // Filter options by search text
+  const filteredOptions = useMemo(() => {
+    if (!searchText.trim()) return options;
+    return options.filter(opt => opt.startsWith(searchText));
+  }, [options, searchText]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setIsOpen(false);
         setIsLocked(false);
+        setSearchText("");
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -399,6 +409,13 @@ function ZipCodeDropdown({ value, onChange, options = [] }) {
     };
   }, []);
 
+  // Focus input when dropdown opens
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isOpen]);
+
   const handleMouseEnter = () => {
     if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
     if (!isLocked) setIsOpen(true);
@@ -406,10 +423,11 @@ function ZipCodeDropdown({ value, onChange, options = [] }) {
 
   const handleMouseLeave = () => {
     if (!isLocked) {
-      // Small delay before closing to allow moving to dropdown
+      // Delay before closing to allow user to return if they accidentally move off
       closeTimeoutRef.current = setTimeout(() => {
         setIsOpen(false);
-      }, 150);
+        setSearchText("");
+      }, 300);
     }
   };
 
@@ -422,6 +440,18 @@ function ZipCodeDropdown({ value, onChange, options = [] }) {
     onChange?.(option);
     setIsOpen(false);
     setIsLocked(false);
+    setSearchText("");
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && filteredOptions.length > 0) {
+      // Select first matching option on Enter
+      handleSelect(filteredOptions[0]);
+    } else if (e.key === "Escape") {
+      setIsOpen(false);
+      setIsLocked(false);
+      setSearchText("");
+    }
   };
 
   return (
@@ -454,25 +484,53 @@ function ZipCodeDropdown({ value, onChange, options = [] }) {
 
       {isOpen && (
         <div
-          className="absolute left-0 mt-2 rounded shadow-lg z-50 max-h-[400px] overflow-y-auto"
+          className="absolute left-0 mt-2 rounded shadow-lg z-50"
           style={{ backgroundColor: "#F3EED9", minWidth: "150px" }}
         >
-          {options.map((opt, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleSelect(opt)}
-              onMouseEnter={() => setHoveredOption(opt)}
-              onMouseLeave={() => setHoveredOption(null)}
-              className="w-full text-left px-4 py-2 font-opensans"
+          {/* Search input */}
+          <div className="p-2" style={{ borderBottom: "2px solid #d4d0c7" }}>
+            <input
+              ref={inputRef}
+              type="text"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type zip code..."
+              className="w-full px-3 py-2 rounded font-opensans"
               style={{
                 fontSize: "14px",
                 color: "#222831",
-                backgroundColor: hoveredOption === opt ? "#d4d0c7" : (value === opt ? "#e0ddd4" : "transparent"),
+                backgroundColor: "#FFFFFF",
+                border: "2px solid #005C72",
+                outline: "none",
               }}
-            >
-              {opt}
-            </button>
-          ))}
+            />
+          </div>
+          {/* Options list */}
+          <div className="max-h-[350px] overflow-y-auto">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((opt, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSelect(opt)}
+                  onMouseEnter={() => setHoveredOption(opt)}
+                  onMouseLeave={() => setHoveredOption(null)}
+                  className="w-full text-left px-4 py-2 font-opensans"
+                  style={{
+                    fontSize: "14px",
+                    color: "#222831",
+                    backgroundColor: hoveredOption === opt ? "#d4d0c7" : (value === opt ? "#e0ddd4" : "transparent"),
+                  }}
+                >
+                  {opt}
+                </button>
+              ))
+            ) : (
+              <div className="px-4 py-2 font-opensans text-gray-500" style={{ fontSize: "14px" }}>
+                No matches found
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

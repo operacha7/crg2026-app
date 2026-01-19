@@ -67,16 +67,19 @@ function StatusPill({ statusId, status }) {
 
 // Icon wrapper component with instant CSS tooltip
 // Uses CSS color property which icons inherit via fill="currentColor"
-// position: "top" (default) or "bottom" for first row to avoid header overlap
+// position: "top" (default), "bottom", or "bottom-right" for icons near left edge
 function IconWithTooltip({ IconComponent, size, iconName, color, className, position = "top" }) {
   if (!IconComponent) return null;
 
   const tooltipText = formatIconName(iconName);
 
-  // Position classes - top shows above icon, bottom shows below
-  const positionClasses = position === "bottom"
-    ? "top-full mt-2 left-1/2 -translate-x-1/2"
-    : "bottom-full mb-2 left-1/2 -translate-x-1/2";
+  // Position classes for different tooltip placements
+  const positionClassesMap = {
+    top: "bottom-full mb-2 left-1/2 -translate-x-1/2",
+    bottom: "top-full mt-2 left-1/2 -translate-x-1/2",
+    "bottom-right": "top-full mt-2 left-0", // For icons near left edge - aligns tooltip to left of icon
+  };
+  const positionClasses = positionClassesMap[position] || positionClassesMap.top;
 
   return (
     <span
@@ -183,7 +186,7 @@ export default function ResultRow({
           size={25}
           iconName={assistanceIcon}
           color="var(--color-results-assistance-icon)"
-          position={rowIndex === 0 ? "bottom" : "top"}
+          position="bottom-right"
         />
         <input
           type="checkbox"
