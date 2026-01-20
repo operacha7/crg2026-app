@@ -253,7 +253,7 @@ export default function LoginPage({ onLoginSuccess }) {
               <div
                 className="flex items-center justify-center gap-3 px-4"
                 style={{
-                  backgroundColor: "var(--color-login-panel-header-bg)",
+                  backgroundColor: "var(--color-panel-header-bg)",
                   height: "var(--height-panel-header)",
                 }}
               >
@@ -279,7 +279,7 @@ export default function LoginPage({ onLoginSuccess }) {
               {/* Panel Body */}
               <div
                 className="px-6 py-6"
-                style={{ backgroundColor: "var(--color-login-panel-bg)" }}
+                style={{ backgroundColor: "var(--color-panel-body-bg)" }}
               >
                 {/* Browse Without Account Button */}
                 <button

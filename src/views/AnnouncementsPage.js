@@ -155,13 +155,13 @@ const NavCard = ({ announcement, position, totalCount, onClick, direction }) => 
 
       {/* Content */}
       <div className="flex flex-col" style={{ textAlign: isLeft ? 'right' : 'left' }}>
-        <div className="font-medium leading-tight mb-2" style={{ color: '#000000', fontSize: '16px' }}>
+        <div className="font-medium leading-tight mb-2" style={{ color: 'var(--color-text-primary)', fontSize: '16px' }}>
           {announcement.title}
         </div>
-        <div className="text-sm" style={{ color: '#333333' }}>
+        <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           {formatDate(announcement.start_date)}
         </div>
-        <div className="text-xs" style={{ color: '#666666' }}>
+        <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
           {position}/{totalCount}
         </div>
       </div>
@@ -284,7 +284,7 @@ function AnnouncementDropdown({ announcements, currentIndex, onSelect }) {
         <div
           className="absolute left-0 mt-2 rounded shadow-lg z-50"
           style={{
-            backgroundColor: '#F3EED9',
+            backgroundColor: 'var(--color-dropdown-bg)',
             width: '400px',
           }}
         >
@@ -298,8 +298,8 @@ function AnnouncementDropdown({ announcements, currentIndex, onSelect }) {
               placeholder="Search by title or date..."
               className="w-full px-3 py-2 rounded font-opensans"
               style={{
-                backgroundColor: '#e8e4db',
-                color: '#222831',
+                backgroundColor: 'var(--color-dropdown-hover-bg)',
+                color: 'var(--color-dropdown-text)',
                 border: '1px solid #ccc',
                 fontSize: '14px',
               }}
@@ -324,12 +324,12 @@ function AnnouncementDropdown({ announcements, currentIndex, onSelect }) {
                     className="w-full text-left px-4 py-3 font-opensans"
                     style={{
                       fontSize: '14px',
-                      color: '#222831',
+                      color: 'var(--color-dropdown-text)',
                       backgroundColor:
                         hoveredOption === announcement.id_no
-                          ? '#d4d0c7'
+                          ? 'var(--color-dropdown-hover-bg)'
                           : actualIndex === currentIndex
-                          ? '#e0ddd4'
+                          ? 'var(--color-dropdown-active-bg)'
                           : 'transparent',
                     }}
                   >
@@ -455,7 +455,7 @@ const AnnouncementsPage = ({ loggedInUser }) => {
           <span
             className="font-opensans"
             style={{
-              color: '#F3EED9',
+              color: 'var(--color-navbar1-title)',
               fontSize: 'var(--font-size-navbar1-btn)',
               fontWeight: 'var(--font-weight-navbar1-btn)',
               letterSpacing: 'var(--letter-spacing-navbar1-btn)',
@@ -482,7 +482,7 @@ const AnnouncementsPage = ({ loggedInUser }) => {
         </nav>
 
         {/* Main content - Memo with navigation */}
-        <main className="flex-1 flex items-center justify-center gap-8 p-8 overflow-hidden" style={{ backgroundColor: '#d0ccc4' }}>
+        <main className="flex-1 flex items-center justify-center gap-8 p-8 overflow-hidden" style={{ backgroundColor: 'var(--color-page-background)' }}>
           {loading ? (
             <div className="text-gray-600 text-xl">Loading announcements...</div>
           ) : announcements.length === 0 ? (

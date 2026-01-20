@@ -653,9 +653,9 @@ export default function NavBar3() {
 
       {/* Right side: Logged-in user */}
       <span
-        className="font-fraktur flex-shrink-0 ml-4"
+        className="font-Montserrat flex-shrink-0 ml-4"
         style={{
-          color: "var(--color-navbar3-user-text, #222831)",
+          color: "var(--color-navbar3-user-text, #000000)",
           fontSize: "var(--font-size-navbar3-user)",
           whiteSpace: "nowrap",
         }}

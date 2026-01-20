@@ -70,8 +70,8 @@ module.exports = {
         'results-status-limited-bg': 'var(--color-results-status-limited-bg)',
         'results-status-inactive-bg': 'var(--color-results-status-inactive-bg)',
         'results-assistance-icon': 'var(--color-results-assistance-icon)',
-        // Reports
-        'reports-row-hover': 'var(--color-reports-row-hover)',
+        // Reports (uses results tokens for consistency)
+        'reports-row-hover': 'var(--color-results-row-hover-bg)',
       },
       fontFamily: {
         body: ["Lexend", "sans-serif"],
@@ -79,7 +79,6 @@ module.exports = {
         comfortaa: ["Comfortaa", "cursive"],
         label: ['"Montserrat"', "sans-serif"],
         opensans: ['"Open Sans"', "sans-serif"],
-        fraktur: ['"UnifrakturMaguntia"', "cursive"],
       },
       fontSize: {
         'footer': 'var(--font-size-footer)',

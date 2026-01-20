@@ -122,6 +122,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
   const [llmSearchInterpretation, setLlmSearchInterpretation] = useState(""); // Human-readable interpretation
   const [llmSearchLoading, setLlmSearchLoading] = useState(false);
   const [llmSearchError, setLlmSearchError] = useState("");
+  const [llmRelatedSearches, setLlmRelatedSearches] = useState([]); // Related search suggestions
 
   // Clear client coordinates when zip code changes
   useEffect(() => {
@@ -266,6 +267,8 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
     setLlmSearchLoading,
     llmSearchError,
     setLlmSearchError,
+    llmRelatedSearches,
+    setLlmRelatedSearches,
   };
 
   return (

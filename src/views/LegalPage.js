@@ -76,7 +76,7 @@ const LegalPage = ({ loggedInUser }) => {
           <span
             className="font-opensans"
             style={{
-              color: '#F3EED9',
+              color: 'var(--color-navbar1-title)',
               fontSize: 'var(--font-size-navbar1-btn)',
               fontWeight: 'var(--font-weight-navbar1-btn)',
               letterSpacing: 'var(--letter-spacing-navbar1-btn)',
@@ -138,7 +138,7 @@ const LegalPage = ({ loggedInUser }) => {
         {/* Main content - Legal text */}
         <main
           className="flex-1 overflow-y-auto p-8"
-          style={{ backgroundColor: '#F3EED9' }}
+          style={{ backgroundColor: 'var(--color-page-background-cream)' }}
         >
           <div
             className="legal-content max-w-4xl mx-auto bg-white rounded-lg shadow-md p-8"

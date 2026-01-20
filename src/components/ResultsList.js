@@ -4,6 +4,7 @@
 
 import { useMemo } from "react";
 import ResultRow from "./ResultRow";
+import { useAppData } from "../Contexts/AppDataContext";
 
 // Sort records by: 1) status_id, 2) assist_id, 3) miles (all ascending)
 function sortRecords(records) {
@@ -29,6 +30,86 @@ function sortRecords(records) {
   });
 }
 
+/**
+ * Generate helpful suggestions when zero results are found
+ */
+function getZeroResultsSuggestions(filters, searchMode) {
+  const suggestions = [];
+
+  if (searchMode === "llm" && filters) {
+    // Analyze what filters are applied and suggest removing restrictive ones
+    if (filters.days && filters.days.length > 0) {
+      suggestions.push({
+        text: "Remove day filter",
+        hint: `Currently filtering for ${filters.days.join(", ")}`,
+      });
+    }
+    if (filters.time_filter) {
+      const timeDesc = filters.time_filter.type === "morning" ? "morning hours" :
+                       filters.time_filter.type === "afternoon" ? "afternoon hours" :
+                       filters.time_filter.type === "evening" ? "evening hours" : "specific hours";
+      suggestions.push({
+        text: "Remove time filter",
+        hint: `Currently filtering for ${timeDesc}`,
+      });
+    }
+    if (filters.max_miles) {
+      suggestions.push({
+        text: "Increase or remove distance limit",
+        hint: `Currently limited to ${filters.max_miles} miles`,
+      });
+    }
+    if (filters.zip_codes && filters.zip_codes.length > 0) {
+      suggestions.push({
+        text: "Try a different or broader zip code area",
+        hint: `Currently searching zip ${filters.zip_codes.join(", ")}`,
+      });
+    }
+    if (filters.neighborhood) {
+      suggestions.push({
+        text: "Remove neighborhood filter",
+        hint: `Currently filtering for ${filters.neighborhood}`,
+      });
+    }
+    if (filters.requirements_keywords && filters.requirements_keywords.length > 0) {
+      suggestions.push({
+        text: "Remove requirements filter",
+        hint: `Currently searching for "${filters.requirements_keywords.join(", ")}"`,
+      });
+    }
+    if (filters.county) {
+      suggestions.push({
+        text: "Try searching without county filter",
+        hint: `Currently limited to ${filters.county} County`,
+      });
+    }
+    if (filters.city && filters.city !== "Houston") {
+      suggestions.push({
+        text: "Try expanding to Houston area",
+        hint: `Currently limited to ${filters.city}`,
+      });
+    }
+
+    // If we have assistance types, suggest related types
+    if (filters.assistance_types && filters.assistance_types.length === 1) {
+      suggestions.push({
+        text: "Try a broader search term",
+        hint: `Currently searching for "${filters.assistance_types[0]}" only`,
+      });
+    }
+  }
+
+  // Always add a generic suggestion if we don't have specific ones
+  if (suggestions.length === 0) {
+    suggestions.push({
+      text: "Try broadening your search",
+      hint: "Use fewer filters or a more general search term",
+    });
+  }
+
+  return suggestions.slice(0, 4); // Max 4 suggestions
+}
+
 export default function ResultsList({
   records = [],
   assistanceData = [],
@@ -36,6 +117,8 @@ export default function ResultsList({
   selectedIds = new Set(),
   onSelectionChange,
 }) {
+  // Get search context for zero-results guidance
+  const { activeSearchMode, llmSearchFilters, llmSearchQuery, llmSearchInterpretation } = useAppData();
   // Sort records
   const sortedRecords = useMemo(
     () => sortRecords(records),
@@ -62,12 +145,65 @@ export default function ResultsList({
     };
   };
 
+  // Generate suggestions for zero results
+  const suggestions = useMemo(() =>
+    getZeroResultsSuggestions(llmSearchFilters, activeSearchMode),
+    [llmSearchFilters, activeSearchMode]
+  );
+
   if (sortedRecords.length === 0) {
+    const isLLMSearch = activeSearchMode === "llm";
+
     return (
       <div className="flex-1 flex items-center justify-center text-gray-500 font-body">
-        <div className="text-center">
-          <p className="text-xl font-semibold">No Results Found</p>
-          <p className="text-sm mt-2">Try adjusting your search criteria</p>
+        <div className="text-center max-w-lg px-4">
+          <p className="text-xl font-semibold text-gray-700">No Results Found</p>
+
+          {/* Show the interpreted query for LLM search */}
+          {isLLMSearch && llmSearchInterpretation && (
+            <p className="text-sm mt-2 italic text-gray-500">
+              Searched for: "{llmSearchInterpretation}"
+            </p>
+          )}
+
+          {/* Suggestions to broaden search */}
+          {suggestions.length > 0 && (
+            <div className="mt-6">
+              <p className="text-sm font-medium text-gray-600 mb-3">
+                Suggestions to find more results:
+              </p>
+              <ul className="text-left space-y-2">
+                {suggestions.map((suggestion, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <span className="text-teal-600 font-bold">•</span>
+                    <div>
+                      <span className="text-gray-700">{suggestion.text}</span>
+                      {suggestion.hint && (
+                        <span className="text-xs text-gray-400 block">{suggestion.hint}</span>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Example searches for LLM mode */}
+          {isLLMSearch && (
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <p className="text-xs text-gray-400 mb-2">Example searches:</p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {["food pantry", "rent help", "medical clinic", "job training"].map((example) => (
+                  <span
+                    key={example}
+                    className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded"
+                  >
+                    {example}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

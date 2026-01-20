@@ -1,13 +1,10 @@
 // src/icons/index.js
 // Re-export all icons for easy importing
-// Usage: import { OkIcon, CancelIcon, SendEmailIcon } from '../icons';
+// Usage: import { SendEmailIcon, CreatePdfIcon } from '../icons';
 
 // Static color icons (colors baked in)
-export { OkIcon } from './OkIcon';
-export { CancelIcon } from './CancelIcon';
 export { SendEmailIcon } from './SendEmailIcon';
 export { CreatePdfIcon } from './CreatePdfIcon';
-export { PinFavoritesIcon } from './PinFavoritesIcon';
 export { USFlagIcon } from './USFlagIcon';
 export { InformationIcon } from './InformationIcon';
 export { ReportsIcon } from './ReportsIcon';

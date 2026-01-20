@@ -11,11 +11,15 @@ import {
   parseRequirements,
 } from "../utils/formatters";
 
+// Default callback phone number if org doesn't have one configured
+const DEFAULT_ORG_PHONE = "713-664-5350";
+
 /**
  * Fetch organization phone number from registered_organizations table
+ * Returns the default phone number if org_phone is null/empty
  */
 export async function fetchOrgPhone(orgName) {
-  if (!orgName) return "";
+  if (!orgName) return DEFAULT_ORG_PHONE;
 
   try {
     const { data, error } = await supabase
@@ -26,12 +30,12 @@ export async function fetchOrgPhone(orgName) {
 
     if (error) {
       console.error("Error fetching org_phone:", error);
-      return "";
+      return DEFAULT_ORG_PHONE;
     }
-    return data?.org_phone || "";
+    return data?.org_phone || DEFAULT_ORG_PHONE;
   } catch (err) {
     console.error("Error in fetchOrgPhone:", err);
-    return "";
+    return DEFAULT_ORG_PHONE;
   }
 }
 

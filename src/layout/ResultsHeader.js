@@ -8,7 +8,7 @@
 // Select(4%) + Miles(3%) + Org(20%) + Assistance(8%) + Hours(17%) + Status(6%) + Phone(6%) + Requirements(33%) + Zip(3%)
 // Note: Address column removed (combined with Organization), old Address 12% redistributed: 8% to Assistance, 4% to Requirements
 // Gaps: 20px before Org, 30px before Hours, 40px before Status, 20px before Phone (applied as paddingLeft)
-const GRID_COLUMNS = "4% 3% 25% 6% 15% 6% 6.5% 31% 3%";
+const GRID_COLUMNS = "4% 3% 25% 6% 17% 6% 6.5% 29% 3%";
 
 const columns = [
   { id: "select", label: "Select" },

@@ -21,6 +21,8 @@ import {
 import { LOADING_MESSAGES } from "../constants/loadingMessages";
 
 // Map of icon keywords to components for inline rendering
+// These render miniature UI mockups in chat bubbles - colors must match actual UI
+// Using CSS variables where possible for consistency with design tokens
 const ICON_MAP = {
   // Sidebar icons
   "[[HOME_ICON]]": <HomeIcon size={20} active={true} />,
@@ -35,60 +37,60 @@ const ICON_MAP = {
   "[[RENT_ICON]]": <RentIcon size={20} />,
   "[[UTILITIES_ICON]]": <UtilitiesIcon size={20} />,
 
-  // Counters in header
+  // Counters in header (uses NavBar1 counter tokens)
   "[[ORANGE_CIRCLE]]": (
-    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold" style={{ backgroundColor: "#EB6E1F", color: "#002E62" }}>5</span>
+    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold" style={{ backgroundColor: "var(--color-navbar1-counter-filtered)", color: "var(--color-navbar1-counter-text-filtered)" }}>5</span>
   ),
   "[[BLUE_CIRCLE]]": (
-    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold" style={{ backgroundColor: "#002E62", color: "#EB6E1F" }}>2</span>
+    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold" style={{ backgroundColor: "var(--color-navbar1-counter-selected)", color: "var(--color-navbar1-counter-text-selected)" }}>2</span>
   ),
 
-  // Header buttons
+  // Header buttons (uses NavBar1 button tokens)
   "[[EMAIL_BTN]]": (
-    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "#E5BA66", color: "#222831" }}>Send Email</span>
+    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar1-btn-email-bg)", color: "var(--color-navbar1-btn-email-text)" }}>Send Email</span>
   ),
   "[[PDF_BTN]]": (
-    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "#6678e5", color: "#FFFFFF" }}>Create PDF</span>
+    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar1-btn-pdf-bg)", color: "var(--color-navbar1-btn-pdf-text)" }}>Create PDF</span>
   ),
 
-  // Search mode buttons (gray bar) - use gray bg so they're visible in white chat bubbles
+  // Search mode buttons (uses NavBar2 tokens)
   "[[ZIP_CODE_BTN]]": (
-    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "#222831", color: "#FFC857" }}>Zip Code</span>
+    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-btn-active-bg)", color: "var(--color-navbar2-btn-active-text)" }}>Zip Code</span>
   ),
   "[[ORGANIZATION_BTN]]": (
-    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "#4A4F56", color: "#F3EED9" }}>Organization</span>
+    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-bg)", color: "var(--color-navbar2-btn-inactive-text)" }}>Organization</span>
   ),
   "[[LOCATION_BTN]]": (
-    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "#4A4F56", color: "#F3EED9" }}>Location</span>
+    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-bg)", color: "var(--color-navbar2-btn-inactive-text)" }}>Location</span>
   ),
   "[[LLM_SEARCH_BTN]]": (
-    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "#4A4F56", color: "#F3EED9" }}>LLM Search</span>
+    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-bg)", color: "var(--color-navbar2-btn-inactive-text)" }}>LLM Search</span>
   ),
 
-  // Dropdowns and input fields (green)
+  // Dropdowns and input fields (uses NavBar2 dropdown tokens)
   "[[ZIP_DROPDOWN]]": (
-    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "#2d6552", color: "#F3EED9" }}>77002 ▾</span>
+    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-dropdown-bg)", color: "var(--color-navbar2-dropdown-text)" }}>77002 ▾</span>
   ),
   "[[LLM_INPUT]]": (
-    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "#4A4F56", color: "#F3EED9" }}>What are you looking for today?</span>
+    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-bg)", color: "var(--color-navbar2-btn-inactive-text)" }}>What are you looking for today?</span>
   ),
 
   // Distance icon
   "[[DISTANCE_ICON]]": (
-    <span className="inline-flex items-center justify-center rounded" style={{ backgroundColor: "#4A4F56", padding: "2px 4px" }}>
+    <span className="inline-flex items-center justify-center rounded" style={{ backgroundColor: "var(--color-navbar2-bg)", padding: "2px 4px" }}>
       <DistanceIcon size={20} />
     </span>
   ),
 
-  // Assistance bar elements (tan bar) - use tan bg so visible in white chat bubbles
+  // Assistance bar elements (uses NavBar3 tokens)
   "[[SELECT_ASSISTANCE_BTN]]": (
-    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "#948979", color: "#F3EED9" }}>Select Assistance ▾</span>
+    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar3-bg)", color: "var(--color-navbar3-chip-active-text)" }}>Select Assistance ▾</span>
   ),
   "[[CHIP_ACTIVE]]": (
-    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: "#2d6552", color: "#F3EED9" }}>Food</span>
+    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: "var(--color-navbar3-chip-active-bg)", color: "var(--color-navbar3-chip-active-text)" }}>Food</span>
   ),
   "[[CHIP_INACTIVE]]": (
-    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: "#F3EED9", color: "#000", border: "1px solid #000" }}>Rent</span>
+    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: "var(--color-navbar3-chip-inactive-bg)", color: "var(--color-navbar3-chip-inactive-text)", border: "1px solid var(--color-navbar3-chip-inactive-border)" }}>Rent</span>
   ),
 };
 
@@ -318,14 +320,14 @@ export default function HelpPanel({ isOpen, onClose, resetKey }) {
             <div className="absolute right-4 flex items-center gap-3">
               <span
                 className="font-opensans select-none"
-                style={{ color: "#FFFFFF", fontSize: "11px" }}
+                style={{ color: "var(--color-help-drag-hint)", fontSize: "var(--font-size-help-drag-hint)" }}
               >
                 drag to move
               </span>
               <button
                 onClick={onClose}
                 className="text-white hover:brightness-125 transition-all"
-                style={{ fontSize: "24px", lineHeight: 1 }}
+                style={{ fontSize: "var(--font-size-help-close-btn)", lineHeight: 1 }}
               >
                 ×
               </button>
@@ -451,11 +453,12 @@ export default function HelpPanel({ isOpen, onClose, resetKey }) {
               onChange={(e) => setQuestion(e.target.value)}
               placeholder="Type your question..."
               disabled={isLoading}
-              className="flex-1 px-3 py-2 rounded font-opensans focus:outline-none focus:ring-2 focus:ring-[#2d6552]"
+              className="flex-1 px-3 py-2 rounded font-opensans focus:outline-none focus:ring-2"
               style={{
                 fontSize: "var(--font-size-help-input)",
                 backgroundColor: "var(--color-help-input-bg)",
                 border: "1px solid var(--color-help-input-border)",
+                "--tw-ring-color": "var(--color-form-focus-ring)",
               }}
             />
             <button

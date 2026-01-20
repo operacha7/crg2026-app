@@ -58,7 +58,8 @@
   --color-panel-btn-text: #000000;
 
   /* Reports / Usage Table */
-  --color-reports-row-hover: #f2f3cc;
+  /* Note: Reports use --color-results-row-hover-bg for row hover */
+  --color-reports-chart-label: #4A4E69;
 
   /* Results Header */
   --color-results-header-bg: #B8001F;
@@ -99,8 +100,7 @@
   --color-assistance-text: #000000;
 
   /* Login Panel */
-  --color-login-panel-bg: #948979; /* Same as panel body */
-  --color-login-panel-header-bg: #4A4F56; /* Same as panel header */
+  /* Note: Login panel uses --color-panel-body-bg for body and --color-panel-header-bg for header */
   --color-login-panel-title: #F3EED9;
   --color-login-btn-guest-bg: #F3EED9;
   --color-login-btn-guest-text: #2C4146;
@@ -159,7 +159,7 @@
   --letter-spacing-assistance-chip: 0.02em; /* 2% */
 
   /* NavBar 3 User Display Typography */
-  --font-size-navbar3-user: 18px;
+  --font-size-navbar3-user: 20px;
 
   /* Results Header Typography */
   --font-size-results-header: 14px;
@@ -339,4 +339,38 @@
   --font-size-help-empty: 14px;
   --font-size-help-input: 14px;
   --line-height-help-message: 1.6;
+  --font-size-help-drag-hint: 11px;
+  --color-help-drag-hint: #FFFFFF;
+  --font-size-help-close-btn: 24px;
+
+  /* ==========================================
+   * COMMON / SHARED
+   * ========================================== */
+
+  /* Page Backgrounds */
+  --color-page-background: #d0ccc4;
+  --color-page-background-cream: #F3EED9;
+
+  /* Text Colors (hierarchy) */
+  --color-text-primary: #222831;
+  --color-text-secondary: #666666;
+  --color-text-tertiary: #999999;
+
+  /* Form Elements */
+  --color-form-label: #222831;
+  --color-form-focus-ring: #2d6552;
+  --color-btn-disabled-bg: #999999;
+
+  /* Dropdown (shared across components) */
+  --color-dropdown-bg: #F3EED9;
+  --color-dropdown-hover-bg: #d4d0c7; /* Intentionally same as active */
+  --color-dropdown-active-bg: #d4d0c7; /* Intentionally same as hover */
+  --color-dropdown-text: #222831;
+  --color-dropdown-divider: #d4d0c7; /* Also same - creates subtle visual grouping */
+
+  /* Links */
+  --color-link: #0066cc;
+
+  /* Error/Status */
+  --color-error-text: #cc0000;
 }

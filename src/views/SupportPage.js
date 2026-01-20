@@ -156,7 +156,7 @@ const SupportPage = ({ loggedInUser }) => {
           <span
             className="font-opensans"
             style={{
-              color: '#F3EED9',
+              color: 'var(--color-navbar1-title)',
               fontSize: 'var(--font-size-navbar1-btn)',
               fontWeight: 'var(--font-weight-navbar1-btn)',
               letterSpacing: 'var(--letter-spacing-navbar1-btn)',
@@ -177,7 +177,7 @@ const SupportPage = ({ loggedInUser }) => {
         {/* Main content - Contact form */}
         <main
           className="flex-1 overflow-y-auto flex items-center justify-center p-8"
-          style={{ backgroundColor: '#d0ccc4' }}
+          style={{ backgroundColor: 'var(--color-page-background)' }}
         >
           <div
             className="w-full max-w-xl bg-white rounded-lg p-8"
@@ -214,7 +214,7 @@ const SupportPage = ({ loggedInUser }) => {
                 <label
                   htmlFor="name"
                   className="block text-sm font-medium mb-1"
-                  style={{ color: '#222831' }}
+                  style={{ color: 'var(--color-form-label)' }}
                 >
                   Name <span className="text-red-500">*</span>
                 </label>
@@ -235,7 +235,7 @@ const SupportPage = ({ loggedInUser }) => {
                 <label
                   htmlFor="email"
                   className="block text-sm font-medium mb-1"
-                  style={{ color: '#222831' }}
+                  style={{ color: 'var(--color-form-label)' }}
                 >
                   Email Address <span className="text-red-500">*</span>
                 </label>
@@ -256,7 +256,7 @@ const SupportPage = ({ loggedInUser }) => {
                 <label
                   htmlFor="organization"
                   className="block text-sm font-medium mb-1"
-                  style={{ color: '#222831' }}
+                  style={{ color: 'var(--color-form-label)' }}
                 >
                   Organization <span className="text-red-500">*</span>
                 </label>
@@ -278,7 +278,7 @@ const SupportPage = ({ loggedInUser }) => {
                 <label
                   htmlFor="subject"
                   className="block text-sm font-medium mb-1"
-                  style={{ color: '#222831' }}
+                  style={{ color: 'var(--color-form-label)' }}
                 >
                   Subject <span className="text-red-500">*</span>
                 </label>
@@ -303,7 +303,7 @@ const SupportPage = ({ loggedInUser }) => {
                 <label
                   htmlFor="message"
                   className="block text-sm font-medium mb-1"
-                  style={{ color: '#222831' }}
+                  style={{ color: 'var(--color-form-label)' }}
                 >
                   Message <span className="text-red-500">*</span>
                 </label>
@@ -326,7 +326,7 @@ const SupportPage = ({ loggedInUser }) => {
                   disabled={isSubmitting}
                   className="font-opensans transition-all duration-200 hover:brightness-110"
                   style={{
-                    backgroundColor: isSubmitting ? '#999999' : 'var(--color-panel-btn-ok-bg)',
+                    backgroundColor: isSubmitting ? 'var(--color-btn-disabled-bg)' : 'var(--color-panel-btn-ok-bg)',
                     color: 'var(--color-panel-btn-text)',
                     width: 'var(--width-panel-btn)',
                     height: 'var(--height-panel-btn)',

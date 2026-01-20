@@ -19,8 +19,9 @@ Community Resources Guide (CRG) Houston - a React application that helps organiz
 
 **Removed from original:**
 - Spanish language version
-- Tour/onboarding feature
+- Tour/onboarding feature (driver.js, intro.js removed)
 - Storybook
+- Legacy components cleaned up (Jan 2026): NavBar.js, SearchResults.js, AssistanceSidebar.js, EmailDialog.js, OrganizationPage.js, GeneralSearchPage.js, charts/, and related files
 
 **Unchanged:**
 - Resend for emails
@@ -84,7 +85,7 @@ Results display format is consistent regardless of filters applied.
 - `tailwind.config.js` - References CSS variables for Tailwind classes
 - `src/index.js` - Imports tokens.css globally
 - **New components fully tokenized:** NavBar1-3, Footer, VerticalNavBar, ResultsHeader, ResultRow, Tooltip
-- **Legacy components not yet tokenized:** Charts, SearchResults, AnnouncementPopup (to be migrated later)
+- **Components not yet tokenized:** AnnouncementPopup (to be migrated later)
 
 **Legacy controls removed from ZipCodePage:**
 The following legacy UI elements have been removed from `src/views/ZipCodePage.js` as they are now handled by the new NavBar components:
@@ -366,9 +367,10 @@ src/
 │   └── StatisticsContext.js  # Shared state for reports/charts
 ├── views/
 │   ├── ZipCodePage.js   # Main search page - filters and displays results
-│   ├── OrganizationPage.js  # LEGACY - to be removed
-│   ├── MessagesPage.js
-│   └── GeneralSearchPage.js # LEGACY - to be removed
+│   ├── ReportsPage.js   # Usage analytics and reports
+│   ├── LegalPage.js     # Privacy policy and terms
+│   ├── SupportPage.js   # Contact support page
+│   └── AnnouncementsPage.js # Announcements history
 ├── components/
 │   ├── ResultRow.js     # Individual result row with expand/collapse
 │   │                    # Uses orgAssistanceMap for Assistance column icons
@@ -377,14 +379,13 @@ src/
 │   ├── DropPanel.js     # Reusable dropdown panel (used by Distance, Email, PDF panels)
 │   ├── EmailPanel.js    # Email/PDF entry panel with inactive warning
 │   ├── DistancePanel.js # Distance override panel (address entry)
-│   ├── SearchResults.js # LEGACY - reference only, do not modify
-│   ├── EmailDialog.js   # LEGACY - replaced by EmailPanel + emailService
-│   ├── AssistanceSidebar.js # LEGACY - to be removed
 │   ├── HelpPanel.js     # LLM-powered help chat (opens from VerticalNavBar)
-│   └── charts/          # LEGACY - not tokenized, may keep for reports
+│   ├── AnnouncementPopup.js  # Modal popup for announcements
+│   ├── AnnouncementManager.js # Orchestrates announcement display
+│   └── reports/
+│       └── ChartReport.js    # Usage charts component
 ├── layout/
 │   ├── PageLayout.js    # Shared layout with header/footer/vertical nav
-│   ├── NavBar.js        # LEGACY - ignore, delete later
 │   ├── NavBar1.js       # Top header (logo, counters, buttons)
 │   ├── NavBar2.js       # Search mode selector + filters (uses context)
 │   ├── NavBar3.js       # Assistance type filters + dropdown panel
@@ -397,32 +398,28 @@ src/
 │   ├── HelpIcon.js      # Fixed-color help icon for panels
 │   └── HelpBubbleIcon.jsx # Speech bubble with "?" - liquid glass style for vertical nav
 ├── data/
-│   ├── mockResults.js   # Mock data - NO LONGER USED (kept for reference)
-│   └── FetchDataSupabase.js # LEGACY - ignore, reference only
+│   └── constants.js     # Static constants (logo URL for emails)
 ├── styles/
 │   └── tokens.css       # Design tokens (CSS custom properties)
 ├── utils/
 │   └── formatters.js    # Shared formatting utilities (hours, address, distance)
+├── Utility/
+│   └── ScheduledReload.js # Auto-reload at 2am for session reset
 └── services/
     ├── dataService.js   # Supabase query methods (directory, assistance, zip_codes)
     ├── emailService.js  # Email/PDF sending logic (sendEmail, createPdf, checkLimits)
-    └── geocodeService.js # Google Geocoding API wrapper
+    ├── geocodeService.js # Google Geocoding API wrapper
+    ├── usageService.js  # Usage logging
+    ├── llmSearchService.js # LLM search filter application
+    └── AnnouncementService.js # Announcement queries
 ```
 
-### Legacy Files (Reference Only - Do Not Modify)
-These files exist from the original `crg-app` and should be ignored or used only as reference:
-- `src/layout/NavBar.js` - Old navbar, replaced by NavBar1/2/3
-- `src/components/SearchResults.js` - Old results display, replaced by ResultRow/ResultsList
-- `src/components/AssistanceSidebar.js` - Old assistance picker, replaced by NavBar3
-- `src/components/EmailDialog.js` - Old modal popup, replaced by EmailPanel + emailService
-- `src/data/FetchDataSupabase.js` - Old data fetching hook
-- `src/views/OrganizationPage.js` - Will be consolidated into single page
-- `src/views/GeneralSearchPage.js` - Will be consolidated into single page
-
-### Files to Keep from Legacy (Working - Updated for 2026)
-- `functions/sendEmail.js` - Resend integration (updated domain)
-- `functions/createPdf.js` - PDFShift integration
+### Cloudflare Functions
+- `functions/sendEmail.js` - Resend integration for email delivery
+- `functions/createPdf.js` - PDFShift integration for PDF generation
 - `functions/help.js` - LLM help assistant (Anthropic Claude API)
+- `functions/geocode.js` - Google Geocoding API wrapper
+- `functions/llm-search.js` - LLM search query processing
 
 ### Authentication
 - Organizations authenticate with passcodes stored in `registered_organizations` table
@@ -433,9 +430,11 @@ These files exist from the original `crg-app` and should be ignored or used only
   - Guests can search and view results but cannot send emails or create PDFs
 
 ### Main Routes
-- `/` - Main app (single page, no routing for search modes)
-- `/reports` - StatisticsPage (usage analytics)
-- `/messages` - MessagesPage (system announcements)
+- `/` - Main app (ZipCodePage - single page for all search modes)
+- `/reports` - ReportsPage (usage analytics)
+- `/announcements` - AnnouncementsPage (announcements history)
+- `/privacy` - LegalPage (privacy policy and terms)
+- `/support` - SupportPage (contact support)
 
 **Architecture Decision:** Search modes (Zip Code, Organization, Location, LLM) do NOT use routing. They change UI state within NavBar2, but results display is always the same format. This simplifies the codebase significantly.
 
@@ -1045,7 +1044,7 @@ The popup uses a typewriter/memo aesthetic to distinguish it from the modern UI.
 - `src/components/AnnouncementPopup.js` - Modal popup component (to be redesigned)
 - `src/components/AnnouncementManager.js` - Orchestrates fetching and sequential display
 - `src/services/AnnouncementService.js` - Supabase query logic
-- `src/views/MessagesPage.js` - History page (to be redesigned)
+- `src/views/AnnouncementsPage.js` - Announcements history page
 - `scripts/sync-to-supabase.js` - Includes announcement sync with HTML generation
 
 ### Next Steps (TODO)

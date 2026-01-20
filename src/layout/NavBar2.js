@@ -139,7 +139,7 @@ function HoverDropdown({ placeholder, options = [], value, onChange, allowReset 
       {isOpen && (
         <div
           className="absolute left-0 mt-2 rounded shadow-lg z-50 max-h-[400px] overflow-y-auto"
-          style={{ backgroundColor: "#F3EED9", minWidth: "200px" }}
+          style={{ backgroundColor: "var(--color-dropdown-bg)", minWidth: "200px" }}
         >
           {allowReset && (
             <button
@@ -149,7 +149,7 @@ function HoverDropdown({ placeholder, options = [], value, onChange, allowReset 
               className="w-full text-left px-4 py-2 font-opensans text-gray-500 italic"
               style={{
                 fontSize: "14px",
-                backgroundColor: hoveredOption === "__reset__" ? "#d4d0c7" : "transparent",
+                backgroundColor: hoveredOption === "__reset__" ? "var(--color-dropdown-hover-bg)" : "transparent",
               }}
             >
               {placeholder}
@@ -164,8 +164,8 @@ function HoverDropdown({ placeholder, options = [], value, onChange, allowReset 
               className="w-full text-left px-4 py-2 font-opensans"
               style={{
                 fontSize: "14px",
-                color: "#222831",
-                backgroundColor: hoveredOption === opt ? "#d4d0c7" : (value === opt ? "#e0ddd4" : "transparent"),
+                color: "var(--color-dropdown-text)",
+                backgroundColor: hoveredOption === opt ? "var(--color-dropdown-hover-bg)" : (value === opt ? "var(--color-dropdown-active-bg)" : "transparent"),
               }}
               title={opt}
             >
@@ -306,7 +306,7 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
       {isOpen && (
         <div
           className="absolute left-0 mt-2 rounded shadow-lg z-50"
-          style={{ backgroundColor: "#F3EED9", minWidth: "300px" }}
+          style={{ backgroundColor: "var(--color-dropdown-bg)", minWidth: "300px" }}
         >
           {/* Search input */}
           <div className="p-2 border-b border-gray-300">
@@ -320,7 +320,7 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
               className="w-full px-3 py-2 rounded font-opensans"
               style={{
                 fontSize: "14px",
-                color: "#222831",
+                color: "var(--color-dropdown-text)",
                 backgroundColor: "#FFFFFF",
                 border: "1px solid #ccc",
               }}
@@ -337,7 +337,7 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
                 className="w-full text-left px-4 py-2 font-opensans text-gray-500 italic"
                 style={{
                   fontSize: "14px",
-                  backgroundColor: hoveredOption === "__reset__" ? "#d4d0c7" : "transparent",
+                  backgroundColor: hoveredOption === "__reset__" ? "var(--color-dropdown-hover-bg)" : "transparent",
                 }}
               >
                 {placeholder}
@@ -357,8 +357,8 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
                   className="w-full text-left px-4 py-2 font-opensans"
                   style={{
                     fontSize: "14px",
-                    color: "#222831",
-                    backgroundColor: hoveredOption === opt ? "#d4d0c7" : (value === opt ? "#e0ddd4" : "transparent"),
+                    color: "var(--color-dropdown-text)",
+                    backgroundColor: hoveredOption === opt ? "var(--color-dropdown-hover-bg)" : (value === opt ? "var(--color-dropdown-active-bg)" : "transparent"),
                   }}
                   title={opt}
                 >
@@ -486,10 +486,10 @@ function ZipCodeDropdown({ value, onChange, options = [] }) {
       {isOpen && (
         <div
           className="absolute left-0 mt-2 rounded shadow-lg z-50"
-          style={{ backgroundColor: "#F3EED9", minWidth: "150px" }}
+          style={{ backgroundColor: "var(--color-dropdown-bg)", minWidth: "150px" }}
         >
           {/* Search input */}
-          <div className="p-2" style={{ borderBottom: "2px solid #d4d0c7" }}>
+          <div className="p-2" style={{ borderBottom: "2px solid var(--color-dropdown-divider)" }}>
             <input
               ref={inputRef}
               type="text"
@@ -500,9 +500,9 @@ function ZipCodeDropdown({ value, onChange, options = [] }) {
               className="w-full px-3 py-2 rounded font-opensans"
               style={{
                 fontSize: "14px",
-                color: "#222831",
+                color: "var(--color-dropdown-text)",
                 backgroundColor: "#FFFFFF",
-                border: "2px solid #005C72",
+                border: "2px solid var(--color-navbar2-dropdown-bg)",
                 outline: "none",
               }}
             />
@@ -519,8 +519,8 @@ function ZipCodeDropdown({ value, onChange, options = [] }) {
                   className="w-full text-left px-4 py-2 font-opensans"
                   style={{
                     fontSize: "14px",
-                    color: "#222831",
-                    backgroundColor: hoveredOption === opt ? "#d4d0c7" : (value === opt ? "#e0ddd4" : "transparent"),
+                    color: "var(--color-dropdown-text)",
+                    backgroundColor: hoveredOption === opt ? "var(--color-dropdown-hover-bg)" : (value === opt ? "var(--color-dropdown-active-bg)" : "transparent"),
                   }}
                 >
                   {opt}
@@ -548,6 +548,7 @@ function LLMSearchDropdown({
   isLoading,
   interpretation,
   error,
+  relatedSearches = [],
   clientAddress,
   onAddressChange,
 }) {
@@ -736,9 +737,29 @@ function LLMSearchDropdown({
         </span>
       )}
       {!isLoading && hasValue && interpretation && !error && (
-        <span className="ml-3 text-white/80 text-sm font-opensans italic">
-          {interpretation}
-        </span>
+        <div className="ml-3 flex items-center gap-3 flex-wrap">
+          <span className="text-white/80 text-sm font-opensans italic">
+            {interpretation}
+          </span>
+          {/* Related search suggestions */}
+          {relatedSearches.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-white/50 text-xs">Try:</span>
+              {relatedSearches.slice(0, 3).map((suggestion, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    onChange(suggestion);
+                    onSearch(suggestion);
+                  }}
+                  className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-colors"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
       {!isLoading && error && (
         <span className="ml-3 text-red-400 text-sm font-opensans">
@@ -797,14 +818,14 @@ function LLMSearchDropdown({
           <div className="p-4">
             {/* Search input label with clear button */}
             <div className="flex justify-between items-center mb-2">
-              <p className="text-sm" style={{ color: "#FFFFFF", fontFamily: "'Open Sans', sans-serif" }}>
+              <p className="text-sm" style={{ color: "var(--color-panel-subtitle)", fontFamily: "'Open Sans', sans-serif" }}>
                 Describe what you're looking for in plain language:
               </p>
               {localValue && (
                 <button
                   onClick={handleClearClick}
                   className="text-xs hover:underline"
-                  style={{ color: "#0000FF", fontFamily: "'Open Sans', sans-serif" }}
+                  style={{ color: "var(--color-link)", fontFamily: "'Open Sans', sans-serif" }}
                 >
                   Clear Search
                 </button>
@@ -822,7 +843,7 @@ function LLMSearchDropdown({
               style={{
                 height: "80px",
                 fontSize: "14px",
-                color: "#222831",
+                color: "var(--color-text-primary)",
                 backgroundColor: "#FFFFFF",
                 border: "1px solid #ccc",
                 fontFamily: "'Open Sans', sans-serif",
@@ -833,7 +854,7 @@ function LLMSearchDropdown({
             {/* Address input section */}
             <div className="mt-4">
               <div className="flex justify-between items-center mb-2">
-                <p className="text-sm" style={{ color: "#FFFFFF", fontFamily: "'Open Sans', sans-serif" }}>
+                <p className="text-sm" style={{ color: "var(--color-panel-subtitle)", fontFamily: "'Open Sans', sans-serif" }}>
                   Optional: Enter client address for distance calculation:
                 </p>
                 {/* Clear address button - only show when address is set */}
@@ -841,7 +862,7 @@ function LLMSearchDropdown({
                   <button
                     onClick={handleClearAddress}
                     className="text-xs hover:underline"
-                    style={{ color: "#0000FF", fontFamily: "'Open Sans', sans-serif" }}
+                    style={{ color: "var(--color-link)", fontFamily: "'Open Sans', sans-serif" }}
                     disabled={isGeocoding}
                   >
                     Clear Address
@@ -869,9 +890,9 @@ function LLMSearchDropdown({
                   className="w-full p-3 rounded"
                   style={{
                     fontSize: "14px",
-                    color: "#222831",
+                    color: "var(--color-text-primary)",
                     backgroundColor: "#FFFFFF",
-                    border: geocodeError ? "2px solid #cc0000" : "1px solid #ccc",
+                    border: geocodeError ? "2px solid var(--color-error-text)" : "1px solid #ccc",
                     paddingRight: isGeocoding ? "40px" : "12px",
                     fontFamily: "'Open Sans', sans-serif",
                   }}
@@ -910,12 +931,12 @@ function LLMSearchDropdown({
               </div>
               {/* Geocode error message - only show errors */}
               {geocodeError && (
-                <p className="text-xs mt-1" style={{ color: "#cc0000", fontFamily: "'Open Sans', sans-serif" }}>
+                <p className="text-xs mt-1" style={{ color: "var(--color-error-text)", fontFamily: "'Open Sans', sans-serif" }}>
                   {geocodeError}
                 </p>
               )}
               {/* Static helper text */}
-              <p className="text-xs mt-1 italic" style={{ color: "#FFFFFF", fontFamily: "'Open Sans', sans-serif" }}>
+              <p className="text-xs mt-1 italic" style={{ color: "var(--color-panel-subtitle)", fontFamily: "'Open Sans', sans-serif" }}>
                 Distances will be calculated from this location
               </p>
             </div>
@@ -1278,6 +1299,7 @@ function LLMFilters({
   isLoading,
   interpretation,
   error,
+  relatedSearches,
   clientAddress,
   onAddressChange,
 }) {
@@ -1290,6 +1312,7 @@ function LLMFilters({
       isLoading={isLoading}
       interpretation={interpretation}
       error={error}
+      relatedSearches={relatedSearches}
       clientAddress={clientAddress}
       onAddressChange={onAddressChange}
     />
@@ -1336,6 +1359,8 @@ export default function NavBar2() {
     setLlmSearchLoading,
     llmSearchError,
     setLlmSearchError,
+    llmRelatedSearches,
+    setLlmRelatedSearches,
   } = useAppData();
 
   // Get organization name for logging
@@ -1476,6 +1501,7 @@ export default function NavBar2() {
       if (result.success) {
         setLlmSearchFilters(result.filters);
         setLlmSearchInterpretation(result.interpretation || "");
+        setLlmRelatedSearches(result.related_searches || []);
 
         // If LLM detected an address in the query, geocode it
         if (result.geocode_address) {
@@ -1514,6 +1540,7 @@ export default function NavBar2() {
     setLlmSearchError,
     setLlmSearchInterpretation,
     setLlmSearchFilters,
+    setLlmRelatedSearches,
     setClientAddress,
     setClientCoordinates,
   ]);
@@ -1597,10 +1624,12 @@ export default function NavBar2() {
               setLlmSearchFilters(null);
               setLlmSearchInterpretation("");
               setLlmSearchError("");
+              setLlmRelatedSearches([]);
             }}
             isLoading={llmSearchLoading}
             interpretation={llmSearchInterpretation}
             error={llmSearchError}
+            relatedSearches={llmRelatedSearches}
             clientAddress={clientAddress}
             onAddressChange={(address, coordinates) => {
               setClientAddress(address);

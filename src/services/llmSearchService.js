@@ -38,6 +38,7 @@ export async function searchWithLLM(query, assistanceTypes = [], zipCodes = []) 
       filters: data.filters,
       interpretation: data.interpretation,
       geocode_address: data.geocode_address,
+      related_searches: data.related_searches || [],
     };
   } catch (error) {
     console.error("LLM search error:", error);

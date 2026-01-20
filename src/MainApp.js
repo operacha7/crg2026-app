@@ -7,12 +7,9 @@ import { Toaster } from "react-hot-toast";
 import { Navigate, Route, Routes } from "react-router-dom";
 // Import Announcement components
 import AnnouncementManager from './components/AnnouncementManager';
-import ScheduledReload from './Utility/ScheduledReload';
+import ScheduledReload from './components/ScheduledReload';
 
-// LEGACY: useFetchCRGData removed - now using AppDataContext
 import { AppDataProvider, useAppData } from "./Contexts/AppDataContext";
-import GeneralSearchPage from "./views/GeneralSearchPage";
-import OrganizationPage from "./views/OrganizationPage";
 import ZipCodePage from "./views/ZipCodePage";
 import ReportsPage from "./views/ReportsPage";
 import LegalPage from "./views/LegalPage";
@@ -123,24 +120,6 @@ function AppContent({ loggedInUser }) {
           path="/"
           element={
             <ZipCodePage
-              records={directory}
-              zips={zipCodes}
-              assistanceTypes={assistance}
-              loggedInUser={loggedInUser}
-            />
-          }
-        />
-        <Route
-          path="/organization"
-          element={<OrganizationPage loggedInUser={loggedInUser} />}
-        />
-        <Route
-          path="/search"
-          element={
-            <GeneralSearchPage
-              records={directory}
-              neighborhoodData={[]}
-              assistanceTypes={assistance}
               loggedInUser={loggedInUser}
             />
           }

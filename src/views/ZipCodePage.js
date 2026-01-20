@@ -1,8 +1,7 @@
 // src/views/ZipCodePage.js
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import PageLayout from "../layout/PageLayout";
-import AssistanceSidebar from "../components/AssistanceSidebar";
 import ResultsList from "../components/ResultsList";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
@@ -13,7 +12,6 @@ import { logUsage } from "../services/usageService";
 import { applyLLMFilters } from "../services/llmSearchService";
 
 export default function ZipCodePage({
-  assistanceTypes = [], // Legacy prop - used by AssistanceSidebar
   loggedInUser,
 }) {
   // Get real data and filter state from AppDataContext
@@ -42,11 +40,7 @@ export default function ZipCodePage({
 
   // State management
   const [selectedRows, setSelectedRows] = useState([]);
-  const [showSidebar, setShowSidebar] = useState(false);
   const [orgPhone, setOrgPhone] = useState("");
-
-  // Legacy state - kept for sidebar compatibility, will be removed
-  const [selectedMore, setSelectedMore] = useState([]);
 
   // Fetch org phone on mount
   useEffect(() => {
@@ -228,9 +222,6 @@ export default function ZipCodePage({
     return filtered;
   }, [directory, zipCodes, assistance, activeSearchMode, selectedZipCode, selectedParentOrg, selectedChildOrg, selectedLocationZip, selectedLocationCity, selectedLocationCounty, selectedLocationNeighborhood, activeAssistanceChips, hasActiveFilter, clientCoordinates, llmSearchFilters]);
 
-  // Refs
-  const sidebarRef = useRef(null);
-
   // Helper function for animated toast
   const showAnimatedToast = (msg, type = "success") => {
     toast.custom(() => (
@@ -246,16 +237,6 @@ export default function ZipCodePage({
         {msg}
       </motion.div>
     ));
-  };
-
-  // Legacy logging functions removed - zip code selection now handled by NavBar2
-  // Assistance selection now handled by NavBar3
-
-  // UPDATED: Remove individual logging from more assistance selection
-  const logAndToggleMore = (a) => {
-    setSelectedMore((prev) =>
-      prev.includes(a) ? prev.filter((v) => v !== a) : [...prev, a]
-    );
   };
 
   // Helper to log email/pdf actions to database (simplified for new schema)
@@ -370,17 +351,6 @@ export default function ZipCodePage({
       />
     </Helmet>
 
-      {showSidebar && (
-        <AssistanceSidebar
-          sidebarRef={sidebarRef}
-          selectedMore={selectedMore || []}
-          toggleMore={logAndToggleMore}
-          clearMore={() => setSelectedMore([])}
-          assistanceTypes={assistanceTypes || []}
-          onClose={() => setShowSidebar(false)}
-        />
-      )}
-
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* Legacy controls removed - now handled by NavBar1 (counters), NavBar2 (zip dropdown), NavBar3 (assistance) */}
 
@@ -417,34 +387,7 @@ export default function ZipCodePage({
             }}
           />
         )}
-
-        {/* LEGACY: Original SearchResults - hidden for now
-        <div className="flex-1 overflow-y-auto pb-6">
-          {!selectedZip ? (
-            <div className="flex flex-col items-center justify-center h-full text-center p-6">
-              <div className="text-xl font-medium text-gray-600 mb-4">
-                Please Select a Zip Code to Initiate a Search
-              </div>
-              <div className="text-gray-500 max-w-md">
-                Results will appear here after you select a zip code.
-              </div>
-            </div>
-          ) : (
-            <SearchResults
-              filtered={filtered || []}
-              expandedRows={expandedRows || {}}
-              rowRefs={rowRefs}
-              toggleExpand={(i) =>
-                setExpandedRows((prev) => ({ ...prev, [i]: !prev[i] }))
-              }
-              selectedRows={selectedRows || []}
-              setSelectedRows={setSelectedRows}
-            />
-          )}
-        </div>
-        */}
       </div>
-
     </PageLayout>
   );
 }

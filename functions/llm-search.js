@@ -2,7 +2,43 @@
 // Endpoint: http(s)://<host>/llm-search
 // Uses Claude to interpret natural language queries and return filter criteria
 
-export async function onRequest({ request, env }) {
+import { createClient } from "@supabase/supabase-js";
+
+/**
+ * Log LLM search query to Supabase for improvement tracking
+ */
+async function logSearchQuery(env, query, filters, resultCount, interpretation) {
+  try {
+    const supabaseUrl = env.VITE_SUPABASE_URL || env.SUPABASE_URL;
+    const supabaseKey = env.VITE_SUPABASE_SECRET_KEY || env.SUPABASE_SECRET_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.log("⚠️ Supabase not configured, skipping search log");
+      return;
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { error } = await supabase.from("llm_search_logs").insert({
+      query: query,
+      filters: filters,
+      result_count: resultCount,
+      interpretation: interpretation,
+    });
+
+    if (error) {
+      console.error("⚠️ Failed to log search query:", error.message);
+    } else {
+      console.log("📝 Search query logged successfully");
+    }
+  } catch (err) {
+    // Don't fail the request if logging fails
+    console.error("⚠️ Search logging error:", err.message);
+  }
+}
+
+export async function onRequest(context) {
+  const { request, env } = context;
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type",
@@ -121,12 +157,17 @@ export async function onRequest({ request, env }) {
 
     console.log("✅ Parsed filters:", JSON.stringify(filters));
 
+    // Log the search query (non-blocking, but kept alive via waitUntil)
+    console.log("📝 Starting search log...");
+    context.waitUntil(logSearchQuery(env, query, filters, null, filters.interpretation || null));
+
     return new Response(
       JSON.stringify({
         success: true,
         filters: filters,
         interpretation: filters.interpretation || null,
         geocode_address: filters.geocode_address || null,
+        related_searches: filters.related_searches || [],
       }),
       {
         status: 200,
@@ -231,19 +272,20 @@ Always respond with ONLY a JSON object (no markdown, no explanation outside the 
   "county": "Fort Bend",                  // County where org is located, or null
   "city": "Katy",                         // City where org is located, or null
   "geocode_address": "1234 Main St, Houston, TX",  // Street address to geocode for distance calculation, or null
-  "interpretation": "Food pantries open Monday mornings in zip code 77002"  // Human-readable interpretation
+  "interpretation": "Food pantries open Monday mornings in zip code 77002",  // Human-readable interpretation
+  "related_searches": ["groceries near me", "food bank open Saturday"]  // 2-3 related search suggestions
 }
 
 ## EXAMPLES:
 
 Query: "food pantry open Monday morning"
-Response: {"assistance_types":["Food"],"zip_codes":null,"days":["Mo"],"time_filter":{"type":"morning"},"status_ids":[1],"max_miles":null,"requirements_keywords":null,"neighborhood":null,"organization_name":null,"county":null,"city":null,"interpretation":"Food assistance open Monday mornings"}
+Response: {"assistance_types":["Food"],"zip_codes":null,"days":["Mo"],"time_filter":{"type":"morning"},"status_ids":[1],"max_miles":null,"requirements_keywords":null,"neighborhood":null,"organization_name":null,"county":null,"city":null,"interpretation":"Food assistance open Monday mornings","related_searches":["food bank open Saturday","groceries near me","meals for seniors"]}
 
 Query: "rent help in 77027"
-Response: {"assistance_types":["Rent"],"zip_codes":["77027"],"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":null,"neighborhood":null,"organization_name":null,"county":null,"city":null,"interpretation":"Rent assistance serving zip code 77027"}
+Response: {"assistance_types":["Rent"],"zip_codes":["77027"],"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":null,"neighborhood":null,"organization_name":null,"county":null,"city":null,"interpretation":"Rent assistance serving zip code 77027","related_searches":["utilities help 77027","eviction prevention","housing assistance"]}
 
 Query: "homeless shelter that accepts walk-ins"
-Response: {"assistance_types":["Homeless - Shelters"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":["walk-in"],"neighborhood":null,"organization_name":null,"county":null,"city":null,"interpretation":"Homeless shelters that accept walk-ins"}
+Response: {"assistance_types":["Homeless - Shelters"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":["walk-in"],"neighborhood":null,"organization_name":null,"county":null,"city":null,"interpretation":"Homeless shelters that accept walk-ins","related_searches":["day center for homeless","meals for homeless","housing assistance"]}
 
 Query: "medical help within 5 miles"
 Response: {"assistance_types":["Medical - Primary Care","Medical - Equipment","Medical - Mental Health","Medical - Addiction Recovery","Medical - Program Enrollment","Medical - Bill Payment"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":5,"requirements_keywords":null,"neighborhood":null,"organization_name":null,"county":null,"city":null,"interpretation":"Medical assistance within 5 miles"}
@@ -299,14 +341,77 @@ Response: {"assistance_types":["Medical - Primary Care","Medical - Equipment","M
 IMPORTANT:
 - Only return valid JSON, nothing else
 - Use exact assistance type names from the list above
-- GENERIC TERM EXPANSION (include ALL matching types):
-  - "medical" → ALL medical types: Medical - Primary Care, Medical - Equipment, Medical - Mental Health, Medical - Addiction Recovery, Medical - Program Enrollment, Medical - Bill Payment
-  - "homeless" → ALL homeless types: Homeless - Shelters, Homeless - Day Centers, Homeless - Other
-  - "shelter" or "shelters" → ALL shelter types: Homeless - Shelters, Domestic Abuse - Shelters
-  - "domestic abuse" or "domestic violence" → ALL domestic abuse types: Domestic Abuse - Shelters, Domestic Abuse - Other
-  - "education" → ALL education types: Education - Children, Education - Adults
-  - "housing" → Housing, Homeless - Shelters, Homeless - Other (housing-related)
-- Search requirements_keywords for eligibility criteria: "veteran", "senior", "disabled", "children", "no ID"
+- SYNONYM EXPANSION (map common terms to assistance types):
+
+  FOOD:
+  - "groceries", "pantry", "food bank", "food pantry", "meals", "hungry", "eat" → Food
+
+  UTILITIES:
+  - "power bill", "electric bill", "electricity", "gas bill", "water bill", "light bill", "energy assistance", "LIHEAP" → Utilities
+
+  RENT:
+  - "rent help", "rent assistance", "eviction", "behind on rent", "can't pay rent", "rental assistance" → Rent
+
+  CLOTHING:
+  - "clothes", "clothing", "wardrobe", "dress", "shoes", "coat" → Clothing
+
+  MEDICAL (expand to ALL medical types):
+  - "medical", "health", "healthcare", "health care" → ALL medical types
+  - "doctor", "clinic", "primary care", "checkup", "physical" → Medical - Primary Care
+  - "wheelchair", "walker", "medical equipment", "DME", "crutches", "oxygen" → Medical - Equipment
+  - "mental health", "counseling", "therapy", "therapist", "depression", "anxiety", "psychiatrist", "psychologist" → Medical - Mental Health
+  - "rehab", "rehabilitation", "AA", "NA", "addiction", "substance abuse", "drug", "alcohol", "recovery", "detox", "sober" → Medical - Addiction Recovery
+  - "medicaid", "medicare", "insurance enrollment", "ACA", "marketplace", "health insurance" → Medical - Program Enrollment
+  - "medical bills", "hospital bill", "medical debt" → Medical - Bill Payment
+
+  HOMELESS (expand to ALL homeless types):
+  - "homeless", "unhoused", "street", "sleeping outside" → ALL homeless types
+  - "homeless shelter", "emergency shelter", "place to sleep" → Homeless - Shelters
+  - "day center", "warming center", "cooling center", "day shelter" → Homeless - Day Centers
+
+  SHELTER (includes both homeless and domestic abuse):
+  - "shelter", "shelters" → Homeless - Shelters, Domestic Abuse - Shelters
+
+  DOMESTIC ABUSE:
+  - "domestic abuse", "domestic violence", "DV", "abusive relationship", "battered", "abuse victim" → ALL domestic abuse types
+  - "women's shelter", "safe house" → Domestic Abuse - Shelters
+
+  HOUSING:
+  - "housing", "apartment", "house", "place to live", "housing assistance", "section 8", "HUD" → Housing
+
+  EDUCATION:
+  - "education", "school", "learning" → ALL education types
+  - "tutoring", "after school", "homework help", "kids education" → Education - Children
+  - "GED", "ESL", "English class", "adult education", "literacy", "learn English", "high school equivalency" → Education - Adults
+
+  CHILDCARE:
+  - "childcare", "child care", "daycare", "day care", "preschool", "babysitter", "babysitting", "headstart", "head start" → Childcare
+
+  JOBS:
+  - "job", "jobs", "employment", "work", "job training", "career", "resume", "interview help", "workforce" → Jobs
+
+  TRANSPORTATION:
+  - "transportation", "bus pass", "metro", "ride", "bus", "transit", "gas money", "car repair" → Transportation
+
+  LEGAL:
+  - "legal", "lawyer", "attorney", "legal aid", "court", "legal help", "lawsuit" → Legal
+
+  IMMIGRATION:
+  - "immigration", "immigrant", "citizenship", "naturalization", "visa", "green card", "DACA", "asylum", "refugee" → Immigration
+
+  SENIORS:
+  - "senior", "seniors", "elderly", "older adult", "aging", "60+", "65+" → Seniors
+
+  HANDYMAN:
+  - "handyman", "home repair", "fix house", "repairs", "plumbing", "electrical work" → Handyman
+
+  ANIMALS:
+  - "pet", "pets", "animal", "dog", "cat", "pet food", "vet", "veterinary", "spay", "neuter" → Animals
+
+  CHRISTMAS:
+  - "christmas", "holiday", "toys", "holiday help", "gift", "angel tree" → Christmas
+
+- Search requirements_keywords for eligibility criteria: "veteran", "senior", "disabled", "children", "no ID", "homeless", "low income", "SNAP", "food stamps"
 - LOCATION DISAMBIGUATION:
   - "Galveston", "Fort Bend", "Montgomery", "Brazoria", "Harris" → use county filter (these are county names)
   - "Ft Bend", "Ft. Bend" → normalize to "Fort Bend" county
@@ -319,6 +424,11 @@ IMPORTANT:
   - Common patterns: "near [address]", "close to [address]", "within X miles of [address]"
   - If address is detected AND max_miles is mentioned, set both geocode_address and max_miles
   - If only address is detected (no distance), set geocode_address and leave max_miles null
+- RELATED SEARCHES: Always include 2-3 related search suggestions that might help the user:
+  - Suggest related assistance types (e.g., if searching "rent", suggest "utilities", "housing")
+  - Suggest variations (e.g., different days, times, or locations)
+  - Suggest broader or narrower searches
+  - Keep suggestions short and natural (3-6 words each)
 - If the query is unclear or doesn't relate to finding resources, return: {"error":"Could not interpret query","interpretation":"Please describe what type of assistance you're looking for"}`;
 }
 
