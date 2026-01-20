@@ -1,6 +1,6 @@
 // src/icons/HomeIcon.js
-// Source: Icons8.com - Static color icon (colors baked in)
-// Supports active state for VerticalNavBar (red -> green, other colors unchanged)
+// Source: Icons8.com - Liquid glass style with active/inactive states
+// Inactive: #b8001f (red), Active: house=#948979 (tan), chimney/roof=#5cb800 (green)
 import { useId } from 'react';
 
 export const HomeIcon = ({ size = 24, active = false }) => {
@@ -12,8 +12,10 @@ export const HomeIcon = ({ size = 24, active = false }) => {
   const gradientId4 = `home-color-4-${id}`;
   const gradientId5 = `home-color-5-${id}`;
 
-  // House body color changes based on active state (red -> green)
+  // In inactive state, everything is red (#b8001f)
+  // In active state, house body is tan (#948979), chimney/roof are green (#5cb800)
   const houseColor = active ? '#948979' : '#b8001f';
+  const accentColor = active ? '#5cb800' : '#b8001f';
 
   return (
     <svg
@@ -23,15 +25,15 @@ export const HomeIcon = ({ size = 24, active = false }) => {
       viewBox="0 0 32 32"
     >
       <defs>
-        {/* House body gradient - changes with active state */}
+        {/* House body gradient - tan when active, red when inactive */}
         <linearGradient x1="7.219" y1="11.901" x2="24.781" y2="29.464" gradientUnits="userSpaceOnUse" id={gradientId1}>
           <stop offset="0" stopColor={houseColor} stopOpacity="0.94902" />
           <stop offset="1" stopColor={houseColor} stopOpacity="0.50196" />
         </linearGradient>
-        {/* Chimney - tan (unchanged) */}
+        {/* Chimney - green when active, red when inactive */}
         <linearGradient x1="24.214" y1="4.373" x2="29.501" y2="9.659" gradientUnits="userSpaceOnUse" id={gradientId2}>
-          <stop offset="0" stopColor="#5cb800" stopOpacity="0.94902" />
-          <stop offset="1" stopColor="#5cb800" stopOpacity="0.50196" />
+          <stop offset="0" stopColor={accentColor} stopOpacity="0.94902" />
+          <stop offset="1" stopColor={accentColor} stopOpacity="0.50196" />
         </linearGradient>
         {/* Door - white (unchanged) */}
         <linearGradient x1="11.396" y1="18.189" x2="20.604" y2="27.396" gradientUnits="userSpaceOnUse" id={gradientId3}>
@@ -39,10 +41,10 @@ export const HomeIcon = ({ size = 24, active = false }) => {
           <stop offset="0.519" stopColor="#ffffff" stopOpacity="0.5" />
           <stop offset="1" stopColor="#ffffff" stopOpacity="0.6" />
         </linearGradient>
-        {/* Roof outline - tan (unchanged) */}
+        {/* Roof outline - green when active, red when inactive */}
         <linearGradient x1="8.189" y1="6.619" x2="23.811" y2="22.24" gradientUnits="userSpaceOnUse" id={gradientId4}>
-          <stop offset="0" stopColor="#5cb800" stopOpacity="0.94902" />
-          <stop offset="1" stopColor="#5cb800" stopOpacity="0.50196" />
+          <stop offset="0" stopColor={accentColor} stopOpacity="0.94902" />
+          <stop offset="1" stopColor={accentColor} stopOpacity="0.50196" />
         </linearGradient>
         {/* Highlight overlay - white (unchanged) */}
         <linearGradient x1="7.696" y1="7.112" x2="27.414" y2="26.831" gradientUnits="userSpaceOnUse" id={gradientId5}>

@@ -1,101 +1,111 @@
 // src/services/AnnouncementService.js
+// Updated for 2026 redesign - new table structure with audience_code and message_html
+
 import { supabase } from '../MainApp';
-import { dataService } from '../services/dataService';
 
 const AnnouncementService = {
   /**
-   * Get active announcements for a specific organization by org_no
-   * @param {string} orgNo - The organization number
+   * Get active announcements for a user based on their login status
+   *
+   * Audience codes (2026):
+   * - 1 = All CRG Users (everyone sees, including guests)
+   * - 2 = Registered Organizations (only logged-in users, not guests)
+   * - 3 = Specific Organization (only the org in reg_organization field)
+   *
+   * Note: Guest-only code was removed (redundant - only one Guest account)
+   *
+   * @param {Object} user - The logged in user object
+   * @param {boolean} user.isGuest - Whether this is a guest user
+   * @param {string} user.reg_organization - The org name (for registered users)
    * @returns {Promise<Array>} - Array of active announcements
    */
-  getActiveAnnouncementsByOrgNo: async (orgNo) => {
+  getActiveAnnouncements: async (user) => {
     try {
-      const now = new Date().toISOString();
-      
-      // Get announcements where:
-      // 1. They are active
-      // 2. Current date is between start and expiration dates
-      // 3. Either org_no is null (universal) OR org_no contains this org's number
-      const { data, error } = await supabase
-        .from('announcements')
-        .select('*')
-        .eq('is_active', true)
-        .lte('start_date', now)
-        .gte('expiration_date', now)
-        .or(`org_no.is.null,org_no.cs.{${orgNo}}`)
-        .order('priority', { ascending: false });
-      
-      if (error) throw error;
-      
-      return data || [];
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+
+      if (user.isGuest) {
+        // Guests only see audience_code 1 (All CRG Users)
+        const { data, error } = await supabase
+          .from('announcements')
+          .select('*')
+          .lte('start_date', today)
+          .gte('expiration_date', today)
+          .eq('audience_code', 1)
+          .order('start_date', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
+      } else {
+        // Registered users see: audience_code 1 (All), 2 (Registered), or 3 (their specific org)
+        // Use separate query for code 3 to handle org name matching properly
+        const { data, error } = await supabase
+          .from('announcements')
+          .select('*')
+          .lte('start_date', today)
+          .gte('expiration_date', today)
+          .or(`audience_code.in.(1,2),and(audience_code.eq.3,reg_organization.eq."${user.reg_organization}")`)
+          .order('start_date', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
+      }
     } catch (error) {
       console.error('Error getting active announcements:', error);
       return [];
     }
   },
-  
+
   /**
-   * Get ALL announcements for a specific organization (active, expired, scheduled)
-   * @param {string} organizationName - The organization name
-   * @returns {Promise<Array>} - Array of all announcements
+   * Get ALL announcements for the MessagesPage history view
+   * Shows all announcements the user is allowed to see (active, expired, future)
+   *
+   * @param {Object} user - The logged in user object
+   * @returns {Promise<Array>} - Array of all announcements for this user
    */
-  getAllAnnouncements: async (organizationName) => {
+  getAllAnnouncements: async (user) => {
     try {
-      // First, get the org_no for this organization
-      const registeredOrgs = await dataService.getRegisteredOrganizations();
-      const userOrg = registeredOrgs.find(
-        org => org.registered_organization === organizationName
-      );
-      
-      if (!userOrg || !userOrg.org_no) {
-        console.error('Organization not found or no org_no available');
-        return [];
+      if (user.isGuest) {
+        // Guests only see audience_code 1 (All CRG Users)
+        const { data, error } = await supabase
+          .from('announcements')
+          .select('*')
+          .eq('audience_code', 1)
+          .order('start_date', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
+      } else {
+        // Registered users see: audience_code 1 (All), 2 (Registered), or 3 (their specific org)
+        const { data, error } = await supabase
+          .from('announcements')
+          .select('*')
+          .or(`audience_code.in.(1,2),and(audience_code.eq.3,reg_organization.eq."${user.reg_organization}")`)
+          .order('start_date', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
       }
-      
-      // Get ALL announcements for this organization (including expired, scheduled)
-      // Either universal (org_no is null) OR targeted to this org
-      const { data, error } = await supabase
-        .from('announcements')
-        .select('*')
-        .or(`org_no.is.null,org_no.cs.{${userOrg.org_no}}`)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      return data || [];
     } catch (error) {
       console.error('Error getting all announcements:', error);
       return [];
     }
   },
-  
+
   /**
-   * Legacy method - kept for backward compatibility
-   * @param {string} organizationName - The organization name
-   * @returns {Promise<Array>} - Array of active announcements
+   * Get the "To:" display text based on audience_code
+   * @param {Object} announcement - The announcement object
+   * @returns {string} - Display text for the "To:" field
    */
-  getActiveAnnouncements: async (organizationName) => {
-    console.warn('getActiveAnnouncements by name is deprecated, use getActiveAnnouncementsByOrgNo instead');
-    try {
-      // This is a fallback method that will work but is less efficient
-      // First get all organizations to find the org_no
-      const { data: orgs, error: orgsError } = await supabase
-        .from('registered_organizations')
-        .select('*')
-        .eq('registered_organization', organizationName);
-      
-      if (orgsError || !orgs || orgs.length === 0) {
-        console.error('Organization not found:', organizationName);
-        return [];
-      }
-      
-      const orgNo = orgs[0].org_no;
-      
-      // Use the new method
-      return AnnouncementService.getActiveAnnouncementsByOrgNo(orgNo);
-    } catch (error) {
-      console.error('Error in legacy getActiveAnnouncements:', error);
-      return [];
+  getAudienceDisplayText: (announcement) => {
+    switch (announcement.audience_code) {
+      case 1:
+        return 'All CRG Users';
+      case 2:
+        return 'Registered Organizations';
+      case 3:
+        return announcement.reg_organization || 'Specific Organization';
+      default:
+        return 'All CRG Users';
     }
   }
 };

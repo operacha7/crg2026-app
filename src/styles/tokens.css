@@ -27,7 +27,7 @@
   --color-navbar1-btn-email-bg: #E5BA66;
   --color-navbar1-btn-email-text: #222831;
   --color-navbar1-btn-pdf-bg: #6678e5;
-  --color-navbar1-btn-pdf-text: #F3EE222831D9;
+  --color-navbar1-btn-pdf-text: #222831;
 
   /* NavBar 2 */
   --color-navbar2-bg: #4A4F56;
@@ -158,6 +158,9 @@
   --font-size-assistance-chip: 14px;
   --letter-spacing-assistance-chip: 0.02em; /* 2% */
 
+  /* NavBar 3 User Display Typography */
+  --font-size-navbar3-user: 18px;
+
   /* Results Header Typography */
   --font-size-results-header: 14px;
   --font-weight-results-header: 400; /* Regular */
@@ -272,4 +275,46 @@
   /* Vertical Nav Bar Icons */
   --size-vertical-nav-icon: 35px;
   --gap-vertical-nav-icons: 25px;
+
+  /* ==========================================
+   * MEMO / ANNOUNCEMENT POPUP
+   * ========================================== */
+
+  /* Memo Colors */
+  --color-memo-bg: #FFFFFF;
+  --color-memo-title: #2500E2;
+  --color-memo-text: #000000;
+  --color-memo-label: #000000;
+  --color-memo-shadow: rgba(0, 0, 0, 0.5);
+  --color-memo-btn-close-bg: #FF0000;
+  --color-memo-btn-close-text: #000000;
+  --color-memo-overlay-bg: rgba(0, 0, 0, 0.6);
+
+  /* Memo Typography */
+  --font-size-memo-title: 90px;
+  --font-weight-memo-title: 600;
+  --font-size-memo-body: 16px;
+  --font-weight-memo-body: 400;
+  --font-size-memo-label: 16px;
+  --font-weight-memo-label: 600;
+
+  /* Memo Sizing */
+  --width-memo-max: 550px;
+  --height-memo-min: 700px;
+  --padding-memo: 40px;
+  --size-memo-logo: 40px;
+  --top-memo-logo: 20px;
+  --width-memo-btn-close: 100px;
+  --height-memo-btn-close: 38px;
+  --radius-memo-btn-close: 5px;
+  --gap-memo-btn-paper: 20px;
+
+  /* ==========================================
+   * HELP PANEL
+   * ========================================== */
+
+  /* Help Panel Sizing - adjust these to change panel size */
+  --width-help-panel: 700px;
+  --height-help-panel: 800px;
+  --height-help-header: 50px;
 }

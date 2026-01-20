@@ -14,6 +14,7 @@ export default function LoginPage({ onLoginSuccess }) {
   const [isAnimating, setIsAnimating] = useState(false);
   const [orgData, setOrgData] = useState([]);
   const [showContactForm, setShowContactForm] = useState(false);
+  const [scrollingOrgs, setScrollingOrgs] = useState([]); // Organizations for sidebar scroll
   const navigate = useNavigate();
   const formRef = useRef(null);
   const passcodeInputRef = useRef(null);
@@ -22,7 +23,7 @@ export default function LoginPage({ onLoginSuccess }) {
     setPasscode("");
   }, []);
 
-  // Fetch organizations using the data service
+  // Fetch registered organizations for login dropdown
   useEffect(() => {
     const fetchOrganizations = async () => {
       try {
@@ -37,6 +38,22 @@ export default function LoginPage({ onLoginSuccess }) {
       }
     };
     fetchOrganizations();
+  }, []);
+
+  // Fetch organizations table for sidebar scrolling display
+  useEffect(() => {
+    const fetchScrollingOrgs = async () => {
+      try {
+        const data = await dataService.getOrganizations();
+        const orgNames = data
+          .filter((item) => item.id_no <= 8000)
+          .map((item) => item.organization);
+        setScrollingOrgs(orgNames);
+      } catch (err) {
+        console.error("Error loading scrolling organizations:", err);
+      }
+    };
+    fetchScrollingOrgs();
   }, []);
 
   // Focus on passcode field when organization is selected
@@ -191,14 +208,32 @@ export default function LoginPage({ onLoginSuccess }) {
                 </motion.div>
               ))}
 
-              {/* Hidden message */}
-              <motion.div
-                className="absolute bottom-20 right-4 text-xs text-white/30 font-mono"
-                animate={{ opacity: [0.1, 0.3, 0.1] }}
-                transition={{ duration: 4, repeat: Infinity }}
-              >
-                You found me! 🎉
-              </motion.div>
+              {/* Scrolling organization names - continuous loop from bottom to top */}
+              {scrollingOrgs.length > 0 && (
+                <motion.div
+                  className="absolute left-0 right-0 font-opensans text-sm"
+                  style={{
+                    color: "#F3EED9",
+                    opacity: 0.5,
+                    top: "100%", // Start from bottom of container
+                    zIndex: 0, // Behind the login panel
+                  }}
+                  animate={{
+                    y: [0, -(scrollingOrgs.length * 24 + window.innerHeight)],
+                  }}
+                  transition={{
+                    duration: scrollingOrgs.length * 1.5,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
+                >
+                  {scrollingOrgs.map((orgName, i) => (
+                    <div key={i} className="py-1 px-2 truncate" style={{ height: "24px" }}>
+                      {orgName}
+                    </div>
+                  ))}
+                </motion.div>
+              )}
             </div>
 
             {/* Login Panel */}
@@ -210,6 +245,8 @@ export default function LoginPage({ onLoginSuccess }) {
               style={{
                 boxShadow: '0px 8px 32px rgba(0, 0, 0, 0.4)',
                 border: 'var(--width-panel-border) solid var(--color-panel-border)',
+                zIndex: 10,
+                position: 'relative',
               }}
             >
               {/* Panel Header - Logo + Title */}

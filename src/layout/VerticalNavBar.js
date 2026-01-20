@@ -2,9 +2,10 @@
 // Vertical navigation bar with accent stripe and icon buttons
 // Icons have active/inactive states with hover effects
 
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  InformationIcon,
+  HelpBubbleIcon,
   ReportsIcon,
   AnnouncementsIcon,
   PrivacyPolicyIcon,
@@ -13,12 +14,13 @@ import {
 } from "../icons";
 import Tooltip from "../components/Tooltip";
 import { useAppData } from "../Contexts/AppDataContext";
+import HelpPanel from "../components/HelpPanel";
 
 const navItems = [
-  { id: "information", Icon: InformationIcon, label: "Information" },
+  { id: "information", Icon: HelpBubbleIcon, label: "Help" },
   { id: "reports", Icon: ReportsIcon, label: "Reports" },
   { id: "announcements", Icon: AnnouncementsIcon, label: "Announcements" },
-  { id: "privacy", Icon: PrivacyPolicyIcon, label: "Privacy Policy" },
+  { id: "privacy", Icon: PrivacyPolicyIcon, label: "Legal" },
   { id: "contact", Icon: ContactSupportIcon, label: "Contact Support" },
 ];
 
@@ -27,12 +29,13 @@ const navRoutes = {
   reports: "/reports",
   privacy: "/privacy",
   contact: "/support",
-  announcements: "/messages",
+  announcements: "/announcements",
 };
 
 export default function VerticalNavBar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   // Get context setters for resetting state on Home click
   const {
@@ -61,11 +64,14 @@ export default function VerticalNavBar() {
   };
 
   const handleClick = (id) => {
+    if (id === "information") {
+      setIsHelpOpen(true);
+      return;
+    }
     const route = navRoutes[id];
     if (route) {
       navigate(route);
     }
-    // "information" - could open a modal or navigate to an info page
   };
 
   const handleHomeClick = () => {
@@ -84,6 +90,7 @@ export default function VerticalNavBar() {
   };
 
   return (
+    <>
     <div className="flex h-full">
       {/* Accent stripe */}
       <div
@@ -131,7 +138,7 @@ export default function VerticalNavBar() {
               >
                 <Icon
                   size={35}
-                  active={getActiveItem() === id}
+                  active={getActiveItem() === id || (id === "information" && isHelpOpen)}
                 />
               </button>
             </Tooltip>
@@ -139,5 +146,9 @@ export default function VerticalNavBar() {
         </div>
       </div>
     </div>
+
+    {/* Help Panel */}
+    <HelpPanel isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+    </>
   );
 }

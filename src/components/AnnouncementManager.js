@@ -1,12 +1,18 @@
 // src/components/AnnouncementManager.js
+// 2026 Redesign - Updated to use new AnnouncementService API
+
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import AnnouncementService from '../services/AnnouncementService';
 import AnnouncementPopup from './AnnouncementPopup';
-import { dataService } from '../services/dataService'; // Add this import
 
 /**
  * Component to manage and display announcements after login
+ *
+ * 2026 Changes:
+ * - Simplified: passes user object directly to service (no org_no lookup needed)
+ * - Service handles audience_code filtering based on user.isGuest
+ * - Supports guest users seeing audience_code 1 and 3
  */
 const AnnouncementManager = ({ loggedInUser }) => {
   const [announcements, setAnnouncements] = useState([]);
@@ -17,35 +23,20 @@ const AnnouncementManager = ({ loggedInUser }) => {
   // Load active announcements on component mount
   useEffect(() => {
     const fetchAnnouncements = async () => {
-      if (!loggedInUser || !loggedInUser.registered_organization) return;
+      if (!loggedInUser) return;
 
       try {
-        // First, get the org_no for this organization
-        const registeredOrgs = await dataService.getRegisteredOrganizations();
-        const userOrg = registeredOrgs.find(
-          org => org.registered_organization === loggedInUser.registered_organization
-        );
-        
-        if (!userOrg || !userOrg.org_no) {
-          console.error('Organization not found or no org_no available');
-          setInitialized(true);
-          return;
-        }
-        
-        // Get active announcements for this organization using org_no
-        const activeAnnouncements = await AnnouncementService.getActiveAnnouncementsByOrgNo(
-          userOrg.org_no
-        );
+        // Get active announcements for this user
+        // Service handles filtering based on user type (guest vs registered)
+        const activeAnnouncements = await AnnouncementService.getActiveAnnouncements(loggedInUser);
 
-        // Use all active announcements instead of filtering seen ones
-        // This ensures they show on every login until expiration
         setAnnouncements(activeAnnouncements);
-        
+
         // Show the first announcement if there are any
         if (activeAnnouncements.length > 0) {
           setShowPopup(true);
         }
-        
+
         setInitialized(true);
       } catch (error) {
         console.error('Error loading announcements:', error);
@@ -79,6 +70,8 @@ const AnnouncementManager = ({ loggedInUser }) => {
         <AnnouncementPopup
           announcement={currentAnnouncement}
           onClose={handleCloseAnnouncement}
+          currentIndex={currentAnnouncementIndex}
+          totalCount={announcements.length}
         />
       )}
     </AnimatePresence>

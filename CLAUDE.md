@@ -928,6 +928,129 @@ PDFSHIFT_API_KEY=xxx
 
 **Production:** Cloudflare dashboard → Pages → Settings → Environment variables
 
+## Announcements System
+
+Announcements are messages posted by the administrator to notify users of important information. They appear automatically on login and are accessible from the vertical navbar.
+
+### Behavior
+- **On login:** Active announcements display one at a time in a modal popup
+- **Active window:** Announcements show when current date is between `start_date` and `expiration_date`
+- **After expiration:** No longer shows on login, but remains accessible via Announcements icon in vertical navbar
+- **MessagesPage (`/messages`):** Shows history of all announcements
+
+### Data Management
+Announcements are managed in Google Sheets (same spreadsheet as directory data) and synced to Supabase via `npm run sync`.
+
+**Google Sheet tab:** `announcements`
+
+**Column Structure:**
+| Column | Field | Notes |
+|--------|-------|-------|
+| A | start_date | MM/DD/YYYY - when announcement becomes visible |
+| B | expiration_date | MM/DD/YYYY - when it stops showing on login |
+| C | audience_code | "1-All CRG Users", "2-Registered Organizations", "3-Specific org" |
+| D | reg_organization | Only used when audience_code starts with "3" |
+| E | title | Announcement title (appears in Subject: line) |
+| F | format_1 | Format codes for para_1 (optional) |
+| G | para_1 | First paragraph text |
+| H | format_2 | Format codes for para_2 (optional) |
+| I | para_2 | Second paragraph text |
+| J | format_3 | Format codes for para_3 (optional) |
+| K | para_3 | Third paragraph text |
+| L | format_4 | Format codes for para_4 (optional) |
+| M | para_4 | Fourth paragraph text |
+
+**Format Codes (comma-separated in format columns):**
+| Code | Effect |
+|------|--------|
+| `bold` | Bold text |
+| `italic` | Italic text |
+| `underline` | Underlined text |
+| `bullet` | Each line becomes a bullet point |
+| 6-char hex (e.g., `B8001F`) | Text color |
+
+**Examples:**
+- `bold, italic` → Bold and italic
+- `bullet` → Bulleted list
+- `B8001F` → Red text
+- `bold, B8001F` → Bold red text
+- (blank) → Default styling (regular weight, black)
+
+**Audience Codes:**
+| Code | "To:" field displays | Who sees it |
+|------|---------------------|-------------|
+| 1 | "All CRG Users" | Everyone (including guests) |
+| 2 | "Registered Organizations" | Logged-in users (not guests) |
+| 3 | Value from reg_organization | Specific organization only |
+
+Note: Guest-only code was removed (redundant - only one Guest account exists).
+
+### Supabase Table: `announcements`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id_no` | SERIAL | Primary key (auto-generated) |
+| `start_date` | DATE | When visible |
+| `expiration_date` | DATE | When stops showing on login |
+| `audience_code` | INTEGER | 1-3 (see above) |
+| `reg_organization` | TEXT | Org name when audience_code=3 |
+| `title` | TEXT | Announcement title |
+| `message_html` | TEXT | Generated HTML from format/para columns |
+| `created_at` | TIMESTAMP | Auto-set |
+| `updated_at` | TIMESTAMP | Auto-set |
+
+### Sync Script
+The `scripts/sync-to-supabase.js` script includes a `transformAnnouncement()` function that:
+1. Extracts audience code from "1-All CRG Users" → `1`
+2. Parses dates from MM/DD/YYYY to YYYY-MM-DD
+3. Converts format/para column pairs into a single `message_html` field
+4. Applies format codes as inline CSS styles
+
+### Announcement Popup Design (2026 Redesign)
+The popup uses a typewriter/memo aesthetic to distinguish it from the modern UI.
+
+**Visual Design:**
+- White paper background with subtle drop shadow
+- Aspect ratio resembles 8.5x11 paper
+- Font: Courier Prime (Google Fonts) - typewriter style
+
+**Layout:**
+```
+┌─────────────────────────────────────────┐
+│ memo                        [CRG Logo]  │  ← "memo" in blue (#2500E2), 110px, underlined
+│                                         │
+│ Date:     January 8, 2026               │  ← Labels semibold, values regular
+│ To:       All CRG Users                 │
+│ Subject:  Baker Ripley Utilities...     │
+│                                         │
+│ The latest round which opened on        │  ← Body text, 16px
+│ January 7th has reached capacity...     │
+│                                         │
+└─────────────────────────────────────────┘
+              [ Close ]                      ← Red button, outside the "paper"
+```
+
+**Design Tokens (to be added):**
+- `--font-memo: 'Courier Prime', monospace`
+- `--font-size-memo-title: 110px`
+- `--font-size-memo-body: 16px`
+- `--color-memo-title: #2500E2`
+- `--color-memo-text: #000000`
+
+**Key Files:**
+- `src/components/AnnouncementPopup.js` - Modal popup component (to be redesigned)
+- `src/components/AnnouncementManager.js` - Orchestrates fetching and sequential display
+- `src/services/AnnouncementService.js` - Supabase query logic
+- `src/views/MessagesPage.js` - History page (to be redesigned)
+- `scripts/sync-to-supabase.js` - Includes announcement sync with HTML generation
+
+### Next Steps (TODO)
+- ⬜ Redesign AnnouncementPopup.js with typewriter/memo style
+- ⬜ Add Courier Prime font to the app
+- ⬜ Add design tokens for memo styling
+- ⬜ Redesign MessagesPage.js (Figma design pending)
+- ⬜ Update AnnouncementService.js to use new table structure
+
 ## Hosting & Infrastructure
 
 - **Domain:** crghouston.operacha.org

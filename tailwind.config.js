@@ -79,6 +79,7 @@ module.exports = {
         comfortaa: ["Comfortaa", "cursive"],
         label: ['"Montserrat"', "sans-serif"],
         opensans: ['"Open Sans"', "sans-serif"],
+        fraktur: ['"UnifrakturMaguntia"', "cursive"],
       },
       fontSize: {
         'footer': 'var(--font-size-footer)',

@@ -15,10 +15,9 @@ import GeneralSearchPage from "./views/GeneralSearchPage";
 import OrganizationPage from "./views/OrganizationPage";
 import ZipCodePage from "./views/ZipCodePage";
 import ReportsPage from "./views/ReportsPage";
-import PrivacyPolicy from "./views/PrivacyPolicy";
-import TermsOfService from "./views/TermsOfService";
+import LegalPage from "./views/LegalPage";
 import SupportPage from "./views/SupportPage";
-import MessagesPage from "./views/MessagesPage";
+import AnnouncementsPage from "./views/AnnouncementsPage";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -147,16 +146,15 @@ function AppContent({ loggedInUser }) {
           }
         />
         <Route
-          path="/messages"
-          element={<MessagesPage loggedInUser={loggedInUser} />}
+          path="/announcements"
+          element={<AnnouncementsPage loggedInUser={loggedInUser} />}
         />
         <Route path="*" element={<Navigate to="/" replace />} />
         <Route
           path="/reports"
           element={<ReportsPage />}
         />
-        <Route path="/privacy" element={<PrivacyPolicy />} />
-        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/privacy" element={<LegalPage loggedInUser={loggedInUser} />} />
         <Route path="/support" element={<SupportPage loggedInUser={loggedInUser} />} />
       </Routes>
     </>

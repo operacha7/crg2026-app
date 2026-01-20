@@ -16,7 +16,11 @@ export { PrivacyPolicyIcon } from './PrivacyPolicyIcon';
 export { ContactSupportIcon } from './ContactSupportIcon';
 export { DistanceIcon } from './DistanceIcon';
 export { HelpIcon } from './HelpIcon';
+export { HelpBubbleIcon } from './HelpBubbleIcon';
 export { HomeIcon } from './HomeIcon';
+export { ChevronLeftIcon } from './ChevronLeftIcon';
+export { ChevronRightIcon } from './ChevronRightIcon';
+export { ChevronDownIcon } from './ChevronDownIcon';
 
 // currentColor icons (inherit color from CSS)
 export { RentIcon } from './RentIcon';

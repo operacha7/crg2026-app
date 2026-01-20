@@ -54,7 +54,7 @@ function AssistanceButton({ hasSelections, onClick, buttonRef }) {
 
 // Chip component for NavBar3
 // States: inactive (white bg, black text, black border) or active (teal bg, white text, white border)
-function AssistanceChip({ name, icon, isActive, onClick }) {
+function AssistanceChip({ name, icon, isActive, onClick, fontSize, iconSize }) {
   const IconComponent = icon ? getIconByName(icon) : null;
 
   return (
@@ -66,7 +66,7 @@ function AssistanceChip({ name, icon, isActive, onClick }) {
         paddingLeft: "12px",
         paddingRight: "12px",
         borderRadius: "var(--radius-assistance-chip)",
-        fontSize: "var(--font-size-assistance-chip)",
+        fontSize: fontSize || "var(--font-size-assistance-chip)",
         letterSpacing: "var(--letter-spacing-assistance-chip)",
         fontWeight: "500",
         backgroundColor: isActive
@@ -78,9 +78,10 @@ function AssistanceChip({ name, icon, isActive, onClick }) {
         border: `1px solid ${isActive
           ? "var(--color-navbar3-chip-active-border)"
           : "var(--color-navbar3-chip-inactive-border)"}`,
+        whiteSpace: "nowrap",
       }}
     >
-      {IconComponent && <IconComponent size={25} />}
+      {IconComponent && <IconComponent size={iconSize || 25} />}
       {name}
     </button>
   );
@@ -205,7 +206,7 @@ function AssistancePanel({
         borderRadius: "var(--radius-panel)",
         width: "1300px", // Wide enough for longest chip text without wrapping
         left: "20px", // Aligned with left edge of nav
-        right: "100px", // Add right padding (space for vertical nav)
+        right: "50px", // Add right padding (space for vertical nav)
         top: "210px", // Below NavBar1 (80px) + NavBar2 (70px) + NavBar3 (60px)
         border: "var(--width-panel-border) solid var(--color-panel-border)",
       }}
@@ -581,14 +582,22 @@ export default function NavBar3() {
     );
   }
 
+  // Display name for logged-in user
+  const displayName = loggedInUser?.isGuest
+    ? 'Guest'
+    : loggedInUser?.reg_organization || 'Guest';
+
   return (
     <nav
-      className="bg-navbar3-bg flex items-center relative"
+      className="bg-navbar3-bg flex items-center justify-between relative"
       style={{
         height: "var(--height-navbar3)",
         paddingLeft: "var(--padding-navbar3-left)",
+        paddingRight: "var(--padding-navbar1-right)",
       }}
     >
+      {/* Left side: Assistance button and chips */}
+      <div className="flex items-center flex-1 min-w-0">
       {/* Assistance button with hover container */}
       <div
         ref={containerRef}
@@ -614,13 +623,13 @@ export default function NavBar3() {
         />
       </div>
 
-      {/* Chips */}
+      {/* Chips - use smaller font/icons when 6+ selections to prevent wrapping */}
       {savedSelections.length > 0 && (
         <div
           className="flex items-center"
           style={{
             marginLeft: "var(--gap-navbar3-button-chips)",
-            gap: "var(--gap-navbar3-chips)",
+            gap: savedSelections.length >= 6 ? "8px" : "var(--gap-navbar3-chips)",
           }}
         >
           {savedSelections.map((typeId) => {
@@ -633,11 +642,26 @@ export default function NavBar3() {
                 icon={typeInfo.icon}
                 isActive={activeAssistanceChips.has(typeId)}
                 onClick={() => handleChipClick(typeId)}
+                fontSize={savedSelections.length >= 6 ? "11px" : undefined}
+                iconSize={savedSelections.length >= 6 ? 18 : undefined}
               />
             );
           })}
         </div>
       )}
+      </div>
+
+      {/* Right side: Logged-in user */}
+      <span
+        className="font-fraktur flex-shrink-0 ml-4"
+        style={{
+          color: "var(--color-navbar3-user-text, #FFB302)",
+          fontSize: "var(--font-size-navbar3-user)",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {displayName}
+      </span>
     </nav>
   );
 }
