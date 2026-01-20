@@ -2,6 +2,40 @@
 // Endpoint: http(s)://<host>/help
 // LLM-powered help system using Claude to answer questions about the CRG app
 
+import { createClient } from "@supabase/supabase-js";
+
+// Generate a simple anonymous session ID (not tied to user identity)
+function generateSessionId() {
+  return `help_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
+// Log help query to Supabase for improvement tracking
+async function logHelpQuery(env, question, response, sessionId) {
+  try {
+    if (!env.SUPABASE_URL || !env.SUPABASE_SECRET_KEY) {
+      console.log("⚠️ Supabase not configured, skipping help log");
+      return;
+    }
+
+    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY);
+
+    const { error } = await supabase.from("help_logs").insert({
+      question: question,
+      response: response,
+      session_id: sessionId,
+    });
+
+    if (error) {
+      console.error("⚠️ Failed to log help query:", error.message);
+    } else {
+      console.log("📝 Help query logged");
+    }
+  } catch (err) {
+    // Don't fail the request if logging fails
+    console.error("⚠️ Help logging error:", err.message);
+  }
+}
+
 export async function onRequest({ request, env }) {
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -98,6 +132,10 @@ export async function onRequest({ request, env }) {
     const answer = data.content[0].text;
     console.log("✅ Help response generated");
 
+    // Log the query for improvement tracking (non-blocking)
+    const sessionId = generateSessionId();
+    logHelpQuery(env, question, answer, sessionId);
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -144,8 +182,9 @@ You can embed visual elements that render as actual UI components. Use these OFT
 - [[LOCATION_BTN]] - The "Location" search mode button
 - [[LLM_SEARCH_BTN]] - The "LLM Search" button for natural language queries
 
-### Dropdowns (green dropdowns in the gray bar):
+### Dropdowns and Input Fields (in the gray bar):
 - [[ZIP_DROPDOWN]] - The zip code dropdown (select which zip to search)
+- [[LLM_INPUT]] - The text field for LLM Search that says "What are you looking for today?"
 
 ### Assistance Filters (in the tan bar):
 - [[SELECT_ASSISTANCE_BTN]] - Button to open assistance type selector
@@ -156,7 +195,10 @@ You can embed visual elements that render as actual UI components. Use these OFT
 - [[HOME_ICON]] - Home icon (click to reset and start over)
 - [[INFO_ICON]] - Help icon (you're using it now!)
 - [[REPORTS_ICON]] - Reports icon (usage statistics)
-- [[DISTANCE_ICON]] - Distance/location pin icon
+- [[ANNOUNCEMENTS_ICON]] - Announcements icon (system messages)
+- [[PRIVACY_ICON]] - Privacy policy icon
+- [[CONTACT_ICON]] - Contact Support icon (report bugs or request features)
+- [[DISTANCE_ICON]] - Distance/location pin icon (in the gray bar, not sidebar)
 
 ### Assistance Type Icons:
 - [[FOOD_ICON]] - Food assistance icon
@@ -187,11 +229,38 @@ Vertical strip with icons: [[HOME_ICON]] [[INFO_ICON]] [[REPORTS_ICON]] and othe
 
 ## HOW TO DO COMMON TASKS
 
-### Select a zip code
-1. Make sure [[ZIP_CODE_BTN]] is active (dark background, gold text) in the gray bar
-2. Click the [[ZIP_DROPDOWN]] dropdown on the left side of the gray bar
+### Search by Zip Code
+1. Click [[ZIP_CODE_BTN]] in the gray bar (if not already active with dark background and gold text)
+2. Click the [[ZIP_DROPDOWN]] dropdown labeled "Select Zip Code" on the left side of the gray bar
 3. Either scroll to find your zip, or start typing the zip code to jump to it
 4. Results will automatically filter to show resources serving that zip code
+5. To refine your results, click [[SELECT_ASSISTANCE_BTN]] in the tan bar to filter by assistance type
+
+### Search by Organization
+1. Click [[ORGANIZATION_BTN]] in the gray bar
+2. You'll see two dropdowns: "Select Parent Org" and "Select Organization"
+3. Parent organizations are the main entity; child organizations are programs or branches under them
+4. You can select a parent to filter the child dropdown, OR select a child directly
+5. Results will show resources for the selected organization
+6. To refine your results, click [[SELECT_ASSISTANCE_BTN]] in the tan bar to filter by assistance type
+
+### Search by Location
+1. Click [[LOCATION_BTN]] in the gray bar
+2. You'll see dropdowns for County, City, and Zip Code
+3. These filter by where organizations are physically located (not which zip codes they serve)
+4. Select any combination - more specific selections override broader ones
+5. Click the neighborhood link to see which neighborhoods are in the selected zip
+6. To refine your results, click [[SELECT_ASSISTANCE_BTN]] in the tan bar to filter by assistance type
+
+### Use natural language search (LLM Search)
+1. Click [[LLM_SEARCH_BTN]] in the gray bar
+2. Click the [[LLM_INPUT]] field on the left side of the gray bar
+3. Type what you're looking for, like:
+   - "food pantry open on weekends"
+   - "medical clinic near downtown open in the evening that has an ob/gyn"
+   - "food pantry near 123 Main St, Houston, TX 77002"
+4. Press Enter or click Search
+5. To refine your results, click assistance type chips in the tan bar to toggle filtering on/off
 
 ### Filter by assistance type (like Food or Rent)
 1. Click [[SELECT_ASSISTANCE_BTN]] in the tan bar
@@ -214,23 +283,28 @@ Vertical strip with icons: [[HOME_ICON]] [[INFO_ICON]] [[REPORTS_ICON]] and othe
 2. Click [[PDF_BTN]]
 3. A PDF will download with all the selected resources
 
-### Use natural language search (LLM Search)
-1. Click [[LLM_SEARCH_BTN]] in the gray bar
-2. Type what you're looking for in plain English, like:
-   - "food pantry open on Saturday"
-   - "rent help near 77027"
-   - "clinic with sliding scale fees"
-3. The system will interpret your request and find matching resources
-
 ### Get more accurate distances
-By default, distances are measured from the center of the selected zip code. To use your client's actual address:
+By default, distances are measured from the center of the selected zip code. For more accurate distances, enter your client's actual address:
 1. Click the [[DISTANCE_ICON]] pin icon in the gray bar (near the zip dropdown)
-2. Enter the client's address
+2. Enter the client's street address
 3. Distances will recalculate from that specific location
-4. Note: These are straight-line distances, not driving distances
+4. This is especially useful when your client lives far from the center of their zip code
+5. Note: These are straight-line distances, not driving distances
 
 ### Start over / Reset filters
 Click [[HOME_ICON]] in the right sidebar to clear all filters and selections and start fresh.
+
+### Contact Support / Report a Bug
+If you find a bug, have a feature request, or need help with something this assistant can't answer:
+1. Click the [[CONTACT_ICON]] icon in the dark sidebar on the right
+2. This opens an email to the CRG development team
+3. Include details about what you were trying to do and what happened
+
+### View Announcements
+Click [[ANNOUNCEMENTS_ICON]] in the right sidebar to see system announcements and updates from the CRG team.
+
+### View Privacy Policy
+Click [[PRIVACY_ICON]] in the right sidebar to read the privacy policy.
 
 ## TIPS
 - The [[ORANGE_CIRCLE]] shows filtered results; [[BLUE_CIRCLE]] shows your selections
@@ -251,4 +325,6 @@ Click [[HOME_ICON]] in the right sidebar to clear all filters and selections and
 - Use numbered steps for procedures
 - ALWAYS use visual tokens when referencing UI elements - this is critical for clarity
 - Describe things by appearance: "the gray bar" not "NavBar2", "the tan bar" not "NavBar3"
-- If unsure about something, suggest clicking [[INFO_ICON]] to contact support`;
+- Keep responses focused on actionable steps, not explanations of how features work internally
+- End with a brief invitation to ask follow-up questions
+- If the user has a bug to report, a feature request, or a question you can't answer, direct them to the [[CONTACT_ICON]] Contact Support icon in the right sidebar`;

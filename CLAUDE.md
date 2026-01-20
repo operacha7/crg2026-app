@@ -73,6 +73,7 @@ Results display format is consistent regardless of filters applied.
 8. ✅ PDF redesign (3-column, print-optimized format) - **header repeat on pages TODO**
 9. ⬜ Simplify usage reporting
 10. ⬜ LLM search (Anthropic API)
+11. ✅ Help system (LLM-powered chat assistant)
 
 ## Current Development Status
 
@@ -379,6 +380,7 @@ src/
 │   ├── SearchResults.js # LEGACY - reference only, do not modify
 │   ├── EmailDialog.js   # LEGACY - replaced by EmailPanel + emailService
 │   ├── AssistanceSidebar.js # LEGACY - to be removed
+│   ├── HelpPanel.js     # LLM-powered help chat (opens from VerticalNavBar)
 │   └── charts/          # LEGACY - not tokenized, may keep for reports
 ├── layout/
 │   ├── PageLayout.js    # Shared layout with header/footer/vertical nav
@@ -392,7 +394,8 @@ src/
 ├── icons/               # Centralized SVG icon components
 │   ├── index.js         # Re-exports all icons
 │   ├── iconMap.js       # Maps Supabase icon names to components
-│   └── HelpIcon.js      # Fixed-color help icon for panels
+│   ├── HelpIcon.js      # Fixed-color help icon for panels
+│   └── HelpBubbleIcon.jsx # Speech bubble with "?" - liquid glass style for vertical nav
 ├── data/
 │   ├── mockResults.js   # Mock data - NO LONGER USED (kept for reference)
 │   └── FetchDataSupabase.js # LEGACY - ignore, reference only
@@ -419,6 +422,7 @@ These files exist from the original `crg-app` and should be ignored or used only
 ### Files to Keep from Legacy (Working - Updated for 2026)
 - `functions/sendEmail.js` - Resend integration (updated domain)
 - `functions/createPdf.js` - PDFShift integration
+- `functions/help.js` - LLM help assistant (Anthropic Claude API)
 
 ### Authentication
 - Organizations authenticate with passcodes stored in `registered_organizations` table
@@ -1051,6 +1055,125 @@ The popup uses a typewriter/memo aesthetic to distinguish it from the modern UI.
 - ⬜ Redesign MessagesPage.js (Figma design pending)
 - ⬜ Update AnnouncementService.js to use new table structure
 
+## Help System (LLM-Powered)
+
+The Help system provides an AI-powered chat assistant that helps users learn how to use the CRG app. It uses Claude (Anthropic API) to answer questions with contextual, visual responses.
+
+### ⚠️ PRIMARY DIRECTIVE: Strengthen Help System Intelligence
+
+**The primary goal is to make the Help system smarter and more accurate over time.** The system should learn how the CRG app works and provide increasingly helpful, contextually appropriate responses.
+
+**When reviewing change requests, warn the user if a proposed change would:**
+- Over-constrain the LLM's ability to adapt responses to user questions
+- Remove flexibility in favor of rigid, scripted answers
+- Prevent the system from synthesizing information naturally
+- Stifle the LLM's reasoning capabilities
+
+**The balance to maintain:**
+- **Accurate facts on day one** - Users must not get incorrect information that damages trust
+- **Flexible enough to adapt** - Don't over-script; let the LLM reason about edge cases
+- **Improve through iteration** - Use logged queries to identify gaps and update the system prompt
+
+### Architecture
+- **Backend:** Cloudflare Function (`functions/help.js`) calls Anthropic API
+- **Frontend:** `src/components/HelpPanel.js` - draggable chat panel
+- **Icon:** `src/icons/HelpBubbleIcon.jsx` - speech bubble with "?" in liquid glass style
+- **Model:** Claude 3.5 Haiku (fast, cost-effective for help queries)
+- **Logging:** Queries logged to `help_logs` Supabase table for improvement tracking
+
+### How It Works
+1. User clicks the Help icon (speech bubble with ?) in the vertical nav bar
+2. HelpPanel opens - draggable, non-modal (user can interact with app while open)
+3. User types a question or clicks a suggested question
+4. Question is sent to `/help` Cloudflare Function with conversation history
+5. Claude responds using the system prompt that describes the app
+6. Response includes visual tokens that render as actual UI elements
+
+### Visual Tokens
+The system prompt instructs Claude to use visual tokens that render as miniature UI elements in chat responses. This helps users identify exactly what to click.
+
+**Available tokens (defined in HelpPanel.js ICON_MAP):**
+
+| Token | Renders As | Description |
+|-------|------------|-------------|
+| `[[ORANGE_CIRCLE]]` | Orange circle with "5" | Filtered results counter |
+| `[[BLUE_CIRCLE]]` | Blue circle with "2" | Selected results counter |
+| `[[EMAIL_BTN]]` | Gold "Send Email" button | Email button |
+| `[[PDF_BTN]]` | Purple "Create PDF" button | PDF button |
+| `[[ZIP_CODE_BTN]]` | Dark button "Zip Code" | Active search mode |
+| `[[ORGANIZATION_BTN]]` | Gray button "Organization" | Inactive search mode |
+| `[[LOCATION_BTN]]` | Gray button "Location" | Inactive search mode |
+| `[[LLM_SEARCH_BTN]]` | Gray button "LLM Search" | Inactive search mode |
+| `[[ZIP_DROPDOWN]]` | Green dropdown "77002 ▾" | Zip code selector |
+| `[[LLM_INPUT]]` | Teal field "What are you looking for today?" | LLM Search input field |
+| `[[SELECT_ASSISTANCE_BTN]]` | Tan button "Select Assistance ▾" | Assistance panel trigger |
+| `[[CHIP_ACTIVE]]` | Green chip "Food" | Active assistance filter |
+| `[[CHIP_INACTIVE]]` | White chip "Rent" | Inactive assistance filter |
+| `[[HOME_ICON]]` | Home icon (green) | Reset/home navigation |
+| `[[INFO_ICON]]` | Help bubble icon (green) | Help panel trigger |
+| `[[REPORTS_ICON]]` | Reports icon (green) | Reports navigation |
+| `[[DISTANCE_ICON]]` | Pin emoji on gray bg | Distance override |
+| `[[FOOD_ICON]]` | Food assistance icon | Assistance type |
+| `[[RENT_ICON]]` | Rent assistance icon | Assistance type |
+| `[[UTILITIES_ICON]]` | Utilities assistance icon | Assistance type |
+
+### Design Tokens (tokens.css)
+```css
+--width-help-panel: 700px;
+--height-help-panel: 800px;
+--height-help-header: 50px;
+```
+
+### System Prompt Location
+The system prompt that teaches Claude about the app is in `functions/help.js` as `HELP_SYSTEM_PROMPT`. Edit this to:
+- Update when UI changes
+- Add new features
+- Improve response quality
+- Add new visual tokens
+
+### Panel Features
+- **Draggable:** Drag header to reposition
+- **Non-modal:** User can interact with app while panel is open
+- **Conversation history:** Last 6 messages sent for context
+- **Suggested questions:** Shown when chat is empty
+- **Auto-clear:** Closing panel clears conversation (no explicit clear button needed)
+
+### Query Logging for Improvement
+
+All help queries are logged to the `help_logs` Supabase table for weekly review and system prompt improvement.
+
+**Table Schema:**
+```sql
+CREATE TABLE help_logs (
+  id SERIAL PRIMARY KEY,
+  question TEXT NOT NULL,
+  response TEXT NOT NULL,
+  session_id TEXT,  -- anonymous identifier
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+**Weekly Review Workflow:**
+1. Query recent logs: `SELECT question, response, created_at FROM help_logs ORDER BY created_at DESC LIMIT 100;`
+2. Look for patterns: common questions, incorrect responses, confusion points
+3. Update `HELP_SYSTEM_PROMPT` in `functions/help.js` to address gaps
+4. Clear old logs: `DELETE FROM help_logs WHERE created_at < NOW() - INTERVAL '7 days';`
+
+**Privacy Considerations:**
+- No PII stored (questions only, no user identifiers)
+- Anonymous session IDs generated per query
+- Recommend 90-day retention policy
+- Update privacy policy to disclose help query logging
+
+### Key Files
+- `functions/help.js` - Cloudflare Function with system prompt
+- `src/components/HelpPanel.js` - React chat panel component
+- `src/icons/HelpBubbleIcon.jsx` - Speech bubble icon (liquid glass style)
+- `src/layout/VerticalNavBar.js` - Triggers HelpPanel on icon click
+
+### API Key
+Requires `ANTHROPIC_API_KEY` in Cloudflare environment variables (or `.dev.vars` for local development).
+
 ## Hosting & Infrastructure
 
 - **Domain:** crghouston.operacha.org
@@ -1058,4 +1181,5 @@ The popup uses a typewriter/memo aesthetic to distinguish it from the modern UI.
 - **Database:** Supabase (new 2026 schema)
 - **Email:** Resend (domain: crghouston.operacha.org)
 - **PDF:** PDFShift
+- **LLM Help:** Anthropic Claude API
 - **API Keys:** Configured in Cloudflare environment variables

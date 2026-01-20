@@ -10,6 +10,7 @@ import { useAppData } from "../Contexts/AppDataContext";
 import { logUsage } from "../services/usageService";
 import { searchWithLLM } from "../services/llmSearchService";
 import { geocodeAddress } from "../services/geocodeService";
+import { LOADING_MESSAGES } from "../constants/loadingMessages";
 
 // Search mode definitions
 const SEARCH_MODES = {
@@ -537,17 +538,6 @@ function ZipCodeDropdown({ value, onChange, options = [] }) {
   );
 }
 
-// Loading phrases for LLM search
-const LOADING_PHRASES = [
-  "Searching...",
-  "Analyzing your request...",
-  "Finding resources...",
-  "Understanding your needs...",
-  "Scanning the database...",
-  "Looking for matches...",
-  "Processing...",
-  "Almost there...",
-];
 
 // LLM Search dropdown with panel - matches ZipCodeDropdown pattern
 function LLMSearchDropdown({
@@ -580,7 +570,7 @@ function LLMSearchDropdown({
       return;
     }
     const interval = setInterval(() => {
-      setLoadingPhraseIndex((prev) => (prev + 1) % LOADING_PHRASES.length);
+      setLoadingPhraseIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
     }, 1500); // Change phrase every 1.5 seconds
     return () => clearInterval(interval);
   }, [isLoading]);
@@ -742,7 +732,7 @@ function LLMSearchDropdown({
       {/* Show loading phrase, interpretation, or error next to button */}
       {isLoading && (
         <span className="ml-3 text-yellow-300 text-sm font-opensans italic animate-pulse">
-          {LOADING_PHRASES[loadingPhraseIndex]}
+          {LOADING_MESSAGES[loadingPhraseIndex]}
         </span>
       )}
       {!isLoading && hasValue && interpretation && !error && (

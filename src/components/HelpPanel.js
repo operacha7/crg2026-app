@@ -9,10 +9,15 @@ import {
   HomeIcon,
   HelpBubbleIcon,
   ReportsIcon,
+  AnnouncementsIcon,
+  PrivacyPolicyIcon,
+  ContactSupportIcon,
+  DistanceIcon,
   FoodPantriesIcon,
   RentIcon,
   UtilitiesIcon,
 } from "../icons";
+import { LOADING_MESSAGES } from "../constants/loadingMessages";
 
 // Map of icon keywords to components for inline rendering
 const ICON_MAP = {
@@ -20,6 +25,9 @@ const ICON_MAP = {
   "[[HOME_ICON]]": <HomeIcon size={20} active={true} />,
   "[[INFO_ICON]]": <HelpBubbleIcon size={20} active={true} />,
   "[[REPORTS_ICON]]": <ReportsIcon size={20} active={true} />,
+  "[[ANNOUNCEMENTS_ICON]]": <AnnouncementsIcon size={20} active={true} />,
+  "[[PRIVACY_ICON]]": <PrivacyPolicyIcon size={20} active={true} />,
+  "[[CONTACT_ICON]]": <ContactSupportIcon size={20} active={true} />,
 
   // Assistance type icons
   "[[FOOD_ICON]]": <FoodPantriesIcon size={20} />,
@@ -56,14 +64,19 @@ const ICON_MAP = {
     <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "#4A4F56", color: "#F3EED9" }}>LLM Search</span>
   ),
 
-  // Dropdowns (green)
+  // Dropdowns and input fields (green)
   "[[ZIP_DROPDOWN]]": (
     <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "#2d6552", color: "#F3EED9" }}>77002 ▾</span>
+  ),
+  "[[LLM_INPUT]]": (
+    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "#4A4F56", color: "#F3EED9" }}>What are you looking for today?</span>
   ),
 
   // Distance icon
   "[[DISTANCE_ICON]]": (
-    <span className="inline-block px-1 py-0.5 rounded text-xs" style={{ backgroundColor: "#4A4F56", color: "#F3EED9" }}>📍</span>
+    <span className="inline-flex items-center justify-center rounded" style={{ backgroundColor: "#4A4F56", padding: "2px 4px" }}>
+      <DistanceIcon size={20} />
+    </span>
   ),
 
   // Assistance bar elements (tan bar) - use tan bg so visible in white chat bubbles
@@ -115,6 +128,7 @@ export default function HelpPanel({ isOpen, onClose }) {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0]);
   const [error, setError] = useState(null);
   const [position, setPosition] = useState({ x: 100, y: 100 });
   const [isDragging, setIsDragging] = useState(false);
@@ -122,6 +136,19 @@ export default function HelpPanel({ isOpen, onClose }) {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const panelRef = useRef(null);
+
+  // Rotate loading messages while loading
+  useEffect(() => {
+    if (!isLoading) return;
+
+    let index = 0;
+    const interval = setInterval(() => {
+      index = (index + 1) % LOADING_MESSAGES.length;
+      setLoadingMessage(LOADING_MESSAGES[index]);
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [isLoading]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -229,11 +256,6 @@ export default function HelpPanel({ isOpen, onClose }) {
     }
   };
 
-  const handleClearChat = () => {
-    setMessages([]);
-    setError(null);
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -255,13 +277,13 @@ export default function HelpPanel({ isOpen, onClose }) {
           cursor: isDragging ? "grabbing" : "default",
         }}
       >
-          {/* Header - draggable */}
+          {/* Header - draggable, follows standard panel formatting */}
           <div
             onMouseDown={handleMouseDown}
-            className="flex items-center justify-between px-4"
+            className="flex flex-col items-center justify-center px-4 relative"
             style={{
               backgroundColor: "var(--color-panel-header-bg)",
-              height: "var(--height-help-header)",
+              height: "var(--height-panel-header)",
               flexShrink: 0,
               cursor: isDragging ? "grabbing" : "grab",
             }}
@@ -270,23 +292,34 @@ export default function HelpPanel({ isOpen, onClose }) {
               className="font-opensans select-none"
               style={{
                 color: "var(--color-panel-title)",
-                fontSize: "16px",
-                fontWeight: "600",
+                fontSize: "var(--font-size-panel-title)",
+                fontWeight: "var(--font-weight-panel-title)",
+                letterSpacing: "var(--letter-spacing-panel-title)",
               }}
             >
-              ❓ Help
+              Help
             </h2>
-            <div className="flex items-center gap-2">
+            <p
+              className="font-opensans select-none"
+              style={{
+                color: "var(--color-panel-subtitle)",
+                fontSize: "var(--font-size-panel-subtitle)",
+                letterSpacing: "var(--letter-spacing-panel-subtitle)",
+              }}
+            >
+              Ask me anything about using the CRG app!
+            </p>
+            <div className="absolute right-4 flex items-center gap-3">
               <span
                 className="font-opensans select-none"
-                style={{ color: "#999", fontSize: "11px" }}
+                style={{ color: "#FFFFFF", fontSize: "11px" }}
               >
                 drag to move
               </span>
               <button
                 onClick={onClose}
                 className="text-white hover:brightness-125 transition-all"
-                style={{ fontSize: "20px", lineHeight: 1 }}
+                style={{ fontSize: "24px", lineHeight: 1 }}
               >
                 ×
               </button>
@@ -297,17 +330,11 @@ export default function HelpPanel({ isOpen, onClose }) {
           <div
             className="flex-1 overflow-y-auto p-4"
             style={{
-              backgroundColor: "#f5f5f5",
+              backgroundColor: "var(--color-help-body-bg)",
             }}
           >
             {messages.length === 0 && !isLoading && (
               <div className="text-center py-8">
-                <p
-                  className="font-opensans mb-4"
-                  style={{ color: "#666", fontSize: "14px" }}
-                >
-                  Ask me anything about using the CRG app!
-                </p>
                 <div className="space-y-2">
                   {[
                     "How do I email resources to a client?",
@@ -321,12 +348,14 @@ export default function HelpPanel({ isOpen, onClose }) {
                         setQuestion(suggestion);
                         inputRef.current?.focus();
                       }}
-                      className="block w-full text-left px-3 py-2 rounded hover:bg-white transition-colors font-opensans"
+                      className="block w-full text-left px-3 py-2 rounded transition-colors font-opensans"
                       style={{
-                        fontSize: "13px",
-                        color: "#2d6552",
-                        backgroundColor: "rgba(45, 101, 82, 0.1)",
+                        fontSize: "var(--font-size-help-suggestion)",
+                        color: "var(--color-help-suggestion-text)",
+                        backgroundColor: "var(--color-help-suggestion-bg)",
                       }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = "var(--color-help-suggestion-hover-bg)"}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = "var(--color-help-suggestion-bg)"}
                     >
                       {suggestion}
                     </button>
@@ -341,20 +370,21 @@ export default function HelpPanel({ isOpen, onClose }) {
                 className={`mb-3 ${msg.type === "user" ? "text-right" : "text-left"}`}
               >
                 <div
-                  className={`inline-block px-3 py-2 rounded-lg font-opensans ${
-                    msg.type === "user"
-                      ? "bg-[#2d6552] text-white"
-                      : "bg-white text-gray-800"
-                  }`}
+                  className="inline-block px-3 py-2 rounded-lg font-opensans"
                   style={{
                     maxWidth: "90%",
-                    fontSize: "13px",
-                    lineHeight: "1.6",
+                    fontSize: "var(--font-size-help-message)",
+                    lineHeight: "var(--line-height-help-message)",
                     whiteSpace: "pre-wrap",
-                    boxShadow:
-                      msg.type === "assistant"
-                        ? "0 1px 3px rgba(0,0,0,0.1)"
-                        : "none",
+                    backgroundColor: msg.type === "user"
+                      ? "var(--color-help-user-bubble-bg)"
+                      : "var(--color-help-assistant-bubble-bg)",
+                    color: msg.type === "user"
+                      ? "var(--color-help-user-bubble-text)"
+                      : "var(--color-help-assistant-bubble-text)",
+                    boxShadow: msg.type === "assistant"
+                      ? "0 1px 3px rgba(0,0,0,0.1)"
+                      : "none",
                   }}
                 >
                   {msg.type === "assistant"
@@ -367,23 +397,16 @@ export default function HelpPanel({ isOpen, onClose }) {
             {isLoading && (
               <div className="text-left mb-3">
                 <div
-                  className="inline-block px-4 py-2 rounded-lg bg-white"
-                  style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}
+                  className="inline-block px-4 py-2 rounded-lg font-opensans"
+                  style={{
+                    backgroundColor: "var(--color-help-assistant-bubble-bg)",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                    fontSize: "var(--font-size-help-message)",
+                    color: "var(--color-help-assistant-bubble-text)",
+                    fontStyle: "italic",
+                  }}
                 >
-                  <span className="flex items-center gap-1">
-                    <span
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: "0ms" }}
-                    />
-                    <span
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: "150ms" }}
-                    />
-                    <span
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: "300ms" }}
-                    />
-                  </span>
+                  {loadingMessage}
                 </div>
               </div>
             )}
@@ -391,8 +414,12 @@ export default function HelpPanel({ isOpen, onClose }) {
             {error && (
               <div className="text-left mb-3">
                 <div
-                  className="inline-block px-4 py-2 rounded-lg bg-red-100 text-red-700 font-opensans"
-                  style={{ fontSize: "14px" }}
+                  className="inline-block px-4 py-2 rounded-lg font-opensans"
+                  style={{
+                    fontSize: "var(--font-size-help-message)",
+                    backgroundColor: "var(--color-help-error-bg)",
+                    color: "var(--color-help-error-text)",
+                  }}
                 >
                   {error}
                 </div>
@@ -408,7 +435,7 @@ export default function HelpPanel({ isOpen, onClose }) {
             className="flex gap-2 p-3"
             style={{
               backgroundColor: "var(--color-panel-body-bg)",
-              borderTop: "1px solid #ddd",
+              borderTop: "1px solid var(--color-help-input-border)",
             }}
           >
             <input
@@ -420,38 +447,27 @@ export default function HelpPanel({ isOpen, onClose }) {
               disabled={isLoading}
               className="flex-1 px-3 py-2 rounded font-opensans focus:outline-none focus:ring-2 focus:ring-[#2d6552]"
               style={{
-                fontSize: "14px",
-                backgroundColor: "white",
-                border: "1px solid #ccc",
+                fontSize: "var(--font-size-help-input)",
+                backgroundColor: "var(--color-help-input-bg)",
+                border: "1px solid var(--color-help-input-border)",
               }}
             />
             <button
               type="submit"
               disabled={isLoading || !question.trim()}
-              className="px-4 py-2 rounded font-opensans transition-all hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="font-opensans transition-all hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
                 backgroundColor: "var(--color-panel-btn-ok-bg)",
                 color: "var(--color-panel-btn-text)",
-                fontSize: "14px",
+                fontSize: "var(--font-size-panel-btn)",
+                letterSpacing: "var(--letter-spacing-panel-btn)",
+                width: "var(--width-panel-btn)",
+                height: "var(--height-panel-btn)",
+                borderRadius: "var(--radius-panel-btn)",
               }}
             >
               Ask
             </button>
-            {messages.length > 0 && (
-              <button
-                type="button"
-                onClick={handleClearChat}
-                className="px-3 py-2 rounded font-opensans transition-all hover:brightness-110"
-                style={{
-                  backgroundColor: "#999",
-                  color: "white",
-                  fontSize: "14px",
-                }}
-                title="Clear chat"
-              >
-                Clear
-              </button>
-            )}
           </form>
       </motion.div>
     </AnimatePresence>

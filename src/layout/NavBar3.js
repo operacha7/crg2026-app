@@ -655,7 +655,7 @@ export default function NavBar3() {
       <span
         className="font-fraktur flex-shrink-0 ml-4"
         style={{
-          color: "var(--color-navbar3-user-text, #FFB302)",
+          color: "var(--color-navbar3-user-text, #222831)",
           fontSize: "var(--font-size-navbar3-user)",
           whiteSpace: "nowrap",
         }}

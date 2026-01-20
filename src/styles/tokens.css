@@ -313,8 +313,30 @@
    * HELP PANEL
    * ========================================== */
 
-  /* Help Panel Sizing - adjust these to change panel size */
+  /* Help Panel Sizing */
   --width-help-panel: 700px;
   --height-help-panel: 800px;
-  --height-help-header: 50px;
+  /* Help panel uses standard --height-panel-header: 70px */
+
+  /* Help Panel Colors */
+  --color-help-body-bg: #f5f5f5;
+  --color-help-empty-text: #666666;
+  --color-help-suggestion-bg: rgba(45, 101, 82, 0.1);
+  --color-help-suggestion-text: #2d6552;
+  --color-help-suggestion-hover-bg: #FFFFFF;
+  --color-help-user-bubble-bg: #2d6552;
+  --color-help-user-bubble-text: #FFFFFF;
+  --color-help-assistant-bubble-bg: #FFFFFF;
+  --color-help-assistant-bubble-text: #333333;
+  --color-help-error-bg: #fee2e2;
+  --color-help-error-text: #b91c1c;
+  --color-help-input-bg: #FFFFFF;
+  --color-help-input-border: #cccccc;
+
+  /* Help Panel Typography */
+  --font-size-help-message: 14px;
+  --font-size-help-suggestion: 14px;
+  --font-size-help-empty: 14px;
+  --font-size-help-input: 14px;
+  --line-height-help-message: 1.6;
 }
