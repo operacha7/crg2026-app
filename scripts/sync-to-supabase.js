@@ -3,10 +3,6 @@ const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
-// Debug - let's see what's loaded
-console.log('VITE_SUPABASE_URL:', process.env.VITE_APP_SUPABASE_URL);
-console.log('VITE_SUPABASE_SECRET_KEY:', process.env.VITE_APP_SUPABASE_SECRET_KEY ? 'Found (hidden)' : 'NOT FOUND');
-
 // Configuration
 const SPREADSHEET_ID = '1m3-OHykdj7S_9fGdyJmFkgjNMQ9FA4BAmuyf4khMm7w';
 
@@ -170,10 +166,11 @@ async function fetchSheetData(sheets, sheetName) {
 }
 
 // Upload data to Supabase (delete all, then insert)
+// Returns the count of records inserted, or null if failed
 async function uploadToSupabase(tableName, data) {
   if (data.length === 0) {
     console.log(`Skipping ${tableName} - no data`);
-    return;
+    return 0;
   }
 
   // Delete all existing rows using id_no (your primary key)
@@ -184,7 +181,7 @@ async function uploadToSupabase(tableName, data) {
 
   if (deleteError) {
     console.error(`Error deleting from ${tableName}:`, deleteError);
-    return;
+    return null;
   }
 
   const { error: insertError } = await supabase
@@ -193,10 +190,54 @@ async function uploadToSupabase(tableName, data) {
 
   if (insertError) {
     console.error(`Error inserting into ${tableName}:`, insertError);
-    return;
+    return null;
   }
 
   console.log(`✓ ${tableName}: ${data.length} rows synced`);
+  return data.length;
+}
+
+// Log sync results to sync_log table
+async function logSyncResults(syncCounts) {
+  // Get current time in Central Time
+  const now = new Date();
+  const centralTime = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Chicago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(now);
+
+  // Parse the formatted date back to ISO format for Supabase
+  // Format: "MM/DD/YYYY, HH:MM:SS" -> "YYYY-MM-DD HH:MM:SS"
+  const [datePart, timePart] = centralTime.split(', ');
+  const [month, day, year] = datePart.split('/');
+  const syncTimestamp = `${year}-${month}-${day} ${timePart}`;
+
+  const logEntry = {
+    sync_timestamp: syncTimestamp,
+    directory_count: syncCounts.directory,
+    zip_codes_count: syncCounts.zip_codes,
+    assistance_count: syncCounts.assistance,
+    organizations_count: syncCounts.organizations,
+    registered_organizations_count: syncCounts.registered_organizations,
+    announcements_count: syncCounts.announcements,
+  };
+
+  const { error } = await supabase
+    .from('sync_log')
+    .insert(logEntry);
+
+  if (error) {
+    console.error('Error logging sync results:', error);
+    console.log('Sync log entry that failed:', logEntry);
+  } else {
+    console.log(`\n✓ Sync logged at ${centralTime} (Central Time)`);
+  }
 }
 
 // Main sync function
@@ -204,6 +245,9 @@ async function syncAll() {
   console.log('Starting sync...\n');
 
   const sheets = await getGoogleSheetsClient();
+
+  // Track counts for each table
+  const syncCounts = {};
 
   for (const table of TABLES) {
     console.log(`Syncing ${table.sheetName}...`);
@@ -214,8 +258,12 @@ async function syncAll() {
       data = data.map(table.transform);
     }
 
-    await uploadToSupabase(table.supabaseTable, data);
+    const count = await uploadToSupabase(table.supabaseTable, data);
+    syncCounts[table.supabaseTable] = count;
   }
+
+  // Log the sync results to sync_log table
+  await logSyncResults(syncCounts);
 
   console.log('\n✓ Sync complete!');
 }
