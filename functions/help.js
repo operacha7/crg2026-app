@@ -10,25 +10,30 @@ function generateSessionId() {
 }
 
 // Log help query to Supabase for improvement tracking
-async function logHelpQuery(env, question, response, sessionId) {
+async function logHelpQuery(env, question, response, sessionId, regOrganization) {
   try {
-    if (!env.SUPABASE_URL || !env.SUPABASE_SECRET_KEY) {
+    // Support both VITE_ prefixed (existing Cloudflare config) and non-prefixed names
+    const supabaseUrl = env.VITE_SUPABASE_URL || env.SUPABASE_URL;
+    const supabaseKey = env.VITE_SUPABASE_SECRET_KEY || env.SUPABASE_SECRET_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
       console.log("⚠️ Supabase not configured, skipping help log");
       return;
     }
 
-    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY);
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { error } = await supabase.from("help_logs").insert({
       question: question,
       response: response,
       session_id: sessionId,
+      reg_organization: regOrganization,
     });
 
     if (error) {
-      console.error("⚠️ Failed to log help query:", error.message);
+      console.error("⚠️ Failed to log help query:", error.message, error.code, error.details);
     } else {
-      console.log("📝 Help query logged");
+      console.log("📝 Help query logged successfully");
     }
   } catch (err) {
     // Don't fail the request if logging fails
@@ -36,7 +41,8 @@ async function logHelpQuery(env, question, response, sessionId) {
   }
 }
 
-export async function onRequest({ request, env }) {
+export async function onRequest(context) {
+  const { request, env } = context;
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type",
@@ -71,7 +77,7 @@ export async function onRequest({ request, env }) {
   }
 
   try {
-    const { question, conversationHistory = [] } = await request.json();
+    const { question, conversationHistory = [], regOrganization = null } = await request.json();
 
     if (!question || typeof question !== "string" || question.trim() === "") {
       return new Response(
@@ -132,9 +138,10 @@ export async function onRequest({ request, env }) {
     const answer = data.content[0].text;
     console.log("✅ Help response generated");
 
-    // Log the query for improvement tracking (non-blocking)
+    // Log the query for improvement tracking (non-blocking, but kept alive via waitUntil)
     const sessionId = generateSessionId();
-    logHelpQuery(env, question, answer, sessionId);
+    console.log("📝 Starting help log...");
+    context.waitUntil(logHelpQuery(env, question, answer, sessionId, regOrganization));
 
     return new Response(
       JSON.stringify({

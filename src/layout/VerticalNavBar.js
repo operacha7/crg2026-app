@@ -36,6 +36,7 @@ export default function VerticalNavBar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [helpResetKey, setHelpResetKey] = useState(0);
 
   // Get context setters for resetting state on Home click
   const {
@@ -65,6 +66,8 @@ export default function VerticalNavBar() {
 
   const handleClick = (id) => {
     if (id === "information") {
+      // Always increment reset key to clear conversation, whether panel is open or not
+      setHelpResetKey((prev) => prev + 1);
       setIsHelpOpen(true);
       return;
     }
@@ -148,7 +151,7 @@ export default function VerticalNavBar() {
     </div>
 
     {/* Help Panel */}
-    <HelpPanel isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+    <HelpPanel isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} resetKey={helpResetKey} />
     </>
   );
 }

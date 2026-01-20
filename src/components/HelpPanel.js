@@ -5,6 +5,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAppData } from "../Contexts/AppDataContext";
 import {
   HomeIcon,
   HelpBubbleIcon,
@@ -124,7 +125,8 @@ function renderMessageContent(content) {
   return parts.length > 0 ? parts : content;
 }
 
-export default function HelpPanel({ isOpen, onClose }) {
+export default function HelpPanel({ isOpen, onClose, resetKey }) {
+  const { loggedInUser } = useAppData();
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -155,14 +157,17 @@ export default function HelpPanel({ isOpen, onClose }) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Focus input when panel opens and reset position
+  // Reset conversation when resetKey changes (user clicked Help icon)
   useEffect(() => {
+    setMessages([]);
+    setQuestion("");
+    setError(null);
+    // Position panel in top-left area, leaving room for nav bars
+    setPosition({ x: 50, y: 220 });
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 100);
-      // Position panel in top-left area, leaving room for nav bars
-      setPosition({ x: 50, y: 220 });
     }
-  }, [isOpen]);
+  }, [resetKey, isOpen]);
 
   // Handle drag start
   const handleMouseDown = (e) => {
@@ -235,6 +240,7 @@ export default function HelpPanel({ isOpen, onClose }) {
         body: JSON.stringify({
           question: userQuestion,
           conversationHistory: buildConversationHistory(),
+          regOrganization: loggedInUser?.reg_organization || "Guest",
         }),
       });
 
