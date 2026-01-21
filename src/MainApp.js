@@ -73,11 +73,6 @@ useEffect(() => {
   return () => { mounted = false; };
 }, []);
 
-// Scroll to top on initial load (fixes mobile starting at NavBar2)
-useEffect(() => {
-  window.scrollTo(0, 0);
-}, []);
-
   return (
     <AppDataProvider loggedInUser={loggedInUser}>
       {/* Add ScheduledReload component */}
@@ -93,6 +88,16 @@ useEffect(() => {
 function AppContent({ loggedInUser }) {
   // Use the new AppDataContext (replaces legacy useFetchCRGData)
   const { directory, assistance, zipCodes, loading, error } = useAppData();
+
+  // Scroll to top when data finishes loading (fixes mobile starting at NavBar2)
+  useEffect(() => {
+    if (!loading && !error) {
+      // Small delay to ensure DOM is fully rendered
+      setTimeout(() => {
+        window.scrollTo(0, 0);
+      }, 100);
+    }
+  }, [loading, error]);
 
   // Show loading state
   if (loading) {
