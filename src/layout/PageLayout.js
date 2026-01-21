@@ -35,16 +35,22 @@ export default function PageLayout({
 
   // Scroll to top on mount (fixes mobile starting at NavBar2)
 useEffect(() => {
-  document.documentElement.style.scrollBehavior = 'auto';
-  
-  const forceTop = () => window.scrollTo({ top: 0, behavior: 'instant' });
+  const forceTop = () => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    
+    // Also try the main flex container
+    const container = document.querySelector('.min-h-screen');
+    if (container) container.scrollTop = 0;
+  };
   
   forceTop();
-  setTimeout(forceTop, 0);
-  setTimeout(forceTop, 50);
-  setTimeout(forceTop, 100);
-  setTimeout(forceTop, 200);
-  setTimeout(forceTop, 500);
+  
+  const interval = setInterval(forceTop, 20);
+  setTimeout(() => clearInterval(interval), 1500);
+  
+  return () => clearInterval(interval);
 }, []);
 
   return (
