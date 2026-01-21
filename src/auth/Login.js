@@ -59,7 +59,7 @@ export default function LoginPage({ onLoginSuccess }) {
   // Focus on passcode field when organization is selected
   useEffect(() => {
     if (org && passcodeInputRef.current) {
-      passcodeInputRef.current.focus();
+      passcodeInputRef.current.focus({ preventScroll: true });
     }
   }, [org]);
 
