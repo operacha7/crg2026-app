@@ -119,6 +119,7 @@ export default function ResultRow({
 }) {
   const [requirementsExpanded, setRequirementsExpanded] = useState(false);
   const [zipExpanded, setZipExpanded] = useState(false);
+  const [mobileExpanded, setMobileExpanded] = useState(false);
 
   // Get the icon component for the primary assistance type
   const AssistanceIconComponent = assistanceIcon ? getIconByName(assistanceIcon) : null;
@@ -164,18 +165,162 @@ export default function ResultRow({
   const requirementsNeedsExpansion = requirements.length > MAX_VISIBLE_LINES;
   const zipNeedsExpansion = zipCodes.length > MAX_VISIBLE_LINES;
 
+  // Status colors for mobile card
+  const statusBgColor = {
+    1: "var(--color-results-status-active-bg)",
+    2: "var(--color-results-status-limited-bg)",
+    3: "var(--color-results-status-inactive-bg)",
+  }[record.status_id] || "#ccc";
+
   return (
-    <div
-      className="border-b border-results-row-border font-opensans transition-colors duration-150 results-row-hover"
-      style={{
-        display: "grid",
-        gridTemplateColumns: GRID_COLUMNS,
-        padding: "12px 0 12px 10px",
-        minHeight: "100px",
-        borderBottomWidth: "0.5px",
-        ...getBgStyle(),
-      }}
-    >
+    <>
+      {/* ========== MOBILE CARD LAYOUT (<md) ========== */}
+      <div
+        className="md:hidden border-b border-results-row-border font-opensans p-3"
+        style={getBgStyle()}
+      >
+        {/* Top row: Checkbox + Org name + Distance */}
+        <div className="flex items-start gap-2 mb-2">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => onSelect(record.id, e.target.checked)}
+            className="cursor-pointer mt-1 flex-shrink-0"
+            style={{
+              width: "20px",
+              height: "20px",
+              accentColor: "var(--color-results-checkbox-checked)",
+            }}
+          />
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-base leading-tight">{record.organization}</div>
+            {addressLines.length > 0 && (
+              <div className="text-sm text-gray-600 mt-1">
+                {addressLines.join(", ")}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col items-end flex-shrink-0">
+            {record.distance != null && (
+              <span className="text-sm font-medium">{record.distance.toFixed(1)} mi</span>
+            )}
+            <span
+              className="text-xs px-2 py-0.5 rounded-full mt-1"
+              style={{ backgroundColor: statusBgColor }}
+            >
+              {record.status}
+            </span>
+          </div>
+        </div>
+
+        {/* Assistance icons + phone */}
+        <div className="flex items-center justify-between text-sm mb-2">
+          <div className="flex items-center gap-1">
+            {AssistanceIconComponent && (
+              <span style={{ color: "var(--color-results-assistance-icon)" }}>
+                <AssistanceIconComponent size={18} />
+              </span>
+            )}
+            {orgAssistanceTypes.slice(0, 3).map((at) => {
+              const IconComp = getIconByName(at.icon);
+              return IconComp ? (
+                <span key={at.id_no} style={{ color: "var(--color-results-assistance-icon-secondary)" }}>
+                  <IconComp size={16} />
+                </span>
+              ) : null;
+            })}
+            {orgAssistanceTypes.length > 3 && (
+              <span className="text-xs text-gray-500">+{orgAssistanceTypes.length - 3}</span>
+            )}
+          </div>
+          {record.telephone && (
+            <a href={`tel:${record.telephone.replace(/\D/g, "")}`} className="text-blue-600">
+              {record.telephone}
+            </a>
+          )}
+        </div>
+
+        {/* Expand/collapse for more details */}
+        <button
+          onClick={() => setMobileExpanded(!mobileExpanded)}
+          className="text-xs flex items-center gap-1 hover:opacity-80"
+          style={{ color: "var(--color-results-expand-chevron)" }}
+        >
+          {mobileExpanded ? "Less details" : "More details"}
+          <DoubleChevronIcon expanded={mobileExpanded} />
+        </button>
+
+        {/* Expanded details */}
+        {mobileExpanded && (
+          <div className="mt-3 pt-3 border-t border-gray-200 text-sm space-y-3">
+            {/* Hours */}
+            {formattedHours && (formattedHours.legacy || formattedHours.rows?.length > 0) && (
+              <div>
+                <div className="font-semibold text-xs text-gray-500 mb-1">HOURS</div>
+                {formattedHours.legacy && <div>{formattedHours.legacy}</div>}
+                {formattedHours.rows?.map((row, idx) => (
+                  <div key={idx} className="flex justify-between">
+                    <span>{row.days}</span>
+                    <span>{row.hours}</span>
+                  </div>
+                ))}
+                {record.hours_notes && (
+                  <div
+                    className="mt-1 px-2 py-1 text-center text-xs rounded"
+                    style={{ backgroundColor: "var(--color-results-hours-notes-bg)" }}
+                  >
+                    {record.hours_notes}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Requirements */}
+            {requirements.length > 0 && (
+              <div>
+                <div className="font-semibold text-xs text-gray-500 mb-1">REQUIREMENTS</div>
+                <ul className="list-disc list-inside space-y-0.5">
+                  {requirements.map((req, idx) => (
+                    <li key={idx}>{req}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Zip codes served */}
+            {zipCodes.length > 0 && (
+              <div>
+                <div className="font-semibold text-xs text-gray-500 mb-1">SERVES ZIP CODES</div>
+                <div className="flex flex-wrap gap-1">
+                  {zipCodes.slice(0, zipExpanded ? undefined : 10).map((zip, idx) => (
+                    <span key={idx} className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">{zip}</span>
+                  ))}
+                  {zipCodes.length > 10 && !zipExpanded && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setZipExpanded(true); }}
+                      className="text-xs text-blue-600"
+                    >
+                      +{zipCodes.length - 10} more
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ========== DESKTOP GRID LAYOUT (md+) ========== */}
+      <div
+        className="hidden md:grid border-b border-results-row-border font-opensans transition-colors duration-150 results-row-hover"
+        style={{
+          gridTemplateColumns: GRID_COLUMNS,
+          padding: "12px 0 12px 10px",
+          minHeight: "100px",
+          borderBottomWidth: "0.5px",
+          ...getBgStyle(),
+        }}
+      >
       {/* Select Column - Icon + Checkbox side by side at top, bottoms aligned */}
       <div
         className="flex items-end justify-center"
@@ -459,7 +604,8 @@ export default function ResultRow({
           ""
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

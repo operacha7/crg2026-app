@@ -2,12 +2,15 @@
 // Edit this file to change the rotating messages shown during LLM operations
 
 export const LOADING_MESSAGES = [
-  "Searching...",
-  "Analyzing your request...",
-  "Finding resources...",
-  "Understanding your needs...",
-  "Scanning the database...",
-  "Looking for matches...",
-  "Processing...",
-  "Almost there...",
+  "Cranking...",
+  "Rigamaroling...",
+  "Crash Coursing...",
+  "Juggling...",
+  "Crisscrossing...",
+  "Tik Tac Toeing...",
+  "Glistening...",
+  "Kitten Herding...",
+  "Nit Picking...",
+  "Rock & Rolling...",
+  "Candle Burning at Both Ends...",
 ];

@@ -1,9 +1,6 @@
 // src/components/DropPanel.js
 // Reusable drop panel component with consistent styling
-// Used by: Distance panel, Assistance panel, Email panel, PDF panel
-
-import { HelpIcon } from "../icons";
-import Tooltip from "./Tooltip";
+// Used by: Distance panel, Email panel, PDF panel
 
 /**
  * DropPanel - Reusable dropdown panel with header, body, and footer
@@ -16,7 +13,6 @@ import Tooltip from "./Tooltip";
  * @param {React.ReactNode} children - Panel body content
  * @param {object} style - Additional styles for positioning (top, left, right, etc.)
  * @param {string} okButtonText - Text for OK button (default: "OK")
- * @param {boolean} showHelpIcon - Whether to show help icon (default: true)
  * @param {boolean} okDisabled - Whether OK button is disabled (default: false)
  */
 export default function DropPanel({
@@ -28,7 +24,6 @@ export default function DropPanel({
   children,
   style = {},
   okButtonText = "OK",
-  showHelpIcon = true,
   okDisabled = false,
 }) {
   if (!isOpen) return null;
@@ -36,14 +31,17 @@ export default function DropPanel({
   return (
     <div
       ref={panelRef}
-      className="absolute shadow-xl z-50 overflow-hidden"
+      className="fixed md:absolute shadow-xl z-50 overflow-hidden left-2 right-2 md:left-auto md:right-auto"
       style={{
         borderRadius: "var(--radius-panel)",
-        minWidth: "400px",
+        minWidth: "min(400px, calc(100vw - 16px))",
+        maxWidth: "calc(100vw - 16px)",
         marginTop: "25px", // Consistent spacing below trigger element
         border: "var(--width-panel-border) solid var(--color-panel-border)",
         ...style,
       }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
     >
       {/* Header */}
       <div
@@ -80,7 +78,7 @@ export default function DropPanel({
         </div>
 
         {/* Footer with buttons */}
-        <div className={`flex items-center ${showHelpIcon ? 'justify-center gap-36' : 'justify-between'}`}>
+        <div className="flex items-center justify-between">
           <button
             onClick={onCancel}
             className="font-opensans transition-all duration-200 hover:brightness-110"
@@ -96,15 +94,6 @@ export default function DropPanel({
           >
             Cancel
           </button>
-
-          {showHelpIcon && (
-            <Tooltip text="Help">
-              <HelpIcon
-                size={40}
-                className="cursor-pointer hover:brightness-110 transition-all duration-200"
-              />
-            </Tooltip>
-          )}
 
           <button
             onClick={onSave}

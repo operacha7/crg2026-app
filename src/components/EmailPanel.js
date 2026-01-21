@@ -78,6 +78,8 @@ export default function EmailPanel({
           right: "0",
           border: "var(--width-panel-border) solid var(--color-panel-border)",
         }}
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div

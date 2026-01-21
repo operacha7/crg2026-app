@@ -1,8 +1,10 @@
 // src/layout/NavBar1.js
 // Top navigation bar with logo, title, counters, and action buttons
 // Frame 494 from Figma design
+// Responsive: Shows hamburger menu on mobile, full layout on desktop
 
 import { useState, useRef, useEffect } from "react";
+import { Menu } from "lucide-react";
 import Tooltip from "../components/Tooltip";
 import EmailPanel from "../components/EmailPanel";
 
@@ -17,6 +19,8 @@ export default function NavBar1({
   selectedZip,
   onEmailSuccess,
   onPdfSuccess,
+  // Mobile menu handler
+  onOpenMobileMenu,
 }) {
   // Panel state
   const [showEmailPanel, setShowEmailPanel] = useState(false);
@@ -156,158 +160,258 @@ export default function NavBar1({
   };
   return (
     <nav
-      className="bg-navbar1-bg flex items-center justify-between"
+      className="bg-navbar1-bg"
       style={{
-        height: 'var(--height-navbar1)',
         paddingLeft: 'var(--padding-navbar1-left)',
         paddingRight: 'var(--padding-navbar1-right)',
       }}
     >
-      {/* Left side - Logo and Title */}
+      {/* ========== DESKTOP LAYOUT (md+) ========== */}
       <div
-        className="flex items-center"
-        style={{ gap: 'var(--gap-navbar1-logo-title)' }}
+        className="hidden md:flex items-center justify-between"
+        style={{ height: 'var(--height-navbar1)' }}
       >
-        <img
-          src="/images/CRG Logo 2025.webp"
-          alt="CRG Logo"
-          style={{
-            width: 'var(--size-navbar1-logo)',
-            height: 'var(--size-navbar1-logo)',
-          }}
-          className="object-contain"
-        />
-        <h1
-          className="text-navbar1-title font-comfortaa"
-          style={{
-            fontSize: 'var(--font-size-navbar1-title)',
-            fontWeight: 'var(--font-weight-navbar1-title)',
-            letterSpacing: 'var(--letter-spacing-navbar1-title)',
-          }}
-        >
-          Community Resources Guide Houston
-        </h1>
-      </div>
-
-      {/* Right side - Counters and Buttons */}
-      <div
-        className="flex items-center"
-        style={{ gap: 'var(--gap-navbar1-counters-buttons)' }}
-      >
-        {/* Counters */}
+        {/* Left side - Logo and Title */}
         <div
           className="flex items-center"
-          style={{ gap: 'var(--gap-navbar1-counters)' }}
+          style={{ gap: 'var(--gap-navbar1-logo-title)' }}
         >
-          {/* Filtered count */}
-          <Tooltip text="Filtered records" position="bottom-left">
+          <img
+            src="/images/CRG Logo 2025.webp"
+            alt="CRG Logo"
+            style={{
+              width: 'var(--size-navbar1-logo)',
+              height: 'var(--size-navbar1-logo)',
+            }}
+            className="object-contain"
+          />
+          <h1
+            className="text-navbar1-title font-comfortaa"
+            style={{
+              fontSize: 'var(--font-size-navbar1-title)',
+              fontWeight: 'var(--font-weight-navbar1-title)',
+              letterSpacing: 'var(--letter-spacing-navbar1-title)',
+            }}
+          >
+            Community Resources Guide Houston
+          </h1>
+        </div>
+
+        {/* Right side - Counters and Buttons */}
+        <div
+          className="flex items-center"
+          style={{ gap: 'var(--gap-navbar1-counters-buttons)' }}
+        >
+          {/* Counters */}
+          <div
+            className="flex items-center"
+            style={{ gap: 'var(--gap-navbar1-counters)' }}
+          >
+            {/* Filtered count */}
+            <Tooltip text="Filtered records" position="bottom-left">
+              <div
+                className="bg-navbar1-counter-filtered text-navbar1-counter-text-filtered rounded-full flex items-center justify-center font-opensans"
+                style={{
+                  width: 'var(--size-navbar1-counter)',
+                  height: 'var(--size-navbar1-counter)',
+                  fontSize: 'var(--font-size-navbar1-counter)',
+                  fontWeight: 'var(--font-weight-navbar1-counter)',
+                }}
+              >
+                {filteredCount}
+              </div>
+            </Tooltip>
+
+            {/* Selected count */}
+            <Tooltip text="Selected records" position="bottom-left">
+              <div
+                className="bg-navbar1-counter-selected text-navbar1-counter-text-selected rounded-full flex items-center justify-center font-opensans"
+                style={{
+                  width: 'var(--size-navbar1-counter)',
+                  height: 'var(--size-navbar1-counter)',
+                  fontSize: 'var(--font-size-navbar1-counter)',
+                  fontWeight: 'var(--font-weight-navbar1-counter)',
+                }}
+              >
+                {selectedCount}
+              </div>
+            </Tooltip>
+          </div>
+
+          {/* Buttons */}
+          <div
+            className="flex items-center"
+            style={{ gap: 'var(--gap-navbar1-buttons)' }}
+          >
+            {/* Send Email button with dropdown panel */}
+            <div className="relative">
+              <Tooltip text={isGuest ? "You need an account. Contact Support." : ""} position="bottom">
+                <button
+                  ref={emailButtonRef}
+                  onClick={handleEmailButtonClick}
+                  className={`rounded font-opensans transition-all ${
+                    isGuest
+                      ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                      : "bg-navbar1-btn-email-bg text-navbar1-btn-email-text hover:brightness-125"
+                  }`}
+                  style={{
+                    width: 'var(--width-navbar1-btn)',
+                    height: 'var(--height-navbar1-btn)',
+                    fontSize: 'var(--font-size-navbar1-btn)',
+                    fontWeight: 'var(--font-weight-navbar1-btn)',
+                    letterSpacing: 'var(--letter-spacing-navbar1-btn)',
+                    opacity: isGuest ? 0.6 : 1,
+                  }}
+                >
+                  Send Email
+                </button>
+              </Tooltip>
+
+              {/* Email Panel */}
+              <EmailPanel
+                isOpen={showEmailPanel}
+                onCancel={handleEmailCancel}
+                onSend={handleEmailSend}
+                panelRef={emailPanelRef}
+                isPdfMode={false}
+                hasInactiveResources={hasInactiveResources}
+                isSending={isSending}
+                statusMessage={statusMessage}
+              />
+            </div>
+
+            {/* Create PDF button with dropdown panel */}
+            <div className="relative">
+              <Tooltip text={isGuest ? "You need an account. Contact Support." : ""} position="bottom">
+                <button
+                  ref={pdfButtonRef}
+                  onClick={handlePdfButtonClick}
+                  className={`rounded font-opensans transition-all ${
+                    isGuest
+                      ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                      : "bg-navbar1-btn-pdf-bg text-navbar1-btn-pdf-text hover:brightness-125"
+                  }`}
+                  style={{
+                    width: 'var(--width-navbar1-btn)',
+                    height: 'var(--height-navbar1-btn)',
+                    fontSize: 'var(--font-size-navbar1-btn)',
+                    fontWeight: 'var(--font-weight-navbar1-btn)',
+                    letterSpacing: 'var(--letter-spacing-navbar1-btn)',
+                    opacity: isGuest ? 0.6 : 1,
+                  }}
+                >
+                  Create Pdf
+                </button>
+              </Tooltip>
+
+              {/* PDF Panel */}
+              <EmailPanel
+                isOpen={showPdfPanel}
+                onCancel={handlePdfCancel}
+                onSend={handlePdfCreate}
+                panelRef={pdfPanelRef}
+                isPdfMode={true}
+                hasInactiveResources={hasInactiveResources}
+                isSending={isSending}
+                statusMessage={statusMessage}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ========== MOBILE LAYOUT (<md) ========== */}
+      <div className="md:hidden flex items-center justify-between py-3">
+        {/* Left side - Logo only (title hidden on mobile) */}
+        <div className="flex items-center gap-2">
+          <img
+            src="/images/CRG Logo 2025.webp"
+            alt="CRG Logo"
+            className="w-8 h-8 object-contain"
+          />
+          <span className="text-navbar1-title font-comfortaa text-sm font-semibold tracking-wide">
+            CRG Houston
+          </span>
+        </div>
+
+        {/* Right side - Counters, Buttons (smaller), Hamburger */}
+        <div className="flex items-center gap-2">
+          {/* Counters (smaller on mobile) */}
+          <div className="flex items-center gap-1">
             <div
-              className="bg-navbar1-counter-filtered text-navbar1-counter-text-filtered rounded-full flex items-center justify-center font-opensans"
-              style={{
-                width: 'var(--size-navbar1-counter)',
-                height: 'var(--size-navbar1-counter)',
-                fontSize: 'var(--font-size-navbar1-counter)',
-                fontWeight: 'var(--font-weight-navbar1-counter)',
-              }}
+              className="bg-navbar1-counter-filtered text-navbar1-counter-text-filtered rounded-full flex items-center justify-center font-opensans text-xs font-medium"
+              style={{ width: '32px', height: '32px' }}
             >
               {filteredCount}
             </div>
-          </Tooltip>
-
-          {/* Selected count */}
-          <Tooltip text="Selected records" position="bottom-left">
             <div
-              className="bg-navbar1-counter-selected text-navbar1-counter-text-selected rounded-full flex items-center justify-center font-opensans"
-              style={{
-                width: 'var(--size-navbar1-counter)',
-                height: 'var(--size-navbar1-counter)',
-                fontSize: 'var(--font-size-navbar1-counter)',
-                fontWeight: 'var(--font-weight-navbar1-counter)',
-              }}
+              className="bg-navbar1-counter-selected text-navbar1-counter-text-selected rounded-full flex items-center justify-center font-opensans text-xs font-medium"
+              style={{ width: '32px', height: '32px' }}
             >
               {selectedCount}
             </div>
-          </Tooltip>
-        </div>
+          </div>
 
-        {/* Buttons */}
-        <div
-          className="flex items-center"
-          style={{ gap: 'var(--gap-navbar1-buttons)' }}
-        >
-          {/* Send Email button with dropdown panel */}
-          <div className="relative">
-            <Tooltip text={isGuest ? "You need an account. Contact Support." : ""} position="bottom">
+          {/* Email/PDF buttons (smaller on mobile) */}
+          <div className="flex items-center gap-1">
+            <div className="relative">
               <button
                 ref={emailButtonRef}
                 onClick={handleEmailButtonClick}
-                className={`rounded font-opensans transition-all ${
+                className={`rounded font-opensans text-xs px-2 py-1.5 transition-all ${
                   isGuest
                     ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                     : "bg-navbar1-btn-email-bg text-navbar1-btn-email-text hover:brightness-125"
                 }`}
-                style={{
-                  width: 'var(--width-navbar1-btn)',
-                  height: 'var(--height-navbar1-btn)',
-                  fontSize: 'var(--font-size-navbar1-btn)',
-                  fontWeight: 'var(--font-weight-navbar1-btn)',
-                  letterSpacing: 'var(--letter-spacing-navbar1-btn)',
-                  opacity: isGuest ? 0.6 : 1,
-                }}
+                style={{ opacity: isGuest ? 0.6 : 1 }}
               >
-                Send Email
+                Email
               </button>
-            </Tooltip>
-
-            {/* Email Panel */}
-            <EmailPanel
-              isOpen={showEmailPanel}
-              onCancel={handleEmailCancel}
-              onSend={handleEmailSend}
-              panelRef={emailPanelRef}
-              isPdfMode={false}
-              hasInactiveResources={hasInactiveResources}
-              isSending={isSending}
-              statusMessage={statusMessage}
-            />
-          </div>
-
-          {/* Create PDF button with dropdown panel */}
-          <div className="relative">
-            <Tooltip text={isGuest ? "You need an account. Contact Support." : ""} position="bottom">
+              <EmailPanel
+                isOpen={showEmailPanel}
+                onCancel={handleEmailCancel}
+                onSend={handleEmailSend}
+                panelRef={emailPanelRef}
+                isPdfMode={false}
+                hasInactiveResources={hasInactiveResources}
+                isSending={isSending}
+                statusMessage={statusMessage}
+              />
+            </div>
+            <div className="relative">
               <button
                 ref={pdfButtonRef}
                 onClick={handlePdfButtonClick}
-                className={`rounded font-opensans transition-all ${
+                className={`rounded font-opensans text-xs px-2 py-1.5 transition-all ${
                   isGuest
                     ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                     : "bg-navbar1-btn-pdf-bg text-navbar1-btn-pdf-text hover:brightness-125"
                 }`}
-                style={{
-                  width: 'var(--width-navbar1-btn)',
-                  height: 'var(--height-navbar1-btn)',
-                  fontSize: 'var(--font-size-navbar1-btn)',
-                  fontWeight: 'var(--font-weight-navbar1-btn)',
-                  letterSpacing: 'var(--letter-spacing-navbar1-btn)',
-                  opacity: isGuest ? 0.6 : 1,
-                }}
+                style={{ opacity: isGuest ? 0.6 : 1 }}
               >
-                Create Pdf
+                PDF
               </button>
-            </Tooltip>
-
-            {/* PDF Panel */}
-            <EmailPanel
-              isOpen={showPdfPanel}
-              onCancel={handlePdfCancel}
-              onSend={handlePdfCreate}
-              panelRef={pdfPanelRef}
-              isPdfMode={true}
-              hasInactiveResources={hasInactiveResources}
-              isSending={isSending}
-              statusMessage={statusMessage}
-            />
+              <EmailPanel
+                isOpen={showPdfPanel}
+                onCancel={handlePdfCancel}
+                onSend={handlePdfCreate}
+                panelRef={pdfPanelRef}
+                isPdfMode={true}
+                hasInactiveResources={hasInactiveResources}
+                isSending={isSending}
+                statusMessage={statusMessage}
+              />
+            </div>
           </div>
+
+          {/* Hamburger menu button */}
+          <button
+            onClick={onOpenMobileMenu}
+            className="text-white p-2 hover:brightness-125 transition-all"
+            aria-label="Open menu"
+          >
+            <Menu size={24} />
+          </button>
         </div>
       </div>
     </nav>

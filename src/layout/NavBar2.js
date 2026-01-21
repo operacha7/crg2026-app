@@ -1642,48 +1642,92 @@ export default function NavBar2() {
     }
   };
 
+  // Get short labels for mobile mode selector
+  const getModeLabel = (mode) => {
+    switch (mode) {
+      case SEARCH_MODES.ZIPCODE: return "Zip";
+      case SEARCH_MODES.ORGANIZATION: return "Org";
+      case SEARCH_MODES.LOCATION: return "Location";
+      case SEARCH_MODES.LLM: return "AI Search";
+      default: return "Zip";
+    }
+  };
+
   return (
-    <nav
-      className="bg-navbar2-bg flex items-center justify-between"
-      style={{
-        height: "var(--height-navbar2)",
-        paddingLeft: "var(--padding-navbar2-left)",
-        paddingRight: "var(--padding-navbar2-right)",
-      }}
-    >
-      {/* Left side - Mode-specific filters */}
+    <nav className="bg-navbar2-bg">
+      {/* ========== DESKTOP LAYOUT (md+) ========== */}
       <div
-        className="flex items-center"
-        style={{ gap: "var(--gap-navbar2-filters)" }}
+        className="hidden md:flex items-center justify-between"
+        style={{
+          height: "var(--height-navbar2)",
+          paddingLeft: "var(--padding-navbar2-left)",
+          paddingRight: "var(--padding-navbar2-right)",
+        }}
       >
-        {renderFilters()}
+        {/* Left side - Mode-specific filters */}
+        <div
+          className="flex items-center"
+          style={{ gap: "var(--gap-navbar2-filters)" }}
+        >
+          {renderFilters()}
+        </div>
+
+        {/* Right side - Search mode buttons */}
+        <div
+          className="flex items-center"
+          style={{ gap: "var(--gap-navbar2-mode-buttons)" }}
+        >
+          <ModeButton
+            label="Zip Code"
+            isActive={activeSearchMode === SEARCH_MODES.ZIPCODE}
+            onClick={() => handleModeChange(SEARCH_MODES.ZIPCODE)}
+          />
+          <ModeButton
+            label="Organization"
+            isActive={activeSearchMode === SEARCH_MODES.ORGANIZATION}
+            onClick={() => handleModeChange(SEARCH_MODES.ORGANIZATION)}
+          />
+          <ModeButton
+            label="Location"
+            isActive={activeSearchMode === SEARCH_MODES.LOCATION}
+            onClick={() => handleModeChange(SEARCH_MODES.LOCATION)}
+          />
+          <ModeButton
+            label="LLM Search"
+            isActive={activeSearchMode === SEARCH_MODES.LLM}
+            onClick={() => handleModeChange(SEARCH_MODES.LLM)}
+          />
+        </div>
       </div>
 
-      {/* Right side - Search mode buttons */}
-      <div
-        className="flex items-center"
-        style={{ gap: "var(--gap-navbar2-mode-buttons)" }}
-      >
-        <ModeButton
-          label="Zip Code"
-          isActive={activeSearchMode === SEARCH_MODES.ZIPCODE}
-          onClick={() => handleModeChange(SEARCH_MODES.ZIPCODE)}
-        />
-        <ModeButton
-          label="Organization"
-          isActive={activeSearchMode === SEARCH_MODES.ORGANIZATION}
-          onClick={() => handleModeChange(SEARCH_MODES.ORGANIZATION)}
-        />
-        <ModeButton
-          label="Location"
-          isActive={activeSearchMode === SEARCH_MODES.LOCATION}
-          onClick={() => handleModeChange(SEARCH_MODES.LOCATION)}
-        />
-        <ModeButton
-          label="LLM Search"
-          isActive={activeSearchMode === SEARCH_MODES.LLM}
-          onClick={() => handleModeChange(SEARCH_MODES.LLM)}
-        />
+      {/* ========== MOBILE LAYOUT (<md) ========== */}
+      <div className="md:hidden flex flex-col py-2 px-3 gap-2">
+        {/* Top row - Mode selector tabs */}
+        <div className="flex gap-1 overflow-x-auto">
+          {[
+            { mode: SEARCH_MODES.ZIPCODE, label: "Zip" },
+            { mode: SEARCH_MODES.ORGANIZATION, label: "Org" },
+            { mode: SEARCH_MODES.LOCATION, label: "Location" },
+            { mode: SEARCH_MODES.LLM, label: "AI" },
+          ].map(({ mode, label }) => (
+            <button
+              key={mode}
+              onClick={() => handleModeChange(mode)}
+              className={`px-3 py-1.5 rounded text-sm font-medium whitespace-nowrap transition-all ${
+                activeSearchMode === mode
+                  ? "bg-navbar2-btn-active-bg text-navbar2-btn-active-text"
+                  : "bg-transparent text-navbar2-btn-inactive-text border border-white/30"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Bottom row - Mode-specific filters (simplified for mobile) */}
+        <div className="flex flex-wrap items-center gap-2">
+          {renderFilters()}
+        </div>
       </div>
     </nav>
   );

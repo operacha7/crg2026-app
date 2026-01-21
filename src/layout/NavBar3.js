@@ -6,8 +6,6 @@
 import { useState, useEffect, useRef } from "react";
 import { dataService } from "../services/dataService";
 import { getIconByName } from "../icons/iconMap";
-import { HelpIcon } from "../icons";
-import Tooltip from "../components/Tooltip";
 import { useAppData } from "../Contexts/AppDataContext";
 import { logUsage } from "../services/usageService";
 
@@ -201,12 +199,13 @@ function AssistancePanel({
   return (
     <div
       ref={panelRef}
-      className="fixed mt-2 shadow-xl z-50 overflow-hidden"
+      className="fixed mt-2 shadow-xl z-50 overflow-auto"
       style={{
         borderRadius: "var(--radius-panel)",
-        width: "1300px", // Wide enough for longest chip text without wrapping
-        left: "20px", // Aligned with left edge of nav
-        right: "50px", // Add right padding (space for vertical nav)
+        width: "min(1300px, calc(100vw - 32px))", // Responsive: max 1300px or screen width - 32px
+        maxHeight: "calc(100vh - 230px)", // Leave room for navbars
+        left: "16px",
+        right: "16px",
         top: "210px", // Below NavBar1 (80px) + NavBar2 (70px) + NavBar3 (60px)
         border: "var(--width-panel-border) solid var(--color-panel-border)",
       }}
@@ -251,8 +250,8 @@ function AssistancePanel({
           padding: "20px",
         }}
       >
-        {/* Groups grid */}
-        <div className="flex gap-4 justify-center">
+        {/* Groups grid - wraps on smaller screens */}
+        <div className="flex flex-wrap gap-4 justify-center">
           {groups.map((group) => {
             // Determine if this group's items should be disabled
             const isGroupDisabled = isInFullGroupMode && fullGroupId !== group.id;
@@ -296,8 +295,8 @@ function AssistancePanel({
           })}
         </div>
 
-        {/* Footer with buttons */}
-        <div className="flex justify-center items-center gap-36 mt-16">
+        {/* Footer with buttons - closer together on mobile */}
+        <div className="flex justify-center items-center gap-8 md:gap-36 mt-8 md:mt-16">
           <button
             onClick={onClear}
             className="font-opensans transition-all duration-200 hover:brightness-110"
@@ -313,10 +312,6 @@ function AssistancePanel({
           >
             Clear
           </button>
-
-          <Tooltip text="Help">
-            <HelpIcon size={40} className="cursor-pointer hover:brightness-110 transition-all duration-200" />
-          </Tooltip>
 
           <button
             onClick={onSave}
@@ -588,80 +583,151 @@ export default function NavBar3() {
     : loggedInUser?.reg_organization || 'Guest';
 
   return (
-    <nav
-      className="bg-navbar3-bg flex items-center justify-between relative"
-      style={{
-        height: "var(--height-navbar3)",
-        paddingLeft: "var(--padding-navbar3-left)",
-        paddingRight: "var(--padding-navbar1-right)",
-      }}
-    >
-      {/* Left side: Assistance button and chips */}
-      <div className="flex items-center flex-1 min-w-0">
-      {/* Assistance button with hover container */}
+    <nav className="bg-navbar3-bg relative">
+      {/* ========== DESKTOP LAYOUT (md+) ========== */}
       <div
-        ref={containerRef}
-        className="relative"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
-        <AssistanceButton
-          hasSelections={savedSelections.length > 0}
-          onClick={handleOpenPanel}
-          buttonRef={buttonRef}
-        />
-        {/* Dropdown Panel - inside hover container */}
-        <AssistancePanel
-          isOpen={isPanelOpen}
-          groups={groups}
-          selectedIds={tempSelections}
-          onTypeToggle={handleTypeToggle}
-          onGroupToggle={handleGroupToggle}
-          onSave={handleSave}
-          onClear={handleClear}
-          panelRef={panelRef}
-        />
-      </div>
-
-      {/* Chips - use smaller font/icons when 6+ selections to prevent wrapping */}
-      {savedSelections.length > 0 && (
-        <div
-          className="flex items-center"
-          style={{
-            marginLeft: "var(--gap-navbar3-button-chips)",
-            gap: savedSelections.length >= 6 ? "8px" : "var(--gap-navbar3-chips)",
-          }}
-        >
-          {savedSelections.map((typeId) => {
-            const typeInfo = getTypeInfo(typeId);
-            if (!typeInfo) return null;
-            return (
-              <AssistanceChip
-                key={typeId}
-                name={typeInfo.name}
-                icon={typeInfo.icon}
-                isActive={activeAssistanceChips.has(typeId)}
-                onClick={() => handleChipClick(typeId)}
-                fontSize={savedSelections.length >= 6 ? "11px" : undefined}
-                iconSize={savedSelections.length >= 6 ? 18 : undefined}
-              />
-            );
-          })}
-        </div>
-      )}
-      </div>
-
-      {/* Right side: Logged-in user */}
-      <span
-        className="font-Montserrat flex-shrink-0 ml-4"
+        className="hidden md:flex items-center justify-between"
         style={{
-          color: "var(--color-navbar3-user-text, #000000)",
-          fontSize: "var(--font-size-navbar3-user)",
-          whiteSpace: "nowrap",
+          height: "var(--height-navbar3)",
+          paddingLeft: "var(--padding-navbar3-left)",
+          paddingRight: "var(--padding-navbar1-right)",
         }}
       >
-        {displayName}
-      </span>
+        {/* Left side: Assistance button and chips */}
+        <div className="flex items-center flex-1 min-w-0">
+          {/* Assistance button with hover container */}
+          <div
+            ref={containerRef}
+            className="relative"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            <AssistanceButton
+              hasSelections={savedSelections.length > 0}
+              onClick={handleOpenPanel}
+              buttonRef={buttonRef}
+            />
+            {/* Dropdown Panel - inside hover container */}
+            <AssistancePanel
+              isOpen={isPanelOpen}
+              groups={groups}
+              selectedIds={tempSelections}
+              onTypeToggle={handleTypeToggle}
+              onGroupToggle={handleGroupToggle}
+              onSave={handleSave}
+              onClear={handleClear}
+              panelRef={panelRef}
+            />
+          </div>
+
+          {/* Chips - use smaller font/icons when 6+ selections to prevent wrapping */}
+          {savedSelections.length > 0 && (
+            <div
+              className="flex items-center"
+              style={{
+                marginLeft: "var(--gap-navbar3-button-chips)",
+                gap: savedSelections.length >= 6 ? "8px" : "var(--gap-navbar3-chips)",
+              }}
+            >
+              {savedSelections.map((typeId) => {
+                const typeInfo = getTypeInfo(typeId);
+                if (!typeInfo) return null;
+                return (
+                  <AssistanceChip
+                    key={typeId}
+                    name={typeInfo.name}
+                    icon={typeInfo.icon}
+                    isActive={activeAssistanceChips.has(typeId)}
+                    onClick={() => handleChipClick(typeId)}
+                    fontSize={savedSelections.length >= 6 ? "11px" : undefined}
+                    iconSize={savedSelections.length >= 6 ? 18 : undefined}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Right side: Logged-in user */}
+        <span
+          className="font-Montserrat flex-shrink-0 ml-4"
+          style={{
+            color: "var(--color-navbar3-user-text, #000000)",
+            fontSize: "var(--font-size-navbar3-user)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {displayName}
+        </span>
+      </div>
+
+      {/* ========== MOBILE LAYOUT (<md) ========== */}
+      <div className="md:hidden py-2 px-3">
+        {/* Top row: Assistance button + user name */}
+        <div className="flex items-center justify-between mb-2">
+          <div
+            ref={containerRef}
+            className="relative"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            <button
+              ref={buttonRef}
+              onClick={handleOpenPanel}
+              className={`
+                font-opensans text-sm px-3 py-1.5 rounded transition-all flex items-center gap-1
+                ${savedSelections.length > 0
+                  ? "bg-navbar2-btn-active-bg text-navbar2-btn-active-text"
+                  : "bg-transparent text-navbar2-btn-inactive-text border border-white/30"
+                }
+              `}
+            >
+              {savedSelections.length > 0 ? `Assistance (${savedSelections.length})` : "Select Assistance"}
+            </button>
+            {/* Panel still available */}
+            <AssistancePanel
+              isOpen={isPanelOpen}
+              groups={groups}
+              selectedIds={tempSelections}
+              onTypeToggle={handleTypeToggle}
+              onGroupToggle={handleGroupToggle}
+              onSave={handleSave}
+              onClear={handleClear}
+              panelRef={panelRef}
+            />
+          </div>
+
+          <span
+            className="font-Montserrat text-sm truncate max-w-[150px]"
+            style={{ color: "var(--color-navbar3-user-text, #000000)" }}
+          >
+            {displayName}
+          </span>
+        </div>
+
+        {/* Chips row - wrap on mobile */}
+        {savedSelections.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {savedSelections.map((typeId) => {
+              const typeInfo = getTypeInfo(typeId);
+              if (!typeInfo) return null;
+              return (
+                <button
+                  key={typeId}
+                  onClick={() => handleChipClick(typeId)}
+                  className={`text-xs px-2 py-1 rounded-full transition-all flex items-center gap-1 ${
+                    activeAssistanceChips.has(typeId)
+                      ? "bg-navbar3-chip-active-bg text-navbar3-chip-active-text border border-white"
+                      : "bg-navbar3-chip-inactive-bg text-navbar3-chip-inactive-text border border-black"
+                  }`}
+                >
+                  {typeInfo.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </nav>
   );
 }

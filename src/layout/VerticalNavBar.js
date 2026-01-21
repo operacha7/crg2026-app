@@ -32,11 +32,15 @@ const navRoutes = {
   announcements: "/announcements",
 };
 
-export default function VerticalNavBar() {
+export default function VerticalNavBar({ externalHelpOpen, onHelpOpenChange }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [internalHelpOpen, setInternalHelpOpen] = useState(false);
   const [helpResetKey, setHelpResetKey] = useState(0);
+
+  // Use external control if provided, otherwise use internal state
+  const isHelpOpen = externalHelpOpen !== undefined ? externalHelpOpen : internalHelpOpen;
+  const setIsHelpOpen = onHelpOpenChange || setInternalHelpOpen;
 
   // Get context setters for resetting state on Home click
   const {

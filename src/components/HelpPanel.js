@@ -135,6 +135,15 @@ export default function HelpPanel({ isOpen, onClose, resetKey }) {
   const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0]);
   const [error, setError] = useState(null);
   const [position, setPosition] = useState({ x: 100, y: 100 });
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check for mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const messagesEndRef = useRef(null);
@@ -275,14 +284,19 @@ export default function HelpPanel({ isOpen, onClose, resetKey }) {
         exit={{ opacity: 0, scale: 0.95 }}
         className="fixed z-50 flex flex-col overflow-hidden"
         style={{
-          left: position.x,
-          top: position.y,
-          width: "var(--width-help-panel)",
-          height: "var(--height-help-panel)",
-          borderRadius: "var(--radius-panel)",
+          // On mobile: full screen. On desktop: draggable with fixed size
+          left: isMobile ? 0 : position.x,
+          top: isMobile ? 0 : position.y,
+          right: isMobile ? 0 : "auto",
+          bottom: isMobile ? 0 : "auto",
+          width: isMobile ? "100%" : "var(--width-help-panel)",
+          height: isMobile ? "100%" : "var(--height-help-panel)",
+          maxWidth: isMobile ? "100%" : "calc(100vw - 32px)",
+          maxHeight: isMobile ? "100%" : "calc(100vh - 32px)",
+          borderRadius: isMobile ? 0 : "var(--radius-panel)",
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
-          border: "2px solid var(--color-panel-border, #F3EED9)",
-          cursor: isDragging ? "grabbing" : "default",
+          border: isMobile ? "none" : "2px solid var(--color-panel-border, #F3EED9)",
+          cursor: isDragging && !isMobile ? "grabbing" : "default",
         }}
       >
           {/* Header - draggable, follows standard panel formatting */}
@@ -293,7 +307,7 @@ export default function HelpPanel({ isOpen, onClose, resetKey }) {
               backgroundColor: "var(--color-panel-header-bg)",
               height: "var(--height-panel-header)",
               flexShrink: 0,
-              cursor: isDragging ? "grabbing" : "grab",
+              cursor: isMobile ? "default" : (isDragging ? "grabbing" : "grab"),
             }}
           >
             <h2
