@@ -86,8 +86,17 @@ useEffect(() => {
 
 // Separate component for the app content
 function AppContent({ loggedInUser }) {
-  // Use the new AppDataContext (replaces legacy useFetchCRGData)
   const { directory, assistance, zipCodes, loading, error } = useAppData();
+
+  // Scroll to top AFTER loading completes
+  useEffect(() => {
+    if (!loading) {
+      console.log("Data loaded - scrolling to top");
+      window.scrollTo(0, 0);
+      setTimeout(() => window.scrollTo(0, 0), 50);
+      setTimeout(() => window.scrollTo(0, 0), 100);
+    }
+  }, [loading]);
 
   // Show loading state
   if (loading) {
