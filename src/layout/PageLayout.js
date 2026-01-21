@@ -62,7 +62,7 @@ useEffect(() => {
       <div className="flex-1 flex flex-col md:overflow-hidden">
         {/* NavBar 1 - Top header with logo, title, counters, buttons */}
 {showNav && (
-  <div className="pt-2 md:pt-0">
+  <div className="pt-20 md:pt-0">
     <NavBar1
       filteredCount={filteredCount}
       selectedCount={selectedCount}
