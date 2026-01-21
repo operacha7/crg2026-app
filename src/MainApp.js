@@ -88,26 +88,17 @@ useEffect(() => {
 function AppContent({ loggedInUser }) {
   const { directory, assistance, zipCodes, loading, error } = useAppData();
 
-  // Scroll to top AFTER loading completes
-  useEffect(() => {
-    if (!loading) {
-      console.log("Data loaded - scrolling to top");
-      window.scrollTo(0, 0);
-      setTimeout(() => window.scrollTo(0, 0), 50);
-      setTimeout(() => window.scrollTo(0, 0), 100);
-    }
-  }, [loading]);
-
   // Show loading state
-  if (loading) {
-    return (
-      <div className="flex items-start justify-center h-screen bg-gray-50 pt-20">
-        <div className="text-center">
-          <div className="text-xl font-semibold text-gray-600">Loading data...</div>
-        </div>
-      </div>
-    );
-  }
+  // TEMPORARILY COMMENT OUT THE LOADING STATE
+  // if (loading) {
+  //   return (
+  //     <div className="flex items-center justify-center h-screen bg-gray-50">
+  //       <div className="text-center">
+  //         <div className="text-xl font-semibold text-gray-600">Loading data...</div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   // Show error state
   if (error) {
