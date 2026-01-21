@@ -37,15 +37,25 @@ export default function PageLayout({
 useEffect(() => {
   console.log("PageLayout scroll fix running");
   window.scrollTo(0, 0);
-  document.documentElement.scrollTop = 0;
-  document.body.scrollTop = 0;
   
-  const timer = setTimeout(() => {
-    console.log("PageLayout delayed scroll fix running");
-    window.scrollTo(0, 0);
-  }, 100);
+  // Monitor any scroll events
+  const handleScroll = () => {
+    console.log("Scroll event! scrollY:", window.scrollY);
+    console.trace("Scroll triggered by:");
+  };
   
-  return () => clearTimeout(timer);
+  window.addEventListener('scroll', handleScroll);
+  
+  // Remove after 2 seconds
+  const cleanup = setTimeout(() => {
+    window.removeEventListener('scroll', handleScroll);
+    console.log("Scroll monitoring stopped");
+  }, 2000);
+  
+  return () => {
+    clearTimeout(cleanup);
+    window.removeEventListener('scroll', handleScroll);
+  };
 }, []);
 
   return (
