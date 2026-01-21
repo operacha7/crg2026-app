@@ -1,5 +1,5 @@
 // src/layout/PageLayout.js
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import NavBar1 from "./NavBar1";
 import NavBar2 from "./NavBar2";
 import NavBar3 from "./NavBar3";
@@ -30,53 +30,26 @@ export default function PageLayout({
   const handleCloseMobileMenu = () => setMobileMenuOpen(false);
   const handleOpenHelp = () => setHelpPanelOpen(true);
 
-  // Ref for scroll-to-top anchor
-  const topRef = useRef(null);
-
-  // Scroll to top on mount (fixes mobile starting at NavBar2)
-useEffect(() => {
-  const forceTop = () => {
-    window.scrollTo(0, 0);
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-    
-    // Also try the main flex container
-    const container = document.querySelector('.min-h-screen');
-    if (container) container.scrollTop = 0;
-  };
-  
-  forceTop();
-  
-  const interval = setInterval(forceTop, 20);
-  setTimeout(() => clearInterval(interval), 1500);
-  
-  return () => clearInterval(interval);
-}, []);
 
   return (
     <div className="md:h-screen md:flex md:flex-row md:overflow-hidden overflow-auto min-h-screen bg-gray-50 text-gray-900 font-opensans">
-      {/* Invisible anchor for scroll-to-top */}
-      <div ref={topRef} className="absolute top-0 left-0" aria-hidden="true" />
-
       {/* Main content area */}
       <div className="flex-1 flex flex-col md:overflow-hidden">
         {/* NavBar 1 - Top header with logo, title, counters, buttons */}
-{showNav && (
-  <div className="pt-24 md:pt-0">
-    <NavBar1
-      filteredCount={filteredCount}
-      selectedCount={selectedCount}
-      onSendEmail={onSendEmail}
-      onCreatePdf={onCreatePdf}
-      selectedData={selectedData}
-      loggedInUser={loggedInUser}
-      selectedZip={selectedZip}
-      onEmailSuccess={onEmailSuccess}
-      onPdfSuccess={onPdfSuccess}
-      onOpenMobileMenu={handleOpenMobileMenu}
-    />
-  </div>
-)}
+        {showNav && (
+          <NavBar1
+            filteredCount={filteredCount}
+            selectedCount={selectedCount}
+            onSendEmail={onSendEmail}
+            onCreatePdf={onCreatePdf}
+            selectedData={selectedData}
+            loggedInUser={loggedInUser}
+            selectedZip={selectedZip}
+            onEmailSuccess={onEmailSuccess}
+            onPdfSuccess={onPdfSuccess}
+            onOpenMobileMenu={handleOpenMobileMenu}
+          />
+        )}
 
         {/* NavBar 2 - Search mode selector + filters */}
         {showNav && <NavBar2 />}
