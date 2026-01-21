@@ -34,14 +34,20 @@ export default function PageLayout({
   const topRef = useRef(null);
 
   // Scroll to top on mount (fixes mobile starting at NavBar2)
-  useEffect(() => {
-    // Use requestAnimationFrame to ensure DOM is painted
-    requestAnimationFrame(() => {
-      if (topRef.current) {
-        topRef.current.scrollIntoView({ behavior: 'instant', block: 'start' });
-      }
-    });
-  }, []);
+// Scroll to top on mount (fixes mobile starting at NavBar2)
+useEffect(() => {
+  // Multiple approaches to ensure scroll to top
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+  
+  // Also try after a brief delay in case something else scrolls
+  const timer = setTimeout(() => {
+    window.scrollTo(0, 0);
+  }, 100);
+  
+  return () => clearTimeout(timer);
+}, []);
 
   return (
     <div className="md:h-screen md:flex md:flex-row md:overflow-hidden overflow-auto min-h-screen bg-gray-50 text-gray-900 font-opensans">
