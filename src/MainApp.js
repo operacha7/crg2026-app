@@ -101,7 +101,7 @@ function AppContent({ loggedInUser }) {
   // Show loading state
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="flex items-start justify-center h-screen bg-gray-50 pt-20">
         <div className="text-center">
           <div className="text-xl font-semibold text-gray-600">Loading data...</div>
         </div>
