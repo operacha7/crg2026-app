@@ -209,6 +209,9 @@ function AssistancePanel({
         top: "210px", // Below NavBar1 (80px) + NavBar2 (70px) + NavBar3 (60px)
         border: "var(--width-panel-border) solid var(--color-panel-border)",
       }}
+      // Prevent click-outside handler from closing panel when clicking inside
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
     >
       {/* Header */}
       <div
@@ -410,8 +413,10 @@ export default function NavBar3() {
     }
 
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
     };
   }, [isPanelOpen, tempSelections, setActiveAssistanceChips]);
 
