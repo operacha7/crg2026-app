@@ -73,6 +73,11 @@ useEffect(() => {
   return () => { mounted = false; };
 }, []);
 
+// Scroll to top on initial load (fixes mobile starting at NavBar2)
+useEffect(() => {
+  window.scrollTo(0, 0);
+}, []);
+
   return (
     <AppDataProvider loggedInUser={loggedInUser}>
       {/* Add ScheduledReload component */}

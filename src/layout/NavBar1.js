@@ -335,49 +335,44 @@ export default function NavBar1({
       </div>
 
       {/* ========== MOBILE LAYOUT (<md) ========== */}
-      <div className="md:hidden flex items-center justify-between py-3">
-        {/* Left side - Logo only (title hidden on mobile) */}
-        <div className="flex items-center gap-2">
-          <img
-            src="/images/CRG Logo 2025.webp"
-            alt="CRG Logo"
-            className="w-8 h-8 object-contain"
-          />
-          <span className="text-navbar1-title font-comfortaa text-sm font-semibold tracking-wide">
-            CRG Houston
-          </span>
-        </div>
+      <div className="md:hidden flex items-center justify-between py-2 px-2">
+        {/* Left side - Logo only (no title on mobile) */}
+        <img
+          src="/images/CRG Logo 2025.webp"
+          alt="CRG Logo"
+          className="w-8 h-8 object-contain"
+        />
 
-        {/* Right side - Counters, Buttons (smaller), Hamburger */}
-        <div className="flex items-center gap-2">
-          {/* Counters (smaller on mobile) */}
+        {/* Right side - Counters, Buttons, Hamburger */}
+        <div className="flex items-center gap-3">
+          {/* Counters */}
           <div className="flex items-center gap-1">
             <div
               className="bg-navbar1-counter-filtered text-navbar1-counter-text-filtered rounded-full flex items-center justify-center font-opensans text-xs font-medium"
-              style={{ width: '32px', height: '32px' }}
+              style={{ width: '28px', height: '28px' }}
             >
               {filteredCount}
             </div>
             <div
               className="bg-navbar1-counter-selected text-navbar1-counter-text-selected rounded-full flex items-center justify-center font-opensans text-xs font-medium"
-              style={{ width: '32px', height: '32px' }}
+              style={{ width: '28px', height: '28px' }}
             >
               {selectedCount}
             </div>
           </div>
 
-          {/* Email/PDF buttons - TEST: Much bigger for mobile touch targets */}
-          <div className="flex items-center gap-6">
+          {/* Email/PDF buttons - sized for touch (40px min height) with good spacing */}
+          <div className="flex items-center gap-3">
             <div className="relative">
               <button
                 ref={emailButtonRef}
                 onClick={handleEmailButtonClick}
-                className={`rounded font-opensans text-base px-6 py-3 transition-all ${
+                className={`rounded font-opensans text-sm px-4 py-2 transition-all ${
                   isGuest
                     ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                     : "bg-navbar1-btn-email-bg text-navbar1-btn-email-text hover:brightness-125"
                 }`}
-                style={{ opacity: isGuest ? 0.6 : 1, minWidth: '80px', minHeight: '44px' }}
+                style={{ opacity: isGuest ? 0.6 : 1, minHeight: '40px' }}
               >
                 Email
               </button>
@@ -396,12 +391,12 @@ export default function NavBar1({
               <button
                 ref={pdfButtonRef}
                 onClick={handlePdfButtonClick}
-                className={`rounded font-opensans text-base px-6 py-3 transition-all ${
+                className={`rounded font-opensans text-sm px-4 py-2 transition-all ${
                   isGuest
                     ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                     : "bg-navbar1-btn-pdf-bg text-navbar1-btn-pdf-text hover:brightness-125"
                 }`}
-                style={{ opacity: isGuest ? 0.6 : 1, minWidth: '80px', minHeight: '44px' }}
+                style={{ opacity: isGuest ? 0.6 : 1, minHeight: '40px' }}
               >
                 PDF
               </button>

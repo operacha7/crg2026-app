@@ -140,10 +140,14 @@ function HoverDropdown({ placeholder, options = [], value, onChange, allowReset 
         <div
           className="absolute left-0 mt-2 rounded shadow-lg z-50 max-h-[400px] overflow-y-auto"
           style={{ backgroundColor: "var(--color-dropdown-bg)", minWidth: "200px" }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
         >
           {allowReset && (
             <button
-              onClick={() => handleSelect("")}
+              onClick={(e) => { e.stopPropagation(); handleSelect(""); }}
+              onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); handleSelect(""); }}
               onMouseEnter={() => setHoveredOption("__reset__")}
               onMouseLeave={() => setHoveredOption(null)}
               className="w-full text-left px-4 py-2 font-opensans text-gray-500 italic"
@@ -158,7 +162,8 @@ function HoverDropdown({ placeholder, options = [], value, onChange, allowReset 
           {options.map((opt, idx) => (
             <button
               key={idx}
-              onClick={() => handleSelect(opt)}
+              onClick={(e) => { e.stopPropagation(); handleSelect(opt); }}
+              onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); handleSelect(opt); }}
               onMouseEnter={() => setHoveredOption(opt)}
               onMouseLeave={() => setHoveredOption(null)}
               className="w-full text-left px-4 py-2 font-opensans"
@@ -307,6 +312,9 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
         <div
           className="absolute left-0 mt-2 rounded shadow-lg z-50"
           style={{ backgroundColor: "var(--color-dropdown-bg)", minWidth: "300px" }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
         >
           {/* Search input */}
           <div className="p-2 border-b border-gray-300">
@@ -331,7 +339,8 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
           <div className="max-h-[350px] overflow-y-auto">
             {allowReset && (
               <button
-                onClick={() => handleSelect("")}
+                onClick={(e) => { e.stopPropagation(); handleSelect(""); }}
+                onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); handleSelect(""); }}
                 onMouseEnter={() => setHoveredOption("__reset__")}
                 onMouseLeave={() => setHoveredOption(null)}
                 className="w-full text-left px-4 py-2 font-opensans text-gray-500 italic"
@@ -351,7 +360,8 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
               filteredOptions.map((opt, idx) => (
                 <button
                   key={idx}
-                  onClick={() => handleSelect(opt)}
+                  onClick={(e) => { e.stopPropagation(); handleSelect(opt); }}
+                  onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); handleSelect(opt); }}
                   onMouseEnter={() => setHoveredOption(opt)}
                   onMouseLeave={() => setHoveredOption(null)}
                   className="w-full text-left px-4 py-2 font-opensans"
@@ -487,6 +497,9 @@ function ZipCodeDropdown({ value, onChange, options = [] }) {
         <div
           className="absolute left-0 mt-2 rounded shadow-lg z-50"
           style={{ backgroundColor: "var(--color-dropdown-bg)", minWidth: "150px" }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
         >
           {/* Search input */}
           <div className="p-2" style={{ borderBottom: "2px solid var(--color-dropdown-divider)" }}>
@@ -513,7 +526,15 @@ function ZipCodeDropdown({ value, onChange, options = [] }) {
               filteredOptions.map((opt, idx) => (
                 <button
                   key={idx}
-                  onClick={() => handleSelect(opt)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSelect(opt);
+                  }}
+                  onTouchEnd={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    handleSelect(opt);
+                  }}
                   onMouseEnter={() => setHoveredOption(opt)}
                   onMouseLeave={() => setHoveredOption(null)}
                   className="w-full text-left px-4 py-2 font-opensans"
