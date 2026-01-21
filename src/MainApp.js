@@ -89,16 +89,6 @@ function AppContent({ loggedInUser }) {
   // Use the new AppDataContext (replaces legacy useFetchCRGData)
   const { directory, assistance, zipCodes, loading, error } = useAppData();
 
-  // Scroll to top when data finishes loading (fixes mobile starting at NavBar2)
-  useEffect(() => {
-    if (!loading && !error) {
-      // Small delay to ensure DOM is fully rendered
-      setTimeout(() => {
-        window.scrollTo(0, 0);
-      }, 100);
-    }
-  }, [loading, error]);
-
   // Show loading state
   if (loading) {
     return (

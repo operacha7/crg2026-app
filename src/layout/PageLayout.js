@@ -1,5 +1,5 @@
 // src/layout/PageLayout.js
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import NavBar1 from "./NavBar1";
 import NavBar2 from "./NavBar2";
 import NavBar3 from "./NavBar3";
@@ -30,8 +30,24 @@ export default function PageLayout({
   const handleCloseMobileMenu = () => setMobileMenuOpen(false);
   const handleOpenHelp = () => setHelpPanelOpen(true);
 
+  // Ref for scroll-to-top anchor
+  const topRef = useRef(null);
+
+  // Scroll to top on mount (fixes mobile starting at NavBar2)
+  useEffect(() => {
+    // Use requestAnimationFrame to ensure DOM is painted
+    requestAnimationFrame(() => {
+      if (topRef.current) {
+        topRef.current.scrollIntoView({ behavior: 'instant', block: 'start' });
+      }
+    });
+  }, []);
+
   return (
     <div className="md:h-screen md:flex md:flex-row md:overflow-hidden overflow-auto min-h-screen bg-gray-50 text-gray-900 font-opensans">
+      {/* Invisible anchor for scroll-to-top */}
+      <div ref={topRef} className="absolute top-0 left-0" aria-hidden="true" />
+
       {/* Main content area */}
       <div className="flex-1 flex flex-col md:overflow-hidden">
         {/* NavBar 1 - Top header with logo, title, counters, buttons */}
