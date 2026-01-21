@@ -28,18 +28,35 @@ export default function DropPanel({
 }) {
   if (!isOpen) return null;
 
-  return (
-    <div
-      ref={panelRef}
-      className="fixed md:absolute shadow-xl z-50 overflow-hidden left-2 right-2 md:left-auto md:right-auto"
-      style={{
+  // Check if we're on mobile (< 768px) to apply different positioning
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+  // On mobile, override top positioning to place panel below NavBar1
+  // On desktop, use the passed style (typically top: "100%" for dropdown behavior)
+  const computedStyle = isMobile
+    ? {
         borderRadius: "var(--radius-panel)",
         minWidth: "min(400px, calc(100vw - 16px))",
         maxWidth: "calc(100vw - 16px)",
-        marginTop: "25px", // Consistent spacing below trigger element
+        border: "var(--width-panel-border) solid var(--color-panel-border)",
+        top: "120px", // Fixed position below NavBar1 on mobile
+      }
+    : {
+        borderRadius: "var(--radius-panel)",
+        minWidth: "min(400px, calc(100vw - 16px))",
+        maxWidth: "calc(100vw - 16px)",
+        marginTop: "25px", // Consistent spacing below trigger element (desktop)
         border: "var(--width-panel-border) solid var(--color-panel-border)",
         ...style,
-      }}
+      };
+
+  return (
+    <div
+      ref={panelRef}
+      // Mobile: fixed positioning centered horizontally
+      // Desktop: absolute positioning relative to trigger button
+      className="fixed md:absolute shadow-xl z-50 overflow-hidden left-2 right-2 md:left-auto md:right-auto"
+      style={computedStyle}
       onMouseDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
     >

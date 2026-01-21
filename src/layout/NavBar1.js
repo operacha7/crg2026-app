@@ -40,12 +40,19 @@ export default function NavBar1({
     return status === "INACTIVE" || status === "INACTIVO";
   });
 
+  // Track when panels were opened to prevent immediate close on mobile
+  const emailOpenTimeRef = useRef(0);
+  const pdfOpenTimeRef = useRef(0);
+
   // Handle click outside to close panels
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Email panel
+      const now = Date.now();
+
+      // Email panel - ignore clicks within 300ms of opening (prevents mobile touch issues)
       if (
         showEmailPanel &&
+        now - emailOpenTimeRef.current > 300 &&
         emailPanelRef.current &&
         !emailPanelRef.current.contains(event.target) &&
         emailButtonRef.current &&
@@ -54,9 +61,10 @@ export default function NavBar1({
         setShowEmailPanel(false);
         setStatusMessage("");
       }
-      // PDF panel
+      // PDF panel - ignore clicks within 300ms of opening (prevents mobile touch issues)
       if (
         showPdfPanel &&
+        now - pdfOpenTimeRef.current > 300 &&
         pdfPanelRef.current &&
         !pdfPanelRef.current.contains(event.target) &&
         pdfButtonRef.current &&
@@ -68,7 +76,11 @@ export default function NavBar1({
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
   }, [showEmailPanel, showPdfPanel]);
 
   // Check if user is a guest (browsing without account)
@@ -84,6 +96,7 @@ export default function NavBar1({
       // Check if selection validation passes (shows toast if no selection)
       const canProceed = onSendEmail();
       if (canProceed !== false) {
+        emailOpenTimeRef.current = Date.now();
         setShowEmailPanel(true);
         setShowPdfPanel(false);
         setStatusMessage("");
@@ -101,6 +114,7 @@ export default function NavBar1({
       // Check if selection validation passes (shows toast if no selection)
       const canProceed = onCreatePdf();
       if (canProceed !== false) {
+        pdfOpenTimeRef.current = Date.now();
         setShowPdfPanel(true);
         setShowEmailPanel(false);
         setStatusMessage("");
@@ -352,18 +366,18 @@ export default function NavBar1({
             </div>
           </div>
 
-          {/* Email/PDF buttons (smaller on mobile) */}
-          <div className="flex items-center gap-1">
+          {/* Email/PDF buttons - TEST: Much bigger for mobile touch targets */}
+          <div className="flex items-center gap-6">
             <div className="relative">
               <button
                 ref={emailButtonRef}
                 onClick={handleEmailButtonClick}
-                className={`rounded font-opensans text-xs px-2 py-1.5 transition-all ${
+                className={`rounded font-opensans text-base px-6 py-3 transition-all ${
                   isGuest
                     ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                     : "bg-navbar1-btn-email-bg text-navbar1-btn-email-text hover:brightness-125"
                 }`}
-                style={{ opacity: isGuest ? 0.6 : 1 }}
+                style={{ opacity: isGuest ? 0.6 : 1, minWidth: '80px', minHeight: '44px' }}
               >
                 Email
               </button>
@@ -382,12 +396,12 @@ export default function NavBar1({
               <button
                 ref={pdfButtonRef}
                 onClick={handlePdfButtonClick}
-                className={`rounded font-opensans text-xs px-2 py-1.5 transition-all ${
+                className={`rounded font-opensans text-base px-6 py-3 transition-all ${
                   isGuest
                     ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                     : "bg-navbar1-btn-pdf-bg text-navbar1-btn-pdf-text hover:brightness-125"
                 }`}
-                style={{ opacity: isGuest ? 0.6 : 1 }}
+                style={{ opacity: isGuest ? 0.6 : 1, minWidth: '80px', minHeight: '44px' }}
               >
                 PDF
               </button>

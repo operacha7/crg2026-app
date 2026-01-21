@@ -64,18 +64,22 @@ export default function EmailPanel({
 
   if (!isOpen) return null;
 
+  // Check if we're on mobile (< 768px) to apply different positioning
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   // Warning view for inactive resources
   if (currentView === "warning") {
     return (
       <div
         ref={panelRef}
-        className="absolute shadow-xl z-50 overflow-hidden"
+        className="fixed md:absolute shadow-xl z-50 overflow-hidden left-2 right-2 md:left-auto md:right-auto"
         style={{
           borderRadius: "var(--radius-panel)",
-          minWidth: "400px",
-          marginTop: "25px",
-          top: "100%",
-          right: "0",
+          minWidth: isMobile ? "min(400px, calc(100vw - 16px))" : "400px",
+          maxWidth: isMobile ? "calc(100vw - 16px)" : undefined,
+          marginTop: isMobile ? undefined : "25px",
+          top: isMobile ? "120px" : "100%",
+          right: isMobile ? undefined : "0",
           border: "var(--width-panel-border) solid var(--color-panel-border)",
         }}
         onMouseDown={(e) => e.stopPropagation()}
