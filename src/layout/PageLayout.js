@@ -61,20 +61,22 @@ useEffect(() => {
       {/* Main content area */}
       <div className="flex-1 flex flex-col md:overflow-hidden">
         {/* NavBar 1 - Top header with logo, title, counters, buttons */}
-        {showNav && (
-          <NavBar1
-            filteredCount={filteredCount}
-            selectedCount={selectedCount}
-            onSendEmail={onSendEmail}
-            onCreatePdf={onCreatePdf}
-            selectedData={selectedData}
-            loggedInUser={loggedInUser}
-            selectedZip={selectedZip}
-            onEmailSuccess={onEmailSuccess}
-            onPdfSuccess={onPdfSuccess}
-            onOpenMobileMenu={handleOpenMobileMenu}
-          />
-        )}
+{showNav && (
+  <div className="pt-2 md:pt-0">
+    <NavBar1
+      filteredCount={filteredCount}
+      selectedCount={selectedCount}
+      onSendEmail={onSendEmail}
+      onCreatePdf={onCreatePdf}
+      selectedData={selectedData}
+      loggedInUser={loggedInUser}
+      selectedZip={selectedZip}
+      onEmailSuccess={onEmailSuccess}
+      onPdfSuccess={onPdfSuccess}
+      onOpenMobileMenu={handleOpenMobileMenu}
+    />
+  </div>
+)}
 
         {/* NavBar 2 - Search mode selector + filters */}
         {showNav && <NavBar2 />}
