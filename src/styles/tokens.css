@@ -103,13 +103,13 @@
   /* Note: Login panel uses --color-panel-body-bg for body and --color-panel-header-bg for header */
   --color-login-panel-title: #F3EED9;
   --color-login-btn-guest-bg: #F3EED9;
-  --color-login-btn-guest-text: #2C4146;
+  --color-login-btn-guest-text: #000000;
   --color-login-label-bg: #F3EED9;
-  --color-login-label-text: #2C4146;
+  --color-login-label-text: #000000;
   --color-login-input-bg: #2C4146;
   --color-login-input-text: #F3EED9;
-  --color-login-btn-login-bg: #739B61;
-  --color-login-btn-login-text: #2C4146;
+  --color-login-btn-login-bg: #d27953;
+  --color-login-btn-login-text: #000000;
   --radius-login-btn: 5px;
 
   /* ==========================================

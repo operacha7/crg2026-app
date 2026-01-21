@@ -292,7 +292,7 @@ export default function LoginPage({ onLoginSuccess }) {
                     borderRadius: "var(--radius-login-btn)",
                     fontSize: "16px",
                     letterSpacing: "0.05em",
-                    fontWeight: 500,
+                    fontWeight: 600,
                   }}
                 >
                   Browse Without Account
@@ -311,8 +311,9 @@ export default function LoginPage({ onLoginSuccess }) {
                     className="text-center mb-4 font-opensans"
                     style={{
                       color: "var(--color-login-label-text)",
-                      fontSize: "14px",
+                      fontSize: "16px",
                       letterSpacing: "0.05em",
+                      fontWeight: 600,
                     }}
                   >
                     Registered Organizations
@@ -327,8 +328,9 @@ export default function LoginPage({ onLoginSuccess }) {
                           backgroundColor: "var(--color-login-input-bg)",
                           color: "var(--color-login-input-text)",
                           borderRadius: "var(--radius-login-btn)",
-                          fontSize: "14px",
+                          fontSize: "16px",
                           letterSpacing: "0.05em",
+                          fontWeight: 600,
                         }}
                         value={org}
                         name={`organization-${org}`}
@@ -389,8 +391,9 @@ export default function LoginPage({ onLoginSuccess }) {
                         backgroundColor: "var(--color-login-input-bg)",
                         color: "var(--color-login-input-text)",
                         borderRadius: "var(--radius-login-btn)",
-                        fontSize: "14px",
+                        fontSize: "16px",
                         letterSpacing: "0.05em",
+                        fontWeight: 500,
                       }}
                       onKeyPress={handleKeyPress}
                     />
@@ -403,9 +406,9 @@ export default function LoginPage({ onLoginSuccess }) {
                         backgroundColor: "var(--color-login-btn-login-bg)",
                         color: "var(--color-login-btn-login-text)",
                         borderRadius: "var(--radius-login-btn)",
-                        fontSize: "14px",
+                        fontSize: "16px",
                         letterSpacing: "0.05em",
-                        fontWeight: 500,
+                        fontWeight: 600,
                       }}
                     >
                       Log in
