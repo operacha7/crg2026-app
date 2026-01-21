@@ -174,7 +174,7 @@ export default function NavBar1({
   };
   return (
     <nav
-      className="bg-red-500"
+      className="bg-navbar1-bg"
       style={{
         paddingLeft: 'var(--padding-navbar1-left)',
         paddingRight: 'var(--padding-navbar1-right)',
