@@ -234,7 +234,7 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
   // Focus input when dropdown opens
   useEffect(() => {
     if (isOpen && inputRef.current) {
-      inputRef.current.focus();
+      inputRef.current.focus({ preventScroll: true });
     }
   }, [isOpen]);
 
@@ -423,7 +423,7 @@ function ZipCodeDropdown({ value, onChange, options = [] }) {
   // Focus input when dropdown opens
   useEffect(() => {
     if (isOpen && inputRef.current) {
-      inputRef.current.focus();
+      inputRef.current.focus({ preventScroll: true });
     }
   }, [isOpen]);
 
@@ -617,7 +617,7 @@ function LLMSearchDropdown({
   // Focus input when panel opens
   useEffect(() => {
     if (isOpen && inputRef.current) {
-      inputRef.current.focus();
+      inputRef.current.focus({ preventScroll: true });
     }
   }, [isOpen]);
 

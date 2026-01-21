@@ -1,5 +1,5 @@
 // src/layout/PageLayout.js
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import NavBar1 from "./NavBar1";
 import NavBar2 from "./NavBar2";
 import NavBar3 from "./NavBar3";
@@ -32,39 +32,21 @@ export default function PageLayout({
 
   // Ref for scroll-to-top anchor
   const topRef = useRef(null);
-  const containerRef = useRef(null);
 
-  // Scroll to top on mount (mobile Safari/Chrome can otherwise restore scroll)
-  useLayoutEffect(() => {
-    // Prevent the browser from restoring a previous scroll position
-    if ("scrollRestoration" in window.history) {
-      window.history.scrollRestoration = "manual";
-    }
-
-    // Ensure we reset both the scroll container and the window
+  // Scroll to top on mount (fixes mobile starting at NavBar2)
+  useEffect(() => {
+    // Use requestAnimationFrame to ensure DOM is painted
     requestAnimationFrame(() => {
-      if (containerRef.current) {
-        containerRef.current.scrollTop = 0;
-      }
-      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
       if (topRef.current) {
-        // NOTE: 'instant' is not a valid scrollIntoView behavior; use 'auto'
-        topRef.current.scrollIntoView({ behavior: "auto", block: "start" });
+        topRef.current.scrollIntoView({ behavior: 'instant', block: 'start' });
       }
     });
   }, []);
 
   return (
-    <div
-      ref={containerRef}
-      className="md:h-screen md:flex md:flex-row md:overflow-hidden overflow-auto min-h-screen bg-gray-50 text-gray-900 font-opensans"
-    >
+    <div className="md:h-screen md:flex md:flex-row md:overflow-hidden overflow-auto min-h-screen bg-gray-50 text-gray-900 font-opensans">
       {/* Invisible anchor for scroll-to-top */}
-      <div
-        ref={topRef}
-        className="absolute top-0 left-0 h-0 w-0 pointer-events-none"
-        aria-hidden="true"
-      />
+      <div ref={topRef} className="absolute top-0 left-0" aria-hidden="true" />
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col md:overflow-hidden">
