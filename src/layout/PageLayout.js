@@ -35,17 +35,16 @@ export default function PageLayout({
 
   // Scroll to top on mount (fixes mobile starting at NavBar2)
 useEffect(() => {
-  console.log("PageLayout scroll fix running");
-  window.scrollTo(0, 0);
+  document.documentElement.style.scrollBehavior = 'auto';
   
-  // Keep trying for a full second after data loads
-  const timers = [50, 100, 200, 300, 500, 750, 1000].map(delay => 
-    setTimeout(() => {
-      window.scrollTo(0, 0);
-    }, delay)
-  );
+  const forceTop = () => window.scrollTo({ top: 0, behavior: 'instant' });
   
-  return () => timers.forEach(t => clearTimeout(t));
+  forceTop();
+  setTimeout(forceTop, 0);
+  setTimeout(forceTop, 50);
+  setTimeout(forceTop, 100);
+  setTimeout(forceTop, 200);
+  setTimeout(forceTop, 500);
 }, []);
 
   return (
