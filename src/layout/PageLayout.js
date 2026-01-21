@@ -34,15 +34,14 @@ export default function PageLayout({
   const topRef = useRef(null);
 
   // Scroll to top on mount (fixes mobile starting at NavBar2)
-// Scroll to top on mount (fixes mobile starting at NavBar2)
 useEffect(() => {
-  // Multiple approaches to ensure scroll to top
+  console.log("PageLayout scroll fix running");
   window.scrollTo(0, 0);
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
   
-  // Also try after a brief delay in case something else scrolls
   const timer = setTimeout(() => {
+    console.log("PageLayout delayed scroll fix running");
     window.scrollTo(0, 0);
   }, 100);
   
