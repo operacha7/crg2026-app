@@ -659,7 +659,7 @@ export default function NavBar3() {
 
         {/* Right side: Logged-in user */}
         <span
-          className="font-kaushanscript flex-shrink-0 ml-4"
+          className="font-handlee flex-shrink-0 ml-4"
           style={{
             color: "var(--color-navbar3-user-text, #F3EED9)",
             fontSize: "var(--font-size-navbar3-user)",

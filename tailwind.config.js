@@ -79,7 +79,7 @@ module.exports = {
         comfortaa: ["Comfortaa", "cursive"],
         label: ['"Montserrat"', "sans-serif"],
         opensans: ['"Open Sans"', "sans-serif"],
-        kaushanscript: ['"Kaushan Script"', "sans-cursive"],
+        handlee: ['"Marcellus SC"', "sans-serif"],
       },
       fontSize: {
         'footer': 'var(--font-size-footer)',

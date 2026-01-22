@@ -20,21 +20,27 @@ const JSON_COLUMNS = ['org_hours'];
 
 // Transform function for announcements
 // Converts format_1/para_1, format_2/para_2, etc. into a single message_html field
+// Dynamically handles any number of paragraphs (not limited to 4)
 function transformAnnouncement(row) {
   // Parse audience_code - extract first character from "1-All CRG Users" -> 1
   const audienceCodeRaw = row.audience_code || '1';
   const audienceCode = parseInt(audienceCodeRaw.toString().charAt(0), 10) || 1;
 
-  // Build HTML from format/para pairs
+  // Build HTML from format/para pairs - dynamically find all para_N fields
   const paragraphs = [];
-  for (let i = 1; i <= 4; i++) {
-    const format = row[`format_${i}`] || '';
+  let i = 1;
+  while (true) {
     const para = row[`para_${i}`];
-
+    if (para === undefined) {
+      // No more paragraphs found
+      break;
+    }
     if (para && para.trim()) {
+      const format = row[`format_${i}`] || '';
       const html = formatParagraph(para, format);
       paragraphs.push(html);
     }
+    i++;
   }
 
   const messageHtml = paragraphs.join('\n');
@@ -68,6 +74,7 @@ function parseDate(dateStr) {
 }
 
 // Convert format codes and paragraph text into HTML
+// Supported codes: bold, italic, underline, bullet, boldfirst, 6-char hex color
 function formatParagraph(text, formatCodes) {
   const codes = formatCodes
     ? formatCodes.split(',').map(c => c.trim().toLowerCase())
@@ -77,11 +84,12 @@ function formatParagraph(text, formatCodes) {
   const isItalic = codes.includes('italic');
   const isUnderline = codes.includes('underline');
   const isBullet = codes.includes('bullet');
+  const isBoldFirst = codes.includes('boldfirst');
 
   // Find hex color code (6 characters, valid hex)
   const hexColor = codes.find(c => /^[0-9a-f]{6}$/i.test(c));
 
-  // Build inline styles
+  // Build inline styles (for whole paragraph or items)
   const styles = [];
   if (isBold) styles.push('font-weight: bold');
   if (isItalic) styles.push('font-style: italic');
@@ -95,6 +103,32 @@ function formatParagraph(text, formatCodes) {
     const lines = text.split('\n').filter(line => line.trim());
     const listItems = lines.map(line => `  <li${styleAttr}>${escapeHtml(line.trim())}</li>`).join('\n');
     return `<ul>\n${listItems}\n</ul>`;
+  } else if (isBoldFirst) {
+    // Bold only the first line, rest is normal (with other styles applied)
+    const lines = text.split('\n');
+    const firstLine = lines[0] || '';
+    const restLines = lines.slice(1).join('\n');
+
+    // Build style for non-bold portion (italic, underline, color still apply)
+    const restStyles = [];
+    if (isItalic) restStyles.push('font-style: italic');
+    if (isUnderline) restStyles.push('text-decoration: underline');
+    if (hexColor) restStyles.push(`color: #${hexColor.toUpperCase()}`);
+    const restStyleAttr = restStyles.length > 0 ? ` style="${restStyles.join('; ')}"` : '';
+
+    // First line gets bold + other styles
+    const firstStyles = ['font-weight: bold'];
+    if (isItalic) firstStyles.push('font-style: italic');
+    if (isUnderline) firstStyles.push('text-decoration: underline');
+    if (hexColor) firstStyles.push(`color: #${hexColor.toUpperCase()}`);
+    const firstStyleAttr = ` style="${firstStyles.join('; ')}"`;
+
+    if (restLines.trim()) {
+      return `<p><span${firstStyleAttr}>${escapeHtml(firstLine)}</span><br/><span${restStyleAttr}>${escapeHtml(restLines)}</span></p>`;
+    } else {
+      // Only one line - just bold it
+      return `<p${firstStyleAttr}>${escapeHtml(firstLine)}</p>`;
+    }
   } else {
     // Regular paragraph
     return `<p${styleAttr}>${escapeHtml(text)}</p>`;
