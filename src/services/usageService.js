@@ -18,7 +18,7 @@ function getCentralDate() {
  * @param {Object} params
  * @param {string} params.reg_organization - Organization name or "Guest"
  * @param {string} params.action_type - "search", "email", or "pdf"
- * @param {string} [params.search_mode] - "Zip Code", "Organization", "Location", "LLM Search"
+ * @param {string} [params.search_mode] - "Zip Code", "Organization", "Location", "Ask a Question"
  * @param {string} [params.assistance_type] - Assistance type name (e.g., "Food", "Rent")
  * @param {string} [params.search_value] - The actual value searched (e.g., zip code "77025")
  */

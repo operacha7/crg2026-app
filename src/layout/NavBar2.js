@@ -839,7 +839,7 @@ function LLMSearchDropdown({
           <div className="p-4">
             {/* Search input label with clear button */}
             <div className="flex justify-between items-center mb-2">
-              <p className="text-sm" style={{ color: "var(--color-panel-subtitle)", fontFamily: "'Open Sans', sans-serif" }}>
+              <p className="text-sm" style={{ color: "#000000", fontFamily: "'Open Sans', sans-serif" }}>
                 Describe what you're looking for in plain language:
               </p>
               {localValue && (
@@ -875,7 +875,7 @@ function LLMSearchDropdown({
             {/* Address input section */}
             <div className="mt-4">
               <div className="flex justify-between items-center mb-2">
-                <p className="text-sm" style={{ color: "var(--color-panel-subtitle)", fontFamily: "'Open Sans', sans-serif" }}>
+                <p className="text-sm" style={{ color: "#000000", fontFamily: "'Open Sans', sans-serif" }}>
                   Optional: Enter client address for distance calculation:
                 </p>
                 {/* Clear address button - only show when address is set */}
@@ -1538,7 +1538,7 @@ export default function NavBar2() {
         logUsage({
           reg_organization: regOrgName,
           action_type: 'search',
-          search_mode: 'LLM Search',
+          search_mode: 'Ask a Question',
           search_value: queryToUse,
         });
       } else {
@@ -1714,7 +1714,7 @@ export default function NavBar2() {
             onClick={() => handleModeChange(SEARCH_MODES.LOCATION)}
           />
           <ModeButton
-            label="LLM Search"
+            label="Ask a Question"
             isActive={activeSearchMode === SEARCH_MODES.LLM}
             onClick={() => handleModeChange(SEARCH_MODES.LLM)}
           />
@@ -1729,7 +1729,7 @@ export default function NavBar2() {
             { mode: SEARCH_MODES.ZIPCODE, label: "Zip" },
             { mode: SEARCH_MODES.ORGANIZATION, label: "Org" },
             { mode: SEARCH_MODES.LOCATION, label: "Location" },
-            { mode: SEARCH_MODES.LLM, label: "AI" },
+            { mode: SEARCH_MODES.LLM, label: "Ask" },
           ].map(({ mode, label }) => (
             <button
               key={mode}

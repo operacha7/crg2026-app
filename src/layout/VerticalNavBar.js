@@ -11,12 +11,15 @@ import {
   PrivacyPolicyIcon,
   ContactSupportIcon,
   HomeIcon,
+  QuickTipsIcon,
 } from "../icons";
 import Tooltip from "../components/Tooltip";
 import { useAppData } from "../Contexts/AppDataContext";
 import HelpPanel from "../components/HelpPanel";
+import QuickTipsPanel from "../components/QuickTipsPanel";
 
 const navItems = [
+  { id: "quicktips", Icon: QuickTipsIcon, label: "Quick Tips" },
   { id: "information", Icon: HelpBubbleIcon, label: "Help" },
   { id: "reports", Icon: ReportsIcon, label: "Reports" },
   { id: "announcements", Icon: AnnouncementsIcon, label: "Announcements" },
@@ -53,6 +56,10 @@ export default function VerticalNavBar({ externalHelpOpen, onHelpOpenChange }) {
     setSelectedLocationZip,
     setClientAddress,
     setClientCoordinates,
+    // Quick Tips state
+    quickTipsOpen,
+    setQuickTipsOpen,
+    setQuickTipsExpandedSection,
   } = useAppData();
 
   // Home is active when we're on the root path
@@ -69,6 +76,14 @@ export default function VerticalNavBar({ externalHelpOpen, onHelpOpenChange }) {
   };
 
   const handleClick = (id) => {
+    if (id === "quicktips") {
+      // Toggle Quick Tips panel, clear expanded section if opening fresh
+      if (!quickTipsOpen) {
+        setQuickTipsExpandedSection(null);
+      }
+      setQuickTipsOpen(!quickTipsOpen);
+      return;
+    }
     if (id === "information") {
       // Always increment reset key to clear conversation, whether panel is open or not
       setHelpResetKey((prev) => prev + 1);
@@ -145,7 +160,11 @@ export default function VerticalNavBar({ externalHelpOpen, onHelpOpenChange }) {
               >
                 <Icon
                   size={35}
-                  active={getActiveItem() === id || (id === "information" && isHelpOpen)}
+                  active={
+                    getActiveItem() === id ||
+                    (id === "information" && isHelpOpen) ||
+                    (id === "quicktips" && quickTipsOpen)
+                  }
                 />
               </button>
             </Tooltip>
@@ -156,6 +175,9 @@ export default function VerticalNavBar({ externalHelpOpen, onHelpOpenChange }) {
 
     {/* Help Panel */}
     <HelpPanel isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} resetKey={helpResetKey} />
+
+    {/* Quick Tips Panel */}
+    <QuickTipsPanel />
     </>
   );
 }

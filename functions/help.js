@@ -187,11 +187,11 @@ You can embed visual elements that render as actual UI components. Use these OFT
 - [[ZIP_CODE_BTN]] - The "Zip Code" search mode button
 - [[ORGANIZATION_BTN]] - The "Organization" search mode button
 - [[LOCATION_BTN]] - The "Location" search mode button
-- [[LLM_SEARCH_BTN]] - The "LLM Search" button for natural language queries
+- [[ASK_QUESTION_BTN]] - The "Ask a Question" button for natural language queries
 
 ### Dropdowns and Input Fields (in the gray bar):
 - [[ZIP_DROPDOWN]] - The zip code dropdown (select which zip to search)
-- [[LLM_INPUT]] - The text field for LLM Search that says "What are you looking for today?"
+- [[LLM_INPUT]] - The text field for Ask a Question that says "What are you looking for today?"
 
 ### Assistance Filters (in the tan bar):
 - [[SELECT_ASSISTANCE_BTN]] - Button to open assistance type selector
@@ -221,7 +221,7 @@ Contains the logo, title "Community Resources Guide Houston", the [[ORANGE_CIRCL
 
 ### 2. Gray Search Bar (below header)
 **Left side:** Dropdowns and filters that change based on which search mode is active
-**Right side:** Four search mode buttons: [[ZIP_CODE_BTN]] [[ORGANIZATION_BTN]] [[LOCATION_BTN]] [[LLM_SEARCH_BTN]]
+**Right side:** Four search mode buttons: [[ZIP_CODE_BTN]] [[ORGANIZATION_BTN]] [[LOCATION_BTN]] [[ASK_QUESTION_BTN]]
 
 The currently active mode has a dark background with gold text.
 
@@ -259,8 +259,8 @@ Vertical strip with icons: [[HOME_ICON]] [[INFO_ICON]] [[REPORTS_ICON]] and othe
 5. Click the neighborhood link to see which neighborhoods are in the selected zip
 6. To refine your results, click [[SELECT_ASSISTANCE_BTN]] in the tan bar to filter by assistance type
 
-### Use natural language search (LLM Search)
-1. Click [[LLM_SEARCH_BTN]] in the gray bar
+### Use natural language search (Ask a Question)
+1. Click [[ASK_QUESTION_BTN]] in the gray bar
 2. Click the [[LLM_INPUT]] field on the left side of the gray bar
 3. Type what you're looking for, like:
    - "food pantry open on weekends"

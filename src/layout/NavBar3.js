@@ -339,7 +339,17 @@ function AssistancePanel({
 
 export default function NavBar3() {
   // Get shared state from context
-  const { activeAssistanceChips, setActiveAssistanceChips, loggedInUser, activeSearchMode } = useAppData();
+  const {
+    activeAssistanceChips,
+    setActiveAssistanceChips,
+    loggedInUser,
+    activeSearchMode,
+    // Quick Tips state for auto-opening on first multi-selection
+    setQuickTipsOpen,
+    setQuickTipsExpandedSection,
+    quickTipsShownThisSession,
+    setQuickTipsShownThisSession,
+  } = useAppData();
 
   // Get organization name for logging
   const regOrgName = loggedInUser?.reg_organization || 'Guest';
@@ -350,7 +360,7 @@ export default function NavBar3() {
       case 'zipcode': return 'Zip Code';
       case 'organization': return 'Organization';
       case 'location': return 'Location';
-      case 'llm': return 'LLM Search';
+      case 'llm': return 'Ask a Question';
       default: return 'Zip Code';
     }
   };
@@ -400,13 +410,9 @@ export default function NavBar3() {
       const isOutsideButton = buttonRef.current && !buttonRef.current.contains(event.target);
 
       if (isOutsidePanel && isOutsideButton) {
-        // Auto-save current selections
+        // Auto-save and activate all selections
         setSavedSelections(tempSelections);
-        if (tempSelections.length === 1) {
-          setActiveAssistanceChips(new Set(tempSelections));
-        } else {
-          setActiveAssistanceChips(new Set());
-        }
+        setActiveAssistanceChips(new Set(tempSelections));
         setIsPanelOpen(false);
         setIsLocked(false);
       }
@@ -454,13 +460,9 @@ export default function NavBar3() {
     if (!isLocked) {
       // Delay before closing to allow user to return if they accidentally move off
       closeTimeoutRef.current = setTimeout(() => {
-        // Auto-save current selections when leaving
+        // Auto-save and activate all selections when leaving
         setSavedSelections(tempSelections);
-        if (tempSelections.length === 1) {
-          setActiveAssistanceChips(new Set(tempSelections));
-        } else {
-          setActiveAssistanceChips(new Set());
-        }
+        setActiveAssistanceChips(new Set(tempSelections));
         setIsPanelOpen(false);
       }, 300);
     }
@@ -523,16 +525,18 @@ export default function NavBar3() {
   // Handle save
   const handleSave = () => {
     setSavedSelections(tempSelections);
-    // If only one selection, auto-activate it (update shared context)
-    if (tempSelections.length === 1) {
-      // assist_id is already text, use directly
-      setActiveAssistanceChips(new Set(tempSelections));
-    } else {
-      // Multiple selections: all start inactive
-      setActiveAssistanceChips(new Set());
-    }
+    // Auto-activate all selections (update shared context)
+    // assist_id is already text, use directly
+    setActiveAssistanceChips(new Set(tempSelections));
     setIsPanelOpen(false);
     setIsLocked(false);
+
+    // Auto-open Quick Tips to Assistance section on first multi-selection of session
+    if (tempSelections.length > 1 && !quickTipsShownThisSession) {
+      setQuickTipsOpen(true);
+      setQuickTipsExpandedSection("assistance");
+      setQuickTipsShownThisSession(true);
+    }
   };
 
   // Handle clear - clears all selections but keeps panel open

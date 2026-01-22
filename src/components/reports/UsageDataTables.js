@@ -20,7 +20,7 @@ const ASSISTANCE_TYPES = [
 ];
 
 // Search modes
-const SEARCH_MODES = ["Zip Code", "Organization", "Location", "LLM Search"];
+const SEARCH_MODES = ["Zip Code", "Organization", "Location", "Ask a Question"];
 
 // Communication actions
 const COMMUNICATION_ACTIONS = ["Send Email", "Create PDF"];

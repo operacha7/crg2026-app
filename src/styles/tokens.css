@@ -344,6 +344,78 @@
   --font-size-help-close-btn: 24px;
 
   /* ==========================================
+   * QUICK TIPS PANEL (Sidebar reference guide)
+   * ========================================== */
+
+  /* Quick Tips Panel Colors */
+  --color-quicktips-header-bg: #222831;
+  --color-quicktips-header-text: #FFC857;
+  --color-quicktips-body-bg: #F3EED9;
+  --color-quicktips-body-text: #222831;
+  --color-quicktips-section-header-bg: #534a56;
+  --color-quicktips-section-header-text: #F3EED9;
+  --color-quicktips-section-body-bg: #FFFFFF;
+  --color-quicktips-section-body-text: #000000;
+  --color-quicktips-section-border: #D1D5DB;
+  --color-quicktips-icon-label: #666666;
+
+  /* Quick Tips Panel Typography */
+  --font-size-quicktips-title: 20px;
+  --font-weight-quicktips-title: 600;
+  --font-size-quicktips-section-header: 16px;
+  --font-weight-quicktips-section-header: 500;
+  --font-size-quicktips-body: 14px;
+  --font-weight-quicktips-body: 400;
+  --font-size-quicktips-icon-label: 12px;
+
+  /* Quick Tips Panel Sizing */
+  --width-quicktips-panel: 380px;
+  --height-quicktips-header: 50px;
+  --padding-quicktips-header-x: 16px;
+  --padding-quicktips-section-x: 16px;
+  --padding-quicktips-section-y: 12px;
+  --gap-quicktips-sections: 1px;
+  --radius-quicktips-panel: 0px;
+
+  /* ==========================================
+   * TIP MODAL (Chip usage hint)
+   * ========================================== */
+
+  /* Tip Modal Colors */
+  --color-tip-modal-header-bg: #3B82F6;
+  --color-tip-modal-header-text: #FFFFFF;
+  --color-tip-modal-body-bg: #FFFFFF;
+  --color-tip-modal-body-text: #374151;
+  --color-tip-modal-btn-bg: #3B82F6;
+  --color-tip-modal-btn-text: #FFFFFF;
+  --color-tip-modal-overlay-bg: rgba(0, 0, 0, 0.5);
+  --color-tip-modal-border: #E5E7EB;
+
+  /* Tip Modal Typography */
+  --font-size-tip-modal-title: 18px;
+  --font-weight-tip-modal-title: 600;
+  --font-size-tip-modal-body: 14px;
+  --font-weight-tip-modal-body: 400;
+  --font-size-tip-modal-chip: 14px;
+  --font-weight-tip-modal-chip: 500;
+  --font-size-tip-modal-btn: 14px;
+  --font-weight-tip-modal-btn: 500;
+
+  /* Tip Modal Sizing */
+  --width-tip-modal-min: 340px;
+  --width-tip-modal-max: 28rem;
+  --padding-tip-modal-header-x: 20px;
+  --padding-tip-modal-header-y: 12px;
+  --padding-tip-modal-body-x: 20px;
+  --padding-tip-modal-body-y: 16px;
+  --padding-tip-modal-footer-x: 20px;
+  --padding-tip-modal-footer-y: 12px;
+  --radius-tip-modal: 8px;
+  --padding-tip-modal-btn-x: 24px;
+  --padding-tip-modal-btn-y: 8px;
+  --radius-tip-modal-btn: 4px;
+
+  /* ==========================================
    * COMMON / SHARED
    * ========================================== */
 

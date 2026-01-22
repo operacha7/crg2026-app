@@ -6,42 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Community Resources Guide (CRG) Houston - a React application that helps organizations find and share community assistance resources. Users log in via organization passcodes and can search for resources by zip code, organization, or assistance type, then email or PDF selected results to clients.
 
-## Project History & Redesign Context
+## Documentation Structure
 
-**Origin:** This is `crg2026-app`, a complete redesign of the original `crg-app` (built ~2024). The original was a learning project with trial-and-error development, inconsistent patterns, and phantom files from abandoned features.
-
-**Goals of this redesign:**
-- Clean, maintainable codebase with standardized patterns
-- Centralized resources (icons in `/src/icons`, design tokens planned)
-- Single-source-of-truth for styling (change once, apply everywhere)
-- Restructured Supabase database (already completed)
-- Complete UX redesign (completed in Figma)
-
-**Removed from original:**
-- Spanish language version
-- Tour/onboarding feature (driver.js, intro.js removed)
-- Storybook
-- Legacy components cleaned up (Jan 2026): NavBar.js, SearchResults.js, AssistanceSidebar.js, EmailDialog.js, OrganizationPage.js, GeneralSearchPage.js, charts/, and related files
-
-**Unchanged:**
-- Resend for emails
-- PDFShift for PDF generation
-- Core functionality (search, email, PDF)
-
-**New features planned:**
-- **Google Geocoding**: Users can enter a client address directly in the app to get lat/long (previously required manual copy from Google Maps). Resources sorted by distance from client location.
-- **LLM Search (Anthropic)**: Natural language queries like "food pantry within 5 miles open Thursday morning" or "food pantry that delivers to 77027"
-- ✅ **Public access**: Users without accounts can browse but cannot email/PDF (implemented via "Browse Without Account" button)
-
-**Infrastructure:**
-- Hosted on Cloudflare (migrated from Netlify)
-- Supabase backend (new restructured database)
-
-## Design & Development Workflow
-
-**Design source:** Figma (complete redesign)
-**Design assets:** Screenshots stored in `/docs/design/`
-**Process:** Export Figma screenshots → Claude interprets and implements → Validate
+- **CLAUDE.md** (this file) - Active reference for working on the app
+- **[CLAUDE-ARCHIVE.md](CLAUDE-ARCHIVE.md)** - Historical context, completed implementation plans, design decisions
 
 ## UI Shell Components
 
@@ -55,64 +23,13 @@ The app shell consists of:
 
 Results display format is consistent regardless of filters applied.
 
-## Development Roadmap
+## Remaining TODO
 
-1. ✅ Set up icons (centralized in `/src/icons`)
-2. ✅ Set up design tokens (`src/styles/tokens.css`)
-3. ✅ Build shell (NavBars, Footer, layout) - **Visual shells first, then wire up**
-   - ✅ Footer component
-   - ✅ Vertical Nav Bar (right side)
-   - ✅ NavBar1 (header with logo, counters, buttons)
-   - ✅ NavBar2 (search mode selector + filters)
-   - ✅ NavBar3 (assistance type filters + dropdown panel) - connected to Supabase
-   - ✅ Remove legacy controls from ZipCodePage
-   - ✅ Results Header
-4. ✅ Results display component (ResultRow + ResultsList)
-5. ✅ Wire up NavBar state to ZipCodePage (zip selection, assistance filtering)
-6. ✅ Add geocoding feature (Google Geocoding API)
-7. ✅ Email redesign (single-column, mobile-friendly format)
-8. ✅ PDF redesign (3-column, print-optimized format) - **header repeat on pages TODO**
-9. ⬜ Simplify usage reporting
-10. ⬜ LLM search (Anthropic API)
-11. ✅ Help system (LLM-powered chat assistant)
+- ⬜ Simplify usage reporting
+- ⬜ LLM search (Anthropic API)
+- ⬜ Announcement popup redesign (typewriter/memo style)
 
-## Current Development Status
-
-**Login page redesign complete** - see Login Page section below for details.
-
-**Design tokens system established:**
-- `src/styles/tokens.css` - CSS custom properties (single source of truth)
-- `tailwind.config.js` - References CSS variables for Tailwind classes
-- `src/index.js` - Imports tokens.css globally
-- **New components fully tokenized:** NavBar1-3, Footer, VerticalNavBar, ResultsHeader, ResultRow, Tooltip
-- **Components not yet tokenized:** AnnouncementPopup (to be migrated later)
-
-**Legacy controls removed from ZipCodePage:**
-The following legacy UI elements have been removed from `src/views/ZipCodePage.js` as they are now handled by the new NavBar components:
-- ~~Zip Code dropdown~~ → Now in NavBar2
-- ~~Assistance buttons and "More options" link~~ → Now in NavBar3
-- ~~Orange animated results counter~~ → Now in NavBar1 (filtered/selected counters)
-
-**Supabase connection complete:**
-- All data loads from Supabase on app start via `AppDataContext`
-- Zip code filtering works (filters `directory.client_zip_codes`)
-- Assistance filtering works (filters by `directory.assist_id`)
-- Distance calculation works (uses `zip_codes.coordinates` and `directory.org_coordinates`)
-- Results sorted by: status_id → assist_id → miles
-- Assistance column shows all assistance types for each organization (computed from directory)
-
-**Geocoding feature complete:**
-- Distance icon in NavBar2 opens DistancePanel for address entry
-- Google Geocoding API converts addresses to coordinates (via Cloudflare Function)
-- User can also paste coordinates directly
-- Override coordinates stored in `AppDataContext` (`clientAddress`, `clientCoordinates`)
-- `ZipCodePage` uses override coordinates instead of zip centroid when set
-- Distance calculated using Haversine formula (straight-line, not driving distance)
-- Distance icon shows active state (plum bg, gold icon) when override is set
-- Override clears automatically when zip code changes
-- Footnote in panel explains distances are approximate straight-line
-
-**Completed components:**
+## Components Reference
 
 ### Footer (`src/layout/Footer.js`)
 - Height: 30px
@@ -126,7 +43,8 @@ The following legacy UI elements have been removed from `src/views/ZipCodePage.j
   - Accent stripe: 20px wide, `#948979` (tan)
   - Main bar: 60px wide, `#222831` (dark charcoal)
 - Icons (bottom-aligned, 80px from bottom):
-  - InformationIcon
+  - QuickTipsIcon (lightbulb)
+  - HelpBubbleIcon (speech bubble with ?)
   - ReportsIcon
   - AnnouncementsIcon
   - PrivacyPolicyIcon
@@ -152,7 +70,7 @@ The following legacy UI elements have been removed from `src/views/ZipCodePage.j
 ### NavBar2 (`src/layout/NavBar2.js`)
 - Height: 70px
 - Background: `#4A4F56` (updated from `#393E46`)
-- Right side: Search mode buttons (Zip Code, Organization, Location, LLM Search)
+- Right side: Search mode buttons (Zip Code, Organization, Location, Ask a Question)
   - Button: auto-width (20px padding), 38px height, 10px radius
   - Inactive: transparent bg, white text, no border
   - Active: `#652C57` bg, `#FFC857` text
@@ -323,20 +241,6 @@ The following legacy UI elements have been removed from `src/views/ZipCodePage.j
 - `--color-login-btn-login-bg` - Log in button
 - `--radius-login-btn` - Button border radius
 
-**Design assets location:** `/docs/design/`
-- `ZipCode.png` - Overall page layout
-- `Footer.png` - Footer specs
-- `Frame 503 Vertical Bar.png` - Vertical nav bar specs
-- `Frame 494 NavBar 1.png` - NavBar1 specs
-- `Frame 496 NavBar 2.png` - NavBar2 specs (shows all 4 search modes)
-- `Frame 505 NavBar 3.png` - NavBar3 with assistance panel
-- `Login Panel.png` - Login page design
-- `Design Tokens Login.txt` - Login page design specs
-- `Supabase Schema.png` - Database schema reference
-- `Design Tokens.txt` - NavBar1 design specs (RTF format)
-- `Design Tokens NavBar 2.txt` - NavBar2 design specs
-- `Design Tokens NavBar 3.txt` - NavBar3 and panel design specs
-
 ## Commands
 
 ```bash
@@ -380,6 +284,7 @@ src/
 │   ├── EmailPanel.js    # Email/PDF entry panel with inactive warning
 │   ├── DistancePanel.js # Distance override panel (address entry)
 │   ├── HelpPanel.js     # LLM-powered help chat (opens from VerticalNavBar)
+│   ├── QuickTipsPanel.js # Visual reference guide sidebar (accordion sections)
 │   ├── AnnouncementPopup.js  # Modal popup for announcements
 │   ├── AnnouncementManager.js # Orchestrates announcement display
 │   └── reports/
@@ -476,7 +381,7 @@ NavBar2 has 4 search modes selected by buttons on the right. Only one can be act
 
 **State management:** `selectedLocationCounty`, `selectedLocationCity`, `selectedLocationZip` are stored in `AppDataContext` (not local state) to support email/PDF headers.
 
-### Mode 4: LLM Search
+### Mode 4: Ask a Question
 - **Left frame:** Text input field
 - **Uses:** Anthropic API for natural language queries
 - **Example:** "food pantry within 5 miles open Thursday morning"
@@ -524,10 +429,10 @@ Chips in NavBar3 have two states:
 6. **Save:** Applies selections to NavBar3 chips
 
 ### NavBar3 Chip Behavior
-- **Single selection saved:** Auto-activates (turns teal), shows results immediately
-- **Multiple selections saved:** All appear inactive (white), user must click to activate
+- **All selections auto-activate:** When saved, all selected chips turn teal and filter immediately
 - **Click chip:** Toggles between active (teal) and inactive (white)
 - **Multiple active:** Allowed - results show resources matching ANY active type
+- **First multi-selection:** Opens Quick Tips sidebar to "Assistance Types" section (once per session)
 
 ### Session Persistence
 - Selections persist while navigating between search modes (Zip Code, Organization, Location, LLM)
@@ -592,17 +497,6 @@ This is the primary data displayed in results. All filtering happens against thi
 | `assistance` | text | `"Rent"` | Display name |
 | `icon` | text | `"RentIcon"` | Maps to icon component |
 | `assist_id` | text | `"11"` | Used for filtering (matches directory.assist_id) |
-
-### `organizations` - NO LONGER USED
-**Note:** The `organizations` table is no longer fetched. Organization data for NavBar2 dropdowns is now derived from the `directory` table. The `org_assistance` field has been replaced by computing assistance types from directory records.
-
-**Deprecated fields:**
-| Field | Type | Example | Notes |
-|-------|------|---------|-------|
-| `id_no` | int4 | `1001` | Primary key |
-| `organization` | text | `"3 \"A\" Bereavement..."` | Org name |
-| `org_parent` | text | Same or parent name | Parent org |
-| `org_assistance` | text | `["65"]` | **DEPRECATED** - Now computed from directory |
 
 ### `zip_codes` (269 records - static)
 | Field | Type | Example | Notes |
@@ -673,65 +567,6 @@ All design values defined as CSS custom properties, referenced by Tailwind confi
 - `#B8001F` (red - footer, inactive vertical nav icons)
 - `#5cb800` (green - active vertical nav icons)
 - `#8FB6FF` (light blue - neighborhood hyperlink)
-
-## Implementation Plan: Supabase Connection ✅ COMPLETE
-
-### Overview
-Connect the UI shell (NavBars, ResultsList) to live Supabase data with client-side filtering for instant results.
-
-### Completed Steps
-
-#### Step 1: Update dataService.js ✅ COMPLETE
-- Fetches from `directory`, `assistance`, `zip_codes` tables
-- `organizations` table no longer fetched (derived from directory)
-
-#### Step 2: Create AppDataContext ✅ COMPLETE
-- Central data context loads all data on app start
-- Exports: `directory`, `assistance`, `zipCodes`, `organizations` (derived), `orgAssistanceMap`
-- `orgAssistanceMap` = lookup table: org name → array of assist_ids (for Assistance column icons)
-
-#### Step 3: Wire NavBar2 Dropdowns ✅ COMPLETE
-- All dropdowns populated from context
-- Organizations derived from directory (no separate table fetch)
-
-#### Step 4: Wire Results Display ✅ COMPLETE
-- ResultsList displays filtered directory data
-- ResultRow uses `orgAssistanceMap` for Assistance column icons
-
-#### Step 5: Implement Zip Code Filtering ✅ COMPLETE
-- Filters `directory.client_zip_codes` containing selected zip
-- Distance calculated from `zip_codes.coordinates` to `directory.org_coordinates`
-
-#### Step 6: Implement Assistance Filtering ✅ COMPLETE
-- Filters by `directory.assist_id` matching active NavBar3 chips
-- Uses `assistance.assist_id` (text) for matching
-
-#### Step 7: Implement Sorting ✅ COMPLETE
-- Results sorted by: status_id → assist_id → miles (all ascending)
-- Sorting handled in `ResultsList.js`
-
-#### Step 8: Wire Counters ⬜ PENDING
-- Filtered count and selected count need to be wired to NavBar1
-
-#### Step 9: Email/PDF Redesign ✅ COMPLETE
-- Email format redesigned (single-column, mobile-friendly)
-- Uses shared formatters from `src/utils/formatters.js`
-- From address updated to `info@crghouston.operacha.org`
-
-### Key Technical Decisions
-
-**assist_id is TEXT:** Both `directory.assist_id` and `assistance.assist_id` are text fields. This allows consistent string comparison without type conversion issues.
-
-**Org assistance computed from directory:** Instead of using `organizations.org_assistance` array, we compute a lookup map from directory records. This ensures single source of truth and eliminates sync issues.
-
-**Sort order:** status_id (1=Active first) → assist_id (numeric order) → miles (nearest first)
-
-### Future Steps (Not This Phase)
-- Organization search mode filtering
-- Location search mode filtering
-- LLM search mode (Anthropic API)
-- Google Geocoding for distance override
-- Public access mode (no login required)
 
 ## Email & PDF System
 
@@ -839,8 +674,8 @@ The header text changes based on the active search mode. Uses "most specific win
 | Location | Zip only | "Resources for Location: 77002" |
 | Location | County + City | "Resources for Location: Houston" |
 | Location | City + Zip | "Resources for Location: 77002" |
-| LLM Search | Query text | "Resources for: [query]" |
-| LLM Search | No query | "Search Results" |
+| Ask a Question | Query text | "Resources for: [query]" |
+| Ask a Question | No query | "Search Results" |
 
 **PDF Filename:** Uses same logic - `CRG - [Header Text] - YYYY-MM-DD.pdf`
 
@@ -894,16 +729,6 @@ PDF uses a different layout than email - optimized for printing (multi-column, d
 - `formatResourcesHtml()` in `src/services/emailService.js` - Email single-column layout
 - `createPdf()` - Assembles HTML and calls PDFShift API
 
-**Known Issue (TODO):**
-- Header does not repeat on subsequent pages (only appears on page 1)
-- PDFShift running headers require special formatting; current workaround puts header in body HTML
-- Need to debug PDFShift header/footer source validation error
-
-**PDFShift Requirements:**
-- Header/footer `source` must start with `<` (no leading whitespace)
-- External resources (images, fonts) must be publicly accessible URLs
-- `{{page}}` and `{{total}}` template variables for page numbers
-
 ### Development Workflow
 **Two-terminal setup for local development:**
 ```bash
@@ -930,6 +755,50 @@ PDFSHIFT_API_KEY=xxx
 ```
 
 **Production:** Cloudflare dashboard → Pages → Settings → Environment variables
+
+## Toast Notifications
+
+The app uses `react-hot-toast` for user feedback notifications with custom animated styling.
+
+### Architecture
+- **Library:** react-hot-toast
+- **Provider:** `<Toaster position="top-center" />` in `MainApp.js`
+- **Custom styling:** Animated toasts using Framer Motion in `ZipCodePage.js`
+
+### Usage Pattern
+```javascript
+import { toast } from "react-hot-toast";
+import { motion } from "framer-motion";
+
+// Custom animated toast helper
+const showAnimatedToast = (msg, type = "success") => {
+  toast.custom(() => (
+    <motion.div
+      initial={{ y: -100, opacity: 0 }}
+      animate={{ y: 400, opacity: 1 }}
+      exit={{ y: 300, opacity: 0 }}
+      transition={{ duration: 1.5, ease: "easeOut" }}
+      className={`px-6 py-4 rounded-lg shadow-lg text-lg font-semibold text-white ${
+        type === "error" ? "bg-red-500" : "bg-green-600"
+      }`}
+    >
+      {msg}
+    </motion.div>
+  ));
+};
+```
+
+### When Toasts Appear
+- **Email sent:** Green success toast "✅ Email sent successfully."
+- **PDF created:** Green success toast "✅ PDF created successfully in your Download Folder."
+- **No selection error:** Red error toast when user tries to email/PDF without selecting records
+
+### Design Notes
+- Toasts animate from top, slide down, then fade out
+- Duration: 1.5 seconds ease-out transition
+- Success: Green background (`bg-green-600`)
+- Error: Red background (`bg-red-500`)
+- Positioned at top-center of screen
 
 ## Announcements System
 
@@ -1009,50 +878,12 @@ The `scripts/sync-to-supabase.js` script includes a `transformAnnouncement()` fu
 3. Converts format/para column pairs into a single `message_html` field
 4. Applies format codes as inline CSS styles
 
-### Announcement Popup Design (2026 Redesign)
-The popup uses a typewriter/memo aesthetic to distinguish it from the modern UI.
-
-**Visual Design:**
-- White paper background with subtle drop shadow
-- Aspect ratio resembles 8.5x11 paper
-- Font: Courier Prime (Google Fonts) - typewriter style
-
-**Layout:**
-```
-┌─────────────────────────────────────────┐
-│ memo                        [CRG Logo]  │  ← "memo" in blue (#2500E2), 110px, underlined
-│                                         │
-│ Date:     January 8, 2026               │  ← Labels semibold, values regular
-│ To:       All CRG Users                 │
-│ Subject:  Baker Ripley Utilities...     │
-│                                         │
-│ The latest round which opened on        │  ← Body text, 16px
-│ January 7th has reached capacity...     │
-│                                         │
-└─────────────────────────────────────────┘
-              [ Close ]                      ← Red button, outside the "paper"
-```
-
-**Design Tokens (to be added):**
-- `--font-memo: 'Courier Prime', monospace`
-- `--font-size-memo-title: 110px`
-- `--font-size-memo-body: 16px`
-- `--color-memo-title: #2500E2`
-- `--color-memo-text: #000000`
-
 **Key Files:**
-- `src/components/AnnouncementPopup.js` - Modal popup component (to be redesigned)
+- `src/components/AnnouncementPopup.js` - Modal popup component
 - `src/components/AnnouncementManager.js` - Orchestrates fetching and sequential display
 - `src/services/AnnouncementService.js` - Supabase query logic
 - `src/views/AnnouncementsPage.js` - Announcements history page
 - `scripts/sync-to-supabase.js` - Includes announcement sync with HTML generation
-
-### Next Steps (TODO)
-- ⬜ Redesign AnnouncementPopup.js with typewriter/memo style
-- ⬜ Add Courier Prime font to the app
-- ⬜ Add design tokens for memo styling
-- ⬜ Redesign MessagesPage.js (Figma design pending)
-- ⬜ Update AnnouncementService.js to use new table structure
 
 ## Help System (LLM-Powered)
 
@@ -1102,9 +933,9 @@ The system prompt instructs Claude to use visual tokens that render as miniature
 | `[[ZIP_CODE_BTN]]` | Dark button "Zip Code" | Active search mode |
 | `[[ORGANIZATION_BTN]]` | Gray button "Organization" | Inactive search mode |
 | `[[LOCATION_BTN]]` | Gray button "Location" | Inactive search mode |
-| `[[LLM_SEARCH_BTN]]` | Gray button "LLM Search" | Inactive search mode |
+| `[[ASK_QUESTION_BTN]]` | Gray button "Ask a Question" | Inactive search mode |
 | `[[ZIP_DROPDOWN]]` | Green dropdown "77002 ▾" | Zip code selector |
-| `[[LLM_INPUT]]` | Teal field "What are you looking for today?" | LLM Search input field |
+| `[[LLM_INPUT]]` | Teal field "What are you looking for today?" | Ask a Question input field |
 | `[[SELECT_ASSISTANCE_BTN]]` | Tan button "Select Assistance ▾" | Assistance panel trigger |
 | `[[CHIP_ACTIVE]]` | Green chip "Food" | Active assistance filter |
 | `[[CHIP_INACTIVE]]` | White chip "Rent" | Inactive assistance filter |
@@ -1172,6 +1003,67 @@ CREATE TABLE help_logs (
 
 ### API Key
 Requires `ANTHROPIC_API_KEY` in Cloudflare environment variables (or `.dev.vars` for local development).
+
+## Quick Tips System
+
+The Quick Tips system provides a visual reference guide for users. It's a sidebar panel with accordion sections that explain how to use each feature with visual examples.
+
+### Purpose
+- **In-context help:** Replaces modal popups with a persistent, accessible reference
+- **Visual learning:** Shows actual UI elements (chips, buttons, icons) instead of text descriptions
+- **Session-based onboarding:** Auto-opens to relevant section on first use of a feature
+
+### Architecture
+- **Component:** `src/components/QuickTipsPanel.js` - Accordion sidebar with visual examples
+- **Icon:** `src/icons/QuickTipsIcon.jsx` - Lightbulb icon (liquid glass style)
+- **State:** Managed in `AppDataContext` (`quickTipsOpen`, `quickTipsExpandedSection`, `quickTipsShownThisSession`)
+
+### Topics (Alphabetical)
+Each topic has visual examples using actual UI component tokens:
+
+1. **Assistance Types** - Chip toggling (active teal vs inactive white)
+2. **Distance** - Address entry for accurate distance calculations
+3. **Email / PDF** - How to send selected resources
+4. **Location Search** - County/City/Zip filtering
+5. **Ask a Question** - Natural language queries
+6. **Organization Search** - Parent/child organization filtering
+7. **Results** - Checkboxes, status pills, expand/collapse
+8. **Sidebar Icons** - Each icon with label (includes actual icons)
+9. **Zip Code Search** - Default search mode
+
+### Behavior
+- **Manual access:** Click lightbulb icon in vertical nav bar
+- **Auto-open:** First time user selects 2+ assistance types, sidebar opens to "Assistance Types" section
+- **Once per session:** Auto-open only happens once per session (tracked via `quickTipsShownThisSession`)
+- **Accordion:** Only one section expanded at a time
+- **Click outside:** Closes the panel
+
+### Design Tokens
+```css
+--color-quicktips-header-bg: #222831;
+--color-quicktips-header-text: #FFC857;
+--color-quicktips-body-bg: #F3EED9;
+--color-quicktips-section-header-bg: #4A4F56;
+--color-quicktips-section-header-text: #F3EED9;
+--color-quicktips-section-body-bg: #FFFFFF;
+--width-quicktips-panel: 380px;
+--height-quicktips-header: 50px;
+```
+
+### Key Files
+- `src/components/QuickTipsPanel.js` - Main panel component with all topic content
+- `src/icons/QuickTipsIcon.jsx` - Lightbulb icon
+- `src/layout/VerticalNavBar.js` - Renders panel, handles icon click
+- `src/Contexts/AppDataContext.js` - State management
+- `src/layout/NavBar3.js` - Triggers auto-open on first multi-selection
+
+### Future Use
+The Quick Tips pattern can be reused for other contextual help. When a feature changes or is new:
+1. Add topic content function in `QuickTipsPanel.js`
+2. Add to `QUICK_TIPS_TOPICS` array
+3. Trigger auto-open by calling `setQuickTipsOpen(true)` and `setQuickTipsExpandedSection("topic-id")`
+
+**Note:** Avoid overusing auto-open. Reserve for truly new or confusing features. Manual access via lightbulb should be the primary discovery method.
 
 ## Hosting & Infrastructure
 

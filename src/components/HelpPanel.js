@@ -63,8 +63,8 @@ const ICON_MAP = {
   "[[LOCATION_BTN]]": (
     <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-bg)", color: "var(--color-navbar2-btn-inactive-text)" }}>Location</span>
   ),
-  "[[LLM_SEARCH_BTN]]": (
-    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-bg)", color: "var(--color-navbar2-btn-inactive-text)" }}>LLM Search</span>
+  "[[ASK_QUESTION_BTN]]": (
+    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-bg)", color: "var(--color-navbar2-btn-inactive-text)" }}>Ask a Question</span>
   ),
 
   // Dropdowns and input fields (uses NavBar2 dropdown tokens)
@@ -362,7 +362,7 @@ export default function HelpPanel({ isOpen, onClose, resetKey }) {
                     "How do I email resources to a client?",
                     "How do I filter by assistance type?",
                     "What does the distance icon do?",
-                    "How do I use LLM Search?",
+                    "How do I use Ask a Question?",
                   ].map((suggestion) => (
                     <button
                       key={suggestion}

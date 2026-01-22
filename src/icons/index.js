@@ -15,6 +15,7 @@ export { DistanceIcon } from './DistanceIcon';
 export { HelpIcon } from './HelpIcon';
 export { HelpBubbleIcon } from './HelpBubbleIcon';
 export { HomeIcon } from './HomeIcon';
+export { QuickTipsIcon } from './QuickTipsIcon';
 export { ChevronLeftIcon } from './ChevronLeftIcon';
 export { ChevronRightIcon } from './ChevronRightIcon';
 export { ChevronDownIcon } from './ChevronDownIcon';

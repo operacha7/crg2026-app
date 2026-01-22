@@ -124,6 +124,11 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
   const [llmSearchError, setLlmSearchError] = useState("");
   const [llmRelatedSearches, setLlmRelatedSearches] = useState([]); // Related search suggestions
 
+  // Quick Tips panel state
+  const [quickTipsOpen, setQuickTipsOpen] = useState(false);
+  const [quickTipsExpandedSection, setQuickTipsExpandedSection] = useState(null); // Which accordion section is expanded
+  const [quickTipsShownThisSession, setQuickTipsShownThisSession] = useState(false); // Track if auto-shown already
+
   // Clear client coordinates when zip code changes
   useEffect(() => {
     setClientAddress("");
@@ -269,6 +274,14 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
     setLlmSearchError,
     llmRelatedSearches,
     setLlmRelatedSearches,
+
+    // Quick Tips panel state
+    quickTipsOpen,
+    setQuickTipsOpen,
+    quickTipsExpandedSection,
+    setQuickTipsExpandedSection,
+    quickTipsShownThisSession,
+    setQuickTipsShownThisSession,
   };
 
   return (
