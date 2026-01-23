@@ -128,7 +128,7 @@
   --font-size-navbar1-title: 28px;
   --font-weight-navbar1-title: 600; /* Semibold */
   --letter-spacing-navbar1-title: 0.1em; /* 10% */
-  --font-size-navbar1-counter: 20px;
+  --font-size-navbar1-counter: 29px;
   --font-weight-navbar1-counter: 400; /* Regular */
   --font-size-navbar1-btn: 22px;
   --font-weight-navbar1-btn: 400; /* Regular */
@@ -193,11 +193,11 @@
   --padding-navbar1-left: 40px;
   --padding-navbar1-right: 40px;
   --gap-navbar1-logo-title: 12px;
-  --gap-navbar1-counters: 15px;
+  --gap-navbar1-counters: 35px;
   --gap-navbar1-buttons: 15px;
-  --gap-navbar1-counters-buttons: 30px;
+  --gap-navbar1-counters-buttons: 100px;
   --size-navbar1-logo: 40px;
-  --size-navbar1-counter: 45px;
+  --size-navbar1-counter: 60px;
   --width-navbar1-btn: 150px;
   --height-navbar1-btn: 38px;
 

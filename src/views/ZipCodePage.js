@@ -332,6 +332,7 @@ export default function ZipCodePage({
 
   return (
     <PageLayout
+      totalCount={directory.length}
       filteredCount={filteredDirectory.length}
       selectedCount={selectedRows.length}
       onSendEmail={validateEmailSelection}

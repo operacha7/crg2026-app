@@ -7,8 +7,10 @@ import { useState, useRef, useEffect } from "react";
 import { Menu } from "lucide-react";
 import Tooltip from "../components/Tooltip";
 import EmailPanel from "../components/EmailPanel";
+import AnimatedCounter from "../components/AnimatedCounter";
 
 export default function NavBar1({
+  totalCount = 0,
   filteredCount = 0,
   selectedCount = 0,
   onSendEmail,
@@ -22,6 +24,9 @@ export default function NavBar1({
   // Mobile menu handler
   onOpenMobileMenu,
 }) {
+  // Orange counter shows totalCount initially (before any filter applied),
+  // then shows filteredCount once user starts filtering
+  const displayFilteredCount = filteredCount > 0 ? filteredCount : totalCount;
   // Panel state
   const [showEmailPanel, setShowEmailPanel] = useState(false);
   const [showPdfPanel, setShowPdfPanel] = useState(false);
@@ -223,7 +228,10 @@ export default function NavBar1({
           >
             {/* Filtered count */}
             <Tooltip text="Filtered records" position="bottom-left">
-              <div
+              <AnimatedCounter
+                value={displayFilteredCount}
+                duration={1000}
+                glowColor="rgba(229, 186, 102, 0.85)"
                 className="bg-navbar1-counter-filtered text-navbar1-counter-text-filtered rounded-full flex items-center justify-center font-opensans"
                 style={{
                   width: 'var(--size-navbar1-counter)',
@@ -231,14 +239,15 @@ export default function NavBar1({
                   fontSize: 'var(--font-size-navbar1-counter)',
                   fontWeight: 'var(--font-weight-navbar1-counter)',
                 }}
-              >
-                {filteredCount}
-              </div>
+              />
             </Tooltip>
 
             {/* Selected count */}
             <Tooltip text="Selected records" position="bottom-left">
-              <div
+              <AnimatedCounter
+                value={selectedCount}
+                duration={600}
+                glowColor="rgba(229, 186, 102, 0.85)"
                 className="bg-navbar1-counter-selected text-navbar1-counter-text-selected rounded-full flex items-center justify-center font-opensans"
                 style={{
                   width: 'var(--size-navbar1-counter)',
@@ -246,9 +255,7 @@ export default function NavBar1({
                   fontSize: 'var(--font-size-navbar1-counter)',
                   fontWeight: 'var(--font-weight-navbar1-counter)',
                 }}
-              >
-                {selectedCount}
-              </div>
+              />
             </Tooltip>
           </div>
 
@@ -347,18 +354,20 @@ export default function NavBar1({
         <div className="flex items-center gap-3">
           {/* Counters */}
           <div className="flex items-center gap-1">
-            <div
+            <AnimatedCounter
+              value={displayFilteredCount}
+              duration={1000}
+              glowColor="rgba(229, 186, 102, 0.85)"
               className="bg-navbar1-counter-filtered text-navbar1-counter-text-filtered rounded-full flex items-center justify-center font-opensans text-xs font-medium"
               style={{ width: '28px', height: '28px' }}
-            >
-              {filteredCount}
-            </div>
-            <div
+            />
+            <AnimatedCounter
+              value={selectedCount}
+              duration={600}
+              glowColor="rgba(229, 186, 102, 0.85)"
               className="bg-navbar1-counter-selected text-navbar1-counter-text-selected rounded-full flex items-center justify-center font-opensans text-xs font-medium"
               style={{ width: '28px', height: '28px' }}
-            >
-              {selectedCount}
-            </div>
+            />
           </div>
 
           {/* Email/PDF buttons - sized for touch (40px min height) with good spacing */}

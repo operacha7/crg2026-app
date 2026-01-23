@@ -13,6 +13,7 @@ export default function PageLayout({
   showNav = true,
   onSendEmail,
   onCreatePdf,
+  totalCount = 0,
   filteredCount = 0,
   selectedCount = 0,
   // Props for email/PDF panels
@@ -38,6 +39,7 @@ export default function PageLayout({
         {/* NavBar 1 - Top header with logo, title, counters, buttons */}
         {showNav && (
           <NavBar1
+            totalCount={totalCount}
             filteredCount={filteredCount}
             selectedCount={selectedCount}
             onSendEmail={onSendEmail}
