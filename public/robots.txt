@@ -1,0 +1,11 @@
+# robots.txt for Community Resources Guide Houston
+# https://crghouston.operacha.org
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://crghouston.operacha.org/sitemap.xml
+
+# Crawl-delay (optional, be polite to our server)
+Crawl-delay: 1
