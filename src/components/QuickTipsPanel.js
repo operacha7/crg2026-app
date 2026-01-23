@@ -79,15 +79,19 @@ const QUICK_TIPS_TOPICS = [
 // TIP CONTENT COMPONENTS
 // ============================================
 
-function AssistanceTypesTip() {
+// Chip toggle content - extracted for reuse in normal and highlighted states
+function ChipToggleContent() {
   return (
-    <div className="space-y-4">
-      <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
-        Filter results by assistance type using the chips in the tan bar.
+    <>
+      <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)", fontWeight: "600", marginBottom: "8px" }}>
+        Step 3: Toggle Chips to Filter
+      </p>
+      <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)", marginBottom: "12px" }}>
+        Your selections appear as chips in the tan bar. Click chips to toggle filtering on/off.
       </p>
 
       {/* Active chip example */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 mb-2">
         <span
           className="px-3 py-1.5 rounded-full"
           style={{
@@ -101,12 +105,12 @@ function AssistanceTypesTip() {
           Food
         </span>
         <span style={{ color: "var(--color-quicktips-section-body-text)", fontSize: "var(--font-size-quicktips-body)" }}>
-          ← Active (showing results)
+          ← Active (filtering results)
         </span>
       </div>
 
       {/* Inactive chip example */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 mb-2">
         <span
           className="px-3 py-1.5 rounded-full"
           style={{
@@ -124,9 +128,202 @@ function AssistanceTypesTip() {
         </span>
       </div>
 
-      <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
+      <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)", fontStyle: "italic" }}>
         Click any chip to toggle it on or off.
       </p>
+    </>
+  );
+}
+
+// Mini panel visual - simplified representation of the assistance panel
+function MiniAssistancePanel() {
+  const groupColors = [
+    "var(--color-assistance-group1)", // yellow
+    "var(--color-assistance-group2)", // purple
+    "var(--color-assistance-group3)", // pink
+    "var(--color-assistance-group4)", // green
+    "var(--color-assistance-group5)", // cyan
+    "var(--color-assistance-group6)", // orange
+  ];
+
+  return (
+    <div
+      className="rounded overflow-hidden"
+      style={{
+        border: "2px solid var(--color-panel-border)",
+        maxWidth: "280px",
+      }}
+    >
+      {/* Mini header */}
+      <div
+        className="flex items-center justify-center py-2"
+        style={{ backgroundColor: "var(--color-panel-header-bg)" }}
+      >
+        <span style={{ color: "var(--color-panel-title)", fontSize: "10px", fontWeight: "600" }}>
+          Assistance Types
+        </span>
+      </div>
+      {/* Mini body with colored blocks representing groups */}
+      <div
+        className="p-2 flex gap-1 flex-wrap justify-center"
+        style={{ backgroundColor: "var(--color-panel-body-bg)" }}
+      >
+        {groupColors.map((color, i) => (
+          <div
+            key={i}
+            className="flex flex-col gap-0.5"
+          >
+            <div
+              style={{
+                backgroundColor: color,
+                width: "36px",
+                height: "12px",
+                borderRadius: "3px",
+                fontSize: "7px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: "600",
+              }}
+            >
+              Group {i + 1}
+            </div>
+            {[1, 2, 3].map((j) => (
+              <div
+                key={j}
+                style={{
+                  backgroundColor: color,
+                  width: "36px",
+                  height: "8px",
+                  borderRadius: "2px",
+                  opacity: j === 2 && i === 0 ? 1 : 0.7,
+                  border: j === 2 && i === 0 ? "1px solid #000" : "none",
+                  // Simulate one selected chip (white bg)
+                  backgroundColor: j === 2 && i === 0 ? "var(--color-assistance-selected-bg)" : color,
+                }}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+      {/* Mini footer */}
+      <div
+        className="flex justify-center gap-2 py-1"
+        style={{ backgroundColor: "var(--color-panel-body-bg)" }}
+      >
+        <div
+          style={{
+            backgroundColor: "var(--color-panel-btn-cancel-bg)",
+            width: "28px",
+            height: "10px",
+            borderRadius: "2px",
+            fontSize: "6px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          Clear
+        </div>
+        <div
+          style={{
+            backgroundColor: "var(--color-panel-btn-ok-bg)",
+            width: "28px",
+            height: "10px",
+            borderRadius: "2px",
+            fontSize: "6px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          OK
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AssistanceTypesTip({ highlightChipToggle }) {
+  return (
+    <div className="space-y-4">
+      {/* SECTION 1: Opening the panel */}
+      <div>
+        <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)", fontWeight: "600", marginBottom: "8px" }}>
+          Step 1: Open the Panel
+        </p>
+        <div className="flex items-center gap-3 mb-2">
+          <span
+            className="px-3 py-1.5 rounded"
+            style={{
+              backgroundColor: "transparent",
+              color: "var(--color-navbar2-btn-inactive-text)",
+              border: "none",
+              fontSize: "13px",
+              fontWeight: "500",
+              backgroundColor: "var(--color-navbar3-bg)",
+            }}
+          >
+            Select Assistance
+          </span>
+          <span style={{ color: "var(--color-quicktips-section-body-text)", fontSize: "var(--font-size-quicktips-body)" }}>
+            ← Click or hover to open panel
+          </span>
+        </div>
+
+        {/* Mini panel visual */}
+        <div className="flex items-start gap-3 mt-3">
+          <MiniAssistancePanel />
+          <div style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
+            <p className="mb-2">The assistance panel lets you filter by type.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION 2: Making selections */}
+      <div style={{ borderTop: "1px solid var(--color-quicktips-section-border)", paddingTop: "12px" }}>
+        <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)", fontWeight: "600", marginBottom: "8px" }}>
+          Step 2: Make Selections
+        </p>
+        <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
+          Select <strong>up to 3 individual types</strong> from any groups, OR select <strong>one entire group</strong>.
+        </p>
+        <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)", marginTop: "8px" }}>
+          Click <strong>OK</strong> to save, or move away from the panel if you opened it by hovering.
+        </p>
+      </div>
+
+      {/* SECTION 3: Using chips in the tan bar - HIGHLIGHTED and SLIDES OUT when auto-opened */}
+      <div style={{ borderTop: "1px solid var(--color-quicktips-section-border)", paddingTop: "12px", marginTop: "12px" }}>
+        {/* When not highlighted, show inline */}
+        {!highlightChipToggle && (
+          <ChipToggleContent />
+        )}
+
+        {/* When highlighted, show as slide-out panel */}
+        <AnimatePresence>
+          {highlightChipToggle && (
+            <motion.div
+              initial={{ x: "100%", opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: "100%", opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300, delay: 0.3 }}
+              style={{
+                backgroundColor: "var(--color-quicktips-highlight-bg)",
+                marginLeft: "-16px",
+                marginRight: "-16px",
+                paddingLeft: "16px",
+                paddingRight: "16px",
+                paddingTop: "12px",
+                paddingBottom: "12px",
+                borderLeft: "4px solid var(--color-quicktips-highlight-border)",
+              }}
+            >
+              <ChipToggleContent />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -474,10 +671,13 @@ function ZipCodeSearchTip() {
 // ACCORDION SECTION COMPONENT
 // ============================================
 
-function AccordionSection({ topic, isExpanded, onToggle }) {
+function AccordionSection({ topic, isExpanded, onToggle, highlightChipToggle }) {
   const ContentComponent = topic.content;
   const TitleIcon = topic.titleIcon;
   const contentRef = useRef(null);
+
+  // Check if this topic's content component accepts highlightChipToggle prop
+  const contentProps = topic.id === "assistance" ? { highlightChipToggle } : {};
 
   return (
     <div style={{ borderBottom: "1px solid var(--color-quicktips-section-border)" }}>
@@ -522,7 +722,7 @@ function AccordionSection({ topic, isExpanded, onToggle }) {
                 padding: "var(--padding-quicktips-section-y) var(--padding-quicktips-section-x)",
               }}
             >
-              <ContentComponent />
+              <ContentComponent {...contentProps} />
             </div>
           </motion.div>
         )}
@@ -541,9 +741,18 @@ export default function QuickTipsPanel() {
     setQuickTipsOpen,
     quickTipsExpandedSection,
     setQuickTipsExpandedSection,
+    quickTipsHighlightChipToggle,
+    setQuickTipsHighlightChipToggle,
   } = useAppData();
 
   const panelRef = useRef(null);
+
+  // Clear highlight when panel closes
+  useEffect(() => {
+    if (!quickTipsOpen && quickTipsHighlightChipToggle) {
+      setQuickTipsHighlightChipToggle(false);
+    }
+  }, [quickTipsOpen, quickTipsHighlightChipToggle, setQuickTipsHighlightChipToggle]);
 
   // Handle click outside to close
   useEffect(() => {
@@ -637,6 +846,7 @@ export default function QuickTipsPanel() {
                   topic={topic}
                   isExpanded={quickTipsExpandedSection === topic.id}
                   onToggle={() => handleToggleSection(topic.id)}
+                  highlightChipToggle={topic.id === "assistance" && quickTipsHighlightChipToggle}
                 />
               </div>
             ))}

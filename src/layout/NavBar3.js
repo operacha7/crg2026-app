@@ -349,6 +349,7 @@ export default function NavBar3() {
     setQuickTipsExpandedSection,
     quickTipsShownThisSession,
     setQuickTipsShownThisSession,
+    setQuickTipsHighlightChipToggle,
   } = useAppData();
 
   // Get organization name for logging
@@ -415,6 +416,7 @@ export default function NavBar3() {
         setActiveAssistanceChips(new Set(tempSelections));
         setIsPanelOpen(false);
         setIsLocked(false);
+
       }
     }
 
@@ -464,6 +466,7 @@ export default function NavBar3() {
         setSavedSelections(tempSelections);
         setActiveAssistanceChips(new Set(tempSelections));
         setIsPanelOpen(false);
+
       }, 300);
     }
   };
@@ -532,9 +535,11 @@ export default function NavBar3() {
     setIsLocked(false);
 
     // Auto-open Quick Tips to Assistance section on first multi-selection of session
+    // Highlight the chip toggle section to draw attention to the toggling feature
     if (tempSelections.length > 1 && !quickTipsShownThisSession) {
       setQuickTipsOpen(true);
       setQuickTipsExpandedSection("assistance");
+      setQuickTipsHighlightChipToggle(true);
       setQuickTipsShownThisSession(true);
     }
   };

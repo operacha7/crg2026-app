@@ -358,6 +358,8 @@
   --color-quicktips-section-body-text: #000000;
   --color-quicktips-section-border: #D1D5DB;
   --color-quicktips-icon-label: #666666;
+  --color-quicktips-highlight-bg: #FFF3CD; /* Yellow highlight for auto-opened chip toggle section */
+  --color-quicktips-highlight-border: #FFC857; /* Gold border for slide-out highlight */
 
   /* Quick Tips Panel Typography */
   --font-size-quicktips-title: 20px;

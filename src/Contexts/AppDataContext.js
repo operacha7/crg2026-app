@@ -128,6 +128,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
   const [quickTipsOpen, setQuickTipsOpen] = useState(false);
   const [quickTipsExpandedSection, setQuickTipsExpandedSection] = useState(null); // Which accordion section is expanded
   const [quickTipsShownThisSession, setQuickTipsShownThisSession] = useState(false); // Track if auto-shown already
+  const [quickTipsHighlightChipToggle, setQuickTipsHighlightChipToggle] = useState(false); // Highlight chip toggle section on auto-open
 
   // Clear client coordinates when zip code changes
   useEffect(() => {
@@ -282,6 +283,8 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
     setQuickTipsExpandedSection,
     quickTipsShownThisSession,
     setQuickTipsShownThisSession,
+    quickTipsHighlightChipToggle,
+    setQuickTipsHighlightChipToggle,
   };
 
   return (
