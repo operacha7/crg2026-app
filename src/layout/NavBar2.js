@@ -839,14 +839,19 @@ function LLMSearchDropdown({
           <div className="p-4">
             {/* Search input label with clear button */}
             <div className="flex justify-between items-center mb-2">
-              <p className="text-sm" style={{ color: "#000000", fontFamily: "'Open Sans', sans-serif" }}>
+              <p className="text-lg" style={{ color: "#F3EED9", fontFamily: "'Open Sans', sans-serif" }}>
                 Describe what you're looking for in plain language:
               </p>
               {localValue && (
                 <button
                   onClick={handleClearClick}
-                  className="text-xs hover:underline"
-                  style={{ color: "var(--color-link)", fontFamily: "'Open Sans', sans-serif" }}
+                  className="text-sm px-3 py-1 rounded-full transition-all duration-200 hover:brightness-90"
+                  style={{
+                    backgroundColor: "#007ab8",
+                    color: "#F3EED9",
+                    fontFamily: "'Open Sans', sans-serif",
+                    fontWeight: "500",
+                  }}
                 >
                   Clear Search
                 </button>
@@ -863,7 +868,7 @@ function LLMSearchDropdown({
               className="w-full p-3 rounded resize-none"
               style={{
                 height: "80px",
-                fontSize: "14px",
+                fontSize: "16px",
                 color: "var(--color-text-primary)",
                 backgroundColor: "#FFFFFF",
                 border: "1px solid #ccc",
@@ -875,15 +880,22 @@ function LLMSearchDropdown({
             {/* Address input section */}
             <div className="mt-4">
               <div className="flex justify-between items-center mb-2">
-                <p className="text-sm" style={{ color: "#000000", fontFamily: "'Open Sans', sans-serif" }}>
+                <p className="text-lg" style={{ color: "#F3EED9", fontFamily: "'Open Sans', sans-serif" }}>
                   Optional: Enter client address for distance calculation:
                 </p>
                 {/* Clear address button - only show when address is set */}
                 {(localAddress || clientAddress) && (
                   <button
                     onClick={handleClearAddress}
-                    className="text-xs hover:underline"
-                    style={{ color: "var(--color-link)", fontFamily: "'Open Sans', sans-serif" }}
+                    className="text-sm px-3 py-1 rounded-full transition-all duration-200 hover:brightness-90"
+                    style={{
+                      backgroundColor: "#007ab8",
+                      color: "#F3EED9",
+                      fontFamily: "'Open Sans', sans-serif",
+                      fontWeight: "500",
+                      opacity: isGeocoding ? 0.5 : 1,
+                      cursor: isGeocoding ? "not-allowed" : "pointer",
+                    }}
                     disabled={isGeocoding}
                   >
                     Clear Address
@@ -910,7 +922,7 @@ function LLMSearchDropdown({
                   placeholder="e.g., 1234 Main St, Houston, TX 77002"
                   className="w-full p-3 rounded"
                   style={{
-                    fontSize: "14px",
+                    fontSize: "16px",
                     color: "var(--color-text-primary)",
                     backgroundColor: "#FFFFFF",
                     border: geocodeError ? "2px solid var(--color-error-text)" : "1px solid #ccc",
