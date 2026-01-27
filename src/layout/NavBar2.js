@@ -385,7 +385,7 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
 
 // Zip Code dropdown - hover to open version with type-to-search
 // Has slight delay before closing to allow time to move to dropdown
-function ZipCodeDropdown({ value, onChange, options = [] }) {
+function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select Zip Code", useDropdownStyle = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [hoveredOption, setHoveredOption] = useState(null);
@@ -484,13 +484,13 @@ function ZipCodeDropdown({ value, onChange, options = [] }) {
           paddingLeft: "var(--padding-navbar2-btn-x)",
           paddingRight: "var(--padding-navbar2-btn-x)",
           borderRadius: "var(--radius-navbar2-btn)",
-          fontSize: "var(--font-size-navbar2-btn)",
-          fontWeight: "var(--font-weight-navbar2-btn)",
-          letterSpacing: "var(--letter-spacing-navbar2-btn)",
+          fontSize: useDropdownStyle ? "var(--font-size-navbar2-dropdown)" : "var(--font-size-navbar2-btn)",
+          fontWeight: useDropdownStyle ? "var(--font-weight-navbar2-dropdown)" : "var(--font-weight-navbar2-btn)",
+          letterSpacing: useDropdownStyle ? "var(--letter-spacing-navbar2-dropdown)" : "var(--letter-spacing-navbar2-btn)",
           border: hasValue ? "1px solid rgba(255,255,255,1)" : "none",
         }}
       >
-        {hasValue ? value : "Select Zip Code"}
+        {hasValue ? value : placeholder}
       </button>
 
       {isOpen && (
@@ -1296,15 +1296,15 @@ function LocationFilters({
         }}
         allowReset={true}
       />
-      <FilterDropdown
-        placeholder="-- Select Zip --"
-        options={zipOptions}
+      <ZipCodeDropdown
         value={selectedLocationZip}
         onChange={(val) => {
           setSelectedLocationZip(val);
           setSelectedNeighborhood("");
         }}
-        allowReset={true}
+        options={zipOptions}
+        placeholder="Select Zip"
+        useDropdownStyle={true}
       />
       <SearchableDropdown
         placeholder="-- Select Neighborhood --"
