@@ -213,11 +213,35 @@ export default function ResultRow({
             }}
           />
           <div className="flex-1 min-w-0">
-            <div className="font-semibold text-base leading-tight">{record.organization}</div>
+            {record.webpage ? (
+              <a
+                href={record.webpage}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-base leading-tight hover:underline"
+                style={{ color: "#0066cc", textDecoration: "none" }}
+              >
+                {record.organization}
+              </a>
+            ) : (
+              <div className="font-semibold text-base leading-tight">{record.organization}</div>
+            )}
             {addressLines.length > 0 && (
-              <div className="text-sm text-gray-600 mt-1">
-                {addressLines.join(", ")}
-              </div>
+              record.googlemaps ? (
+                <a
+                  href={record.googlemaps}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm mt-1 block hover:underline"
+                  style={{ color: "#0066cc", textDecoration: "none" }}
+                >
+                  {addressLines.join(", ")}
+                </a>
+              ) : (
+                <div className="text-sm text-gray-600 mt-1">
+                  {addressLines.join(", ")}
+                </div>
+              )
             )}
           </div>
           <div className="flex flex-col items-end flex-shrink-0">
@@ -417,31 +441,70 @@ export default function ResultRow({
 
       {/* Organization Column - org name + address below, gap before (20px) */}
       <div className="flex flex-col" style={{ paddingLeft: "20px" }}>
-        {/* Organization name (no favicon) */}
-        <span
-          style={{
-            fontSize: "var(--font-size-results-org)",
-            fontWeight: "var(--font-weight-results-org)",
-            letterSpacing: "var(--letter-spacing-results-org)",
-          }}
-        >
-          {record.organization}
-        </span>
-        {/* Address below org name with 10px gap */}
-        {addressLines.length > 0 && (
-          <div
-            className="flex flex-col"
+        {/* Organization name - hyperlink to webpage if available */}
+        {record.webpage ? (
+          <a
+            href={record.webpage}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline"
             style={{
-              marginTop: "10px",
-              fontSize: "var(--font-size-results-default)",
-              fontWeight: "var(--font-weight-results-default)",
-              letterSpacing: "var(--letter-spacing-results-default)",
+              fontSize: "var(--font-size-results-org)",
+              fontWeight: "var(--font-weight-results-org)",
+              letterSpacing: "var(--letter-spacing-results-org)",
+              color: "#0066cc",
+              textDecoration: "none",
             }}
           >
-            {addressLines.map((line, idx) => (
-              <div key={idx}>{line}</div>
-            ))}
-          </div>
+            {record.organization}
+          </a>
+        ) : (
+          <span
+            style={{
+              fontSize: "var(--font-size-results-org)",
+              fontWeight: "var(--font-weight-results-org)",
+              letterSpacing: "var(--letter-spacing-results-org)",
+            }}
+          >
+            {record.organization}
+          </span>
+        )}
+        {/* Address below org name with 10px gap - hyperlink to Google Maps if available */}
+        {addressLines.length > 0 && (
+          record.googlemaps ? (
+            <a
+              href={record.googlemaps}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col hover:underline"
+              style={{
+                marginTop: "10px",
+                fontSize: "var(--font-size-results-default)",
+                fontWeight: "var(--font-weight-results-default)",
+                letterSpacing: "var(--letter-spacing-results-default)",
+                color: "#0066cc",
+                textDecoration: "none",
+              }}
+            >
+              {addressLines.map((line, idx) => (
+                <div key={idx}>{line}</div>
+              ))}
+            </a>
+          ) : (
+            <div
+              className="flex flex-col"
+              style={{
+                marginTop: "10px",
+                fontSize: "var(--font-size-results-default)",
+                fontWeight: "var(--font-weight-results-default)",
+                letterSpacing: "var(--letter-spacing-results-default)",
+              }}
+            >
+              {addressLines.map((line, idx) => (
+                <div key={idx}>{line}</div>
+              ))}
+            </div>
+          )
         )}
       </div>
 
