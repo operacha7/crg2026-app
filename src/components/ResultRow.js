@@ -10,10 +10,9 @@ import {
   formatIconName,
 } from "../utils/formatters";
 
-// Maximum visible lines before showing expand chevron
-const MAX_VISIBLE_LINES = 5;
-// Line reserved for chevron when content exceeds max
-const LINES_FOR_CHEVRON = 1;
+// Max height for collapsed content area (enforces uniform row height)
+// Approximately 6 lines at ~20px each = 120px
+const COLLAPSED_MAX_HEIGHT = 120;
 
 // Format date to MM-DD-YYYY from various input formats
 function formatStatusDate(dateStr) {
@@ -186,10 +185,6 @@ export default function ResultRow({
       : "var(--color-results-row-odd-bg)";
     return { backgroundColor: bgColor };
   };
-
-  // Calculate if we need expansion for either column
-  const requirementsNeedsExpansion = requirements.length > MAX_VISIBLE_LINES;
-  const zipNeedsExpansion = zipCodes.length > MAX_VISIBLE_LINES;
 
   // Status colors for mobile card
   const statusBgColor = {
@@ -724,36 +719,37 @@ export default function ResultRow({
       >
         {requirements.length > 0 ? (
           <>
-            {/* Content area */}
-            <div className="flex-1">
-              {(requirementsExpanded || !requirementsNeedsExpansion
-                ? requirements
-                : requirements.slice(0, MAX_VISIBLE_LINES - LINES_FOR_CHEVRON)
-              ).map((req, idx) => (
+            {/* Content area - constrained height when collapsed for uniform rows */}
+            <div
+              className="flex-1"
+              style={requirementsExpanded ? {} : {
+                maxHeight: `${COLLAPSED_MAX_HEIGHT}px`,
+                overflow: "hidden",
+              }}
+            >
+              {requirements.map((req, idx) => (
                 <div key={idx} className="flex items-start gap-2">
                   <span>•</span>
                   <span>{req}</span>
                 </div>
               ))}
             </div>
-            {/* Chevron - centered with label */}
-            {requirementsNeedsExpansion && (
-              <div className="flex justify-center mt-1">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setRequirementsExpanded(!requirementsExpanded);
-                  }}
-                  className="flex items-center gap-1 hover:opacity-80 transition-opacity"
-                  style={{ fontSize: "var(--font-size-results-more-info)" }}
-                >
-                  <span style={{ color: "var(--color-results-expand-chevron)" }}>
-                    {requirementsExpanded ? "Less Info" : "More Info"}
-                  </span>
-                  <DoubleChevronIcon expanded={requirementsExpanded} />
-                </button>
-              </div>
-            )}
+            {/* Chevron - always show when there's content, allows expand/collapse */}
+            <div className="flex justify-center mt-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setRequirementsExpanded(!requirementsExpanded);
+                }}
+                className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+                style={{ fontSize: "var(--font-size-results-more-info)" }}
+              >
+                <span style={{ color: "var(--color-results-expand-chevron)" }}>
+                  {requirementsExpanded ? "Less Info" : "More Info"}
+                </span>
+                <DoubleChevronIcon expanded={requirementsExpanded} />
+              </button>
+            </div>
           </>
         ) : (
           ""
@@ -770,29 +766,30 @@ export default function ResultRow({
       >
         {zipCodes.length > 0 ? (
           <>
-            {/* Content area - flex-1 to fill available space */}
-            <div className="flex-1 flex flex-col">
-              {(zipExpanded || !zipNeedsExpansion
-                ? zipCodes
-                : zipCodes.slice(0, MAX_VISIBLE_LINES - LINES_FOR_CHEVRON)
-              ).map((zip, idx) => (
+            {/* Content area - constrained height when collapsed for uniform rows */}
+            <div
+              className="flex-1 flex flex-col"
+              style={zipExpanded ? {} : {
+                maxHeight: `${COLLAPSED_MAX_HEIGHT}px`,
+                overflow: "hidden",
+              }}
+            >
+              {zipCodes.map((zip, idx) => (
                 <div key={idx}>{zip}</div>
               ))}
             </div>
-            {/* Chevron - centered, no label */}
-            {zipNeedsExpansion && (
-              <div className="flex justify-center mt-1">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setZipExpanded(!zipExpanded);
-                  }}
-                  className="flex items-center justify-center hover:opacity-80 transition-opacity"
-                >
-                  <DoubleChevronIcon expanded={zipExpanded} />
-                </button>
-              </div>
-            )}
+            {/* Chevron - always show when there's content */}
+            <div className="flex justify-center mt-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setZipExpanded(!zipExpanded);
+                }}
+                className="flex items-center justify-center hover:opacity-80 transition-opacity"
+              >
+                <DoubleChevronIcon expanded={zipExpanded} />
+              </button>
+            </div>
           </>
         ) : (
           ""
