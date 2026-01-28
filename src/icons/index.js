@@ -50,3 +50,4 @@ export { HandymanIcon } from './HandymanIcon';
 export { AnimalsIcon } from './AnimalsIcon';
 export { ChristmasIcon } from './ChristmasIcon';
 export { OtherIcon } from './OtherIcon';
+export { DentalVisionIcon } from './DentalVisionIcon';

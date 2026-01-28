@@ -32,6 +32,7 @@ import {
   AnimalsIcon,
   ChristmasIcon,
   OtherIcon,
+  DentalVisionIcon,
 } from './index';
 
 // Map icon names (as stored in Supabase) to actual components
@@ -65,6 +66,7 @@ export const iconMap = {
   AnimalsIcon,
   ChristmasIcon,
   OtherIcon,
+  DentalVisionIcon,
 };
 
 // Helper function to get icon component by name
