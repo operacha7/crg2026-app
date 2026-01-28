@@ -14,6 +14,10 @@
  * @param {object} style - Additional styles for positioning (top, left, right, etc.)
  * @param {string} okButtonText - Text for OK button (default: "OK")
  * @param {boolean} okDisabled - Whether OK button is disabled (default: false)
+ * @param {function} onClear - Optional Clear button handler (renders between Cancel and OK)
+ * @param {string} clearButtonText - Text for Clear button (default: "Clear")
+ * @param {string} clearButtonBgColor - Background color for Clear button (default: "#007ab8")
+ * @param {string} clearButtonTextColor - Text color for Clear button (default: "#F3EED9")
  */
 export default function DropPanel({
   title,
@@ -25,6 +29,10 @@ export default function DropPanel({
   style = {},
   okButtonText = "OK",
   okDisabled = false,
+  onClear,
+  clearButtonText = "Clear",
+  clearButtonBgColor = "#007ab8",
+  clearButtonTextColor = "#F3EED9",
 }) {
   if (!isOpen) return null;
 
@@ -111,6 +119,25 @@ export default function DropPanel({
           >
             Cancel
           </button>
+
+          {/* Optional Clear button in the middle */}
+          {onClear && (
+            <button
+              onClick={onClear}
+              className="font-opensans transition-all duration-200 hover:brightness-110"
+              style={{
+                backgroundColor: clearButtonBgColor,
+                color: clearButtonTextColor,
+                width: "var(--width-panel-btn)",
+                height: "var(--height-panel-btn)",
+                borderRadius: "var(--radius-panel-btn)",
+                fontSize: "var(--font-size-panel-btn)",
+                letterSpacing: "var(--letter-spacing-panel-btn)",
+              }}
+            >
+              {clearButtonText}
+            </button>
+          )}
 
           <button
             onClick={onSave}

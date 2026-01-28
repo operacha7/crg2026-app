@@ -234,12 +234,24 @@ export default function DistancePanel({
     onCancel();
   };
 
+  // Handle clear - reset both fields to defaults
+  const handleClear = () => {
+    setTempAddress("");
+    setTempCoordinates(formatCoordinatesForDisplay(defaultCoordinates) || "");
+    setCoordsError(false);
+    setGeocodeError("");
+    setAddressGeocoded(false);
+    setLastGeocodedAddress("");
+  };
+
   return (
     <DropPanel
       title="Enter Start Address"
       isOpen={isOpen}
       onCancel={handleCancel}
       onSave={handleSave}
+      onClear={handleClear}
+      clearButtonText="Clear"
       panelRef={panelRef}
       style={{
         top: "100%",
@@ -247,7 +259,7 @@ export default function DistancePanel({
         transform: "translateX(-50%)",
       }}
     >
-      <div className="flex flex-col gap-4" style={{ minWidth: "350px" }}>
+      <div className="flex flex-col gap-4" style={{ minWidth: "420px" }}>
         {/* Address Input */}
         <div className="relative">
           <input

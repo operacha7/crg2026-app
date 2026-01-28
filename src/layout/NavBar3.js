@@ -375,7 +375,6 @@ export default function NavBar3() {
   const [savedSelections, setSavedSelections] = useState([]);
   // Panel state
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [isLocked, setIsLocked] = useState(false); // Click locks panel open
   // Temporary selections while panel is open
   const [tempSelections, setTempSelections] = useState([]);
 
@@ -383,7 +382,6 @@ export default function NavBar3() {
   const panelRef = useRef(null);
   const buttonRef = useRef(null);
   const containerRef = useRef(null);
-  const closeTimeoutRef = useRef(null);
 
   // Fetch assistance data on mount
   useEffect(() => {
@@ -415,8 +413,6 @@ export default function NavBar3() {
         setSavedSelections(tempSelections);
         setActiveAssistanceChips(new Set(tempSelections));
         setIsPanelOpen(false);
-        setIsLocked(false);
-
       }
     }
 
@@ -427,13 +423,6 @@ export default function NavBar3() {
       document.removeEventListener("touchstart", handleClickOutside);
     };
   }, [isPanelOpen, tempSelections, setActiveAssistanceChips]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
-    };
-  }, []);
 
   // Get type info by assist_id (text field that matches directory.assist_id)
   const getTypeInfo = (typeId) => {
@@ -449,33 +438,18 @@ export default function NavBar3() {
     return null;
   };
 
-  // Hover handlers for panel
-  const handleMouseEnter = () => {
-    if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
-    if (!isLocked) {
+  // Click handler toggles the panel
+  const handleOpenPanel = () => {
+    if (isPanelOpen) {
+      // Closing - auto-save selections
+      setSavedSelections(tempSelections);
+      setActiveAssistanceChips(new Set(tempSelections));
+      setIsPanelOpen(false);
+    } else {
+      // Opening - load saved selections into temp
       setTempSelections([...savedSelections]);
       setIsPanelOpen(true);
     }
-  };
-
-  const handleMouseLeave = () => {
-    if (!isLocked) {
-      // Delay before closing to allow user to return if they accidentally move off
-      closeTimeoutRef.current = setTimeout(() => {
-        // Auto-save and activate all selections when leaving
-        setSavedSelections(tempSelections);
-        setActiveAssistanceChips(new Set(tempSelections));
-        setIsPanelOpen(false);
-
-      }, 300);
-    }
-  };
-
-  // Click handler locks the panel open
-  const handleOpenPanel = () => {
-    setTempSelections([...savedSelections]);
-    setIsLocked(!isLocked);
-    setIsPanelOpen(true);
   };
 
   // Handle type toggle in panel
@@ -532,7 +506,6 @@ export default function NavBar3() {
     // assist_id is already text, use directly
     setActiveAssistanceChips(new Set(tempSelections));
     setIsPanelOpen(false);
-    setIsLocked(false);
 
     // Auto-open Quick Tips to Assistance section on first multi-selection of session
     // Highlight the chip toggle section to draw attention to the toggling feature
@@ -609,12 +582,10 @@ export default function NavBar3() {
       >
         {/* Left side: Assistance button and chips */}
         <div className="flex items-center flex-1 min-w-0">
-          {/* Assistance button with hover container */}
+          {/* Assistance button container */}
           <div
             ref={containerRef}
             className="relative"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
           >
             <AssistanceButton
               hasSelections={savedSelections.length > 0}
@@ -680,10 +651,7 @@ export default function NavBar3() {
         {/* Top row: Assistance button + user name */}
         <div className="flex items-center justify-between mb-2">
           <div
-            ref={containerRef}
             className="relative"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
           >
             <button
               ref={buttonRef}

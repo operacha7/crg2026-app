@@ -47,15 +47,12 @@ function ModeButton({ label, isActive, onClick }) {
   );
 }
 
-// HoverDropdown component - opens on hover, click locks it open
-// Replaces native select for better hover control
-// Has slight delay before closing to allow time to move to dropdown
+// HoverDropdown component - click to open, click to close
+// Replaces native select for better control
 function HoverDropdown({ placeholder, options = [], value, onChange, allowReset = true, maxChars = 74 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
   const [hoveredOption, setHoveredOption] = useState(null);
   const containerRef = useRef(null);
-  const closeTimeoutRef = useRef(null);
   const hasValue = value && value !== "";
 
   // Truncate text if longer than maxChars
@@ -69,51 +66,25 @@ function HoverDropdown({ placeholder, options = [], value, onChange, allowReset 
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setIsOpen(false);
-        setIsLocked(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
-    };
-  }, []);
-
-  const handleMouseEnter = () => {
-    if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
-    if (!isLocked) setIsOpen(true);
-  };
-
-  const handleMouseLeave = () => {
-    if (!isLocked) {
-      // Delay before closing to allow user to return if they accidentally move off
-      closeTimeoutRef.current = setTimeout(() => {
-        setIsOpen(false);
-      }, 300);
-    }
-  };
-
   const handleClick = () => {
-    setIsLocked(!isLocked);
-    setIsOpen(true);
+    setIsOpen(!isOpen);
   };
 
   const handleSelect = (option) => {
     onChange?.(option);
     setIsOpen(false);
-    setIsLocked(false);
   };
 
   return (
     <div
       ref={containerRef}
       className="relative"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
     >
       <button
         onClick={handleClick}
@@ -188,14 +159,13 @@ const FilterDropdown = HoverDropdown;
 
 // SearchableDropdown - allows typing to filter options (searches anywhere in name)
 // Used for organization dropdowns where user wants to find "Health" anywhere in org name
+// Click to open, click to close
 function SearchableDropdown({ placeholder, options = [], value, onChange, allowReset = true, maxChars = 74 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
   const [hoveredOption, setHoveredOption] = useState(null);
   const [searchText, setSearchText] = useState("");
   const containerRef = useRef(null);
   const inputRef = useRef(null);
-  const closeTimeoutRef = useRef(null);
   const hasValue = value && value !== "";
 
   // Truncate text if longer than maxChars
@@ -216,19 +186,11 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setIsOpen(false);
-        setIsLocked(false);
         setSearchText("");
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
-    };
   }, []);
 
   // Focus input when dropdown opens
@@ -238,30 +200,13 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
     }
   }, [isOpen]);
 
-  const handleMouseEnter = () => {
-    if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
-    if (!isLocked) setIsOpen(true);
-  };
-
-  const handleMouseLeave = () => {
-    if (!isLocked) {
-      // Delay before closing to allow user to return if they accidentally move off
-      closeTimeoutRef.current = setTimeout(() => {
-        setIsOpen(false);
-        setSearchText("");
-      }, 300);
-    }
-  };
-
   const handleClick = () => {
-    setIsLocked(!isLocked);
-    setIsOpen(true);
+    setIsOpen(!isOpen);
   };
 
   const handleSelect = (option) => {
     onChange?.(option);
     setIsOpen(false);
-    setIsLocked(false);
     setSearchText("");
   };
 
@@ -272,7 +217,6 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
   const handleKeyDown = (e) => {
     if (e.key === "Escape") {
       setIsOpen(false);
-      setIsLocked(false);
       setSearchText("");
     } else if (e.key === "Enter" && filteredOptions.length === 1) {
       // Auto-select if only one match
@@ -284,8 +228,6 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
     <div
       ref={containerRef}
       className="relative"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
     >
       <button
         onClick={handleClick}
@@ -383,16 +325,13 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
   );
 }
 
-// Zip Code dropdown - hover to open version with type-to-search
-// Has slight delay before closing to allow time to move to dropdown
+// Zip Code dropdown - click to open with type-to-search
 function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select Zip Code", useDropdownStyle = false }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
   const [hoveredOption, setHoveredOption] = useState(null);
   const [searchText, setSearchText] = useState("");
   const containerRef = useRef(null);
   const inputRef = useRef(null);
-  const closeTimeoutRef = useRef(null);
   const hasValue = value && value !== "";
 
   // Filter options by search text
@@ -405,19 +344,11 @@ function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select 
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setIsOpen(false);
-        setIsLocked(false);
         setSearchText("");
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
-    };
   }, []);
 
   // Focus input when dropdown opens
@@ -427,30 +358,13 @@ function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select 
     }
   }, [isOpen]);
 
-  const handleMouseEnter = () => {
-    if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
-    if (!isLocked) setIsOpen(true);
-  };
-
-  const handleMouseLeave = () => {
-    if (!isLocked) {
-      // Delay before closing to allow user to return if they accidentally move off
-      closeTimeoutRef.current = setTimeout(() => {
-        setIsOpen(false);
-        setSearchText("");
-      }, 300);
-    }
-  };
-
   const handleClick = () => {
-    setIsLocked(!isLocked);
-    setIsOpen(true);
+    setIsOpen(!isOpen);
   };
 
   const handleSelect = (option) => {
     onChange?.(option);
     setIsOpen(false);
-    setIsLocked(false);
     setSearchText("");
   };
 
@@ -460,7 +374,6 @@ function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select 
       handleSelect(filteredOptions[0]);
     } else if (e.key === "Escape") {
       setIsOpen(false);
-      setIsLocked(false);
       setSearchText("");
     }
   };
@@ -469,8 +382,6 @@ function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select 
     <div
       ref={containerRef}
       className="relative"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
     >
       <button
         onClick={handleClick}
@@ -560,7 +471,7 @@ function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select 
 }
 
 
-// LLM Search dropdown with panel - matches ZipCodeDropdown pattern
+// LLM Search dropdown with panel - click to open
 function LLMSearchDropdown({
   value,
   onChange,
@@ -574,7 +485,6 @@ function LLMSearchDropdown({
   onAddressChange,
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
   const [localValue, setLocalValue] = useState(value || "");
   const [localAddress, setLocalAddress] = useState(clientAddress || "");
   const [loadingPhraseIndex, setLoadingPhraseIndex] = useState(0);
@@ -582,7 +492,6 @@ function LLMSearchDropdown({
   const [geocodeError, setGeocodeError] = useState("");
   const containerRef = useRef(null);
   const inputRef = useRef(null);
-  const closeTimeoutRef = useRef(null);
   const hasValue = value && value.trim() !== "";
 
   // Rotate loading phrases while loading
@@ -632,39 +541,14 @@ function LLMSearchDropdown({
           onSearch(localValue);
         }
         setIsOpen(false);
-        setIsLocked(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, localValue, value, onChange, onSearch]);
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
-    };
-  }, []);
-
-  const handleMouseEnter = () => {
-    if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
-    if (!isLocked) setIsOpen(true);
-  };
-
-  const handleMouseLeave = () => {
-    if (!isLocked) {
-      closeTimeoutRef.current = setTimeout(() => {
-        // Don't auto-close if user has entered text
-        if (!localValue.trim()) {
-          setIsOpen(false);
-        }
-      }, 300);
-    }
-  };
-
   const handleClick = () => {
-    setIsLocked(!isLocked);
-    setIsOpen(true);
+    setIsOpen(!isOpen);
   };
 
   const handleSearchClick = async () => {
@@ -695,7 +579,6 @@ function LLMSearchDropdown({
     onChange(localValue);
     onSearch(localValue);
     setIsOpen(false);
-    setIsLocked(false);
   };
 
   const handleClearClick = () => {
@@ -712,7 +595,6 @@ function LLMSearchDropdown({
       handleSearchClick();
     } else if (e.key === "Escape") {
       setIsOpen(false);
-      setIsLocked(false);
     }
   };
 
@@ -726,8 +608,6 @@ function LLMSearchDropdown({
     <div
       ref={containerRef}
       className="relative"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
     >
       {/* Trigger button */}
       <button
@@ -979,7 +859,6 @@ function LLMSearchDropdown({
               <button
                 onClick={() => {
                   setIsOpen(false);
-                  setIsLocked(false);
                   setLocalValue(value || "");
                   setLocalAddress(clientAddress || "");
                 }}
@@ -1420,6 +1299,12 @@ export default function NavBar2() {
       // Clear client coordinates
       setClientAddress("");
       setClientCoordinates("");
+      // Clear LLM search state (both input boxes in the Search for Resources panel)
+      setLlmSearchQuery("");
+      setLlmSearchFilters(null);
+      setLlmSearchInterpretation("");
+      setLlmSearchError("");
+      setLlmRelatedSearches([]);
       setActiveSearchMode(newMode);
     }
   };

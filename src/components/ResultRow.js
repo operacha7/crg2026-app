@@ -15,6 +15,25 @@ const MAX_VISIBLE_LINES = 5;
 // Line reserved for chevron when content exceeds max
 const LINES_FOR_CHEVRON = 1;
 
+// Format date to MM-DD-YYYY from various input formats
+function formatStatusDate(dateStr) {
+  if (!dateStr) return "";
+
+  // If already MM/DD/YYYY, just replace slashes with dashes
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+    return dateStr.replace(/\//g, "-");
+  }
+
+  // If YYYY-MM-DD (ISO format), rearrange to MM-DD-YYYY
+  if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+    const [year, month, day] = dateStr.split("-");
+    return `${month}-${day.substring(0, 2)}-${year}`;
+  }
+
+  // Fallback: return as-is with slashes replaced
+  return dateStr.replace(/\//g, "-");
+}
+
 // Grid column definitions - must match ResultsHeader
 // Using percentages for responsive scaling (like legacy SearchResults.js)
 // Select(4%) + Miles(3%) + Org(20%) + Assistance(8%) + Hours(17%) + Status(6%) + Phone(6%) + Requirements(33%) + Zip(3%)
@@ -119,14 +138,15 @@ export default function ResultRow({
 }) {
   const [requirementsExpanded, setRequirementsExpanded] = useState(false);
   const [zipExpanded, setZipExpanded] = useState(false);
+  const [statusExpanded, setStatusExpanded] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState(false);
 
   // Get the icon component for the primary assistance type
   const AssistanceIconComponent = assistanceIcon ? getIconByName(assistanceIcon) : null;
 
-  // Parse requirements into array (assuming comma or newline separated)
+  // Parse requirements into array (newline separated from Google Sheets Alt+Enter)
   const requirements = record.requirements
-    ? record.requirements.split(/[,\n]/).map((r) => r.trim()).filter(Boolean)
+    ? record.requirements.split(/[\n]/).map((r) => r.trim()).filter(Boolean)
     : [];
 
   // Parse zip codes into array
@@ -210,6 +230,38 @@ export default function ResultRow({
             >
               {record.status}
             </span>
+            {(record.status_date || record.status_text) && (
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setStatusExpanded(!statusExpanded);
+                  }}
+                  className="flex items-center mt-0.5"
+                >
+                  <DoubleChevronIcon expanded={statusExpanded} />
+                </button>
+                {statusExpanded && (
+                  <div
+                    className="absolute z-10 shadow-lg rounded right-0 mt-1"
+                    style={{
+                      minWidth: "150px",
+                      maxWidth: "250px",
+                      backgroundColor: "#FFFFFF",
+                      border: "1px solid #CCCCCC",
+                      padding: "6px 10px",
+                    }}
+                  >
+                    {record.status_date && (
+                      <div className="text-xs text-gray-700 italic">{formatStatusDate(record.status_date)}</div>
+                    )}
+                    {record.status_text && (
+                      <div className="text-xs text-gray-700 italic">{record.status_text}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -503,8 +555,62 @@ export default function ResultRow({
       </div>
 
       {/* Status Column - gap before (40px) */}
-      <div className="flex items-start justify-center" style={{ paddingLeft: "40px" }}>
+      <div className="flex flex-col items-center" style={{ paddingLeft: "40px" }}>
         <StatusPill statusId={record.status_id} status={record.status} />
+        {/* Expandable status details - chevron below pill */}
+        {(record.status_date || record.status_text) && (
+          <div className="relative">
+            {/* Chevron toggle */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setStatusExpanded(!statusExpanded);
+              }}
+              className="flex items-center justify-center hover:opacity-80 transition-opacity mt-1"
+            >
+              <DoubleChevronIcon expanded={statusExpanded} />
+            </button>
+            {/* Expanded content - positioned box directly under chevron, left-aligned */}
+            {statusExpanded && (
+              <div
+                className="absolute z-10 shadow-lg rounded"
+                style={{
+                  top: "100%",
+                  left: "0",
+                  marginTop: "2px",
+                  minWidth: "200px",
+                  maxWidth: "300px",
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #CCCCCC",
+                  padding: "8px 12px",
+                }}
+              >
+                {record.status_date && (
+                  <div
+                    className="italic"
+                    style={{
+                      fontSize: "var(--font-size-results-zip)",
+                      color: "#333333",
+                    }}
+                  >
+                    {formatStatusDate(record.status_date)}
+                  </div>
+                )}
+                {record.status_text && (
+                  <div
+                    className="italic"
+                    style={{
+                      fontSize: "var(--font-size-results-zip)",
+                      color: "#333333",
+                    }}
+                  >
+                    {record.status_text}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Telephone Column - gap before (20px) */}
