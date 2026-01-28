@@ -51,3 +51,5 @@ export { AnimalsIcon } from './AnimalsIcon';
 export { ChristmasIcon } from './ChristmasIcon';
 export { OtherIcon } from './OtherIcon';
 export { DentalVisionIcon } from './DentalVisionIcon';
+export { MedicalDentalIcon } from './MedicalDentalIcon';
+export { MedicalVisionIcon } from './MedicalVisionIcon';

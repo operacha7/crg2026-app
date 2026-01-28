@@ -53,7 +53,11 @@ function AssistanceButton({ hasSelections, onClick, buttonRef }) {
 // Chip component for NavBar3
 // States: inactive (white bg, black text, black border) or active (teal bg, white text, white border)
 function AssistanceChip({ name, icon, isActive, onClick, fontSize, iconSize }) {
-  const IconComponent = icon ? getIconByName(icon) : null;
+  const iconResult = icon ? getIconByName(icon) : null;
+  // Normalize to array for consistent handling (supports comma-separated icons)
+  const IconComponents = iconResult
+    ? (Array.isArray(iconResult) ? iconResult : [iconResult])
+    : [];
 
   return (
     <button
@@ -79,7 +83,9 @@ function AssistanceChip({ name, icon, isActive, onClick, fontSize, iconSize }) {
         whiteSpace: "nowrap",
       }}
     >
-      {IconComponent && <IconComponent size={iconSize || 25} />}
+      {IconComponents.map((IconComp, idx) => (
+        <IconComp key={idx} size={iconSize || 25} />
+      ))}
       {name}
     </button>
   );
@@ -88,7 +94,11 @@ function AssistanceChip({ name, icon, isActive, onClick, fontSize, iconSize }) {
 // Panel type button - shows in dropdown panel
 // States: unselected (group color) or selected (white bg, black border)
 function PanelTypeButton({ name, icon, groupColor, isSelected, onClick, disabled }) {
-  const IconComponent = icon ? getIconByName(icon) : null;
+  const iconResult = icon ? getIconByName(icon) : null;
+  // Normalize to array for consistent handling (supports comma-separated icons)
+  const IconComponents = iconResult
+    ? (Array.isArray(iconResult) ? iconResult : [iconResult])
+    : [];
 
   return (
     <button
@@ -112,7 +122,9 @@ function PanelTypeButton({ name, icon, groupColor, isSelected, onClick, disabled
         textAlign: "left",
       }}
     >
-      {IconComponent && <IconComponent size={25} />}
+      {IconComponents.map((IconComp, idx) => (
+        <IconComp key={idx} size={25} />
+      ))}
       {name}
     </button>
   );

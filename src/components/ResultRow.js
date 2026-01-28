@@ -3,7 +3,7 @@
 // Handles expand/collapse for Requirements and Zip columns
 
 import React, { useState } from "react";
-import { getIconByName } from "../icons/iconMap";
+import { getIconByName, getIconNames } from "../icons/iconMap";
 import {
   formatHoursFromJson,
   formatAddress,
@@ -141,8 +141,14 @@ export default function ResultRow({
   const [statusExpanded, setStatusExpanded] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState(false);
 
-  // Get the icon component for the primary assistance type
-  const AssistanceIconComponent = assistanceIcon ? getIconByName(assistanceIcon) : null;
+  // Get the icon component(s) for the primary assistance type
+  // Can be a single component or array of components for comma-separated icons
+  const assistanceIconResult = assistanceIcon ? getIconByName(assistanceIcon) : null;
+  const assistanceIconNames = assistanceIcon ? getIconNames(assistanceIcon) : [];
+  // Normalize to array for consistent handling
+  const AssistanceIconComponents = assistanceIconResult
+    ? (Array.isArray(assistanceIconResult) ? assistanceIconResult : [assistanceIconResult])
+    : [];
 
   // Parse requirements into array (newline separated from Google Sheets Alt+Enter)
   const requirements = record.requirements
@@ -292,18 +298,20 @@ export default function ResultRow({
         {/* Assistance icons + phone */}
         <div className="flex items-center justify-between text-sm mb-2">
           <div className="flex items-center gap-1">
-            {AssistanceIconComponent && (
-              <span style={{ color: "var(--color-results-assistance-icon)" }}>
-                <AssistanceIconComponent size={18} />
+            {AssistanceIconComponents.map((IconComp, idx) => (
+              <span key={idx} style={{ color: "var(--color-results-assistance-icon)" }}>
+                <IconComp size={18} />
               </span>
-            )}
+            ))}
             {orgAssistanceTypes.slice(0, 3).map((at) => {
               const IconComp = getIconByName(at.icon);
-              return IconComp ? (
-                <span key={at.id_no} style={{ color: "var(--color-results-assistance-icon-secondary)" }}>
-                  <IconComp size={16} />
+              // Handle array result for comma-separated icons
+              const IconComponents = Array.isArray(IconComp) ? IconComp : (IconComp ? [IconComp] : []);
+              return IconComponents.map((IC, idx) => (
+                <span key={`${at.id_no}-${idx}`} style={{ color: "var(--color-results-assistance-icon-secondary)" }}>
+                  <IC size={16} />
                 </span>
-              ) : null;
+              ));
             })}
             {orgAssistanceTypes.length > 3 && (
               <span className="text-xs text-gray-500">+{orgAssistanceTypes.length - 3}</span>
@@ -397,32 +405,46 @@ export default function ResultRow({
           ...getBgStyle(),
         }}
       >
-      {/* Select Column - Icon + Checkbox side by side at top, bottoms aligned */}
+      {/* Select Column - Icons stacked vertically with checkbox next to first icon */}
       <div
-        className="flex items-end justify-center"
-        style={{ gap: "var(--gap-results-select-items)", alignSelf: "start" }}
+        className="flex justify-center"
+        style={{ alignSelf: "start", gap: "var(--gap-results-select-items)" }}
       >
-        <IconWithTooltip
-          IconComponent={AssistanceIconComponent}
-          size={25}
-          iconName={assistanceIcon}
-          color="var(--color-results-assistance-icon)"
-          position="bottom-right"
-        />
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={(e) => onSelect(record.id, e.target.checked)}
-          className="cursor-pointer"
-          style={{
-            width: "var(--size-results-checkbox)",
-            height: "var(--size-results-checkbox)",
-            position: "relative",
-            top: "-1.5px",
-            accentColor: "var(--color-results-checkbox-checked)",
-          }}
-          onClick={(e) => e.stopPropagation()}
-        />
+        {/* Icons column - all icons stacked vertically */}
+        {AssistanceIconComponents.length > 0 && (
+          <div className="flex flex-col" style={{ gap: "4px" }}>
+            {AssistanceIconComponents.map((IconComp, idx) => (
+              <IconWithTooltip
+                key={idx}
+                IconComponent={IconComp}
+                size={25}
+                iconName={assistanceIconNames[idx]}
+                color="var(--color-results-assistance-icon)"
+                position="bottom-right"
+              />
+            ))}
+          </div>
+        )}
+        {/* Checkbox - aligned with bottom of first icon (25px height) */}
+        <div
+          className="flex items-end"
+          style={{ height: AssistanceIconComponents.length > 0 ? "25px" : "auto" }}
+        >
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => onSelect(record.id, e.target.checked)}
+            className="cursor-pointer"
+            style={{
+              width: "var(--size-results-checkbox)",
+              height: "var(--size-results-checkbox)",
+              position: "relative",
+              top: "-1.5px",
+              accentColor: "var(--color-results-checkbox-checked)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
       </div>
 
       {/* Miles Column - with "mi" underneath */}
@@ -511,17 +533,20 @@ export default function ResultRow({
       {/* Assistance Column - icons for all assistance types this org provides */}
       <div className="flex flex-wrap gap-1" style={{ alignSelf: "start" }}>
         {orgAssistanceTypes.map((at) => {
-          const IconComp = getIconByName(at.icon);
-          return (
+          const IconResult = getIconByName(at.icon);
+          const iconNames = getIconNames(at.icon);
+          // Handle array result for comma-separated icons
+          const IconComponents = Array.isArray(IconResult) ? IconResult : (IconResult ? [IconResult] : []);
+          return IconComponents.map((IconComp, idx) => (
             <IconWithTooltip
-              key={at.id_no}
+              key={`${at.id_no}-${idx}`}
               IconComponent={IconComp}
               size={20}
-              iconName={at.icon}
+              iconName={iconNames[idx]}
               color="var(--color-results-assistance-icon-secondary)"
               position={rowIndex === 0 ? "bottom" : "top"}
             />
-          );
+          ));
         })}
       </div>
 
