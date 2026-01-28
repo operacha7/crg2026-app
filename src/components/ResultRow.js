@@ -2,7 +2,7 @@
 // Individual result row component for displaying resource data
 // Handles expand/collapse for Requirements and Zip columns
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { getIconByName, getIconNames } from "../icons/iconMap";
 import {
   formatHoursFromJson,
@@ -139,6 +139,22 @@ export default function ResultRow({
   const [zipExpanded, setZipExpanded] = useState(false);
   const [statusExpanded, setStatusExpanded] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState(false);
+
+  // Refs for measuring content overflow
+  const requirementsRef = useRef(null);
+  const zipRef = useRef(null);
+  const [requirementsOverflows, setRequirementsOverflows] = useState(false);
+  const [zipOverflows, setZipOverflows] = useState(false);
+
+  // Detect if content overflows the max height
+  useEffect(() => {
+    if (requirementsRef.current) {
+      setRequirementsOverflows(requirementsRef.current.scrollHeight > COLLAPSED_MAX_HEIGHT);
+    }
+    if (zipRef.current) {
+      setZipOverflows(zipRef.current.scrollHeight > COLLAPSED_MAX_HEIGHT);
+    }
+  }, [record.requirements, record.client_zip_codes]);
 
   // Get the icon component(s) for the primary assistance type
   // Can be a single component or array of components for comma-separated icons
@@ -721,6 +737,7 @@ export default function ResultRow({
           <>
             {/* Content area - constrained height when collapsed for uniform rows */}
             <div
+              ref={requirementsRef}
               className="flex-1"
               style={requirementsExpanded ? {} : {
                 maxHeight: `${COLLAPSED_MAX_HEIGHT}px`,
@@ -734,22 +751,24 @@ export default function ResultRow({
                 </div>
               ))}
             </div>
-            {/* Chevron - always show when there's content, allows expand/collapse */}
-            <div className="flex justify-center mt-1">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setRequirementsExpanded(!requirementsExpanded);
-                }}
-                className="flex items-center gap-1 hover:opacity-80 transition-opacity"
-                style={{ fontSize: "var(--font-size-results-more-info)" }}
-              >
-                <span style={{ color: "var(--color-results-expand-chevron)" }}>
-                  {requirementsExpanded ? "Less Info" : "More Info"}
-                </span>
-                <DoubleChevronIcon expanded={requirementsExpanded} />
-              </button>
-            </div>
+            {/* Chevron - only show when content overflows */}
+            {(requirementsOverflows || requirementsExpanded) && (
+              <div className="flex justify-center mt-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRequirementsExpanded(!requirementsExpanded);
+                  }}
+                  className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+                  style={{ fontSize: "var(--font-size-results-more-info)" }}
+                >
+                  <span style={{ color: "var(--color-results-expand-chevron)" }}>
+                    {requirementsExpanded ? "Less Info" : "More Info"}
+                  </span>
+                  <DoubleChevronIcon expanded={requirementsExpanded} />
+                </button>
+              </div>
+            )}
           </>
         ) : (
           ""
@@ -768,6 +787,7 @@ export default function ResultRow({
           <>
             {/* Content area - constrained height when collapsed for uniform rows */}
             <div
+              ref={zipRef}
               className="flex-1 flex flex-col"
               style={zipExpanded ? {} : {
                 maxHeight: `${COLLAPSED_MAX_HEIGHT}px`,
@@ -778,18 +798,20 @@ export default function ResultRow({
                 <div key={idx}>{zip}</div>
               ))}
             </div>
-            {/* Chevron - always show when there's content */}
-            <div className="flex justify-center mt-1">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setZipExpanded(!zipExpanded);
-                }}
-                className="flex items-center justify-center hover:opacity-80 transition-opacity"
-              >
-                <DoubleChevronIcon expanded={zipExpanded} />
-              </button>
-            </div>
+            {/* Chevron - only show when content overflows */}
+            {(zipOverflows || zipExpanded) && (
+              <div className="flex justify-center mt-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setZipExpanded(!zipExpanded);
+                  }}
+                  className="flex items-center justify-center hover:opacity-80 transition-opacity"
+                >
+                  <DoubleChevronIcon expanded={zipExpanded} />
+                </button>
+              </div>
+            )}
           </>
         ) : (
           ""
