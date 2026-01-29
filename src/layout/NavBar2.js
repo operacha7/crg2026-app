@@ -481,15 +481,10 @@ function LLMSearchDropdown({
   interpretation,
   error,
   relatedSearches = [],
-  clientAddress,
-  onAddressChange,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [localValue, setLocalValue] = useState(value || "");
-  const [localAddress, setLocalAddress] = useState(clientAddress || "");
   const [loadingPhraseIndex, setLoadingPhraseIndex] = useState(0);
-  const [isGeocoding, setIsGeocoding] = useState(false);
-  const [geocodeError, setGeocodeError] = useState("");
   const containerRef = useRef(null);
   const inputRef = useRef(null);
   const hasValue = value && value.trim() !== "";
@@ -510,18 +505,6 @@ function LLMSearchDropdown({
   useEffect(() => {
     setLocalValue(value || "");
   }, [value]);
-
-  // Sync local address with prop
-  useEffect(() => {
-    setLocalAddress(clientAddress || "");
-  }, [clientAddress]);
-
-  // Handle clearing the address
-  const handleClearAddress = () => {
-    setLocalAddress("");
-    onAddressChange?.("", "");
-    setGeocodeError("");
-  };
 
   // Focus input when panel opens
   useEffect(() => {
@@ -551,31 +534,8 @@ function LLMSearchDropdown({
     setIsOpen(!isOpen);
   };
 
-  const handleSearchClick = async () => {
+  const handleSearchClick = () => {
     if (!localValue.trim()) return;
-
-    // If there's a new address that needs geocoding, do it first
-    if (localAddress.trim() && localAddress !== clientAddress) {
-      setIsGeocoding(true);
-      setGeocodeError("");
-      try {
-        const result = await geocodeAddress(localAddress.trim());
-        if (result.success) {
-          onAddressChange?.(localAddress.trim(), result.coordinates);
-        } else {
-          setGeocodeError(result.message || "Could not find address");
-          setIsGeocoding(false);
-          return; // Don't proceed with search if geocoding failed
-        }
-      } catch (error) {
-        setGeocodeError("Geocoding service unavailable");
-        setIsGeocoding(false);
-        return; // Don't proceed with search if geocoding failed
-      }
-      setIsGeocoding(false);
-    }
-
-    // Now proceed with search
     onChange(localValue);
     onSearch(localValue);
     setIsOpen(false);
@@ -591,7 +551,7 @@ function LLMSearchDropdown({
   const handleKeyDown = (e) => {
     // Enter (without Shift) triggers search
     if (e.key === "Enter" && !e.shiftKey && !isLoading && localValue.trim()) {
-      e.preventDefault(); // Prevent newline in textarea
+      e.preventDefault();
       handleSearchClick();
     } else if (e.key === "Escape") {
       setIsOpen(false);
@@ -704,10 +664,7 @@ function LLMSearchDropdown({
               Search for Resources
             </span>
             <button
-              onClick={() => {
-                setIsOpen(false);
-                setIsLocked(false);
-              }}
+              onClick={() => setIsOpen(false)}
               className="absolute right-4 text-white hover:text-gray-300 transition-colors"
               style={{ fontSize: "20px" }}
             >
@@ -717,28 +674,12 @@ function LLMSearchDropdown({
 
           {/* Panel body */}
           <div className="p-4">
-            {/* Search input label with clear button */}
-            <div className="flex justify-between items-center mb-2">
-              <p className="text-lg" style={{ color: "#F3EED9", fontFamily: "'Open Sans', sans-serif" }}>
-                Describe what you're looking for in plain language:
-              </p>
-              {localValue && (
-                <button
-                  onClick={handleClearClick}
-                  className="text-sm px-3 py-1 rounded-full transition-all duration-200 hover:brightness-90"
-                  style={{
-                    backgroundColor: "#007ab8",
-                    color: "#F3EED9",
-                    fontFamily: "'Open Sans', sans-serif",
-                    fontWeight: "500",
-                  }}
-                >
-                  Clear Search
-                </button>
-              )}
-            </div>
+            {/* Search input label */}
+            <p className="text-lg mb-2" style={{ color: "#F3EED9", fontFamily: "'Open Sans', sans-serif" }}>
+              Describe what you're looking for in plain language:
+            </p>
 
-            {/* Search input */}
+            {/* Search input - 50% taller (80px -> 120px) */}
             <textarea
               ref={inputRef}
               value={localValue}
@@ -747,122 +688,24 @@ function LLMSearchDropdown({
               placeholder="e.g., food pantry open Monday morning in 77027"
               className="w-full p-3 rounded resize-none"
               style={{
-                height: "80px",
+                height: "120px",
                 fontSize: "16px",
                 color: "var(--color-text-primary)",
                 backgroundColor: "#FFFFFF",
                 border: "1px solid #ccc",
                 fontFamily: "'Open Sans', sans-serif",
               }}
-              disabled={isLoading || isGeocoding}
+              disabled={isLoading}
             />
 
-            {/* Address input section */}
-            <div className="mt-4">
-              <div className="flex justify-between items-center mb-2">
-                <p className="text-lg" style={{ color: "#F3EED9", fontFamily: "'Open Sans', sans-serif" }}>
-                  Optional: Enter client address for distance calculation:
-                </p>
-                {/* Clear address button - only show when address is set */}
-                {(localAddress || clientAddress) && (
-                  <button
-                    onClick={handleClearAddress}
-                    className="text-sm px-3 py-1 rounded-full transition-all duration-200 hover:brightness-90"
-                    style={{
-                      backgroundColor: "#007ab8",
-                      color: "#F3EED9",
-                      fontFamily: "'Open Sans', sans-serif",
-                      fontWeight: "500",
-                      opacity: isGeocoding ? 0.5 : 1,
-                      cursor: isGeocoding ? "not-allowed" : "pointer",
-                    }}
-                    disabled={isGeocoding}
-                  >
-                    Clear Address
-                  </button>
-                )}
-              </div>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={localAddress}
-                  onChange={(e) => {
-                    setLocalAddress(e.target.value);
-                    setGeocodeError("");
-                  }}
-                  onKeyDown={(e) => {
-                    // Enter in address field triggers search (which handles geocoding)
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      if (localValue.trim()) {
-                        handleSearchClick();
-                      }
-                    }
-                  }}
-                  placeholder="e.g., 1234 Main St, Houston, TX 77002"
-                  className="w-full p-3 rounded"
-                  style={{
-                    fontSize: "16px",
-                    color: "var(--color-text-primary)",
-                    backgroundColor: "#FFFFFF",
-                    border: geocodeError ? "2px solid var(--color-error-text)" : "1px solid #ccc",
-                    paddingRight: isGeocoding ? "40px" : "12px",
-                    fontFamily: "'Open Sans', sans-serif",
-                  }}
-                  disabled={isLoading || isGeocoding}
-                />
-                {/* Loading spinner for geocoding */}
-                {isGeocoding && (
-                  <div
-                    className="absolute right-3 top-1/2 -translate-y-1/2"
-                    style={{ width: "20px", height: "20px" }}
-                  >
-                    <svg
-                      className="animate-spin"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      style={{ width: "100%", height: "100%" }}
-                    >
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="#ccc"
-                        strokeWidth="3"
-                        fill="none"
-                      />
-                      <path
-                        d="M12 2a10 10 0 0 1 10 10"
-                        stroke="#666"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        fill="none"
-                      />
-                    </svg>
-                  </div>
-                )}
-              </div>
-              {/* Geocode error message - only show errors */}
-              {geocodeError && (
-                <p className="text-xs mt-1" style={{ color: "var(--color-error-text)", fontFamily: "'Open Sans', sans-serif" }}>
-                  {geocodeError}
-                </p>
-              )}
-              {/* Static helper text */}
-              <p className="text-xs mt-1 italic" style={{ color: "var(--color-panel-subtitle)", fontFamily: "'Open Sans', sans-serif" }}>
-                Distances will be calculated from this location
-              </p>
-            </div>
-
-            {/* Action buttons - Cancel on left, Search on right */}
-            <div className="flex justify-between items-center mt-6">
+            {/* Action buttons - Cancel, Clear, Search */}
+            <div className="flex items-center justify-between mt-6">
               <button
                 onClick={() => {
                   setIsOpen(false);
                   setLocalValue(value || "");
-                  setLocalAddress(clientAddress || "");
                 }}
-                className="transition-all duration-200 hover:brightness-110"
+                className="transition-all duration-200 hover:brightness-110 font-opensans"
                 style={{
                   backgroundColor: "var(--color-panel-btn-cancel-bg)",
                   color: "var(--color-panel-btn-text)",
@@ -871,15 +714,32 @@ function LLMSearchDropdown({
                   borderRadius: "var(--radius-panel-btn)",
                   fontSize: "var(--font-size-panel-btn)",
                   letterSpacing: "var(--letter-spacing-panel-btn)",
-                  fontFamily: "'Open Sans', sans-serif",
                 }}
               >
                 Cancel
               </button>
+
+              {/* Clear button in the middle */}
+              <button
+                onClick={handleClearClick}
+                className="transition-all duration-200 hover:brightness-110 font-opensans"
+                style={{
+                  backgroundColor: "#007ab8",
+                  color: "#F3EED9",
+                  width: "var(--width-panel-btn)",
+                  height: "var(--height-panel-btn)",
+                  borderRadius: "var(--radius-panel-btn)",
+                  fontSize: "var(--font-size-panel-btn)",
+                  letterSpacing: "var(--letter-spacing-panel-btn)",
+                }}
+              >
+                Clear
+              </button>
+
               <button
                 onClick={handleSearchClick}
-                disabled={isLoading || isGeocoding || !localValue.trim()}
-                className="transition-all duration-200 hover:brightness-110"
+                disabled={isLoading || !localValue.trim()}
+                className="transition-all duration-200 hover:brightness-110 font-opensans"
                 style={{
                   backgroundColor: "var(--color-panel-btn-ok-bg)",
                   color: "var(--color-panel-btn-text)",
@@ -888,7 +748,6 @@ function LLMSearchDropdown({
                   borderRadius: "var(--radius-panel-btn)",
                   fontSize: "var(--font-size-panel-btn)",
                   letterSpacing: "var(--letter-spacing-panel-btn)",
-                  fontFamily: "'Open Sans', sans-serif",
                 }}
               >
                 {isLoading ? "Searching..." : "Search"}
@@ -1213,21 +1072,29 @@ function LLMFilters({
   error,
   relatedSearches,
   clientAddress,
-  onAddressChange,
+  clientCoordinates,
+  onCoordinatesChange,
 }) {
   return (
-    <LLMSearchDropdown
-      value={query}
-      onChange={setQuery}
-      onSearch={onSearch}
-      onClear={onClear}
-      isLoading={isLoading}
-      interpretation={interpretation}
-      error={error}
-      relatedSearches={relatedSearches}
-      clientAddress={clientAddress}
-      onAddressChange={onAddressChange}
-    />
+    <>
+      <LLMSearchDropdown
+        value={query}
+        onChange={setQuery}
+        onSearch={onSearch}
+        onClear={onClear}
+        isLoading={isLoading}
+        interpretation={interpretation}
+        error={error}
+        relatedSearches={relatedSearches}
+      />
+      <DistanceButtonWithPanel
+        isActive={!!clientCoordinates}
+        defaultCoordinates=""
+        clientAddress={clientAddress}
+        clientCoordinates={clientCoordinates}
+        onCoordinatesChange={onCoordinatesChange}
+      />
+    </>
   );
 }
 
@@ -1549,10 +1416,8 @@ export default function NavBar2() {
             error={llmSearchError}
             relatedSearches={llmRelatedSearches}
             clientAddress={clientAddress}
-            onAddressChange={(address, coordinates) => {
-              setClientAddress(address);
-              setClientCoordinates(coordinates);
-            }}
+            clientCoordinates={clientCoordinates}
+            onCoordinatesChange={handleCoordinatesChange}
           />
         );
       default:
