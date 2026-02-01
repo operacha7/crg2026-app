@@ -571,13 +571,44 @@ All design values defined as CSS custom properties, referenced by Tailwind confi
 ## Email & PDF System
 
 ### Architecture
+- **Email Templates:** React Email components (`src/emails/`)
 - **Email Service:** Resend API via Cloudflare Function (`functions/sendEmail.js`)
 - **PDF Service:** PDFShift API via Cloudflare Function (`functions/createPdf.js`)
 - **From Address:** `info@crghouston.operacha.org` (configured in Resend)
 - **Email Service Module:** `src/services/emailService.js` - Centralized email/PDF logic
 - **UI Components:**
-  - `src/components/EmailPanel.js` - Dropdown panel UI for email/PDF entry
+  - `src/components/EmailPanel.js` - Dropdown panel UI for email/PDF entry with preview
   - `src/components/DropPanel.js` - Reusable dropdown panel component (shared styling)
+
+### React Email Integration (January 2026)
+Email templates are built using [React Email](https://react.email) for better maintainability and cross-client compatibility.
+
+**Template Structure:**
+```
+src/emails/
+├── ResourceEmail.jsx       # Main email template
+├── components/
+│   ├── ResourceCard.jsx    # Individual resource display
+│   └── HoursTable.jsx      # Hours formatting component
+├── index.js                # Exports
+└── README.md               # Integration docs
+```
+
+**Key Files:**
+- `src/emails/ResourceEmail.jsx` - Main email template component
+- `src/services/emailService.js` - Uses `render()` from `@react-email/components`
+
+**Development Preview:**
+```bash
+npm run email:dev
+```
+Opens preview server at http://localhost:3001 to test email templates without sending.
+
+**Benefits:**
+- Component-based templates (easier to maintain)
+- Cross-client compatibility (Gmail, Outlook quirks handled automatically)
+- Preview before sending (in EmailPanel)
+- Spam score checking available
 
 ### Email/PDF Panel UI (2026 Redesign)
 The email and PDF buttons in NavBar1 now use dropdown panels instead of modal popups.
@@ -587,7 +618,7 @@ The email and PDF buttons in NavBar1 now use dropdown panels instead of modal po
 2. If no records selected → Toast error, panel doesn't open
 3. If inactive resources selected → Warning panel appears first
 4. Warning panel: Cancel returns to results, Continue proceeds to input panel
-5. Email panel: Enter recipient email, click Send
+5. Email panel: Enter recipient email, click "Show Preview" to see email, click Send
 6. PDF panel: Confirmation message, click OK to create
 
 **Panel Styling (consistent across all panels):**

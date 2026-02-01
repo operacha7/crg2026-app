@@ -138,9 +138,10 @@
   --font-size-navbar2-btn: 20px;
   --font-weight-navbar2-btn: 500; /* Medium */
   --letter-spacing-navbar2-btn: 0.05em; /* 5% */
-  --font-size-navbar2-dropdown: 16px;
+  --font-size-navbar2-dropdown: 20px;
   --font-weight-navbar2-dropdown: 500; /* Medium */
   --letter-spacing-navbar2-dropdown: 0.05em; /* 5% */
+  --font-size-navbar2-dropdown-option: 20px; /* Dropdown list items */
   --font-size-navbar2-link: 14px;
   --font-weight-navbar2-link: 400; /* Regular */
 

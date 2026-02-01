@@ -298,6 +298,8 @@ export default function NavBar1({
                 hasInactiveResources={hasInactiveResources}
                 isSending={isSending}
                 statusMessage={statusMessage}
+                selectedData={selectedData}
+                headerText={selectedZip ? `Resources for Zip Code: ${selectedZip}` : "Resources"}
               />
             </div>
 
@@ -394,6 +396,8 @@ export default function NavBar1({
                 hasInactiveResources={hasInactiveResources}
                 isSending={isSending}
                 statusMessage={statusMessage}
+                selectedData={selectedData}
+                headerText={selectedZip ? `Resources for Zip Code: ${selectedZip}` : "Resources"}
               />
             </div>
             <div className="relative">

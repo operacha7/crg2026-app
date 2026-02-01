@@ -253,7 +253,7 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
       {isOpen && (
         <div
           className="absolute left-0 mt-2 rounded shadow-lg z-50"
-          style={{ backgroundColor: "var(--color-dropdown-bg)", minWidth: "300px" }}
+          style={{ backgroundColor: "var(--color-dropdown-bg)", minWidth: "700px" }}
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
           onTouchEnd={(e) => e.stopPropagation()}
@@ -308,7 +308,7 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
                   onMouseLeave={() => setHoveredOption(null)}
                   className="w-full text-left px-4 py-2 font-opensans"
                   style={{
-                    fontSize: "14px",
+                    fontSize: "var(--font-size-navbar2-dropdown-option)",
                     color: "var(--color-dropdown-text)",
                     backgroundColor: hoveredOption === opt ? "var(--color-dropdown-hover-bg)" : (value === opt ? "var(--color-dropdown-active-bg)" : "transparent"),
                   }}
@@ -450,7 +450,7 @@ function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select 
                   onMouseLeave={() => setHoveredOption(null)}
                   className="w-full text-left px-4 py-2 font-opensans"
                   style={{
-                    fontSize: "14px",
+                    fontSize: "var(--font-size-navbar2-dropdown-option)",
                     color: "var(--color-dropdown-text)",
                     backgroundColor: hoveredOption === opt ? "var(--color-dropdown-hover-bg)" : (value === opt ? "var(--color-dropdown-active-bg)" : "transparent"),
                   }}
@@ -880,6 +880,7 @@ function ZipCodeFilters({
         value={selectedZip}
         onChange={onZipChange}
         options={zipCodeOptions}
+        useDropdownStyle={true}
       />
       {selectedZip && neighborhoodText && <NeighborhoodLink text={neighborhoodText} />}
       <DistanceButtonWithPanel
