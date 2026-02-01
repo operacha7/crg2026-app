@@ -18,7 +18,7 @@ export default function NavBar1({
   // Props for email/PDF panels
   selectedData = [],
   loggedInUser,
-  selectedZip,
+  headerText = "Resources",
   onEmailSuccess,
   onPdfSuccess,
   // Mobile menu handler
@@ -299,7 +299,7 @@ export default function NavBar1({
                 isSending={isSending}
                 statusMessage={statusMessage}
                 selectedData={selectedData}
-                headerText={selectedZip ? `Resources for Zip Code: ${selectedZip}` : "Resources"}
+                headerText={headerText}
               />
             </div>
 
@@ -397,7 +397,7 @@ export default function NavBar1({
                 isSending={isSending}
                 statusMessage={statusMessage}
                 selectedData={selectedData}
-                headerText={selectedZip ? `Resources for Zip Code: ${selectedZip}` : "Resources"}
+                headerText={headerText}
               />
             </div>
             <div className="relative">

@@ -19,7 +19,7 @@ export default function PageLayout({
   // Props for email/PDF panels
   selectedData = [],
   loggedInUser,
-  selectedZip,
+  headerText,
   onEmailSuccess,
   onPdfSuccess,
 }) {
@@ -46,7 +46,7 @@ export default function PageLayout({
             onCreatePdf={onCreatePdf}
             selectedData={selectedData}
             loggedInUser={loggedInUser}
-            selectedZip={selectedZip}
+            headerText={headerText}
             onEmailSuccess={onEmailSuccess}
             onPdfSuccess={onPdfSuccess}
             onOpenMobileMenu={handleOpenMobileMenu}

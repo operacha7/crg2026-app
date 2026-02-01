@@ -64,7 +64,7 @@ function getSortedData(data) {
  * @param {object} searchContext - Contains searchMode and relevant filter values
  * @returns {string} Header text for email/PDF
  */
-function generateSearchHeader(searchContext) {
+export function generateSearchHeader(searchContext) {
   const {
     searchMode,
     selectedZip,

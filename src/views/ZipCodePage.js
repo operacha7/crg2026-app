@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { calculateDistance, parseCoordinates } from "../services/dataService";
 import { useAppData } from "../Contexts/AppDataContext";
-import { sendEmail, createPdf, fetchOrgPhone } from "../services/emailService";
+import { sendEmail, createPdf, fetchOrgPhone, generateSearchHeader } from "../services/emailService";
 import { logUsage } from "../services/usageService";
 import { applyLLMFilters } from "../services/llmSearchService";
 
@@ -330,6 +330,9 @@ export default function ZipCodePage({
   // Calculate selected data for email/PDF panels
   const selectedData = selectedRows?.map((i) => filteredDirectory[i]).filter(Boolean);
 
+  // Generate header text for email/PDF preview based on search mode
+  const headerText = generateSearchHeader(buildSearchContext());
+
   return (
     <PageLayout
       totalCount={directory.length}
@@ -339,7 +342,7 @@ export default function ZipCodePage({
       onCreatePdf={validatePdfSelection}
       selectedData={selectedData}
       loggedInUser={loggedInUser}
-      selectedZip={selectedZipCode}
+      headerText={headerText}
       onEmailSuccess={handleEmailSuccess}
       onPdfSuccess={handlePdfSuccess}
     >
