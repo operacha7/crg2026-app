@@ -61,8 +61,8 @@ export default function ReportsPage() {
         />
         <NavBar3Reports />
 
-        {/* Report content */}
-        <main className="flex-1 overflow-auto bg-gray-50">
+        {/* Report content - UsageDataTables handles its own scroll for sticky header */}
+        <main className={`flex-1 bg-gray-50 ${selectedReport === "usage-tables" ? "overflow-hidden" : "overflow-auto"}`}>
           {renderReport()}
         </main>
 

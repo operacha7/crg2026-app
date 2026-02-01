@@ -292,7 +292,7 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
   }
 
   return (
-    <div className="w-full overflow-auto max-h-[calc(100vh-200px)]">
+    <div className="w-full h-full overflow-auto">
       <table className="w-full border-collapse">
         {/* Single header row - red background, white text, sticky */}
         <thead className="sticky top-0 z-10">
