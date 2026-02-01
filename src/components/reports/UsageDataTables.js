@@ -4,20 +4,9 @@
 // Columns: dates + Da/Mo + Mo/Yr percentages
 
 import { useState, useEffect, useMemo } from "react";
-import { supabase } from "../../MainApp";
 import { fetchDailyUsage, fetchMonthlyUsage } from "../../services/usageService";
 import VerticalLineIcon from "../../icons/VerticalLineIcon";
-
-// Assistance types in order by assist_id (from assistance table)
-const ASSISTANCE_TYPES = [
-  "Rent", "Utilities", "Food", "Clothing",
-  "Homeless - Shelters", "Homeless - Day Centers", "Homeless - Other", "Housing",
-  "Medical - Primary Care", "Medical - Equipment", "Medical - Mental Health",
-  "Medical - Addiction Recovery", "Medical - Program Enrollment", "Medical - Bill Payment",
-  "Domestic Abuse - Shelters", "Domestic Abuse - Other", "Education - Children", "Childcare",
-  "Education - Adults", "Jobs", "Transportation", "Legal", "Immigration",
-  "Seniors", "Handyman", "Animals", "Christmas", "Other"
-];
+import { useAppData } from "../../Contexts/AppDataContext";
 
 // Search modes
 const SEARCH_MODES = ["Zip Code", "Organization", "Location", "Ask a Question"];
@@ -26,8 +15,17 @@ const SEARCH_MODES = ["Zip Code", "Organization", "Location", "Ask a Question"];
 const COMMUNICATION_ACTIONS = ["Send Email", "Create PDF"];
 
 export default function UsageDataTables({ selectedOrg, viewMode }) {
+  const { assistance } = useAppData();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Get assistance type names from the assistance table, sorted by assist_id
+  const assistanceTypes = useMemo(() => {
+    if (!assistance || assistance.length === 0) return [];
+    return [...assistance]
+      .sort((a, b) => parseInt(a.assist_id, 10) - parseInt(b.assist_id, 10))
+      .map(a => a.assistance);
+  }, [assistance]);
 
   // Fetch all data
   useEffect(() => {
@@ -172,7 +170,8 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
   const assistanceData = useMemo(() => {
     const dateKey = viewMode === "daily" ? "log_date" : "month";
 
-    const rows = ASSISTANCE_TYPES.map(type => {
+    // Build rows for known assistance types from the assistance table
+    const rows = assistanceTypes.map(type => {
       const rowData = { metric: type };
       let total = 0;
 
@@ -188,7 +187,27 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
       return rowData;
     });
 
-    // Calculate totals row
+    // Find any assistance_type values in the data that don't match known types
+    // These are orphaned records from deleted/renamed assistance types
+    const knownTypesSet = new Set(assistanceTypes);
+    const undefinedRow = { metric: "Undefined" };
+    let undefinedTotal = 0;
+
+    dateColumns.forEach(date => {
+      const count = data
+        .filter(row => row[dateKey] === date && row.assistance_type && !knownTypesSet.has(row.assistance_type))
+        .reduce((sum, row) => sum + row.count, 0);
+      undefinedRow[date] = count;
+      undefinedTotal += count;
+    });
+    undefinedRow._total = undefinedTotal;
+
+    // Only add Undefined row if there are actually undefined values
+    if (undefinedTotal > 0) {
+      rows.push(undefinedRow);
+    }
+
+    // Calculate totals row (includes undefined if present)
     const totalsRow = { metric: "Total", _isTotal: true };
     let grandTotal = 0;
     dateColumns.forEach(date => {
@@ -209,7 +228,7 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
     totalsRow._moYr = 100;
 
     return [...rows, totalsRow];
-  }, [data, dateColumns, viewMode]);
+  }, [data, dateColumns, viewMode, assistanceTypes]);
 
   // Render section header row with vertical line icon
   const renderSectionHeader = (title, isFirst = false) => (
@@ -273,23 +292,23 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
   }
 
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="w-full overflow-auto max-h-[calc(100vh-200px)]">
       <table className="w-full border-collapse">
-        {/* Single header row - red background, white text */}
-        <thead>
+        {/* Single header row - red background, white text, sticky */}
+        <thead className="sticky top-0 z-10">
           <tr style={{ backgroundColor: "#B8001F" }}>
-            <th className="text-left py-2 font-opensans font-semibold text-sm text-white sticky left-0 min-w-[180px]" style={{ backgroundColor: "#B8001F", paddingLeft: "10px" }}>
+            <th className="text-left py-2 font-opensans font-semibold text-sm text-white sticky left-0 z-20 min-w-[180px]" style={{ backgroundColor: "#B8001F", paddingLeft: "10px" }}>
               Metric
             </th>
             {dateColumns.map(date => (
-              <th key={date} className="text-center px-2 py-2 font-opensans font-semibold text-sm text-white min-w-[70px]">
+              <th key={date} className="text-center px-2 py-2 font-opensans font-semibold text-sm text-white min-w-[70px]" style={{ backgroundColor: "#B8001F" }}>
                 {formatDateHeader(date)}
               </th>
             ))}
-            <th className="text-center px-2 py-2 font-opensans font-semibold text-sm text-white min-w-[70px]">
+            <th className="text-center px-2 py-2 font-opensans font-semibold text-sm text-white min-w-[70px]" style={{ backgroundColor: "#B8001F" }}>
               Da/Mo
             </th>
-            <th className="text-center px-2 py-2 font-opensans font-semibold text-sm text-white min-w-[70px]">
+            <th className="text-center px-2 py-2 font-opensans font-semibold text-sm text-white min-w-[70px]" style={{ backgroundColor: "#B8001F" }}>
               Mo/Yr
             </th>
           </tr>
