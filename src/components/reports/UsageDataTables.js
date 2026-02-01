@@ -189,13 +189,18 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
 
     // Find any assistance_type values in the data that don't match known types
     // These are orphaned records from deleted/renamed assistance types
+    // Excludes null, empty string, and literal "null" string (from CSV imports)
     const knownTypesSet = new Set(assistanceTypes);
     const undefinedRow = { metric: "Undefined" };
     let undefinedTotal = 0;
 
+    // Helper to check if assistance_type is a valid non-null value
+    const isValidAssistanceType = (value) =>
+      value != null && value !== '' && value !== 'null';
+
     dateColumns.forEach(date => {
       const count = data
-        .filter(row => row[dateKey] === date && row.assistance_type && !knownTypesSet.has(row.assistance_type))
+        .filter(row => row[dateKey] === date && isValidAssistanceType(row.assistance_type) && !knownTypesSet.has(row.assistance_type))
         .reduce((sum, row) => sum + row.count, 0);
       undefinedRow[date] = count;
       undefinedTotal += count;
