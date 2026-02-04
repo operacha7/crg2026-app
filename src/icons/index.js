@@ -12,6 +12,8 @@ export { AnnouncementsIcon } from './AnnouncementsIcon';
 export { PrivacyPolicyIcon } from './PrivacyPolicyIcon';
 export { ContactSupportIcon } from './ContactSupportIcon';
 export { DistanceIcon } from './DistanceIcon';
+export { default as Car1Icon } from './Car1Icon';
+export { default as Car2Icon } from './Car2Icon';
 export { HelpIcon } from './HelpIcon';
 export { HelpBubbleIcon } from './HelpBubbleIcon';
 export { HomeIcon } from './HomeIcon';

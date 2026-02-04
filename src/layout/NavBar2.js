@@ -3,7 +3,7 @@
 // Frame 496 from Figma design
 
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { DistanceIcon } from "../icons";
+import { Car1Icon } from "../icons";
 import Tooltip from "../components/Tooltip";
 import DistancePanel from "../components/DistancePanel";
 import { useAppData } from "../Contexts/AppDataContext";
@@ -842,7 +842,7 @@ function DistanceButtonWithPanel({
             borderRadius: "var(--radius-navbar2-btn)",
           }}
         >
-          <DistanceIcon size={24} active={isActive} />
+          <Car1Icon size={24} active={isActive} />
         </button>
       </Tooltip>
 

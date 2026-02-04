@@ -8,6 +8,7 @@ import { toast } from "react-hot-toast";
 import { calculateDistance, parseCoordinates } from "../services/dataService";
 import { useAppData } from "../Contexts/AppDataContext";
 import { sendEmail, createPdf, fetchOrgPhone, generateSearchHeader } from "../services/emailService";
+import { getDrivingDistances } from "../services/geocodeService";
 import { logUsage } from "../services/usageService";
 import { applyLLMFilters } from "../services/llmSearchService";
 
@@ -33,6 +34,10 @@ export default function ZipCodePage({
     activeAssistanceChips,
     // Client coordinates override for distance calculations
     clientCoordinates,
+    // Driving distances (when user enters custom address)
+    drivingDistances,
+    setDrivingDistances,
+    setDrivingDistancesLoading,
     // LLM Search state
     llmSearchFilters,
     llmSearchQuery,
@@ -198,12 +203,14 @@ export default function ZipCodePage({
     }
 
     // Calculate distance for each record (if we have reference coordinates)
+    // Uses Haversine (straight-line) distance calculation
     if (refCoords) {
       filtered = filtered.map(record => {
         const recordCoords = parseCoordinates(record.org_coordinates);
         if (!recordCoords) {
           return { ...record, distance: 999999 };
         }
+
         const distance = calculateDistance(
           refCoords.lat, refCoords.lng,
           recordCoords.lat, recordCoords.lng
@@ -221,6 +228,78 @@ export default function ZipCodePage({
     // Sorting is handled by ResultsList (status_id, assist_id, miles)
     return filtered;
   }, [directory, zipCodes, assistance, activeSearchMode, selectedZipCode, selectedParentOrg, selectedChildOrg, selectedLocationZip, selectedLocationCity, selectedLocationCounty, selectedLocationNeighborhood, activeAssistanceChips, hasActiveFilter, clientCoordinates, llmSearchFilters]);
+
+  // Fetch driving distances when user enters a custom address
+  // This runs after filtering to only fetch for visible results
+  useEffect(() => {
+    const fetchDistances = async () => {
+      // Only fetch if user entered a custom address (clientCoordinates set)
+      // and we have filtered results to calculate distances for
+      if (!clientCoordinates || filteredDirectory.length === 0) {
+        return;
+      }
+
+      // Find records that don't have driving distances yet
+      const recordsNeedingDistances = filteredDirectory.filter(
+        record => record.org_coordinates && !drivingDistances.has(record.id_no)
+      );
+
+      // Skip if all records already have driving distances
+      if (recordsNeedingDistances.length === 0) {
+        return;
+      }
+
+      // Prepare destinations from records needing distances
+      const destinations = recordsNeedingDistances.map(record => ({
+        id: record.id_no,
+        coordinates: record.org_coordinates.replace(/\s/g, ""), // Remove spaces for API
+      }));
+
+      console.log(`🚗 Fetching driving distances for ${destinations.length} new destinations...`);
+      setDrivingDistancesLoading(true);
+
+      try {
+        const result = await getDrivingDistances(clientCoordinates, destinations);
+
+        if (result.success && result.distances) {
+          // Merge new distances with existing ones
+          setDrivingDistances(prev => {
+            const merged = new Map(prev);
+            result.distances.forEach((value, key) => merged.set(key, value));
+            return merged;
+          });
+          console.log(`🚗 Driving distances loaded: ${result.distances.size} new results (total: ${drivingDistances.size + result.distances.size})`);
+        } else {
+          console.warn("Failed to fetch driving distances:", result.message);
+        }
+      } catch (error) {
+        console.error("Error fetching driving distances:", error);
+      } finally {
+        setDrivingDistancesLoading(false);
+      }
+    };
+
+    fetchDistances();
+  }, [clientCoordinates, filteredDirectory, drivingDistances, setDrivingDistances, setDrivingDistancesLoading]);
+
+  // Apply driving distances to filtered results (when available)
+  // This creates the final display data with driving distances overriding Haversine
+  const displayDirectory = useMemo(() => {
+    // If no driving distances or no client coordinates, use filtered as-is
+    if (!clientCoordinates || drivingDistances.size === 0) {
+      return filteredDirectory;
+    }
+
+    // Replace Haversine distances with driving distances where available
+    return filteredDirectory.map(record => {
+      const drivingDistance = drivingDistances.get(record.id_no);
+      if (drivingDistance !== undefined && drivingDistance !== null) {
+        return { ...record, distance: drivingDistance };
+      }
+      // Keep Haversine distance if driving distance not available
+      return record;
+    });
+  }, [filteredDirectory, drivingDistances, clientCoordinates]);
 
   // Helper function for animated toast
   const showAnimatedToast = (msg, type = "success") => {
@@ -265,7 +344,7 @@ export default function ZipCodePage({
 
   // Email success handler - called from NavBar1 panel
   const handleEmailSuccess = async (recipient) => {
-    const dataToSend = selectedRows?.map((i) => filteredDirectory[i]).filter(Boolean);
+    const dataToSend = selectedRows?.map((i) => displayDirectory[i]).filter(Boolean);
 
     // Send the email using the service
     await sendEmail({
@@ -286,7 +365,7 @@ export default function ZipCodePage({
 
   // PDF success handler - called from NavBar1 panel
   const handlePdfSuccess = async () => {
-    const dataToSend = selectedRows?.map((i) => filteredDirectory[i]).filter(Boolean);
+    const dataToSend = selectedRows?.map((i) => displayDirectory[i]).filter(Boolean);
 
     // Create the PDF using the service
     await createPdf({
@@ -328,7 +407,7 @@ export default function ZipCodePage({
   };
 
   // Calculate selected data for email/PDF panels
-  const selectedData = selectedRows?.map((i) => filteredDirectory[i]).filter(Boolean);
+  const selectedData = selectedRows?.map((i) => displayDirectory[i]).filter(Boolean);
 
   // Generate header text for email/PDF preview based on search mode
   const headerText = generateSearchHeader(buildSearchContext());
@@ -336,7 +415,7 @@ export default function ZipCodePage({
   return (
     <PageLayout
       totalCount={directory.length}
-      filteredCount={filteredDirectory.length}
+      filteredCount={displayDirectory.length}
       selectedCount={selectedRows.length}
       onSendEmail={validateEmailSelection}
       onCreatePdf={validatePdfSelection}
@@ -378,13 +457,13 @@ export default function ZipCodePage({
           </div>
         ) : (
           <ResultsList
-            records={filteredDirectory}
+            records={displayDirectory}
             assistanceData={assistance}
             orgAssistanceMap={orgAssistanceMap}
-            selectedIds={new Set(selectedRows.map(i => filteredDirectory[i]?.id).filter(Boolean))}
+            selectedIds={new Set(selectedRows.map(i => displayDirectory[i]?.id).filter(Boolean))}
             onSelectionChange={(newSelectedIds) => {
               // Convert Set of IDs back to array of indices for compatibility
-              const newSelectedRows = filteredDirectory
+              const newSelectedRows = displayDirectory
                 .map((r, i) => newSelectedIds.has(r.id) ? i : -1)
                 .filter(i => i >= 0);
               setSelectedRows(newSelectedRows);

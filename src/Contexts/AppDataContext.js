@@ -116,6 +116,11 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
   const [clientAddress, setClientAddress] = useState("");
   const [clientCoordinates, setClientCoordinates] = useState("");
 
+  // Driving distances from client address to organizations
+  // Map of record id_no → driving distance in miles (null if not calculated)
+  const [drivingDistances, setDrivingDistances] = useState(new Map());
+  const [drivingDistancesLoading, setDrivingDistancesLoading] = useState(false);
+
   // LLM Search state
   const [llmSearchQuery, setLlmSearchQuery] = useState("");
   const [llmSearchFilters, setLlmSearchFilters] = useState(null); // Filters returned from LLM
@@ -130,11 +135,17 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
   const [quickTipsShownThisSession, setQuickTipsShownThisSession] = useState(false); // Track if auto-shown already
   const [quickTipsHighlightChipToggle, setQuickTipsHighlightChipToggle] = useState(false); // Highlight chip toggle section on auto-open
 
-  // Clear client coordinates when zip code changes
+  // Clear client coordinates and driving distances when zip code changes
   useEffect(() => {
     setClientAddress("");
     setClientCoordinates("");
+    setDrivingDistances(new Map());
   }, [selectedZipCode, selectedLocationZip]);
+
+  // Clear driving distances when client coordinates change (new lookup needed)
+  useEffect(() => {
+    setDrivingDistances(new Map());
+  }, [clientCoordinates]);
 
   // Load all data on mount
   useEffect(() => {
@@ -261,6 +272,12 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
     setClientAddress,
     clientCoordinates,
     setClientCoordinates,
+
+    // Driving distances (Map of record id → miles)
+    drivingDistances,
+    setDrivingDistances,
+    drivingDistancesLoading,
+    setDrivingDistancesLoading,
 
     // LLM Search state
     llmSearchQuery,

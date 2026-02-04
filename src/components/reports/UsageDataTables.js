@@ -311,10 +311,10 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
               </th>
             ))}
             <th className="text-center px-2 py-2 font-opensans font-semibold text-sm text-white min-w-[70px]" style={{ backgroundColor: "#B8001F" }}>
-              Da/Mo
+              Current
             </th>
             <th className="text-center px-2 py-2 font-opensans font-semibold text-sm text-white min-w-[70px]" style={{ backgroundColor: "#B8001F" }}>
-              Mo/Yr
+              Total
             </th>
           </tr>
         </thead>

@@ -117,8 +117,11 @@ export default function ResultsList({
   selectedIds = new Set(),
   onSelectionChange,
 }) {
-  // Get search context for zero-results guidance
-  const { activeSearchMode, llmSearchFilters, llmSearchQuery, llmSearchInterpretation } = useAppData();
+  // Get search context for zero-results guidance and driving distance indicator
+  const { activeSearchMode, llmSearchFilters, llmSearchQuery, llmSearchInterpretation, clientCoordinates } = useAppData();
+
+  // Determine if we're showing driving distances (vs Haversine)
+  const isDrivingDistance = !!clientCoordinates;
   // Sort records
   const sortedRecords = useMemo(
     () => sortRecords(records),
@@ -224,6 +227,7 @@ export default function ResultsList({
             allAssistanceTypes={assistanceData}
             orgAssistanceMap={orgAssistanceMap}
             rowIndex={index}
+            isDrivingDistance={isDrivingDistance}
           />
         );
       })}

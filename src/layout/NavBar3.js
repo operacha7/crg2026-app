@@ -651,6 +651,7 @@ export default function NavBar3() {
           style={{
             color: "var(--color-navbar3-user-text, #F3EED9)",
             fontSize: "var(--font-size-navbar3-user)",
+            letterSpacing: ".05em",
             whiteSpace: "nowrap",
           }}
         >

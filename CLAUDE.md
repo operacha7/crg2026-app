@@ -313,7 +313,7 @@ src/
 └── services/
     ├── dataService.js   # Supabase query methods (directory, assistance, zip_codes)
     ├── emailService.js  # Email/PDF sending logic (sendEmail, createPdf, checkLimits)
-    ├── geocodeService.js # Google Geocoding API wrapper
+    ├── geocodeService.js # Geocoding + driving distances (geocodeAddress, getDrivingDistances)
     ├── usageService.js  # Usage logging
     ├── llmSearchService.js # LLM search filter application
     └── AnnouncementService.js # Announcement queries
@@ -323,7 +323,8 @@ src/
 - `functions/sendEmail.js` - Resend integration for email delivery
 - `functions/createPdf.js` - PDFShift integration for PDF generation
 - `functions/help.js` - LLM help assistant (Anthropic Claude API)
-- `functions/geocode.js` - Google Geocoding API wrapper
+- `functions/geocode.js` - Geocodio API for address geocoding
+- `functions/distance.js` - Google Distance Matrix API for driving distances
 - `functions/llm-search.js` - LLM search query processing
 
 ### Authentication
@@ -386,12 +387,65 @@ NavBar2 has 4 search modes selected by buttons on the right. Only one can be act
 - **Uses:** Anthropic API for natural language queries
 - **Example:** "food pantry within 5 miles open Thursday morning"
 
-### Distance Sorting
-- Results are sorted by distance from zip code centroid (not alphabetically)
-- `zip_codes.coordinates` = centroid of each zip code
-- `directory.org_coordinates` = lat/long of each organization
-- **Distance icon:** Opens modal for user to enter client address → Google Geocoding API converts to coordinates → overrides default zip centroid for distance calculation
-- Distance icon appears in Zip Code, Organization, and Location modes
+### Distance Calculation
+
+The app calculates distances from a reference point (zip centroid or user-entered address) to each organization.
+
+**Two calculation modes:**
+
+| Mode | Reference Point | Distance Type | API Used | Visual Indicator |
+|------|-----------------|---------------|----------|------------------|
+| **Default** | Zip code centroid | Straight-line (Haversine) | None (client-side) | No icon |
+| **Custom Address** | User-entered address | Driving distance | Google Distance Matrix API | Gold car icon |
+
+**Default behavior (Haversine):**
+- Uses stored coordinates: `zip_codes.coordinates` (centroids) and `directory.org_coordinates`
+- Calculated client-side using Haversine formula in `src/services/dataService.js`
+- Fast, no API cost, but straight-line (not driving distance)
+- No visual indicator in results - just distance number
+
+**Custom address behavior (Google Distance Matrix):**
+- User clicks Car icon (cream colored when inactive) → enters address in DistancePanel
+- Address geocoded via Geocodio API (`/geocode` endpoint)
+- Driving distances fetched via Google Distance Matrix API (`/distance` endpoint)
+- Results update with actual driving distances
+- **Visual indicator:** Gold car icon with dark background (`#4A4F56`) appears in Miles column
+- Car icon in NavBar2 turns gold when active
+- **Clear button:** Immediately reverts to Haversine from centroid, car icon returns to cream
+
+**Batching for large result sets:**
+- Google Distance Matrix API allows max 25 destinations per request
+- `src/services/geocodeService.js` automatically batches requests
+- Example: 37 destinations → 2 API calls (25 + 12)
+
+**Filter changes with custom address:**
+- When user changes assistance filters while custom address is active
+- New records that don't have driving distances are automatically fetched
+- Existing driving distances are preserved (merged, not replaced)
+- Prevents unnecessary API calls for already-calculated distances
+
+**Key files:**
+- `functions/distance.js` - Cloudflare Function calling Google Distance Matrix API
+- `src/services/geocodeService.js` - `getDrivingDistances()` function with caching and batching
+- `src/views/ZipCodePage.js` - useEffect fetches driving distances when `clientCoordinates` is set
+- `src/Contexts/AppDataContext.js` - `drivingDistances` state (Map of record id → miles)
+- `src/components/DistancePanel.js` - Address entry panel with Clear button
+- `src/icons/Car1Icon.jsx` - Car icon used in NavBar2 and ResultRow
+
+**Google Distance Matrix API:**
+- Pricing: $5 per 1,000 elements ($200/month free = ~40,000 elements)
+- 1 element = 1 origin × 1 destination
+- Typical search: 1 origin × 25 destinations = 25 elements = 1 API request
+- Monitor usage: Google Cloud Console → APIs & Services → Quotas → Distance Matrix API
+- Environment variable: `GOOGLE_MAPS_API_KEY` in `.dev.vars` and Cloudflare
+
+**API Key Security:**
+- Application restrictions: None (required for server-side Cloudflare Functions)
+- API restrictions: Limited to Distance Matrix API only
+- Daily quota: 1,000 elements/day (configurable in Google Cloud Console)
+- Key stored in Cloudflare environment variables (never exposed to browser)
+
+**Design Decision:** Haversine for default searches is intentional - it's fast, free, and good enough for most use cases. Users who need accurate driving distances can enter a custom address. This balances user experience with API costs.
 
 ### Dropdown Behavior
 - Standard `<select>` with type-ahead (browser native: type "Ri" jumps to Richmond)
@@ -783,6 +837,9 @@ RESEND_API_KEY=re_xxxxx
 SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_SECRET_KEY=xxx
 PDFSHIFT_API_KEY=xxx
+GEOCODIO_API_KEY=xxx
+ANTHROPIC_API_KEY=xxx
+GOOGLE_MAPS_API_KEY=xxx
 ```
 
 **Production:** Cloudflare dashboard → Pages → Settings → Environment variables

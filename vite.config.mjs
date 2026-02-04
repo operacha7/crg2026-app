@@ -29,6 +29,7 @@ export default defineConfig({
     proxy: {
       // Proxy API requests to Wrangler dev server
       '/geocode': 'http://localhost:8788',
+      '/distance': 'http://localhost:8788',
       '/llm-search': 'http://localhost:8788',
       '/sendEmail': 'http://localhost:8788',
       '/createPdf': 'http://localhost:8788',

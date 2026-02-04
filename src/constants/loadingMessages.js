@@ -12,5 +12,5 @@ export const LOADING_MESSAGES = [
   "Kitten Herding...",
   "Nit Picking...",
   "Rock & Rolling...",
-  "Candle Burning at Both Ends...",
+  "Stirring...",
 ];

@@ -234,14 +234,13 @@ export default function DistancePanel({
     onCancel();
   };
 
-  // Handle clear - reset both fields to defaults
+  // Handle clear - reset both fields and save immediately to revert to centroid
   const handleClear = () => {
-    setTempAddress("");
-    setTempCoordinates(formatCoordinatesForDisplay(defaultCoordinates) || "");
-    setCoordsError(false);
-    setGeocodeError("");
-    setAddressGeocoded(false);
-    setLastGeocodedAddress("");
+    // Save empty values to revert to default (zip centroid, Haversine distances)
+    onSave({
+      address: "",
+      coordinates: "",
+    });
   };
 
   return (
@@ -368,11 +367,11 @@ export default function DistancePanel({
           className="font-opensans text-center italic"
           style={{
             color: "#D7D5D1",
-            fontSize: "11px",
+            fontSize: "16px",
             marginTop: "4px"
           }}
         >
-          Distances are approximate straight-line, not driving distance.
+          Enter an address to calculate driving distances for filtered results.
         </p>
       </div>
     </DropPanel>
