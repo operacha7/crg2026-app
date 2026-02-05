@@ -825,7 +825,7 @@ function DistanceButtonWithPanel({
 
   return (
     <div className="relative">
-      <Tooltip text="Distance from client location">
+      <Tooltip text="Driving Distance from client">
         <button
           ref={buttonRef}
           onClick={handleToggle}
@@ -837,12 +837,14 @@ function DistanceButtonWithPanel({
             }
           `}
           style={{
-            height: "var(--height-navbar2-btn)",
-            width: "var(--height-navbar2-btn)", // Square button
+            height: "auto",
+            width: "auto",
+            padding: "0px 8px",
             borderRadius: "var(--radius-navbar2-btn)",
+            marginLeft: "200px",
           }}
         >
-          <Car1Icon size={24} active={isActive} />
+          <Car1Icon size={38} active={isActive} />
         </button>
       </Tooltip>
 

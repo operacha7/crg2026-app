@@ -4,7 +4,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { getIconByName, getIconNames } from "../icons/iconMap";
-import { Car1Icon } from "../icons";
+import { Car11Icon } from "../icons";
 import {
   formatHoursFromJson,
   formatAddress,
@@ -267,15 +267,8 @@ export default function ResultRow({
             {record.distance != null && (
               <div className="flex items-center gap-1">
                 {isDrivingDistance && (
-                  <div
-                    className="flex items-center justify-center"
-                    style={{
-                      backgroundColor: "#4A4F56",
-                      borderRadius: "3px",
-                      padding: "2px",
-                    }}
-                  >
-                    <Car1Icon size={14} active />
+                  <div className="flex items-center justify-center">
+                    <Car11Icon size={14} active />
                   </div>
                 )}
                 <span className="text-sm font-medium">{record.distance.toFixed(1)} mi</span>
@@ -283,7 +276,7 @@ export default function ResultRow({
             )}
             <span
               className="text-xs px-2 py-0.5 rounded-full mt-1"
-              style={{ backgroundColor: statusBgColor }}
+              
             >
               {record.status}
             </span>
@@ -483,15 +476,8 @@ export default function ResultRow({
         }}
       >
         {isDrivingDistance && record.distance != null && (
-          <div
-            className="flex items-center justify-center mb-1"
-            style={{
-              backgroundColor: "#4A4F56",
-              borderRadius: "4px",
-              padding: "4px",
-            }}
-          >
-            <Car1Icon size={16} active />
+          <div className="flex items-center justify-center mb-1">
+            <Car11Icon size={18} active />
           </div>
         )}
         <span>{record.distance != null ? record.distance.toFixed(1) : ""}</span>
