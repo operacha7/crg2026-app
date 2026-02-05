@@ -49,12 +49,14 @@ function mapDirectoryRecord(record) {
 
 // Build lookup map: organization name → array of unique assist_ids
 // Computed once from directory data for O(1) lookups in ResultRow
+// Excludes Inactive records (status_id === 3) - only Active and Limited
 function buildOrgAssistanceMap(directoryData) {
   const map = {};
   directoryData.forEach(record => {
     const orgName = record.organization;
     const assistId = record.assist_id;
-    if (orgName && assistId) {
+    const statusId = record.status_id;
+    if (orgName && assistId && statusId !== 3) {
       if (!map[orgName]) {
         map[orgName] = new Set();
       }

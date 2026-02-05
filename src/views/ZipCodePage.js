@@ -414,8 +414,8 @@ export default function ZipCodePage({
 
   return (
     <PageLayout
-      totalCount={directory.length}
-      filteredCount={displayDirectory.length}
+      totalCount={directory.filter(r => r.status_id !== 3).length}
+      filteredCount={displayDirectory.filter(r => r.status_id !== 3).length}
       selectedCount={selectedRows.length}
       onSendEmail={validateEmailSelection}
       onCreatePdf={validatePdfSelection}
