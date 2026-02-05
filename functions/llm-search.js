@@ -195,8 +195,8 @@ function buildSystemPrompt(assistanceTypes, zipCodes) {
     ? assistanceTypes.map((a) => `- "${a.assistance}" (assist_id: "${a.assist_id}")`).join("\n")
     : `- Rent, Utilities, Food, Clothing
 - Homeless - Shelters, Homeless - Day Centers, Homeless - Other, Housing
-- Medical - Primary Care, Medical - Equipment, Medical - Mental Health, Medical - Addiction Recovery, Medical - Program Enrollment, Medical - Bill Payment
-- Domestic Abuse - Shelters, Domestic Abuse - Other, Education - Children, Childcare
+- Medical - Primary Care, Medical - Dental & Vision, Medical - Mental Health, Medical - Addiction Recovery, Medical - Program Enrollment, Medical - Bill Payment
+- Domestic Abuse - Shelters, Domestic Abuse - Other, Education - Children, Mother & Child
 - Education - Adults, Jobs, Transportation, Legal, Immigration
 - Seniors, Handyman, Animals, Christmas, Other`;
 
@@ -288,7 +288,7 @@ Query: "homeless shelter that accepts walk-ins"
 Response: {"assistance_types":["Homeless - Shelters"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":["walk-in"],"neighborhood":null,"organization_name":null,"county":null,"city":null,"interpretation":"Homeless shelters that accept walk-ins","related_searches":["day center for homeless","meals for homeless","housing assistance"]}
 
 Query: "medical help within 5 miles"
-Response: {"assistance_types":["Medical - Primary Care","Medical - Equipment","Medical - Mental Health","Medical - Addiction Recovery","Medical - Program Enrollment","Medical - Bill Payment"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":5,"requirements_keywords":null,"neighborhood":null,"organization_name":null,"county":null,"city":null,"interpretation":"Medical assistance within 5 miles"}
+Response: {"assistance_types":["Medical - Primary Care","Medical - Dental & Vision","Medical - Mental Health","Medical - Addiction Recovery","Medical - Program Enrollment","Medical - Bill Payment"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":5,"requirements_keywords":null,"neighborhood":null,"organization_name":null,"county":null,"city":null,"interpretation":"Medical assistance within 5 miles"}
 
 Query: "anything open on Saturday"
 Response: {"assistance_types":null,"zip_codes":null,"days":["Sa"],"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":null,"neighborhood":null,"organization_name":null,"county":null,"city":null,"interpretation":"Any assistance open on Saturday"}
@@ -300,7 +300,7 @@ Query: "Catholic Charities"
 Response: {"assistance_types":null,"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":null,"neighborhood":null,"organization_name":"Catholic Charities","county":null,"city":null,"interpretation":"Services from Catholic Charities"}
 
 Query: "by appointment only medical"
-Response: {"assistance_types":["Medical - Primary Care","Medical - Equipment","Medical - Mental Health","Medical - Addiction Recovery","Medical - Program Enrollment","Medical - Bill Payment"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":["appointment"],"neighborhood":null,"organization_name":null,"county":null,"city":null,"interpretation":"Medical services requiring appointment"}
+Response: {"assistance_types":["Medical - Primary Care","Medical - Dental & Vision","Medical - Mental Health","Medical - Addiction Recovery","Medical - Program Enrollment","Medical - Bill Payment"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":["appointment"],"neighborhood":null,"organization_name":null,"county":null,"city":null,"interpretation":"Medical services requiring appointment"}
 
 Query: "help for veterans"
 Response: {"assistance_types":null,"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":["veteran"],"neighborhood":null,"organization_name":null,"county":null,"city":null,"interpretation":"Assistance for veterans"}
@@ -308,11 +308,20 @@ Response: {"assistance_types":null,"zip_codes":null,"days":null,"time_filter":nu
 Query: "senior services"
 Response: {"assistance_types":["Seniors"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":null,"neighborhood":null,"organization_name":null,"county":null,"city":null,"interpretation":"Services for seniors"}
 
+Query: "eye exam"
+Response: {"assistance_types":["Medical - Dental & Vision"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":["Vision"],"neighborhood":null,"organization_name":null,"county":null,"city":null,"interpretation":"Vision and eye care resources"}
+
+Query: "low cost glasses"
+Response: {"assistance_types":["Medical - Dental & Vision"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":["Vision"],"neighborhood":null,"organization_name":null,"county":null,"city":null,"interpretation":"Affordable eyeglasses assistance"}
+
+Query: "dentist for low income"
+Response: {"assistance_types":["Medical - Dental & Vision"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":["Dental","low income"],"neighborhood":null,"organization_name":null,"county":null,"city":null,"interpretation":"Low-cost dental services"}
+
 Query: "childcare in Fort Bend county"
-Response: {"assistance_types":["Childcare"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":null,"neighborhood":null,"organization_name":null,"county":"Fort Bend","city":null,"interpretation":"Childcare services in Fort Bend County"}
+Response: {"assistance_types":["Mother & Child"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":["Childcare"],"neighborhood":null,"organization_name":null,"county":"Fort Bend","city":null,"interpretation":"Childcare services in Fort Bend County"}
 
 Query: "childcare in Ft Bend"
-Response: {"assistance_types":["Childcare"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":null,"neighborhood":null,"organization_name":null,"county":"Fort Bend","city":null,"interpretation":"Childcare services in Fort Bend County"}
+Response: {"assistance_types":["Mother & Child"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":["Childcare"],"neighborhood":null,"organization_name":null,"county":"Fort Bend","city":null,"interpretation":"Childcare services in Fort Bend County"}
 
 Query: "food in Galveston"
 Response: {"assistance_types":["Food"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":null,"neighborhood":null,"organization_name":null,"county":"Galveston","city":null,"interpretation":"Food assistance in Galveston County"}
@@ -336,7 +345,7 @@ Query: "rent help within 3 miles of 5678 Westheimer Rd"
 Response: {"assistance_types":["Rent"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":3,"requirements_keywords":null,"neighborhood":null,"organization_name":null,"county":null,"city":null,"geocode_address":"5678 Westheimer Rd, Houston, TX","interpretation":"Rent assistance within 3 miles of 5678 Westheimer Rd"}
 
 Query: "medical help close to 9900 Memorial Dr Houston TX 77024"
-Response: {"assistance_types":["Medical - Primary Care","Medical - Equipment","Medical - Mental Health","Medical - Addiction Recovery","Medical - Program Enrollment","Medical - Bill Payment"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":null,"neighborhood":null,"organization_name":null,"county":null,"city":null,"geocode_address":"9900 Memorial Dr, Houston, TX 77024","interpretation":"Medical assistance near 9900 Memorial Dr"}
+Response: {"assistance_types":["Medical - Primary Care","Medical - Dental & Vision","Medical - Mental Health","Medical - Addiction Recovery","Medical - Program Enrollment","Medical - Bill Payment"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":null,"neighborhood":null,"organization_name":null,"county":null,"city":null,"geocode_address":"9900 Memorial Dr, Houston, TX 77024","interpretation":"Medical assistance near 9900 Memorial Dr"}
 
 IMPORTANT:
 - Only return valid JSON, nothing else
@@ -350,15 +359,15 @@ IMPORTANT:
   - "power bill", "electric bill", "electricity", "gas bill", "water bill", "light bill", "energy assistance", "LIHEAP" → Utilities
 
   RENT:
-  - "rent help", "rent assistance", "eviction", "behind on rent", "can't pay rent", "rental assistance" → Rent
+  - "rent help", "rent assistance", "eviction", "behind on rent", "can't pay rent", "rental assistance", "mortgage", "mortgage help", "mortgage assistance", "foreclosure" → Rent
 
   CLOTHING:
   - "clothes", "clothing", "wardrobe", "dress", "shoes", "coat" → Clothing
 
   MEDICAL (expand to ALL medical types):
   - "medical", "health", "healthcare", "health care" → ALL medical types
-  - "doctor", "clinic", "primary care", "checkup", "physical" → Medical - Primary Care
-  - "wheelchair", "walker", "medical equipment", "DME", "crutches", "oxygen" → Medical - Equipment
+  - "doctor", "clinic", "primary care", "checkup", "physical", "wheelchair", "walker", "medical equipment", "DME", "crutches", "oxygen" → Medical - Primary Care
+  - "vision", "eye", "eye exam", "eye care", "glasses", "eyeglasses", "optometrist", "optometry", "dental", "dentist", "teeth", "tooth", "oral health" → Medical - Dental & Vision
   - "mental health", "counseling", "therapy", "therapist", "depression", "anxiety", "psychiatrist", "psychologist" → Medical - Mental Health
   - "rehab", "rehabilitation", "AA", "NA", "addiction", "substance abuse", "drug", "alcohol", "recovery", "detox", "sober" → Medical - Addiction Recovery
   - "medicaid", "medicare", "insurance enrollment", "ACA", "marketplace", "health insurance" → Medical - Program Enrollment
@@ -375,6 +384,7 @@ IMPORTANT:
   DOMESTIC ABUSE:
   - "domestic abuse", "domestic violence", "DV", "abusive relationship", "battered", "abuse victim" → ALL domestic abuse types
   - "women's shelter", "safe house" → Domestic Abuse - Shelters
+  - "trafficking", "human trafficking", "sex trafficking", "sex worker", "prostitution", "exploitation" → Domestic Abuse - Other, Other
 
   HOUSING:
   - "housing", "apartment", "house", "place to live", "housing assistance", "section 8", "HUD" → Housing
@@ -384,8 +394,8 @@ IMPORTANT:
   - "tutoring", "after school", "homework help", "kids education" → Education - Children
   - "GED", "ESL", "English class", "adult education", "literacy", "learn English", "high school equivalency" → Education - Adults
 
-  CHILDCARE:
-  - "childcare", "child care", "daycare", "day care", "preschool", "babysitter", "babysitting", "headstart", "head start" → Childcare
+  MOTHER & CHILD:
+  - "childcare", "child care", "daycare", "day care", "preschool", "babysitter", "babysitting", "headstart", "head start", "pregnant", "pregnancy", "prenatal", "new mother", "newborn", "baby", "infant", "maternity", "postpartum" → Mother & Child
 
   JOBS:
   - "job", "jobs", "employment", "work", "job training", "career", "resume", "interview help", "workforce" → Jobs
@@ -411,7 +421,15 @@ IMPORTANT:
   CHRISTMAS:
   - "christmas", "holiday", "toys", "holiday help", "gift", "angel tree" → Christmas
 
+  OTHER (miscellaneous assistance):
+  - "mattress", "furniture", "bed", "couch", "sofa", "table", "household items", "home furnishings" → Other
+  - "sex worker", "prostitution", "trafficking", "exploitation" → Other (also consider Domestic Abuse - Other)
+
 - Search requirements_keywords for eligibility criteria: "veteran", "senior", "disabled", "children", "no ID", "homeless", "low income", "SNAP", "food stamps"
+- SUB-TYPE FILTERING via requirements_keywords: Some assistance types contain sub-types indicated in the first line of requirements. When searching for specific services, add to requirements_keywords:
+  - Vision/eye queries → add "Vision" to requirements_keywords (matches "Vision" in first line)
+  - Dental queries → add "Dental" to requirements_keywords (matches "Dental" in first line)
+  - Childcare queries → add "Childcare" to requirements_keywords (matches "Childcare" in first line)
 - LOCATION DISAMBIGUATION:
   - "Galveston", "Fort Bend", "Montgomery", "Brazoria", "Harris" → use county filter (these are county names)
   - "Ft Bend", "Ft. Bend" → normalize to "Fort Bend" county
@@ -429,6 +447,11 @@ IMPORTANT:
   - Suggest variations (e.g., different days, times, or locations)
   - Suggest broader or narrower searches
   - Keep suggestions short and natural (3-6 words each)
+- REDIRECT SIMPLE QUERIES: "Ask a Question" has API costs, so redirect queries that can be answered by other search modes:
+  - "What are [Org Name]'s hours?" → Return error with interpretation: "For organization hours, use the Organization search mode and look up [Org Name] directly."
+  - "What resources are in [county/city/zip]?" → Return error with interpretation: "For resources by location, use the Location search mode."
+  - "What [assistance type] is in [zip code]?" → Return error with interpretation: "For assistance by zip code, use the Zip Code search mode and select the assistance type."
+  - Only process complex queries that combine multiple filters (e.g., "food pantry open Thursday morning within 5 miles") that cannot be easily done with other search modes.
 - If the query is unclear or doesn't relate to finding resources, return: {"error":"Could not interpret query","interpretation":"Please describe what type of assistance you're looking for"}`;
 }
 

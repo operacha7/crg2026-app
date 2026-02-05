@@ -498,8 +498,8 @@ Groups are **evergreen** - determined by the `group` field in the `assistance` t
 
 - **Group 1** (Yellow): Rent, Utilities, Food, Clothing
 - **Group 2** (Purple): Homeless - Shelters, Homeless - Day Centers, Homeless - Other, Housing
-- **Group 3** (Pink): Medical - Primary Care, Medical - Equipment, Medical - Mental Health, Medical - Addiction Recovery, Medical - Program Enrollment, Medical - Bill Payment
-- **Group 4** (Green): Domestic Abuse - Shelters, Domestic Abuse - Other, Education - Children, Childcare
+- **Group 3** (Pink): Medical - Primary Care, Medical - Dental & Vision, Medical - Mental Health, Medical - Addiction Recovery, Medical - Program Enrollment, Medical - Bill Payment
+- **Group 4** (Green): Domestic Abuse - Shelters, Domestic Abuse - Other, Education - Children, Mother & Child
 - **Group 5** (Cyan): Education - Adults, Jobs, Transportation, Legal, Immigration
 - **Group 6** (Orange): Seniors, Handyman, Animals, Christmas, Other
 
