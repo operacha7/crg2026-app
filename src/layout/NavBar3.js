@@ -3,7 +3,7 @@
 // Shows Assistance button + selected assistance type chips + dropdown panel
 // Fetches assistance types from Supabase for dynamic/evergreen groups
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { dataService } from "../services/dataService";
 import { getIconByName } from "../icons/iconMap";
 import { useAppData } from "../Contexts/AppDataContext";
@@ -378,6 +378,22 @@ export default function NavBar3() {
     }
   };
 
+  // Log assistance type selections to app_usage_logs
+  const logAssistanceSelections = useCallback((selections, assistData) => {
+    selections.forEach((typeId) => {
+      const item = assistData.find((a) => a.assist_id === typeId);
+      if (item) {
+        logUsage({
+          reg_organization: regOrgName,
+          action_type: 'search',
+          search_mode: getSearchModeDisplay(),
+          assistance_type: item.assistance,
+        });
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regOrgName, activeSearchMode]);
+
   // Assistance data from Supabase
   const [assistanceData, setAssistanceData] = useState([]);
   const [groups, setGroups] = useState([]);
@@ -425,6 +441,9 @@ export default function NavBar3() {
         setSavedSelections(tempSelections);
         setActiveAssistanceChips(new Set(tempSelections));
         setIsPanelOpen(false);
+
+        // Log each selected assistance type
+        logAssistanceSelections(tempSelections, assistanceData);
       }
     }
 
@@ -434,7 +453,7 @@ export default function NavBar3() {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("touchstart", handleClickOutside);
     };
-  }, [isPanelOpen, tempSelections, setActiveAssistanceChips]);
+  }, [isPanelOpen, tempSelections, setActiveAssistanceChips, logAssistanceSelections, assistanceData]);
 
   // Get type info by assist_id (text field that matches directory.assist_id)
   const getTypeInfo = (typeId) => {
@@ -457,6 +476,9 @@ export default function NavBar3() {
       setSavedSelections(tempSelections);
       setActiveAssistanceChips(new Set(tempSelections));
       setIsPanelOpen(false);
+
+      // Log each selected assistance type
+      logAssistanceSelections(tempSelections, assistanceData);
     } else {
       // Opening - load saved selections into temp
       setTempSelections([...savedSelections]);
@@ -518,6 +540,9 @@ export default function NavBar3() {
     // assist_id is already text, use directly
     setActiveAssistanceChips(new Set(tempSelections));
     setIsPanelOpen(false);
+
+    // Log each selected assistance type
+    logAssistanceSelections(tempSelections, assistanceData);
 
     // Auto-open Quick Tips to Assistance section on first multi-selection of session
     // Highlight the chip toggle section to draw attention to the toggling feature
