@@ -114,7 +114,9 @@ function AssistanceButton({ hasSelections, hasActiveSearchFilter, onClick, butto
         }}
       >
         {buttonText}
-        <span style={{ fontSize: "10px" }}>&#9662;</span>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+          <path d="M7 10l5 5 5-5z" />
+        </svg>
       </button>
     </>
   );
@@ -795,7 +797,9 @@ export default function NavBar3() {
               }}
             >
               {savedSelections.length > 0 ? `Assistance (${savedSelections.length})` : "Choose Assistance"}
-              <span style={{ fontSize: "8px" }}>&#9662;</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+                <path d="M7 10l5 5 5-5z" />
+              </svg>
             </button>
             {/* Panel still available */}
             <AssistancePanel

@@ -437,7 +437,11 @@ function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select 
         }}
       >
         {hasValue ? value : placeholder}
-        {usePromptingStyle && <span style={{ fontSize: "10px", marginLeft: "4px" }}>&#9662;</span>}
+        {usePromptingStyle && (
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0, marginLeft: "4px" }}>
+            <path d="M7 10l5 5 5-5z" />
+          </svg>
+        )}
       </button>
 
       {isOpen && (
