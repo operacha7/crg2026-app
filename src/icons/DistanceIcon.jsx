@@ -2,7 +2,7 @@
 // Distance icon with active/inactive states
 // Inactive: #FFFFFF (white), Active: #FFC857 (gold)
 export const DistanceIcon = ({ size = 24, className = "", active = false }) => {
-  const fillColor = active ? "#FFC857" : "#F3EED9";
+  const fillColor = active ? "#FFC857" : "#FFFFFF";
 
   return (
     <svg

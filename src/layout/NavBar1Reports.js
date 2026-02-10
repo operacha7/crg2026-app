@@ -116,7 +116,7 @@ export default function NavBar1Reports({ selectedReport, onReportChange }) {
           className="font-opensans transition-all hover:brightness-125"
           style={{
             backgroundColor: 'transparent',
-            color: '#F3EED9',
+            color: '#FFFFFF',
             fontSize: 'var(--font-size-navbar1-btn)',
             fontWeight: 'var(--font-weight-navbar1-btn)',
             letterSpacing: 'var(--letter-spacing-navbar1-btn)',
@@ -131,7 +131,7 @@ export default function NavBar1Reports({ selectedReport, onReportChange }) {
           <div
             className="absolute right-0 mt-2 rounded shadow-lg z-50"
             style={{
-              backgroundColor: '#F3EED9',
+              backgroundColor: '#FDF6E3',
               minWidth: '180px',
             }}
           >

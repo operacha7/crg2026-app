@@ -24,6 +24,7 @@ module.exports = {
         'navbar1-btn-pdf-text': 'var(--color-navbar1-btn-pdf-text)',
         // NavBar 2
         'navbar2-bg': 'var(--color-navbar2-bg)',
+        'navbar2-btn-inactive-bg': 'var(--color-navbar2-btn-inactive-bg)',
         'navbar2-btn-inactive-text': 'var(--color-navbar2-btn-inactive-text)',
         'navbar2-btn-inactive-border': 'var(--color-navbar2-btn-inactive-border)',
         'navbar2-btn-active-bg': 'var(--color-navbar2-btn-active-bg)',

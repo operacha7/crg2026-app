@@ -238,7 +238,7 @@ Vertical strip with icons: [[HOME_ICON]] [[INFO_ICON]] [[REPORTS_ICON]] and othe
 
 ### Search by Zip Code
 1. Click [[ZIP_CODE_BTN]] in the gray bar (if not already active with dark background and gold text)
-2. Click the [[ZIP_DROPDOWN]] dropdown labeled "Select Zip Code" on the left side of the gray bar
+2. Click the [[ZIP_DROPDOWN]] dropdown labeled "Choose Zip Code" on the left side of the gray bar
 3. Either scroll to find your zip, or start typing the zip code to jump to it
 4. Results will automatically filter to show resources serving that zip code
 5. To refine your results, click [[SELECT_ASSISTANCE_BTN]] in the tan bar to filter by assistance type

@@ -23,30 +23,100 @@ const GROUP_COLORS = {
 
 // Assistance button - changes text based on whether chips exist
 // No chevron - panel opens on hover
-function AssistanceButton({ hasSelections, onClick, buttonRef }) {
+function AssistanceButton({ hasSelections, hasActiveSearchFilter, onClick, buttonRef }) {
+  // Three states: disabled (no filter + no selections), prompting (filter active, no selections), active (has selections)
+  let buttonState;
+  if (hasSelections) {
+    buttonState = "active";
+  } else if (hasActiveSearchFilter) {
+    buttonState = "prompting";
+  } else {
+    buttonState = "disabled";
+  }
+
+  // Track previous state to detect transition to prompting (for animation)
+  const prevStateRef = useRef(buttonState);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    if (buttonState === "prompting" && prevStateRef.current !== "prompting") {
+      setIsAnimating(true);
+      const timeout = setTimeout(() => setIsAnimating(false), 1500);
+      return () => clearTimeout(timeout);
+    }
+    prevStateRef.current = buttonState;
+  }, [buttonState]);
+
+  const stateStyles = {
+    disabled: {
+      backgroundColor: "var(--color-navbar3-btn-disabled-bg)",
+      color: "#000000",
+      border: "var(--border-width-btn) solid var(--color-navbar3-btn-disabled-border)",
+      opacity: 0.5,
+    },
+    prompting: {
+      backgroundColor: "var(--color-navbar3-btn-prompting-bg)",
+      color: "var(--color-navbar3-btn-prompting-text)",
+      border: "var(--border-width-btn) solid var(--color-navbar3-btn-prompting-border)",
+      opacity: 1,
+    },
+    active: {
+      backgroundColor: "var(--color-navbar3-btn-active-bg)",
+      color: "var(--color-navbar3-btn-active-text)",
+      border: "var(--border-width-btn) solid var(--color-navbar3-btn-active-border)",
+      opacity: 1,
+    },
+  };
+
+  // Glow + bounce animation when entering prompting state
+  const glowColor = "rgba(249, 178, 51, 0.7)";
+  const animationStyles = isAnimating
+    ? {
+        boxShadow: `0 0 0 3px ${glowColor}, 0 0 15px 5px ${glowColor}`,
+        animation: "assistanceBounce 0.6s ease-out",
+      }
+    : {
+        boxShadow: "none",
+      };
+
+  const buttonText = hasSelections ? "Change Assistance" : "Choose Assistance";
+
   return (
-    <button
-      ref={buttonRef}
-      onClick={onClick}
-      className={`
-        font-opensans transition-all duration-200 flex items-center gap-2
-        ${hasSelections
-          ? "bg-navbar2-btn-active-bg text-navbar2-btn-active-text hover:brightness-125"
-          : "bg-transparent text-navbar2-btn-inactive-text hover:bg-white/10"
+    <>
+      <style>{`
+        @keyframes assistanceBounce {
+          0% { transform: scale(1); }
+          20% { transform: scale(1.08) translateY(-3px); }
+          40% { transform: scale(0.97) translateY(1px); }
+          60% { transform: scale(1.03) translateY(-1px); }
+          80% { transform: scale(0.99); }
+          100% { transform: scale(1); }
         }
-      `}
-      style={{
-        height: "var(--height-navbar3-btn)",
-        paddingLeft: "var(--padding-navbar2-btn-x)",
-        paddingRight: "var(--padding-navbar2-btn-x)",
-        borderRadius: "var(--radius-navbar2-btn)",
-        fontSize: "var(--font-size-navbar2-btn)",
-        fontWeight: "var(--font-weight-navbar2-btn)",
-        letterSpacing: "var(--letter-spacing-navbar2-btn)",
-      }}
-    >
-      {hasSelections ? "Change Assistance" : "Select Assistance"}
-    </button>
+      `}</style>
+      <button
+        ref={buttonRef}
+        onClick={buttonState === "disabled" ? undefined : onClick}
+        disabled={buttonState === "disabled"}
+        className={`font-opensans transition-all duration-200 flex items-center gap-2 ${
+          buttonState === "disabled" ? "cursor-not-allowed" : "hover:brightness-125 cursor-pointer"
+        }`}
+        style={{
+          height: "var(--height-navbar3-btn)",
+          minWidth: "var(--min-width-choose-btn)",
+          paddingLeft: "var(--padding-navbar2-btn-x)",
+          paddingRight: "var(--padding-navbar2-btn-x)",
+          borderRadius: "var(--radius-navbar2-btn)",
+          fontSize: "var(--font-size-navbar2-btn)",
+          fontWeight: "var(--font-weight-navbar2-btn)",
+          letterSpacing: "var(--letter-spacing-navbar2-btn)",
+          ...stateStyles[buttonState],
+          ...animationStyles,
+        }}
+      >
+        {buttonText}
+        <span style={{ fontSize: "10px" }}>&#9662;</span>
+      </button>
+    </>
   );
 }
 
@@ -77,7 +147,7 @@ function AssistanceChip({ name, icon, isActive, onClick, fontSize, iconSize }) {
         color: isActive
           ? "var(--color-navbar3-chip-active-text)"
           : "var(--color-navbar3-chip-inactive-text)",
-        border: `1px solid ${isActive
+        border: `var(--border-width-btn) solid ${isActive
           ? "var(--color-navbar3-chip-active-border)"
           : "var(--color-navbar3-chip-inactive-border)"}`,
         whiteSpace: "nowrap",
@@ -356,6 +426,7 @@ export default function NavBar3() {
     setActiveAssistanceChips,
     loggedInUser,
     activeSearchMode,
+    hasActiveSearchFilter,
     // Quick Tips state for auto-opening on first multi-selection
     setQuickTipsOpen,
     setQuickTipsExpandedSection,
@@ -610,7 +681,7 @@ export default function NavBar3() {
     <nav className="bg-navbar3-bg relative">
       {/* ========== DESKTOP LAYOUT (md+) ========== */}
       <div
-        className="hidden md:flex items-center justify-between"
+        className="hidden lg:flex items-center justify-between"
         style={{
           height: "var(--height-navbar3)",
           paddingLeft: "var(--padding-navbar3-left)",
@@ -626,6 +697,7 @@ export default function NavBar3() {
           >
             <AssistanceButton
               hasSelections={savedSelections.length > 0}
+              hasActiveSearchFilter={hasActiveSearchFilter}
               onClick={handleOpenPanel}
               buttonRef={buttonRef}
             />
@@ -674,7 +746,7 @@ export default function NavBar3() {
         <span
           className="font-handlee flex-shrink-0 ml-4"
           style={{
-            color: "var(--color-navbar3-user-text, #F3EED9)",
+            color: "var(--color-navbar3-user-text, #FFFFFF)",
             fontSize: "var(--font-size-navbar3-user)",
             letterSpacing: ".05em",
             whiteSpace: "nowrap",
@@ -685,7 +757,7 @@ export default function NavBar3() {
       </div>
 
       {/* ========== MOBILE LAYOUT (<md) ========== */}
-      <div className="md:hidden py-2 px-3">
+      <div className="lg:hidden py-2 px-3">
         {/* Top row: Assistance button + user name */}
         <div className="flex items-center justify-between mb-2">
           <div
@@ -693,16 +765,37 @@ export default function NavBar3() {
           >
             <button
               ref={buttonRef}
-              onClick={handleOpenPanel}
-              className={`
-                font-opensans text-sm px-3 py-1.5 rounded transition-all flex items-center gap-1
-                ${savedSelections.length > 0
-                  ? "bg-navbar2-btn-active-bg text-navbar2-btn-active-text"
-                  : "bg-transparent text-navbar2-btn-inactive-text border border-white/30"
-                }
-              `}
+              onClick={savedSelections.length === 0 && !hasActiveSearchFilter ? undefined : handleOpenPanel}
+              disabled={savedSelections.length === 0 && !hasActiveSearchFilter}
+              className={`font-opensans text-sm px-3 py-1.5 rounded transition-all flex items-center gap-1 ${
+                savedSelections.length === 0 && !hasActiveSearchFilter
+                  ? "cursor-not-allowed"
+                  : "hover:brightness-125 cursor-pointer"
+              }`}
+              style={{
+                ...(savedSelections.length > 0
+                  ? {
+                      backgroundColor: "var(--color-navbar3-btn-active-bg)",
+                      color: "var(--color-navbar3-btn-active-text)",
+                      border: "var(--border-width-btn) solid var(--color-navbar3-btn-active-border)",
+                    }
+                  : hasActiveSearchFilter
+                    ? {
+                        backgroundColor: "var(--color-navbar3-btn-prompting-bg)",
+                        color: "var(--color-navbar3-btn-prompting-text)",
+                        border: "var(--border-width-btn) solid var(--color-navbar3-btn-prompting-border)",
+                      }
+                    : {
+                        backgroundColor: "var(--color-navbar3-btn-disabled-bg)",
+                        color: "#000000",
+                        border: "var(--border-width-btn) solid var(--color-navbar3-btn-disabled-border)",
+                        opacity: 0.5,
+                      }
+                ),
+              }}
             >
-              {savedSelections.length > 0 ? `Assistance (${savedSelections.length})` : "Select Assistance"}
+              {savedSelections.length > 0 ? `Assistance (${savedSelections.length})` : "Choose Assistance"}
+              <span style={{ fontSize: "8px" }}>&#9662;</span>
             </button>
             {/* Panel still available */}
             <AssistancePanel

@@ -250,7 +250,7 @@ export default function EmailPanel({
               className="font-opensans transition-all duration-200 hover:brightness-110"
               style={{
                 backgroundColor: showPreview ? "#666" : "#007ab8",
-                color: "#F3EED9",
+                color: "#FFFFFF",
                 height: "var(--height-panel-btn)",
                 borderRadius: "var(--radius-panel-btn)",
                 fontSize: "var(--font-size-panel-btn)",

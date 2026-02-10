@@ -84,7 +84,7 @@ const ICON_MAP = {
 
   // Assistance bar elements (uses NavBar3 tokens)
   "[[SELECT_ASSISTANCE_BTN]]": (
-    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar3-bg)", color: "var(--color-navbar3-chip-active-text)" }}>Select Assistance ▾</span>
+    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar3-btn-prompting-bg)", color: "var(--color-navbar3-btn-prompting-text)" }}>Choose Assistance ▾</span>
   ),
   "[[CHIP_ACTIVE]]": (
     <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: "var(--color-navbar3-chip-active-bg)", color: "var(--color-navbar3-chip-active-text)" }}>Food</span>
@@ -295,7 +295,7 @@ export default function HelpPanel({ isOpen, onClose, resetKey }) {
           maxHeight: isMobile ? "100%" : "calc(100vh - 32px)",
           borderRadius: isMobile ? 0 : "var(--radius-panel)",
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
-          border: isMobile ? "none" : "2px solid var(--color-panel-border, #F3EED9)",
+          border: isMobile ? "none" : "2px solid var(--color-panel-border, #000000)",
           cursor: isDragging && !isMobile ? "grabbing" : "default",
         }}
       >

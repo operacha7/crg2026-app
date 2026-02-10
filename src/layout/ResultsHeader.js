@@ -26,7 +26,7 @@ export default function ResultsHeader() {
   return (
     // Hide header on mobile - cards are self-explanatory
     <div
-      className="hidden md:flex bg-results-header-bg text-results-header-text font-opensans items-center"
+      className="hidden lg:flex bg-results-header-bg text-results-header-text font-opensans items-center"
       style={{
         height: "var(--height-results-header)",
         fontSize: "var(--font-size-results-header)",

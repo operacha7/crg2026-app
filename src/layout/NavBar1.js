@@ -187,7 +187,7 @@ export default function NavBar1({
     >
       {/* ========== DESKTOP LAYOUT (md+) ========== */}
       <div
-        className="hidden md:flex items-center justify-between"
+        className="hidden lg:flex items-center justify-between"
         style={{ height: 'var(--height-navbar1)' }}
       >
         {/* Left side - Logo and Title */}
@@ -344,7 +344,7 @@ export default function NavBar1({
       </div>
 
       {/* ========== MOBILE LAYOUT (<md) ========== */}
-      <div className="md:hidden flex items-center justify-between py-2 px-2">
+      <div className="lg:hidden flex items-center justify-between py-2 px-2">
         {/* Left side - Logo only (no title on mobile) */}
         <img
           src="/images/CRG Logo 2025.webp"

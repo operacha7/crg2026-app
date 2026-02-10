@@ -25,13 +25,7 @@ function ModeButton({ label, isActive, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`
-        font-opensans transition-all duration-200
-        ${isActive
-          ? "bg-navbar2-btn-active-bg text-navbar2-btn-active-text hover:brightness-125"
-          : "bg-transparent text-navbar2-btn-inactive-text hover:bg-white/10"
-        }
-      `}
+      className="font-opensans transition-all duration-200 hover:brightness-125"
       style={{
         height: "var(--height-navbar2-btn)",
         paddingLeft: "var(--padding-navbar2-btn-x)",
@@ -40,6 +34,16 @@ function ModeButton({ label, isActive, onClick }) {
         fontSize: "var(--font-size-navbar2-btn)",
         fontWeight: "var(--font-weight-navbar2-btn)",
         letterSpacing: "var(--letter-spacing-navbar2-btn)",
+        backgroundColor: isActive
+          ? "var(--color-navbar2-btn-active-bg)"
+          : "var(--color-navbar2-btn-inactive-bg)",
+        color: isActive
+          ? "var(--color-navbar2-btn-active-text)"
+          : "var(--color-navbar2-btn-inactive-text)",
+        border: isActive
+          ? "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)"
+          : "var(--border-width-btn) solid var(--color-navbar2-btn-inactive-border)",
+        whiteSpace: "nowrap",
       }}
     >
       {label}
@@ -88,11 +92,7 @@ function HoverDropdown({ placeholder, options = [], value, onChange, allowReset 
     >
       <button
         onClick={handleClick}
-        className={`font-opensans transition-all duration-200 ${
-          hasValue
-            ? "bg-navbar2-dropdown-bg text-navbar2-dropdown-text hover:brightness-125"
-            : "bg-transparent text-navbar2-btn-inactive-text hover:bg-white/10"
-        }`}
+        className="font-opensans transition-all duration-200 hover:brightness-125"
         style={{
           height: "var(--height-navbar2-btn)",
           paddingLeft: "var(--padding-navbar2-btn-x)",
@@ -101,7 +101,16 @@ function HoverDropdown({ placeholder, options = [], value, onChange, allowReset 
           fontSize: "var(--font-size-navbar2-dropdown)",
           fontWeight: "var(--font-weight-navbar2-dropdown)",
           letterSpacing: "var(--letter-spacing-navbar2-dropdown)",
-          border: hasValue ? "1px solid rgba(255,255,255,1)" : "none",
+          backgroundColor: hasValue
+            ? "var(--color-navbar2-btn-active-bg)"
+            : "var(--color-navbar2-btn-inactive-bg)",
+          color: hasValue
+            ? "var(--color-navbar2-btn-active-text)"
+            : "var(--color-navbar2-btn-inactive-text)",
+          border: hasValue
+            ? "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)"
+            : "var(--border-width-btn) solid var(--color-navbar2-btn-inactive-border)",
+          whiteSpace: "nowrap",
         }}
       >
         {hasValue ? truncateText(value) : placeholder}
@@ -231,11 +240,7 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
     >
       <button
         onClick={handleClick}
-        className={`font-opensans transition-all duration-200 ${
-          hasValue
-            ? "bg-navbar2-dropdown-bg text-navbar2-dropdown-text hover:brightness-125"
-            : "bg-transparent text-navbar2-btn-inactive-text hover:bg-white/10"
-        }`}
+        className="font-opensans transition-all duration-200 hover:brightness-125"
         style={{
           height: "var(--height-navbar2-btn)",
           paddingLeft: "var(--padding-navbar2-btn-x)",
@@ -244,7 +249,16 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
           fontSize: "var(--font-size-navbar2-dropdown)",
           fontWeight: "var(--font-weight-navbar2-dropdown)",
           letterSpacing: "var(--letter-spacing-navbar2-dropdown)",
-          border: hasValue ? "1px solid rgba(255,255,255,1)" : "none",
+          backgroundColor: hasValue
+            ? "var(--color-navbar2-btn-active-bg)"
+            : "var(--color-navbar2-btn-inactive-bg)",
+          color: hasValue
+            ? "var(--color-navbar2-btn-active-text)"
+            : "var(--color-navbar2-btn-inactive-text)",
+          border: hasValue
+            ? "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)"
+            : "var(--border-width-btn) solid var(--color-navbar2-btn-inactive-border)",
+          whiteSpace: "nowrap",
         }}
       >
         {hasValue ? truncateText(value) : placeholder}
@@ -326,7 +340,7 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
 }
 
 // Zip Code dropdown - click to open with type-to-search
-function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select Zip Code", useDropdownStyle = false }) {
+function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select Zip Code", useDropdownStyle = false, usePromptingStyle = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredOption, setHoveredOption] = useState(null);
   const [searchText, setSearchText] = useState("");
@@ -385,11 +399,7 @@ function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select 
     >
       <button
         onClick={handleClick}
-        className={`font-opensans transition-all duration-200 ${
-          hasValue
-            ? "bg-navbar2-dropdown-bg text-navbar2-dropdown-text hover:brightness-125"
-            : "bg-transparent text-navbar2-btn-inactive-text hover:bg-white/10"
-        }`}
+        className="font-opensans transition-all duration-200 hover:brightness-125 flex items-center gap-1"
         style={{
           height: "var(--height-navbar2-btn)",
           paddingLeft: "var(--padding-navbar2-btn-x)",
@@ -398,10 +408,36 @@ function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select 
           fontSize: useDropdownStyle ? "var(--font-size-navbar2-dropdown)" : "var(--font-size-navbar2-btn)",
           fontWeight: useDropdownStyle ? "var(--font-weight-navbar2-dropdown)" : "var(--font-weight-navbar2-btn)",
           letterSpacing: useDropdownStyle ? "var(--letter-spacing-navbar2-dropdown)" : "var(--letter-spacing-navbar2-btn)",
-          border: hasValue ? "1px solid rgba(255,255,255,1)" : "none",
+          whiteSpace: "nowrap",
+          ...(usePromptingStyle
+            ? {
+                minWidth: hasValue ? undefined : "var(--min-width-choose-btn)",
+                backgroundColor: hasValue
+                  ? "var(--color-navbar2-dropdown-bg)"
+                  : "var(--color-navbar2-dropdown-prompting-bg)",
+                color: hasValue
+                  ? "var(--color-navbar2-dropdown-text)"
+                  : "var(--color-navbar2-dropdown-prompting-text)",
+                border: hasValue
+                  ? "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)"
+                  : "var(--border-width-btn) solid var(--color-navbar2-dropdown-prompting-border)",
+              }
+            : {
+                backgroundColor: hasValue
+                  ? "var(--color-navbar2-btn-active-bg)"
+                  : "var(--color-navbar2-btn-inactive-bg)",
+                color: hasValue
+                  ? "var(--color-navbar2-btn-active-text)"
+                  : "var(--color-navbar2-btn-inactive-text)",
+                border: hasValue
+                  ? "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)"
+                  : "var(--border-width-btn) solid var(--color-navbar2-btn-inactive-border)",
+              }
+          ),
         }}
       >
         {hasValue ? value : placeholder}
+        {usePromptingStyle && <span style={{ fontSize: "10px", marginLeft: "4px" }}>&#9662;</span>}
       </button>
 
       {isOpen && (
@@ -572,11 +608,7 @@ function LLMSearchDropdown({
       {/* Trigger button */}
       <button
         onClick={handleClick}
-        className={`font-opensans transition-all duration-200 ${
-          hasValue
-            ? "bg-navbar2-dropdown-bg text-navbar2-dropdown-text hover:brightness-125"
-            : "bg-transparent text-navbar2-btn-inactive-text hover:bg-white/10"
-        }`}
+        className="font-opensans transition-all duration-200 hover:brightness-125"
         style={{
           height: "var(--height-navbar2-btn)",
           paddingLeft: "var(--padding-navbar2-btn-x)",
@@ -585,7 +617,16 @@ function LLMSearchDropdown({
           fontSize: "var(--font-size-navbar2-btn)",
           fontWeight: "var(--font-weight-navbar2-btn)",
           letterSpacing: "var(--letter-spacing-navbar2-btn)",
-          border: hasValue ? "1px solid rgba(255,255,255,1)" : "none",
+          backgroundColor: hasValue
+            ? "var(--color-navbar2-btn-active-bg)"
+            : "var(--color-navbar2-btn-inactive-bg)",
+          color: hasValue
+            ? "var(--color-navbar2-btn-active-text)"
+            : "var(--color-navbar2-btn-inactive-text)",
+          border: hasValue
+            ? "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)"
+            : "var(--border-width-btn) solid var(--color-navbar2-btn-inactive-border)",
+          whiteSpace: "nowrap",
         }}
       >
         {hasValue ? truncateText(value) : "What are you looking for today?"}
@@ -675,7 +716,7 @@ function LLMSearchDropdown({
           {/* Panel body */}
           <div className="p-4">
             {/* Search input label */}
-            <p className="text-lg mb-2" style={{ color: "#F3EED9", fontFamily: "'Open Sans', sans-serif" }}>
+            <p className="text-lg mb-2" style={{ color: "#FFFFFF", fontFamily: "'Open Sans', sans-serif" }}>
               Describe what you're looking for in plain language:
             </p>
 
@@ -725,7 +766,7 @@ function LLMSearchDropdown({
                 className="transition-all duration-200 hover:brightness-110 font-opensans"
                 style={{
                   backgroundColor: "#007ab8",
-                  color: "#F3EED9",
+                  color: "#FFFFFF",
                   width: "var(--width-panel-btn)",
                   height: "var(--height-panel-btn)",
                   borderRadius: "var(--radius-panel-btn)",
@@ -839,12 +880,13 @@ function DistanceButtonWithPanel({
           style={{
             height: "auto",
             width: "auto",
-            padding: "0px 8px",
+            padding: "0px 6px",
             borderRadius: "var(--radius-navbar2-btn)",
-            marginLeft: "200px",
+            marginLeft: "clamp(10px, 10vw, 200px)",
+            flexShrink: 0,
           }}
         >
-          <Car1Icon size={38} active={isActive} />
+          <Car1Icon size={28} active={isActive} />
         </button>
       </Tooltip>
 
@@ -882,7 +924,9 @@ function ZipCodeFilters({
         value={selectedZip}
         onChange={onZipChange}
         options={zipCodeOptions}
+        placeholder="Choose Zip Code"
         useDropdownStyle={true}
+        usePromptingStyle={true}
       />
       {selectedZip && neighborhoodText && <NeighborhoodLink text={neighborhoodText} />}
       <DistanceButtonWithPanel
@@ -1443,7 +1487,7 @@ export default function NavBar2() {
     <nav className="bg-navbar2-bg">
       {/* ========== DESKTOP LAYOUT (md+) ========== */}
       <div
-        className="hidden md:flex items-center justify-between"
+        className="hidden lg:flex items-center justify-between"
         style={{
           height: "var(--height-navbar2)",
           paddingLeft: "var(--padding-navbar2-left)",
@@ -1452,7 +1496,7 @@ export default function NavBar2() {
       >
         {/* Left side - Mode-specific filters */}
         <div
-          className="flex items-center"
+          className="flex items-center min-w-0 flex-shrink"
           style={{ gap: "var(--gap-navbar2-filters)" }}
         >
           {renderFilters()}
@@ -1460,7 +1504,7 @@ export default function NavBar2() {
 
         {/* Right side - Search mode buttons */}
         <div
-          className="flex items-center"
+          className="flex items-center flex-shrink-0"
           style={{ gap: "var(--gap-navbar2-mode-buttons)" }}
         >
           <ModeButton
@@ -1487,7 +1531,7 @@ export default function NavBar2() {
       </div>
 
       {/* ========== MOBILE LAYOUT (<md) ========== */}
-      <div className="md:hidden flex flex-col py-2 px-3 gap-2">
+      <div className="lg:hidden flex flex-col py-2 px-3 gap-2">
         {/* Top row - Mode selector tabs */}
         <div className="flex gap-1 overflow-x-auto">
           {[
@@ -1499,11 +1543,18 @@ export default function NavBar2() {
             <button
               key={mode}
               onClick={() => handleModeChange(mode)}
-              className={`px-3 py-1.5 rounded text-sm font-medium whitespace-nowrap transition-all ${
-                activeSearchMode === mode
-                  ? "bg-navbar2-btn-active-bg text-navbar2-btn-active-text"
-                  : "bg-transparent text-navbar2-btn-inactive-text border border-white/30"
-              }`}
+              className="px-3 py-1.5 rounded text-sm font-medium whitespace-nowrap transition-all hover:brightness-125"
+              style={{
+                backgroundColor: activeSearchMode === mode
+                  ? "var(--color-navbar2-btn-active-bg)"
+                  : "var(--color-navbar2-btn-inactive-bg)",
+                color: activeSearchMode === mode
+                  ? "var(--color-navbar2-btn-active-text)"
+                  : "var(--color-navbar2-btn-inactive-text)",
+                border: activeSearchMode === mode
+                  ? "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)"
+                  : "var(--border-width-btn) solid var(--color-navbar2-btn-inactive-border)",
+              }}
             >
               {label}
             </button>

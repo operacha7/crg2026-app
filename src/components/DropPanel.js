@@ -17,7 +17,7 @@
  * @param {function} onClear - Optional Clear button handler (renders between Cancel and OK)
  * @param {string} clearButtonText - Text for Clear button (default: "Clear")
  * @param {string} clearButtonBgColor - Background color for Clear button (default: "#007ab8")
- * @param {string} clearButtonTextColor - Text color for Clear button (default: "#F3EED9")
+ * @param {string} clearButtonTextColor - Text color for Clear button (default: "#FFFFFF")
  */
 export default function DropPanel({
   title,
@@ -32,7 +32,7 @@ export default function DropPanel({
   onClear,
   clearButtonText = "Clear",
   clearButtonBgColor = "#007ab8",
-  clearButtonTextColor = "#F3EED9",
+  clearButtonTextColor = "#FFFFFF",
 }) {
   if (!isOpen) return null;
 

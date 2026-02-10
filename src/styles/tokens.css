@@ -19,34 +19,49 @@
 
   /* NavBar 1 */
   --color-navbar1-bg: #222831;
-  --color-navbar1-title: #F3EED9;
+  --color-navbar1-title: #FFFFFF;
   --color-navbar1-counter-text-filtered: #002E62;
   --color-navbar1-counter-text-selected: #EB6E1F;
   --color-navbar1-counter-filtered: #EB6E1F;
   --color-navbar1-counter-selected: #002E62;
-  --color-navbar1-btn-email-bg: #E5BA66;
+  --color-navbar1-btn-email-bg: #FFCC00;
   --color-navbar1-btn-email-text: #222831;
-  --color-navbar1-btn-pdf-bg: #6678e5;
+  --color-navbar1-btn-pdf-bg: #8FAFFB;
   --color-navbar1-btn-pdf-text: #222831;
 
   /* NavBar 2 */
   --color-navbar2-bg: #4A4F56;
-  --color-navbar2-btn-inactive-text: #F3EED9;
-  --color-navbar2-btn-inactive-border: #F3EED9;
-  --color-navbar2-btn-active-bg: #222831;
-  --color-navbar2-btn-active-text: #FFC857;
-  --color-navbar2-dropdown-bg: #2d6552;
-  --color-navbar2-dropdown-text: #F3EED9;
+  --color-navbar2-btn-inactive-bg: #FDF6E3;
+  --color-navbar2-btn-inactive-text: #2E5A88;
+  --color-navbar2-btn-inactive-border: #000000;
+  --color-navbar2-btn-active-bg: #2E5A88;
+  --color-navbar2-btn-active-text: #FFFFFF;
+  --color-navbar2-btn-active-border: #000000;
+  --border-width-btn: 2px;
+  --color-navbar2-dropdown-bg: #2E5A88;
+  --color-navbar2-dropdown-text: #FFFFFF;
+  --color-navbar2-dropdown-prompting-bg: #F9B233;
+  --color-navbar2-dropdown-prompting-text: #000000;
+  --color-navbar2-dropdown-prompting-border: #000000;
   --color-navbar2-link: #F0F8FF;
 
   /* NavBar 3 */
   --color-navbar3-bg: #948979;
-  --color-navbar3-chip-active-bg: #2d6552;
-  --color-navbar3-chip-active-text: #F3EED9;
-  --color-navbar3-chip-active-border: #F3EED9;
-  --color-navbar3-chip-inactive-bg: #F3EED9;
-  --color-navbar3-chip-inactive-text: #000000;
+  --color-navbar3-user-text: #222831;
+  --color-navbar3-chip-active-bg: #2D5A27;
+  --color-navbar3-chip-active-text: #FFFFFF;
+  --color-navbar3-chip-active-border: #000000;
+  --color-navbar3-chip-inactive-bg: #E8E8E8;
+  --color-navbar3-chip-inactive-text: #666666;
   --color-navbar3-chip-inactive-border: #000000;
+  --color-navbar3-btn-disabled-bg: #FDF6E3;
+  --color-navbar3-btn-disabled-border: #000000;
+  --color-navbar3-btn-prompting-bg: #F9B233;
+  --color-navbar3-btn-prompting-text: #000000;
+  --color-navbar3-btn-prompting-border: #000000;
+  --color-navbar3-btn-active-bg: #2E5A88;
+  --color-navbar3-btn-active-text: #FFFFFF;
+  --color-navbar3-btn-active-border: #000000;
 
   /* Dropdown Panel / Modal (standard for all panels) */
   --color-panel-header-bg: #4A4F56;
@@ -63,7 +78,7 @@
 
   /* Results Header */
   --color-results-header-bg: #B8001F;
-  --color-results-header-text: #F3EED9;
+  --color-results-header-text: #FFFFFF;
 
   /* Results Row */
   --color-results-row-bg: transparent;
@@ -77,7 +92,7 @@
   --color-results-status-active-bg: #8FBC8F;
   --color-results-status-limited-bg: #FFDA6A;
   --color-results-status-inactive-bg: #E74C3E;
-  --color-results-assistance-icon: #2d6552;
+  --color-results-assistance-icon: #2D5A27;
   --color-results-assistance-icon-secondary: #050500;
   --color-results-expand-chevron: #FF0004;
   --color-results-distance-label: #666666;
@@ -95,19 +110,19 @@
   --color-assistance-group4: #C2E592;
   --color-assistance-group5: #92DEE5;
   --color-assistance-group6: #E5C392;
-  --color-assistance-selected-bg: #F3EED9;
+  --color-assistance-selected-bg: #FDF6E3;
   --color-assistance-selected-border: #000000;
   --color-assistance-text: #000000;
 
   /* Login Panel */
   /* Note: Login panel uses --color-panel-body-bg for body and --color-panel-header-bg for header */
-  --color-login-panel-title: #F3EED9;
-  --color-login-btn-guest-bg: #F3EED9;
+  --color-login-panel-title: #FFFFFF;
+  --color-login-btn-guest-bg: #FDF6E3;
   --color-login-btn-guest-text: #000000;
-  --color-login-label-bg: #F3EED9;
+  --color-login-label-bg: #FDF6E3;
   --color-login-label-text: #000000;
   --color-login-input-bg: #2C4146;
-  --color-login-input-text: #F3EED9;
+  --color-login-input-text: #FFFFFF;
   --color-login-btn-login-bg: #d27953;
   --color-login-btn-login-text: #000000;
   --radius-login-btn: 5px;
@@ -125,20 +140,20 @@
   --font-weight-footer: 400; /* Regular */
 
   /* NavBar 1 Typography */
-  --font-size-navbar1-title: 28px;
+  --font-size-navbar1-title: clamp(16px, 1.8vw, 28px);
   --font-weight-navbar1-title: 600; /* Semibold */
   --letter-spacing-navbar1-title: 0.1em; /* 10% */
   --font-size-navbar1-counter: 29px;
   --font-weight-navbar1-counter: 400; /* Regular */
-  --font-size-navbar1-btn: 22px;
+  --font-size-navbar1-btn: clamp(14px, 1.4vw, 22px);
   --font-weight-navbar1-btn: 400; /* Regular */
   --letter-spacing-navbar1-btn: 0.02em; /* 2% */
 
   /* NavBar 2 Typography */
-  --font-size-navbar2-btn: 20px;
+  --font-size-navbar2-btn: clamp(13px, 1.3vw, 20px);
   --font-weight-navbar2-btn: 500; /* Medium */
   --letter-spacing-navbar2-btn: 0.05em; /* 5% */
-  --font-size-navbar2-dropdown: 20px;
+  --font-size-navbar2-dropdown: clamp(13px, 1.3vw, 20px);
   --font-weight-navbar2-dropdown: 500; /* Medium */
   --letter-spacing-navbar2-dropdown: 0.05em; /* 5% */
   --font-size-navbar2-dropdown-option: 20px; /* Dropdown list items */
@@ -160,7 +175,7 @@
   --letter-spacing-assistance-chip: 0.02em; /* 2% */
 
   /* NavBar 3 User Display Typography */
-  --font-size-navbar3-user: 20px;
+  --font-size-navbar3-user: 22px;
 
   /* Results Header Typography */
   --font-size-results-header: 14px;
@@ -191,12 +206,12 @@
 
   /* NavBar 1 */
   --height-navbar1: 80px;
-  --padding-navbar1-left: 40px;
-  --padding-navbar1-right: 40px;
+  --padding-navbar1-left: clamp(10px, 2.5vw, 40px);
+  --padding-navbar1-right: clamp(10px, 2.5vw, 40px);
   --gap-navbar1-logo-title: 12px;
-  --gap-navbar1-counters: 35px;
-  --gap-navbar1-buttons: 15px;
-  --gap-navbar1-counters-buttons: 100px;
+  --gap-navbar1-counters: clamp(10px, 2vw, 35px);
+  --gap-navbar1-buttons: clamp(5px, 1vw, 15px);
+  --gap-navbar1-counters-buttons: clamp(15px, 6vw, 100px);
   --size-navbar1-logo: 40px;
   --size-navbar1-counter: 60px;
   --width-navbar1-btn: 150px;
@@ -204,17 +219,18 @@
 
   /* NavBar 2 */
   --height-navbar2: 70px;
-  --padding-navbar2-left: 40px;
-  --padding-navbar2-right: 40px;
+  --padding-navbar2-left: clamp(10px, 2.5vw, 40px);
+  --padding-navbar2-right: clamp(10px, 2.5vw, 40px);
   --height-navbar2-btn: 38px;
-  --padding-navbar2-btn-x: 20px;
+  --padding-navbar2-btn-x: clamp(8px, 1.3vw, 20px);
   --radius-navbar2-btn: 10px;
-  --gap-navbar2-mode-buttons: 50px;
-  --gap-navbar2-filters: 30px;
+  --gap-navbar2-mode-buttons: clamp(8px, 3vw, 50px);
+  --gap-navbar2-filters: clamp(8px, 2vw, 30px);
 
   /* NavBar 3 */
   --height-navbar3: 60px;
-  --padding-navbar3-left: 20px;
+  --padding-navbar3-left: clamp(10px, 2.5vw, 40px);
+  --min-width-choose-btn: 230px;
   --gap-navbar3-button-chips: 40px;
   --gap-navbar3-chips: 15px;
   --height-navbar3-btn: 35px;
@@ -239,7 +255,7 @@
   --height-panel-btn: 38px;
   --radius-panel-btn: 5px;
   --size-panel-help-icon: 40px;
-  --color-panel-border: #F3EED9;
+  --color-panel-border: #000000;
   --width-panel-border: 2px;
 
   /* LLM Search Panel */
@@ -354,7 +370,7 @@
   --color-quicktips-body-bg: #c8bcb3;
   --color-quicktips-body-text: #222831;
   --color-quicktips-section-header-bg: #534a56;
-  --color-quicktips-section-header-text: #F3EED9;
+  --color-quicktips-section-header-text: #FFFFFF;
   --color-quicktips-section-body-bg: #FFFFFF;
   --color-quicktips-section-body-text: #000000;
   --color-quicktips-section-border: #D1D5DB;
@@ -424,7 +440,7 @@
 
   /* Page Backgrounds */
   --color-page-background: #d0ccc4;
-  --color-page-background-cream: #F3EED9;
+  --color-page-background-cream: #FDF6E3;
 
   /* Text Colors (hierarchy) */
   --color-text-primary: #222831;
@@ -437,7 +453,7 @@
   --color-btn-disabled-bg: #999999;
 
   /* Dropdown (shared across components) */
-  --color-dropdown-bg: #F3EED9;
+  --color-dropdown-bg: #FDF6E3;
   --color-dropdown-hover-bg: #d4d0c7; /* Intentionally same as active */
   --color-dropdown-active-bg: #d4d0c7; /* Intentionally same as hover */
   --color-dropdown-text: #222831;

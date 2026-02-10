@@ -33,9 +33,9 @@ export default function PageLayout({
 
 
   return (
-    <div className="md:h-screen md:flex md:flex-row md:overflow-hidden overflow-auto min-h-screen bg-gray-50 text-gray-900 font-opensans">
+    <div className="lg:h-screen lg:flex lg:flex-row lg:overflow-hidden overflow-auto min-h-screen bg-gray-50 text-gray-900 font-opensans">
       {/* Main content area */}
-      <div className="flex-1 flex flex-col md:overflow-hidden">
+      <div className="flex-1 flex flex-col lg:overflow-hidden">
         {/* NavBar 1 - Top header with logo, title, counters, buttons */}
         {showNav && (
           <NavBar1
@@ -63,7 +63,7 @@ export default function PageLayout({
         {showNav && <ResultsHeader />}
 
         {/* Main Content */}
-        <main className="md:flex-1 md:flex md:flex-col md:overflow-hidden">{children}</main>
+        <main className="lg:flex-1 lg:flex lg:flex-col lg:overflow-hidden">{children}</main>
 
         {/* Footer */}
         <Footer />
@@ -71,7 +71,7 @@ export default function PageLayout({
 
       {/* Vertical Nav Bar - Right side (hidden on mobile) */}
       {showNav && (
-        <div className="hidden md:block">
+        <div className="hidden lg:block">
           <VerticalNavBar
             externalHelpOpen={helpPanelOpen}
             onHelpOpenChange={setHelpPanelOpen}

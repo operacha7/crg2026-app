@@ -144,7 +144,7 @@ function HoverDropdown({ value, options, onChange, placeholder }) {
         <div
           className="absolute left-0 mt-2 rounded shadow-lg z-50 max-h-[400px] overflow-y-auto"
           style={{
-            backgroundColor: "#F3EED9",
+            backgroundColor: "#FDF6E3",
             width: "380px",
           }}
         >

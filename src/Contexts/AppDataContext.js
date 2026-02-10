@@ -231,6 +231,17 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
     };
   }, []);
 
+  // Derived: whether any search filter is active (for NavBar3 button state)
+  const hasActiveSearchFilter = Boolean(
+    selectedZipCode ||
+    selectedParentOrg ||
+    selectedChildOrg ||
+    selectedLocationCounty ||
+    selectedLocationCity ||
+    selectedLocationZip ||
+    llmSearchFilters
+  );
+
   const value = {
     // Data
     directory,
@@ -249,6 +260,9 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
     // Search mode (shared between NavBar2 and results pages)
     activeSearchMode,
     setActiveSearchMode,
+
+    // Derived filter state
+    hasActiveSearchFilter, // true when any search filter is active (for NavBar3 button state)
 
     // Filter state (shared between NavBar2/NavBar3 and results pages)
     selectedZipCode,

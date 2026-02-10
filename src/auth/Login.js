@@ -213,7 +213,7 @@ export default function LoginPage({ onLoginSuccess }) {
                 <motion.div
                   className="absolute left-0 right-0 font-opensans text-sm"
                   style={{
-                    color: "#F3EED9",
+                    color: "#FFFFFF",
                     opacity: 0.5,
                     top: "100%", // Start from bottom of container
                     zIndex: 0, // Behind the login panel

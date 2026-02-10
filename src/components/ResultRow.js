@@ -215,7 +215,7 @@ export default function ResultRow({
     <>
       {/* ========== MOBILE CARD LAYOUT (<md) ========== */}
       <div
-        className="md:hidden border-b border-results-row-border font-opensans p-3"
+        className="lg:hidden border-b border-results-row-border font-opensans p-3"
         style={getBgStyle()}
       >
         {/* Top row: Checkbox + Org name + Distance */}
@@ -416,7 +416,7 @@ export default function ResultRow({
 
       {/* ========== DESKTOP GRID LAYOUT (md+) ========== */}
       <div
-        className="hidden md:grid border-b border-results-row-border font-opensans transition-colors duration-150 results-row-hover"
+        className="hidden lg:grid border-b border-results-row-border font-opensans transition-colors duration-150 results-row-hover"
         style={{
           gridTemplateColumns: GRID_COLUMNS,
           padding: "12px 0 12px 10px",

@@ -264,7 +264,7 @@ function AssistanceTypesTip({ highlightChipToggle }) {
               backgroundColor: "var(--color-navbar3-bg)",
             }}
           >
-            Select Assistance
+            Choose Assistance
           </span>
           <span style={{ color: "var(--color-quicktips-section-body-text)", fontSize: "var(--font-size-quicktips-body)" }}>
             ← Click or hover to open panel
