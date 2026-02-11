@@ -230,7 +230,7 @@
   /* NavBar 3 */
   --height-navbar3: 60px;
   --padding-navbar3-left: clamp(10px, 2.5vw, 40px);
-  --min-width-choose-btn: 230px;
+  --min-width-choose-btn: 270px;
   --gap-navbar3-button-chips: 40px;
   --gap-navbar3-chips: 15px;
   --height-navbar3-btn: 35px;
