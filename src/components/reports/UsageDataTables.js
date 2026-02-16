@@ -70,7 +70,8 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
       const parts = dateStr.split('-');
       if (parts.length < 2) return dateStr;
       const [year, month] = parts.map(Number);
-      return `${String(month).padStart(2, '0')}/${String(year).slice(-2)}`;
+      const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return `${monthNames[month - 1]} ${String(year).slice(-2)}`;
     }
     // Daily uses "YYYY-MM-DD" format from database
     const parts = dateStr.split('-');
