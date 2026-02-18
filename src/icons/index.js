@@ -56,3 +56,4 @@ export { OtherIcon } from './OtherIcon';
 export { DentalVisionIcon } from './DentalVisionIcon';
 export { MedicalDentalIcon } from './MedicalDentalIcon';
 export { MedicalVisionIcon } from './MedicalVisionIcon';
+export { VeteransIcon } from './VeteransIcon';

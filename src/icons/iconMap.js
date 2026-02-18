@@ -35,6 +35,7 @@ import {
   DentalVisionIcon,
   MedicalDentalIcon,
   MedicalVisionIcon,
+  VeteransIcon,
 } from './index';
 
 // Map icon names (as stored in Supabase) to actual components
@@ -71,6 +72,7 @@ export const iconMap = {
   DentalVisionIcon,
   MedicalDentalIcon,
   MedicalVisionIcon,
+  VeteransIcon,
 };
 
 // Helper function to get icon component by name
