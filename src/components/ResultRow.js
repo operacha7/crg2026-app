@@ -385,7 +385,15 @@ export default function ResultRow({
                 <div className="font-semibold text-xs text-gray-500 mb-1">REQUIREMENTS</div>
                 <ul className="list-disc list-inside space-y-0.5">
                   {requirements.map((req, idx) => (
-                    <li key={idx}>{req}</li>
+                    <li
+                      key={idx}
+                      style={idx === 0 ? {
+                        fontWeight: record.is_first_bold ? "bold" : undefined,
+                        color: record.is_first_red ? "#B8001F" : undefined,
+                      } : undefined}
+                    >
+                      {req}
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -764,7 +772,14 @@ export default function ResultRow({
               }}
             >
               {requirements.map((req, idx) => (
-                <div key={idx} className="flex items-start gap-2">
+                <div
+                  key={idx}
+                  className="flex items-start gap-2"
+                  style={idx === 0 ? {
+                    fontWeight: record.is_first_bold ? "bold" : undefined,
+                    color: record.is_first_red ? "#B8001F" : undefined,
+                  } : undefined}
+                >
                   <span>•</span>
                   <span>{req}</span>
                 </div>
