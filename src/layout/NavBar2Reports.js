@@ -116,37 +116,38 @@ function HoverDropdown({ value, options, onChange, placeholder }) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Trigger button */}
+      {/* Trigger button - matches NavBar2 Zip Code dropdown styling */}
       <button
         onClick={handleClick}
-        className={`font-opensans transition-all duration-200 text-left ${
-          isActive
-            ? "bg-navbar2-dropdown-bg text-navbar2-dropdown-text hover:brightness-125"
-            : "bg-transparent text-navbar2-btn-inactive-text hover:bg-white/10"
-        }`}
+        className="font-opensans transition-all duration-200 hover:brightness-125"
         style={{
           height: "var(--height-navbar2-btn)",
           paddingLeft: "var(--padding-navbar2-btn-x)",
           paddingRight: "var(--padding-navbar2-btn-x)",
           borderRadius: "var(--radius-navbar2-btn)",
-          fontSize: "18px",
-          fontWeight: "var(--font-weight-navbar2-btn)",
-          letterSpacing: "var(--letter-spacing-navbar2-btn)",
-          border: isActive ? "1px solid rgba(255,255,255,1)" : "none",
+          fontSize: "var(--font-size-navbar2-dropdown)",
+          fontWeight: "var(--font-weight-navbar2-dropdown)",
+          letterSpacing: "var(--letter-spacing-navbar2-dropdown)",
+          backgroundColor: isActive
+            ? "var(--color-navbar2-btn-active-bg)"
+            : "var(--color-navbar2-btn-inactive-bg)",
+          color: isActive
+            ? "var(--color-navbar2-btn-active-text)"
+            : "var(--color-navbar2-btn-inactive-text)",
+          border: isActive
+            ? "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)"
+            : "var(--border-width-btn) solid var(--color-navbar2-btn-inactive-border)",
           whiteSpace: "nowrap",
         }}
       >
         {value || placeholder}
       </button>
 
-      {/* Dropdown panel - scrollable for many options */}
+      {/* Dropdown panel - matches NavBar2 dropdown styling */}
       {isOpen && (
         <div
           className="absolute left-0 mt-2 rounded shadow-lg z-50 max-h-[400px] overflow-y-auto"
-          style={{
-            backgroundColor: "#FDF6E3",
-            width: "380px",
-          }}
+          style={{ backgroundColor: "var(--color-dropdown-bg)", minWidth: "380px" }}
         >
           {options.map((option) => (
             <button
@@ -157,8 +158,8 @@ function HoverDropdown({ value, options, onChange, placeholder }) {
               className="w-full text-left px-4 py-2 font-opensans"
               style={{
                 fontSize: "14px",
-                color: "#222831",
-                backgroundColor: hoveredOption === option ? "#d4d0c7" : (value === option ? "#e0ddd4" : "transparent"),
+                color: "var(--color-dropdown-text)",
+                backgroundColor: hoveredOption === option ? "var(--color-dropdown-hover-bg)" : (value === option ? "var(--color-dropdown-active-bg)" : "transparent"),
               }}
             >
               {option}
