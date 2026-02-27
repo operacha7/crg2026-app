@@ -134,7 +134,7 @@ function AssistanceChip({ name, icon, isActive, onClick, fontSize, iconSize }) {
   return (
     <button
       onClick={onClick}
-      className="font-opensans transition-all duration-200 hover:brightness-110 flex items-center gap-2"
+      className="font-opensans transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-2"
       style={{
         height: "var(--height-navbar3-btn)",
         paddingLeft: "12px",
@@ -177,7 +177,7 @@ function PanelTypeButton({ name, icon, groupColor, isSelected, onClick, disabled
       onClick={onClick}
       disabled={disabled}
       className={`
-        font-opensans transition-all duration-200 flex items-center gap-2
+        font-opensans transition-all duration-200 flex items-center justify-center gap-2
         ${disabled ? "opacity-50 cursor-not-allowed" : "hover:brightness-110 cursor-pointer"}
       `}
       style={{
@@ -189,9 +189,9 @@ function PanelTypeButton({ name, icon, groupColor, isSelected, onClick, disabled
         letterSpacing: "var(--letter-spacing-assistance-chip)",
         fontWeight: "500",
         border: isSelected ? "1px solid var(--color-assistance-selected-border)" : "1px solid transparent",
-        whiteSpace: "nowrap", // Prevent text wrapping
-        width: "100%", // Fill column width (all chips same width within group)
-        textAlign: "left",
+        whiteSpace: "nowrap",
+        width: "100%",
+        textAlign: "center",
       }}
     >
       {IconComponents.map((IconComp, idx) => (

@@ -9,6 +9,7 @@ const REPORT_OPTIONS = [
   { id: 'emails-sent', label: 'Emails Sent' },
   { id: 'pdfs-created', label: 'PDFs Created' },
   { id: 'usage-tables', label: 'Usage Data Tables' },
+  { id: 'coverage', label: 'The Matt Report', color: '#f79184' },
 ];
 
 export default function NavBar1Reports({ selectedReport, onReportChange }) {
@@ -116,7 +117,7 @@ export default function NavBar1Reports({ selectedReport, onReportChange }) {
           className="font-opensans transition-all hover:brightness-125"
           style={{
             backgroundColor: 'transparent',
-            color: '#FFFFFF',
+            color: currentReport?.color || '#FFFFFF',
             fontSize: 'var(--font-size-navbar1-btn)',
             fontWeight: 'var(--font-weight-navbar1-btn)',
             letterSpacing: 'var(--letter-spacing-navbar1-btn)',
@@ -144,7 +145,7 @@ export default function NavBar1Reports({ selectedReport, onReportChange }) {
                 className="w-full text-left px-4 py-3 font-opensans"
                 style={{
                   fontSize: '16px',
-                  color: '#222831',
+                  color: option.color || '#222831',
                   backgroundColor: hoveredOption === option.id ? '#d4d0c7' : (selectedReport === option.id ? '#e0ddd4' : 'transparent'),
                 }}
               >
