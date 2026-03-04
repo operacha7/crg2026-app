@@ -272,6 +272,18 @@
   /* Results Header */
   --height-results-header: 30px;
 
+  /* Filter Row */
+  --color-filter-row-bg: #FDF6E3;
+  --color-filter-input-bg: #005C72;
+  --color-filter-input-text: #FFFFFF;
+  --color-filter-input-placeholder: #999999;
+  --height-filter-row: 35px;
+  --height-filter-input: 26px;
+  --font-size-filter-input: 13px;
+  --color-filter-funnel-active: #FFC857;
+  --color-filter-funnel-inactive: #FFFFFF;
+  --color-filter-reset-text: #FF0004;
+
   /* Results Row */
   --size-results-assistance-icon: 25px;
   --size-results-checkbox: 20px;

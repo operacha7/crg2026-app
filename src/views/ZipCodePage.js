@@ -1,5 +1,5 @@
 // src/views/ZipCodePage.js
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import PageLayout from "../layout/PageLayout";
 import ResultsList from "../components/ResultsList";
@@ -46,6 +46,17 @@ export default function ZipCodePage({
   // State management
   const [selectedRows, setSelectedRows] = useState([]);
   const [orgPhone, setOrgPhone] = useState("");
+  const [inlineFilteredCount, setInlineFilteredCount] = useState(null);
+
+  // Search key for auto-resetting inline filters when search params change
+  const searchKey = useMemo(() =>
+    `${activeSearchMode}:${selectedZipCode}:${selectedParentOrg}:${selectedChildOrg}:${selectedLocationZip}:${selectedLocationCity}:${selectedLocationCounty}:${selectedLocationNeighborhood}:${[...activeAssistanceChips].sort().join(',')}:${llmSearchQuery}`,
+    [activeSearchMode, selectedZipCode, selectedParentOrg, selectedChildOrg, selectedLocationZip, selectedLocationCity, selectedLocationCounty, selectedLocationNeighborhood, activeAssistanceChips, llmSearchQuery]
+  );
+
+  const handleFilteredCountChange = useCallback((count) => {
+    setInlineFilteredCount(count);
+  }, []);
 
   // Fetch org phone on mount
   useEffect(() => {
@@ -415,7 +426,9 @@ export default function ZipCodePage({
   return (
     <PageLayout
       totalCount={directory.filter(r => r.status_id !== 3).length}
-      filteredCount={displayDirectory.filter(r => r.status_id !== 3).length}
+      filteredCount={inlineFilteredCount !== null
+        ? inlineFilteredCount
+        : displayDirectory.filter(r => r.status_id !== 3).length}
       selectedCount={selectedRows.length}
       onSendEmail={validateEmailSelection}
       onCreatePdf={validatePdfSelection}
@@ -468,6 +481,8 @@ export default function ZipCodePage({
                 .filter(i => i >= 0);
               setSelectedRows(newSelectedRows);
             }}
+            searchKey={searchKey}
+            onFilteredCountChange={handleFilteredCountChange}
           />
         )}
       </div>

@@ -3,7 +3,6 @@ import { useState } from "react";
 import NavBar1 from "./NavBar1";
 import NavBar2 from "./NavBar2";
 import NavBar3 from "./NavBar3";
-import ResultsHeader from "./ResultsHeader";
 import Footer from "./Footer";
 import VerticalNavBar from "./VerticalNavBar";
 import MobileMenu from "./MobileMenu";
@@ -59,10 +58,7 @@ export default function PageLayout({
         {/* NavBar 3 - Assistance type filters */}
         {showNav && <NavBar3 />}
 
-        {/* Results Header - Column labels (hidden on mobile) */}
-        {showNav && <ResultsHeader />}
-
-        {/* Main Content */}
+        {/* Main Content - ResultsHeader now rendered inside ResultsList */}
         <main className="lg:flex-1 lg:flex lg:flex-col lg:overflow-hidden">{children}</main>
 
         {/* Footer */}

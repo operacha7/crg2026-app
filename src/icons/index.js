@@ -22,6 +22,7 @@ export { QuickTipsIcon } from './QuickTipsIcon';
 export { ChevronLeftIcon } from './ChevronLeftIcon';
 export { ChevronRightIcon } from './ChevronRightIcon';
 export { ChevronDownIcon } from './ChevronDownIcon';
+export { FunnelIcon } from './FunnelIcon';
 
 // currentColor icons (inherit color from CSS)
 export { RentIcon } from './RentIcon';

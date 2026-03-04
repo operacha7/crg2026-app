@@ -86,6 +86,24 @@ function formatTimeRange(open, close) {
 }
 
 /**
+ * Parse org_hours JSON into raw object for filtering/querying
+ * Handles string, object, and double-encoded JSON
+ *
+ * @param {string|object} hoursJson - The org_hours field from database
+ * @returns {object|null} Parsed hours object with regular/special/labeled arrays, or null
+ */
+export function parseHoursJson(hoursJson) {
+  if (!hoursJson) return null;
+  try {
+    let data = typeof hoursJson === "string" ? JSON.parse(hoursJson) : hoursJson;
+    if (typeof data === "string") data = JSON.parse(data);
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Parse JSON hours and format for display
  * Returns structured data: { rows: [{days, hours}], special: [{days, hours}], labeled: [{label, days, hours}], legacy }
  *
