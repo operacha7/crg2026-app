@@ -2,8 +2,8 @@
 // Car front view icon - used for distance button in NavBar2
 
 export default function Car11Icon({ size = 24, active = false, className = "" }) {
-  // Active: gold (#B8001F), Inactive: white (#FFFFFF)
-  const fillColor = active ? "#B8001F" : "#FFFFFF";
+  // Active: light blue (#8FB6FF) matching NavBar2 car inactive state, Inactive: white (#FFFFFF)
+  const fillColor = active ? "#8FB6FF" : "#FFFFFF";
 
   return (
     <svg

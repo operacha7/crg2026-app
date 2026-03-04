@@ -805,32 +805,64 @@ function LLMSearchDropdown({
   );
 }
 
-// Neighborhood link component - wraps at 80 characters
-// Note: This is display-only text, not a clickable link, so we use a span
-function NeighborhoodLink({ text = "Braeswood Place, Knollwood Village" }) {
+// External link icon for zip code map
+function ExternalLinkIcon({ size = 14, color = "currentColor" }) {
   return (
-    <span
-      className="text-navbar2-link"
-      style={{
-        fontSize: "var(--font-size-navbar2-link)",
-        fontWeight: "var(--font-weight-navbar2-link)",
-        maxWidth: "60ch",
-        whiteSpace: "normal",
-        lineHeight: "1.3",
-      }}
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
+      strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
     >
-      {text}
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  );
+}
+
+// Neighborhood display with optional zip link icon
+function NeighborhoodLink({ text = "Braeswood Place, Knollwood Village", zipLink }) {
+  return (
+    <span className="flex items-center gap-2">
+      <span
+        className="text-navbar2-link"
+        style={{
+          fontSize: "var(--font-size-navbar2-link)",
+          fontWeight: "var(--font-weight-navbar2-link)",
+          maxWidth: "60ch",
+          whiteSpace: "normal",
+          lineHeight: "1.3",
+        }}
+      >
+        {text}
+      </span>
+      {zipLink && (
+        <Tooltip text="Zip code map and demographics">
+          <a
+            href={zipLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center transition-all duration-200 hover:brightness-150"
+            style={{
+              color: "#8FB6FF",
+              flexShrink: 0,
+              padding: "2px",
+            }}
+          >
+            <ExternalLinkIcon size={18} color="#8FB6FF" />
+          </a>
+        </Tooltip>
+      )}
     </span>
   );
 }
 
 // Distance icon button with panel
-function DistanceButtonWithPanel({ 
-  isActive = false, 
+function DistanceButtonWithPanel({
+  isActive = false,
   defaultCoordinates = "",
   onCoordinatesChange,
   clientAddress = "",
   clientCoordinates = "",
+  disabled = false,
 }) {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const panelRef = useRef(null);
@@ -856,6 +888,7 @@ function DistanceButtonWithPanel({
   }, [isPanelOpen]);
 
   const handleToggle = () => {
+    if (disabled) return;
     setIsPanelOpen(!isPanelOpen);
   };
 
@@ -868,17 +901,23 @@ function DistanceButtonWithPanel({
     setIsPanelOpen(false);
   };
 
+  const tooltipText = disabled
+    ? "Select one Assistance Type to enable driving distance"
+    : "Driving Distance from client";
+
   return (
     <div className="relative">
-      <Tooltip text="Driving Distance from client">
+      <Tooltip text={tooltipText}>
         <button
           ref={buttonRef}
           onClick={handleToggle}
           className={`
             flex items-center justify-center transition-all duration-200
-            ${isActive
-              ? "bg-navbar2-btn-active-bg hover:brightness-125"
-              : "bg-transparent hover:bg-white/10"
+            ${disabled
+              ? "opacity-30 cursor-not-allowed"
+              : isActive
+                ? "hover:brightness-125"
+                : "bg-transparent hover:bg-white/10"
             }
           `}
           style={{
@@ -886,11 +925,15 @@ function DistanceButtonWithPanel({
             width: "auto",
             padding: "0px 6px",
             borderRadius: "var(--radius-navbar2-btn)",
-            marginLeft: "clamp(10px, 10vw, 200px)",
+            marginLeft: "15px",
             flexShrink: 0,
+            ...(isActive && !disabled ? {
+              backgroundColor: "var(--color-navbar2-btn-active-bg)",
+              border: "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)",
+            } : {}),
           }}
         >
-          <Car1Icon size={28} active={isActive} />
+          <Car1Icon size={22} active={isActive} />
         </button>
       </Tooltip>
 
@@ -908,14 +951,15 @@ function DistanceButtonWithPanel({
 }
 
 // Filter content for each search mode
-function ZipCodeFilters({ 
-  selectedZip, 
-  onZipChange, 
-  zipCodeOptions, 
+function ZipCodeFilters({
+  selectedZip,
+  onZipChange,
+  zipCodeOptions,
   selectedZipData,
   clientAddress,
   clientCoordinates,
   onCoordinatesChange,
+  distanceDisabled,
 }) {
   // Get neighborhood text for selected zip
   const neighborhoodText = selectedZipData?.neighborhood || "";
@@ -932,13 +976,14 @@ function ZipCodeFilters({
         useDropdownStyle={true}
         usePromptingStyle={true}
       />
-      {selectedZip && neighborhoodText && <NeighborhoodLink text={neighborhoodText} />}
+      {selectedZip && neighborhoodText && <NeighborhoodLink text={neighborhoodText} zipLink={selectedZipData?.zip_link} />}
       <DistanceButtonWithPanel
         isActive={!!clientCoordinates}
         defaultCoordinates={defaultCoordinates}
         clientAddress={clientAddress}
         clientCoordinates={clientCoordinates}
         onCoordinatesChange={onCoordinatesChange}
+        disabled={distanceDisabled}
       />
     </>
   );
@@ -954,6 +999,7 @@ function OrganizationFilters({
   clientAddress,
   clientCoordinates,
   onCoordinatesChange,
+  distanceDisabled,
 }) {
   // Filter child orgs based on selected parent
   const childOrgOptions = useMemo(() => {
@@ -989,6 +1035,7 @@ function OrganizationFilters({
         clientAddress={clientAddress}
         clientCoordinates={clientCoordinates}
         onCoordinatesChange={onCoordinatesChange}
+        disabled={distanceDisabled}
       />
     </>
   );
@@ -1008,6 +1055,7 @@ function LocationFilters({
   clientAddress,
   clientCoordinates,
   onCoordinatesChange,
+  distanceDisabled,
 }) {
 
   // Get unique counties
@@ -1108,6 +1156,7 @@ function LocationFilters({
         clientAddress={clientAddress}
         clientCoordinates={clientCoordinates}
         onCoordinatesChange={onCoordinatesChange}
+        disabled={distanceDisabled}
       />
     </>
   );
@@ -1125,6 +1174,7 @@ function LLMFilters({
   clientAddress,
   clientCoordinates,
   onCoordinatesChange,
+  distanceDisabled,
 }) {
   return (
     <>
@@ -1144,6 +1194,7 @@ function LLMFilters({
         clientAddress={clientAddress}
         clientCoordinates={clientCoordinates}
         onCoordinatesChange={onCoordinatesChange}
+        disabled={distanceDisabled}
       />
     </>
   );
@@ -1171,6 +1222,7 @@ export default function NavBar2() {
     setSelectedLocationCity,
     selectedLocationNeighborhood,
     setSelectedLocationNeighborhood,
+    activeAssistanceChips,
     setActiveAssistanceChips,
     directory,
     // Client coordinates from context (shared with ZipCodePage for distance calc)
@@ -1402,6 +1454,9 @@ export default function NavBar2() {
     return parents.sort();
   }, [organizations]);
 
+  // Distance button requires exactly 1 active assistance type to prevent large API calls
+  const distanceDisabled = activeAssistanceChips.size !== 1;
+
   // Render the appropriate filters based on active mode
   const renderFilters = () => {
     switch (activeSearchMode) {
@@ -1415,6 +1470,7 @@ export default function NavBar2() {
             clientAddress={clientAddress}
             clientCoordinates={clientCoordinates}
             onCoordinatesChange={handleCoordinatesChange}
+            distanceDisabled={distanceDisabled}
           />
         );
       case SEARCH_MODES.ORGANIZATION:
@@ -1429,6 +1485,7 @@ export default function NavBar2() {
             clientAddress={clientAddress}
             clientCoordinates={clientCoordinates}
             onCoordinatesChange={handleCoordinatesChange}
+            distanceDisabled={distanceDisabled}
           />
         );
       case SEARCH_MODES.LOCATION:
@@ -1447,6 +1504,7 @@ export default function NavBar2() {
             clientAddress={clientAddress}
             clientCoordinates={clientCoordinates}
             onCoordinatesChange={handleCoordinatesChange}
+            distanceDisabled={distanceDisabled}
           />
         );
       case SEARCH_MODES.LLM:
@@ -1469,6 +1527,7 @@ export default function NavBar2() {
             clientAddress={clientAddress}
             clientCoordinates={clientCoordinates}
             onCoordinatesChange={handleCoordinatesChange}
+            distanceDisabled={distanceDisabled}
           />
         );
       default:

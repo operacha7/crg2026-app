@@ -1,6 +1,6 @@
 // Cloudflare Pages Function: POST /geocode
 // Endpoint: http(s)://<host>/geocode
-// Converts an address to coordinates using Geocodio API
+// Converts an address to coordinates using Google Maps Geocoding API
 
 export async function onRequest({ request, env }) {
   const corsHeaders = {
@@ -24,14 +24,14 @@ export async function onRequest({ request, env }) {
   console.log("📍 Incoming geocode request...");
   console.log(
     "🔐 Using API Key:",
-    env.GEOCODIO_API_KEY ? "✅ Set" : "❌ Missing"
+    env.GOOGLE_MAPS_API_KEY ? "✅ Set" : "❌ Missing"
   );
 
-  if (!env.GEOCODIO_API_KEY) {
+  if (!env.GOOGLE_MAPS_API_KEY) {
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        message: "Geocoding service not configured" 
+      JSON.stringify({
+        success: false,
+        message: "Geocoding service not configured"
       }),
       {
         status: 500,
@@ -45,9 +45,9 @@ export async function onRequest({ request, env }) {
 
     if (!address || typeof address !== "string" || address.trim() === "") {
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: "Address is required" 
+        JSON.stringify({
+          success: false,
+          message: "Address is required"
         }),
         {
           status: 400,
@@ -58,35 +58,32 @@ export async function onRequest({ request, env }) {
 
     console.log("📦 Address:", address);
 
-    // Call Geocodio API
+    // Call Google Maps Geocoding API
     const encodedAddress = encodeURIComponent(address.trim());
-    const geocodioUrl = `https://api.geocod.io/v1.7/geocode?q=${encodedAddress}&api_key=${env.GEOCODIO_API_KEY}`;
+    const googleUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedAddress}&key=${env.GOOGLE_MAPS_API_KEY}`;
 
-    const res = await fetch(geocodioUrl, {
+    const res = await fetch(googleUrl, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
     });
 
     const data = await res.json();
 
-    if (!res.ok) {
-      console.error("❌ Geocodio error:", data);
+    if (!res.ok || data.status === "REQUEST_DENIED") {
+      console.error("❌ Google Geocoding error:", data);
       return new Response(
         JSON.stringify({
           success: false,
-          message: data.error || "Geocoding failed",
+          message: data.error_message || "Geocoding failed",
         }),
         {
-          status: res.status,
+          status: res.ok ? 403 : res.status,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
 
     // Check if we got results
-    if (!data.results || data.results.length === 0) {
+    if (data.status === "ZERO_RESULTS" || !data.results || data.results.length === 0) {
       console.log("⚠️ No results found for address");
       return new Response(
         JSON.stringify({
@@ -100,15 +97,15 @@ export async function onRequest({ request, env }) {
       );
     }
 
-    // Get the best result (first one, highest accuracy)
+    // Get the best result (first one)
     const bestResult = data.results[0];
-    const { lat, lng } = bestResult.location;
-    const accuracy = bestResult.accuracy;
-    const accuracyType = bestResult.accuracy_type;
+    const { lat, lng } = bestResult.geometry.location;
+    const locationType = bestResult.geometry.location_type; // ROOFTOP, RANGE_INTERPOLATED, GEOMETRIC_CENTER, APPROXIMATE
     const formattedAddress = bestResult.formatted_address;
 
-    console.log(`✅ Geocoded successfully: ${lat}, ${lng} (${accuracyType}: ${accuracy})`);
+    console.log(`✅ Geocoded successfully: ${lat}, ${lng} (${locationType})`);
 
+    // Return same response shape as before so client code doesn't change
     return new Response(
       JSON.stringify({
         success: true,
@@ -116,8 +113,8 @@ export async function onRequest({ request, env }) {
         latitude: lat,
         longitude: lng,
         formattedAddress: formattedAddress,
-        accuracy: accuracy,
-        accuracyType: accuracyType,
+        accuracy: locationType === "ROOFTOP" ? 1 : locationType === "RANGE_INTERPOLATED" ? 0.8 : 0.5,
+        accuracyType: locationType,
       }),
       {
         status: 200,
