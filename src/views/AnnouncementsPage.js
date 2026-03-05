@@ -489,14 +489,14 @@ const AnnouncementsPage = ({ loggedInUser }) => {
             <div className="text-gray-600 text-xl">No announcements available</div>
           ) : (
             <>
-              {/* Left navigation card (go back / previous) */}
-              <div style={{ width: '280px', visibility: hasPrevious ? 'visible' : 'hidden' }}>
-                {hasPrevious && (
+              {/* Left navigation card (go back / older) */}
+              <div style={{ width: '280px', visibility: hasNext ? 'visible' : 'hidden' }}>
+                {hasNext && (
                   <NavCard
-                    announcement={announcements[currentIndex - 1]}
-                    position={currentIndex}
+                    announcement={announcements[currentIndex + 1]}
+                    position={currentIndex + 2}
                     totalCount={announcements.length}
-                    onClick={goToPrevious}
+                    onClick={goToNext}
                     direction="left"
                   />
                 )}
@@ -522,14 +522,14 @@ const AnnouncementsPage = ({ loggedInUser }) => {
                 </AnimatePresence>
               </div>
 
-              {/* Right navigation card (go forward / next) */}
-              <div style={{ width: '280px', visibility: hasNext ? 'visible' : 'hidden' }}>
-                {hasNext && (
+              {/* Right navigation card (go forward / newer) */}
+              <div style={{ width: '280px', visibility: hasPrevious ? 'visible' : 'hidden' }}>
+                {hasPrevious && (
                   <NavCard
-                    announcement={announcements[currentIndex + 1]}
-                    position={currentIndex + 2}
+                    announcement={announcements[currentIndex - 1]}
+                    position={currentIndex}
                     totalCount={announcements.length}
-                    onClick={goToNext}
+                    onClick={goToPrevious}
                     direction="right"
                   />
                 )}

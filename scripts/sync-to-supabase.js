@@ -86,8 +86,9 @@ function formatParagraph(text, formatCodes) {
   const isBullet = codes.includes('bullet');
   const isBoldFirst = codes.includes('boldfirst');
 
-  // Find hex color code (6 characters, valid hex)
-  const hexColor = codes.find(c => /^[0-9a-f]{6}$/i.test(c));
+  // Find hex color code (6 characters, with or without leading #)
+  const hexColorRaw = codes.find(c => /^#?[0-9a-f]{6}$/i.test(c));
+  const hexColor = hexColorRaw ? hexColorRaw.replace(/^#/, '') : null;
 
   // Build inline styles (for whole paragraph or items)
   const styles = [];
@@ -98,7 +99,36 @@ function formatParagraph(text, formatCodes) {
 
   const styleAttr = styles.length > 0 ? ` style="${styles.join('; ')}"` : '';
 
-  if (isBullet) {
+  if (isBullet && isBoldFirst) {
+    // Each line becomes a bullet point with first line of each bullet bolded
+    const lines = text.split('\n').filter(line => line.trim());
+    const firstStyles = ['font-weight: bold'];
+    if (isItalic) firstStyles.push('font-style: italic');
+    if (isUnderline) firstStyles.push('text-decoration: underline');
+    if (hexColor) firstStyles.push(`color: #${hexColor.toUpperCase()}`);
+    const firstStyleAttr = ` style="${firstStyles.join('; ')}"`;
+
+    // Style for the rest of the text in each bullet (no bold)
+    const restBulletStyles = [];
+    if (isItalic) restBulletStyles.push('font-style: italic');
+    if (isUnderline) restBulletStyles.push('text-decoration: underline');
+    if (hexColor) restBulletStyles.push(`color: #${hexColor.toUpperCase()}`);
+    const restBulletStyleAttr = restBulletStyles.length > 0 ? ` style="${restBulletStyles.join('; ')}"` : '';
+
+    const listItems = lines.map(line => {
+      const trimmed = line.trim();
+      // Split on first period+space to separate the bold "first line" from the rest
+      const dotIndex = trimmed.indexOf('.  ');
+      if (dotIndex !== -1) {
+        const firstPart = trimmed.substring(0, dotIndex + 1);
+        const restPart = trimmed.substring(dotIndex + 1);
+        return `  <li><span${firstStyleAttr}>${escapeHtml(firstPart)}</span><span${restBulletStyleAttr}>${escapeHtml(restPart)}</span></li>`;
+      }
+      // No split point found — bold the whole line
+      return `  <li${firstStyleAttr}>${escapeHtml(trimmed)}</li>`;
+    }).join('\n');
+    return `<ul>\n${listItems}\n</ul>`;
+  } else if (isBullet) {
     // Each line becomes a bullet point
     const lines = text.split('\n').filter(line => line.trim());
     const listItems = lines.map(line => `  <li${styleAttr}>${escapeHtml(line.trim())}</li>`).join('\n');
