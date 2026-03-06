@@ -89,9 +89,10 @@
   --color-results-row-border: #9b9b9b;
   --color-results-row-text: #000000;
   --color-results-hours-notes-bg: #FFB302;
-  --color-results-status-active-bg: #8FBC8F;
-  --color-results-status-limited-bg: #FFDA6A;
-  --color-results-status-inactive-bg: #E74C3E;
+  --color-results-status-active-bg: #68e73e;
+  --color-results-status-limited-bg: #e7d93e;
+  --color-results-status-inactive-bg: #e7923e;
+  --color-results-status-closed-bg: #E74C3E;
   --color-results-assistance-icon: #2D5A27;
   --color-results-assistance-icon-secondary: #050500;
   --color-results-expand-chevron: #FF0004;

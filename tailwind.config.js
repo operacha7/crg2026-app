@@ -70,6 +70,7 @@ module.exports = {
         'results-status-active-bg': 'var(--color-results-status-active-bg)',
         'results-status-limited-bg': 'var(--color-results-status-limited-bg)',
         'results-status-inactive-bg': 'var(--color-results-status-inactive-bg)',
+        'results-status-closed-bg': 'var(--color-results-status-closed-bg)',
         'results-assistance-icon': 'var(--color-results-assistance-icon)',
         // Reports (uses results tokens for consistency)
         'reports-row-hover': 'var(--color-results-row-hover-bg)',

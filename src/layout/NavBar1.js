@@ -39,10 +39,10 @@ export default function NavBar1({
   const emailButtonRef = useRef(null);
   const pdfButtonRef = useRef(null);
 
-  // Check if any selected records are inactive
+  // Check if any selected records are inactive or closed
   const hasInactiveResources = selectedData.some((item) => {
     const status = item.status?.toUpperCase();
-    return status === "INACTIVE" || status === "INACTIVO";
+    return status === "INACTIVE" || status === "INACTIVO" || status === "CLOSED";
   });
 
   // Track when panels were opened to prevent immediate close on mobile

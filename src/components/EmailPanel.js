@@ -136,7 +136,7 @@ export default function EmailPanel({
               letterSpacing: "var(--letter-spacing-panel-title)",
             }}
           >
-            Inactive Resources
+            Inactive / Closed Resources
           </h3>
         </div>
 
@@ -157,7 +157,7 @@ export default function EmailPanel({
                 lineHeight: "1.6",
               }}
             >
-              You have selected an organization listed as inactive. Please{" "}
+              You have selected an organization listed as inactive or closed. Please{" "}
               <span style={{ color: "#FF0000" }}>Cancel</span> and correct.
               However, if you have personal knowledge that the organization is
               active, you may continue. Please let us know by contacting support

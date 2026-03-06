@@ -68,6 +68,7 @@ function StatusPill({ statusId, status }) {
     1: "bg-results-status-active-bg",
     2: "bg-results-status-limited-bg",
     3: "bg-results-status-inactive-bg",
+    4: "bg-results-status-closed-bg",
   }[statusId] || "bg-gray-300";
 
   return (
@@ -209,6 +210,7 @@ export default function ResultRow({
     1: "var(--color-results-status-active-bg)",
     2: "var(--color-results-status-limited-bg)",
     3: "var(--color-results-status-inactive-bg)",
+    4: "var(--color-results-status-closed-bg)",
   }[record.status_id] || "#ccc";
 
   return (
