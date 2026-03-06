@@ -257,9 +257,13 @@ export default function ZipCodeMap({ povertyLevel, zipCode, assistanceType }) {
       const records = directory.filter((r) => r.status_id === 1 && r.assist_id === assistId && (r.client_zip_codes || []).includes(zip));
       records.sort((a, b) => (a.organization || "").localeCompare(b.organization || ""));
       if (records.length > 0) {
-        // Track which parent orgs we've already shown impact for
+        // Deduplicate by organization name and track parent impact
+        const seenOrgs = new Set();
         const seenParents = new Set();
-        result[zip] = records.map((r) => {
+        const entries = [];
+        records.forEach((r) => {
+          if (seenOrgs.has(r.organization)) return;
+          seenOrgs.add(r.organization);
           const parent = r.org_parent || r.organization;
           const rawImpact = impactLookup[parent];
           let impact = null;
@@ -267,11 +271,11 @@ export default function ZipCodeMap({ povertyLevel, zipCode, assistanceType }) {
             seenParents.add(parent);
             impact = formatImpact(rawImpact);
           } else if (rawImpact) {
-            // Already shown for this parent, skip duplicate
             seenParents.add(parent);
           }
-          return { name: r.organization, impact };
+          entries.push({ name: r.organization, impact });
         });
+        if (entries.length > 0) result[zip] = entries;
       }
     });
     return result;

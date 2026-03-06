@@ -10,6 +10,7 @@ const REPORT_OPTIONS = [
   { id: 'pdfs-created', label: 'PDFs Created' },
   { id: 'usage-tables', label: 'Usage Data Tables' },
   { id: 'coverage', label: 'The Matt Report', color: '#f79184' },
+  { id: 'map', label: 'Map' },
 ];
 
 export default function NavBar1Reports({ selectedReport, onReportChange }) {

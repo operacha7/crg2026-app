@@ -13,6 +13,7 @@ import EmailsReport from "../components/reports/EmailsReport";
 import PdfsReport from "../components/reports/PdfsReport";
 import UsageDataTables from "../components/reports/UsageDataTables";
 import CoverageReport from "../components/reports/CoverageReport";
+import ZipCodeMap from "../components/reports/ZipCodeMap";
 
 export default function ReportsPage() {
   // State for report selection
@@ -67,6 +68,17 @@ export default function ReportsPage() {
     status: coverageStatus,
   }), [coverageCounty, coverageParentOrg, coverageChildOrg, coverageAssistanceType, coverageStatus]);
 
+  // Map Report filter state
+  const [mapPovertyLevel, setMapPovertyLevel] = useState("");
+  const [mapZipCode, setMapZipCode] = useState("");
+  const [mapAssistanceType, setMapAssistanceType] = useState("");
+
+  const handleMapReset = useCallback(() => {
+    setMapPovertyLevel("");
+    setMapZipCode("");
+    setMapAssistanceType("");
+  }, []);
+
   // Render the selected report
   const renderReport = () => {
     const commonProps = {
@@ -97,6 +109,14 @@ export default function ReportsPage() {
         return <PdfsReport {...commonProps} />;
       case "usage-tables":
         return <UsageDataTables {...commonProps} />;
+      case "map":
+        return (
+          <ZipCodeMap
+            povertyLevel={mapPovertyLevel}
+            zipCode={mapZipCode}
+            assistanceType={mapAssistanceType}
+          />
+        );
       default:
         return <ZipCodeReport {...commonProps} />;
     }
@@ -128,8 +148,15 @@ export default function ReportsPage() {
           coverageStatus={coverageStatus}
           onCoverageStatusChange={setCoverageStatus}
           onCoverageReset={handleCoverageReset}
+          mapPovertyLevel={mapPovertyLevel}
+          onMapPovertyLevelChange={setMapPovertyLevel}
+          mapZipCode={mapZipCode}
+          onMapZipCodeChange={setMapZipCode}
+          mapAssistanceType={mapAssistanceType}
+          onMapAssistanceTypeChange={setMapAssistanceType}
+          onMapReset={handleMapReset}
         />
-        <NavBar3Reports
+        {selectedReport !== "map" && <NavBar3Reports
           selectedReport={selectedReport}
           coverageSummary={coverageSummary}
           coverageDisplayFilter={coverageDisplayFilter}
@@ -138,10 +165,10 @@ export default function ReportsPage() {
           onCoverageRestrictionFilterChange={setCoverageRestrictionFilter}
           coverageDisplayData={coverageDisplayData}
           coverageFilters={coverageFilters}
-        />
+        />}
 
         {/* Report content - UsageDataTables handles its own scroll for sticky header */}
-        <main className={`flex-1 bg-gray-50 ${selectedReport === "usage-tables" ? "overflow-hidden" : "overflow-auto"}`}>
+        <main className={`flex-1 bg-gray-50 ${selectedReport === "usage-tables" || selectedReport === "map" ? "overflow-hidden" : "overflow-auto"}`}>
           {renderReport()}
         </main>
 

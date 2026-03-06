@@ -437,6 +437,14 @@ export default function NavBar2Reports({
   coverageStatus,
   onCoverageStatusChange,
   onCoverageReset,
+  // Map report filter props
+  mapPovertyLevel,
+  onMapPovertyLevelChange,
+  mapZipCode,
+  onMapZipCodeChange,
+  mapAssistanceType,
+  onMapAssistanceTypeChange,
+  onMapReset,
 }) {
   const [registeredOrgs, setRegisteredOrgs] = useState([]);
   const { organizations, assistance, zipCodes, directory } = useAppData();
@@ -551,6 +559,20 @@ export default function NavBar2Reports({
     onViewModeChange(viewMode === "daily" ? "monthly" : "daily");
   };
 
+  // === Map report options ===
+  // Poverty level options from zip_codes data
+  const povertyLevelOptions = useMemo(() => {
+    const levels = [...new Set(
+      zipCodes.filter(z => z.houston_area === "Y" && z.poverty_level != null).map(z => String(z.poverty_level))
+    )].sort((a, b) => parseInt(a) - parseInt(b));
+    return levels.map(l => `Level ${l}`);
+  }, [zipCodes]);
+
+  // Zip code options for map (houston_area only)
+  const mapZipOptions = useMemo(() => {
+    return zipCodes.filter(z => z.houston_area === "Y").map(z => z.zip_code).sort();
+  }, [zipCodes]);
+
   return (
     <nav
       className="bg-navbar2-bg flex items-center"
@@ -560,7 +582,55 @@ export default function NavBar2Reports({
         paddingRight: "var(--padding-navbar2-right)",
       }}
     >
-      {selectedReport === "coverage" ? (
+      {selectedReport === "map" ? (
+        /* Map report filters */
+        <div
+          className="flex items-center"
+          style={{ gap: "var(--gap-navbar2-filters)" }}
+        >
+          <HoverDropdown
+            value={mapPovertyLevel || ""}
+            options={povertyLevelOptions}
+            onChange={(val) => {
+              onMapPovertyLevelChange(val);
+              onMapZipCodeChange(""); // Clear zip when poverty level selected
+            }}
+            placeholder="-- Poverty Level --"
+            inactiveValue=""
+          />
+          <span className="font-opensans text-white/50" style={{ fontSize: "14px" }}>or</span>
+          <HoverDropdown
+            value={mapZipCode || ""}
+            options={mapZipOptions}
+            onChange={(val) => {
+              onMapZipCodeChange(val);
+              onMapPovertyLevelChange(""); // Clear poverty level when zip selected
+            }}
+            placeholder="-- Zip Code --"
+            inactiveValue=""
+          />
+          <AssistanceChipSelector
+            assistance={assistance}
+            value={mapAssistanceType}
+            onChange={onMapAssistanceTypeChange}
+          />
+          <button
+            onClick={onMapReset}
+            className="font-opensans transition-all duration-200 hover:brightness-125"
+            style={{
+              fontSize: "13px",
+              color: "#FFFFFF",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              textDecoration: "underline",
+            }}
+          >
+            Reset Filters
+          </button>
+        </div>
+      ) : selectedReport === "coverage" ? (
         /* Coverage report filters - all inline with same gap */
         <div
           className="flex items-center"

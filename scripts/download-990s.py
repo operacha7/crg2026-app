@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Download IRS Form 990 PDFs for CRG Houston organizations via ProPublica Nonprofit Explorer API.
+Download IRS Form 990 PDFs for CRG Houston organizations_990 via ProPublica Nonprofit Explorer API.
 
 Usage:
     python3 scripts/download-990s.py
 
 Input:
-    scripts/data/CRG 2026 Master Data - organizations.csv  - exported from Google Sheets "organizations" tab
+    scripts/data/CRG 2026 Master Data - organizations_990.csv  - exported from Google Sheets "organizations_990" tab
     Expected columns: id_no, organization, org_parent, org_assistance, contact, telephone, email
 
     scripts/data/CRG 2026 Master Data - directory.csv      - (optional) exported from Google Sheets "directory" tab
@@ -41,7 +41,7 @@ from datetime import datetime
 # --- Configuration ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.join(SCRIPT_DIR, '..')
-ORG_CSV = os.path.join(SCRIPT_DIR, 'data', 'CRG 2026 Master Data - organizations.csv')
+ORG_CSV = os.path.join(SCRIPT_DIR, 'data', 'CRG 2026 Master Data - organizations_990.csv')
 DIR_CSV = os.path.join(SCRIPT_DIR, 'data', 'CRG 2026 Master Data - directory.csv')
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'public', 'documents', '990s')
 REPORT_PATH = os.path.join(OUTPUT_DIR, '_download_report.csv')
@@ -49,7 +49,7 @@ PROPUBLICA_SEARCH = 'https://projects.propublica.org/nonprofits/api/v2/search.js
 PROPUBLICA_ORG = 'https://projects.propublica.org/nonprofits/api/v2/organizations/{ein}.json'
 DELAY_SECONDS = 1.0
 STATE_FILTER = 'TX'
-MAX_DOWNLOADS = 5  # Stop after this many successful PDF downloads (set to 0 for unlimited)
+MAX_DOWNLOADS = 0  # Stop after this many successful PDF downloads (set to 0 for unlimited)
 
 # Browser-like headers to avoid 403 blocks on PDF downloads
 HEADERS = {
@@ -174,16 +174,31 @@ def read_organizations():
     seen = set()
     with open(ORG_CSV, 'r', encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
+        columns = reader.fieldnames
+        print(f"CSV columns: {columns}")
 
-        # Validate expected columns exist
-        if 'organization' not in reader.fieldnames:
-            print(f"ERROR: CSV must have an 'organization' column.")
-            print(f"Found columns: {reader.fieldnames}")
+        # Find the org name column — support multiple possible column names
+        org_col = None
+        for candidate in ['organization', 'org_parent', 'active and limited org', 'name']:
+            if candidate in columns:
+                org_col = candidate
+                break
+
+        if not org_col:
+            print(f"ERROR: Could not find organization name column.")
+            print(f"Expected one of: 'organization', 'org_parent', 'active and limited org', 'name'")
+            print(f"Found columns: {columns}")
             sys.exit(1)
 
+        print(f"Using column '{org_col}' for organization names")
+
+        # Also check for a separate parent column
+        parent_col = 'org_parent' if 'org_parent' in columns else None
+
         for row in reader:
-            org_name = row.get('organization', '').strip()
-            org_parent = row.get('org_parent', '').strip() or org_name
+            org_name = row.get(org_col, '').strip()
+            org_parent = row.get(parent_col, '').strip() if parent_col else org_name
+            org_parent = org_parent or org_name  # fallback if parent is blank
             if org_name and org_name not in seen:
                 seen.add(org_name)
                 orgs.append({'name': org_name, 'parent': org_parent})
