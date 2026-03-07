@@ -10,7 +10,7 @@ const REPORT_OPTIONS = [
   { id: 'pdfs-created', label: 'PDFs Created' },
   { id: 'usage-tables', label: 'Usage Data Tables' },
   { id: 'coverage', label: 'The Matt Report', color: '#f79184' },
-  { id: 'map', label: 'Map' },
+  { id: 'map2', label: 'Zip Code Map', color: '#9df784' },
 ];
 
 export default function NavBar1Reports({ selectedReport, onReportChange }) {
@@ -118,11 +118,15 @@ export default function NavBar1Reports({ selectedReport, onReportChange }) {
           className="font-opensans transition-all hover:brightness-125"
           style={{
             backgroundColor: 'transparent',
-            color: currentReport?.color || '#FFFFFF',
+            color: currentReport?.color || (currentReport ? '#FDF6E3' : '#FFFFFF'),
             fontSize: 'var(--font-size-navbar1-btn)',
             fontWeight: 'var(--font-weight-navbar1-btn)',
             letterSpacing: 'var(--letter-spacing-navbar1-btn)',
             padding: '8px 16px',
+            border: currentReport
+              ? `2px solid ${currentReport.color || '#FDF6E3'}`
+              : 'none',
+            borderRadius: currentReport ? '10px' : '0',
           }}
         >
           {buttonLabel}
@@ -137,22 +141,26 @@ export default function NavBar1Reports({ selectedReport, onReportChange }) {
               minWidth: '180px',
             }}
           >
-            {REPORT_OPTIONS.map((option) => (
-              <button
-                key={option.id}
-                onClick={() => handleReportSelect(option.id)}
-                onMouseEnter={() => setHoveredOption(option.id)}
-                onMouseLeave={() => setHoveredOption(null)}
-                className="w-full text-left px-4 py-3 font-opensans"
-                style={{
-                  fontSize: '16px',
-                  color: option.color || '#222831',
-                  backgroundColor: hoveredOption === option.id ? '#d4d0c7' : (selectedReport === option.id ? '#e0ddd4' : 'transparent'),
-                }}
-              >
-                {option.label}
-              </button>
-            ))}
+            {REPORT_OPTIONS.map((option) => {
+              const fontColor = option.color || '#222831';
+              return (
+                <button
+                  key={option.id}
+                  onClick={() => handleReportSelect(option.id)}
+                  onMouseEnter={() => setHoveredOption(option.id)}
+                  onMouseLeave={() => setHoveredOption(null)}
+                  className="w-full text-left px-4 py-3 font-opensans"
+                  style={{
+                    fontSize: '16px',
+                    color: fontColor,
+                    backgroundColor: hoveredOption === option.id ? '#d4d0c7' : (selectedReport === option.id ? '#e0ddd4' : 'transparent'),
+                    borderBottom: '1px solid #999999',
+                  }}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

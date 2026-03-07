@@ -24,6 +24,7 @@ function SortArrow({ active, direction }) {
 
 export default function CoverageReport({
   county,
+  zipCode,
   parentOrg,
   childOrg,
   assistanceType,
@@ -107,14 +108,17 @@ export default function CoverageReport({
     });
   }, [directory, assistId, statusId, parentOrg, childOrg]);
 
-  // Get Houston-area zip codes, optionally filtered by county, sorted numerically
+  // Get Houston-area zip codes, optionally filtered by county and/or specific zip code
   const houstonZipCodes = useMemo(() => {
     let filtered = zipCodes.filter(z => z.houston_area === "Y");
-    if (county && county !== "All Counties") {
+    if (zipCode) {
+      // Specific zip code selected - show only that row
+      filtered = filtered.filter(z => z.zip_code === zipCode);
+    } else if (county && county !== "All Counties") {
       filtered = filtered.filter(z => z.county === county);
     }
     return filtered.sort((a, b) => a.zip_code.localeCompare(b.zip_code));
-  }, [zipCodes, county]);
+  }, [zipCodes, county, zipCode]);
 
   // Build set of unrestricted org names (those with 99999)
   const unrestrictedOrgNames = useMemo(() => {

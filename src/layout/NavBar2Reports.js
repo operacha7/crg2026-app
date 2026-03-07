@@ -4,7 +4,7 @@
 // Coverage report: County, Parent Org, Child Org, Assistance Type (chip selector), Status, Reset
 // Dropdowns are cross-filtered: each shows only options valid given other selections
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { fetchOrganizations } from "../services/usageService";
 import { useAppData } from "../Contexts/AppDataContext";
 import { ChevronDownIcon } from "../icons/ChevronDownIcon";
@@ -73,7 +73,7 @@ function SlideToggle({ leftLabel, rightLabel, isRight, onToggle }) {
 }
 
 // Click dropdown component - opens on click, closes on click outside
-function HoverDropdown({ value, options, onChange, placeholder, inactiveValue = "All Registered Organizations" }) {
+function HoverDropdown({ value, options, onChange, placeholder, inactiveValue = "All Registered Organizations", format1 = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredOption, setHoveredOption] = useState(null);
   const containerRef = useRef(null);
@@ -102,26 +102,37 @@ function HoverDropdown({ value, options, onChange, placeholder, inactiveValue = 
       ref={containerRef}
       className="relative"
     >
-      <button
-        onClick={handleClick}
-        className="flex items-center gap-1 font-opensans transition-all duration-200 hover:brightness-125"
-        style={{
-          height: "var(--height-navbar2-btn)",
-          paddingLeft: "var(--padding-navbar2-btn-x)",
-          paddingRight: "var(--padding-navbar2-btn-x)",
-          borderRadius: "var(--radius-navbar2-btn)",
-          fontSize: "var(--font-size-navbar2-dropdown)",
-          fontWeight: "var(--font-weight-navbar2-dropdown)",
-          letterSpacing: "var(--letter-spacing-navbar2-dropdown)",
-          backgroundColor: "#2E5A88",
-          color: "#FFFFFF",
-          border: "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {value || placeholder}
-        <ChevronDownIcon size={16} color="currentColor" />
-      </button>
+      {(() => {
+        const isActive = format1 && value && value !== inactiveValue;
+        const btnBg = format1
+          ? (isActive ? "var(--color-navbar2-btn-active-bg)" : "var(--color-navbar2-btn-inactive-bg)")
+          : "#2E5A88";
+        const btnColor = format1
+          ? (isActive ? "var(--color-navbar2-btn-active-text)" : "var(--color-navbar2-btn-inactive-text)")
+          : "#FFFFFF";
+        return (
+          <button
+            onClick={handleClick}
+            className="flex items-center gap-1 font-opensans transition-all duration-200 hover:brightness-125"
+            style={{
+              height: "var(--height-navbar2-btn)",
+              paddingLeft: "var(--padding-navbar2-btn-x)",
+              paddingRight: "var(--padding-navbar2-btn-x)",
+              borderRadius: "var(--radius-navbar2-btn)",
+              fontSize: format1 ? "var(--font-size-navbar2-btn)" : "var(--font-size-navbar2-dropdown)",
+              fontWeight: format1 ? "var(--font-weight-navbar2-btn)" : "var(--font-weight-navbar2-dropdown)",
+              letterSpacing: format1 ? "var(--letter-spacing-navbar2-btn)" : "var(--letter-spacing-navbar2-dropdown)",
+              backgroundColor: btnBg,
+              color: btnColor,
+              border: "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {value || placeholder}
+            <ChevronDownIcon size={16} color="currentColor" />
+          </button>
+        );
+      })()}
 
       {isOpen && (
         <div
@@ -151,7 +162,7 @@ function HoverDropdown({ value, options, onChange, placeholder, inactiveValue = 
 }
 
 // Searchable dropdown - type to filter options
-function SearchableDropdown({ placeholder, options = [], value, onChange, maxChars = 74 }) {
+function SearchableDropdown({ placeholder, options = [], value, onChange, maxChars = 74, format1 = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredOption, setHoveredOption] = useState(null);
   const [searchText, setSearchText] = useState("");
@@ -206,26 +217,37 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, maxCha
 
   return (
     <div ref={containerRef} className="relative">
-      <button
-        onClick={handleClick}
-        className="flex items-center gap-1 font-opensans transition-all duration-200 hover:brightness-125"
-        style={{
-          height: "var(--height-navbar2-btn)",
-          paddingLeft: "var(--padding-navbar2-btn-x)",
-          paddingRight: "var(--padding-navbar2-btn-x)",
-          borderRadius: "var(--radius-navbar2-btn)",
-          fontSize: "var(--font-size-navbar2-dropdown)",
-          fontWeight: "var(--font-weight-navbar2-dropdown)",
-          letterSpacing: "var(--letter-spacing-navbar2-dropdown)",
-          backgroundColor: "#2E5A88",
-          color: "#FFFFFF",
-          border: "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {hasValue ? truncateText(value) : placeholder}
-        <ChevronDownIcon size={16} color="currentColor" />
-      </button>
+      {(() => {
+        const isActive = format1 && hasValue;
+        const btnBg = format1
+          ? (isActive ? "var(--color-navbar2-btn-active-bg)" : "var(--color-navbar2-btn-inactive-bg)")
+          : "#2E5A88";
+        const btnColor = format1
+          ? (isActive ? "var(--color-navbar2-btn-active-text)" : "var(--color-navbar2-btn-inactive-text)")
+          : "#FFFFFF";
+        return (
+          <button
+            onClick={handleClick}
+            className="flex items-center gap-1 font-opensans transition-all duration-200 hover:brightness-125"
+            style={{
+              height: "var(--height-navbar2-btn)",
+              paddingLeft: "var(--padding-navbar2-btn-x)",
+              paddingRight: "var(--padding-navbar2-btn-x)",
+              borderRadius: "var(--radius-navbar2-btn)",
+              fontSize: format1 ? "var(--font-size-navbar2-btn)" : "var(--font-size-navbar2-dropdown)",
+              fontWeight: format1 ? "var(--font-weight-navbar2-btn)" : "var(--font-weight-navbar2-dropdown)",
+              letterSpacing: format1 ? "var(--letter-spacing-navbar2-btn)" : "var(--letter-spacing-navbar2-dropdown)",
+              backgroundColor: btnBg,
+              color: btnColor,
+              border: "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {hasValue ? truncateText(value) : placeholder}
+            <ChevronDownIcon size={16} color="currentColor" />
+          </button>
+        );
+      })()}
 
       {isOpen && (
         <div
@@ -293,126 +315,153 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, maxCha
   );
 }
 
-// Assistance type chip selector - dropdown shows chips with icons and group colors
-function AssistanceChipSelector({ assistance, value, onChange }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [hoveredOption, setHoveredOption] = useState(null);
-  const containerRef = useRef(null);
+// Map 2 Assistance Button - mirrors NavBar3's Choose/Change Assistance pattern
+// Three states: default (cream), prompting (amber bounce), active (teal)
+function Map2AssistanceButton({ hasSelection, hasAnyFilter, onClick, buttonRef }) {
+  let buttonState;
+  if (hasSelection) {
+    buttonState = "active";
+  } else if (hasAnyFilter) {
+    buttonState = "prompting";
+  } else {
+    buttonState = "default";
+  }
 
-  const sortedAssistance = useMemo(() => {
-    return [...assistance].sort((a, b) => parseInt(a.assist_id) - parseInt(b.assist_id));
-  }, [assistance]);
-
-  const selectedInfo = useMemo(() => {
-    if (!value) return null;
-    return assistance.find(a => a.assistance === value);
-  }, [value, assistance]);
+  const prevStateRef = useRef(buttonState);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
-        setIsOpen(false);
+    if (buttonState === "prompting" && prevStateRef.current !== "prompting") {
+      setIsAnimating(true);
+      const timeout = setTimeout(() => setIsAnimating(false), 1500);
+      return () => clearTimeout(timeout);
+    }
+    prevStateRef.current = buttonState;
+  }, [buttonState]);
+
+  const stateStyles = {
+    default: {
+      backgroundColor: "var(--color-navbar2-btn-inactive-bg)",
+      color: "var(--color-navbar2-btn-inactive-text)",
+      border: "var(--border-width-btn) solid var(--color-navbar2-btn-inactive-border)",
+    },
+    prompting: {
+      backgroundColor: "var(--color-navbar3-btn-prompting-bg)",
+      color: "var(--color-navbar3-btn-prompting-text)",
+      border: "var(--border-width-btn) solid var(--color-navbar3-btn-prompting-border)",
+    },
+    active: {
+      backgroundColor: "var(--color-navbar2-btn-active-bg)",
+      color: "var(--color-navbar2-btn-active-text)",
+      border: "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)",
+    },
+  };
+
+  const glowColor = "rgba(249, 178, 51, 0.7)";
+  const animationStyles = isAnimating
+    ? {
+        boxShadow: `0 0 0 3px ${glowColor}, 0 0 15px 5px ${glowColor}`,
+        animation: "map2AssistanceBounce 0.6s ease-out",
       }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    : { boxShadow: "none" };
 
-  const handleSelect = (assistanceName) => {
-    onChange(assistanceName);
-    setIsOpen(false);
-  };
-
-  const renderChip = (item, isInDropdown = false) => {
-    const groupColor = GROUP_COLORS[item.group] || GROUP_COLORS[1];
-    const iconResult = item.icon ? getIconByName(item.icon) : null;
-    const IconComponents = iconResult
-      ? (Array.isArray(iconResult) ? iconResult : [iconResult])
-      : [];
-
-    return (
-      <button
-        key={item.assist_id}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (isInDropdown) handleSelect(item.assistance);
-        }}
-        onMouseEnter={isInDropdown ? () => setHoveredOption(item.assist_id) : undefined}
-        onMouseLeave={isInDropdown ? () => setHoveredOption(null) : undefined}
-        className="font-opensans transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-2"
-        style={{
-          backgroundColor: isInDropdown && value === item.assistance
-            ? "var(--color-assistance-selected-bg)"
-            : groupColor,
-          color: "var(--color-assistance-text)",
-          padding: "8px 12px",
-          borderRadius: "var(--radius-assistance-chip)",
-          fontSize: "var(--font-size-assistance-chip)",
-          letterSpacing: "var(--letter-spacing-assistance-chip)",
-          fontWeight: 500,
-          border: isInDropdown && value === item.assistance
-            ? "1px solid #000"
-            : (isInDropdown && hoveredOption === item.assist_id ? "1px solid #666" : "1px solid transparent"),
-          whiteSpace: "nowrap",
-          cursor: isInDropdown ? "pointer" : "default",
-        }}
-      >
-        {IconComponents.map((IconComp, idx) => (
-          <IconComp key={idx} size={20} />
-        ))}
-        {item.assistance}
-      </button>
-    );
-  };
+  const buttonText = hasSelection ? "Change Assistance" : "Choose Assistance";
 
   return (
-    <div ref={containerRef} className="relative flex items-center gap-2">
-      {selectedInfo ? (
-        <div className="flex items-center gap-2">
-          {renderChip(selectedInfo, false)}
-          <button
-            onClick={() => onChange("")}
-            className="text-white hover:brightness-125 transition-all"
-            style={{ fontSize: "14px", lineHeight: 1 }}
-            title="Clear selection"
-          >
-            ✕
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-1 font-opensans transition-all duration-200 hover:brightness-125"
-          style={{
-            height: "var(--height-navbar2-btn)",
-            paddingLeft: "var(--padding-navbar2-btn-x)",
-            paddingRight: "var(--padding-navbar2-btn-x)",
-            borderRadius: "var(--radius-navbar2-btn)",
-            fontSize: "var(--font-size-navbar2-dropdown)",
-            fontWeight: "var(--font-weight-navbar2-dropdown)",
-            letterSpacing: "var(--letter-spacing-navbar2-dropdown)",
-            backgroundColor: "#2E5A88",
-            color: "#FFFFFF",
-            border: "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)",
-            whiteSpace: "nowrap",
-          }}
-        >
-          Select Assistance Type
-          <ChevronDownIcon size={16} color="currentColor" />
-        </button>
-      )}
+    <>
+      <style>{`
+        @keyframes map2AssistanceBounce {
+          0% { transform: scale(1); }
+          20% { transform: scale(1.08) translateY(-3px); }
+          40% { transform: scale(0.97) translateY(1px); }
+          60% { transform: scale(1.03) translateY(-1px); }
+          80% { transform: scale(0.99); }
+          100% { transform: scale(1); }
+        }
+      `}</style>
+      <button
+        ref={buttonRef}
+        onClick={onClick}
+        className="font-opensans transition-all duration-200 hover:brightness-125 flex items-center gap-2"
+        style={{
+          height: "var(--height-navbar2-btn)",
+          paddingLeft: "var(--padding-navbar2-btn-x)",
+          paddingRight: "var(--padding-navbar2-btn-x)",
+          borderRadius: "var(--radius-navbar2-btn)",
+          fontSize: "var(--font-size-navbar2-btn)",
+          fontWeight: "var(--font-weight-navbar2-btn)",
+          letterSpacing: "var(--letter-spacing-navbar2-btn)",
+          whiteSpace: "nowrap",
+          ...stateStyles[buttonState],
+          ...animationStyles,
+        }}
+      >
+        {buttonText}
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+          <path d="M7 10l5 5 5-5z" />
+        </svg>
+      </button>
+    </>
+  );
+}
 
-      {isOpen && (
-        <div
-          className="absolute left-0 top-full mt-2 rounded shadow-lg z-50 p-4"
-          style={{ backgroundColor: "var(--color-dropdown-bg)", minWidth: "500px" }}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <div className="flex flex-wrap gap-2">
-            {sortedAssistance.map(item => renderChip(item, true))}
-          </div>
-        </div>
-      )}
+// Assistance chip dropdown - simple dropdown showing colored chips, click to select
+// Used by Map 2 and Coverage Report (single selection, shows only filtered/available types)
+function AssistanceChipDropdown({ isOpen, assistanceList, selectedName, onSelect, panelRef }) {
+  const [hoveredOption, setHoveredOption] = useState(null);
+
+  const sortedAssistance = useMemo(() => {
+    return [...assistanceList].sort((a, b) => parseInt(a.assist_id) - parseInt(b.assist_id));
+  }, [assistanceList]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      ref={panelRef}
+      className="absolute left-0 top-full mt-2 rounded shadow-lg z-50 p-4"
+      style={{ backgroundColor: "var(--color-dropdown-bg)", minWidth: "500px" }}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <div className="flex flex-wrap gap-2">
+        {sortedAssistance.map((item) => {
+          const groupColor = GROUP_COLORS[item.group] || GROUP_COLORS[1];
+          const iconResult = item.icon ? getIconByName(item.icon) : null;
+          const IconComponents = iconResult
+            ? (Array.isArray(iconResult) ? iconResult : [iconResult])
+            : [];
+          const isSelected = selectedName === item.assistance;
+
+          return (
+            <button
+              key={item.assist_id}
+              onClick={(e) => { e.stopPropagation(); onSelect(item.assistance); }}
+              onMouseEnter={() => setHoveredOption(item.assist_id)}
+              onMouseLeave={() => setHoveredOption(null)}
+              className="font-opensans transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-2"
+              style={{
+                backgroundColor: isSelected ? "var(--color-assistance-selected-bg)" : groupColor,
+                color: "var(--color-assistance-text)",
+                padding: "8px 12px",
+                borderRadius: "var(--radius-assistance-chip)",
+                fontSize: "var(--font-size-assistance-chip)",
+                letterSpacing: "var(--letter-spacing-assistance-chip)",
+                fontWeight: 500,
+                border: isSelected
+                  ? "1px solid #000"
+                  : (hoveredOption === item.assist_id ? "1px solid #666" : "1px solid transparent"),
+                whiteSpace: "nowrap",
+                cursor: "pointer",
+              }}
+            >
+              {IconComponents.map((IconComp, idx) => (
+                <IconComp key={idx} size={20} />
+              ))}
+              {item.assistance}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -428,6 +477,8 @@ export default function NavBar2Reports({
   // Coverage report filter props
   coverageCounty,
   onCoverageCountyChange,
+  coverageZipCode,
+  onCoverageZipCodeChange,
   coverageParentOrg,
   onCoverageParentOrgChange,
   coverageChildOrg,
@@ -437,14 +488,18 @@ export default function NavBar2Reports({
   coverageStatus,
   onCoverageStatusChange,
   onCoverageReset,
-  // Map report filter props
-  mapPovertyLevel,
-  onMapPovertyLevelChange,
-  mapZipCode,
-  onMapZipCodeChange,
-  mapAssistanceType,
-  onMapAssistanceTypeChange,
-  onMapReset,
+  // Zip Code Map (Mapbox) filter props
+  map2County,
+  onMap2CountyChange,
+  map2ZipCode,
+  onMap2ZipCodeChange,
+  map2ParentOrg,
+  onMap2ParentOrgChange,
+  map2Organization,
+  onMap2OrganizationChange,
+  map2AssistanceType,
+  onMap2AssistanceTypeChange,
+  onMap2Reset,
 }) {
   const [registeredOrgs, setRegisteredOrgs] = useState([]);
   const { organizations, assistance, zipCodes, directory } = useAppData();
@@ -465,6 +520,89 @@ export default function NavBar2Reports({
       .filter(o => o.reg_organization !== "Administrator")
       .map(o => o.reg_organization),
   ], [registeredOrgs]);
+
+  // === Shared geographic helpers (used by both Coverage and Map 2) ===
+
+  // All houston-area zips grouped by county
+  const houstonZipsByCounty = useMemo(() => {
+    const byCounty = {};
+    zipCodes.filter(z => z.houston_area === "Y").forEach(z => {
+      if (!byCounty[z.county]) byCounty[z.county] = new Set();
+      byCounty[z.county].add(z.zip_code);
+    });
+    return byCounty;
+  }, [zipCodes]);
+
+  // All houston-area zip codes as a flat set
+  const allHoustonZips = useMemo(() => {
+    return new Set(zipCodes.filter(z => z.houston_area === "Y").map(z => z.zip_code));
+  }, [zipCodes]);
+
+  // Helper: does this org serve the selected geographic area?
+  // Checks client_zip_codes against county zips, specific zip, or all Houston zips
+  const orgServesArea = useCallback((r, countyVal, zipVal) => {
+    const clientZips = Array.isArray(r.client_zip_codes) ? r.client_zip_codes : [];
+    // 99999 = serves all Houston-area zips
+    if (clientZips.includes("99999")) return true;
+    // Specific zip selected
+    if (zipVal) return clientZips.includes(zipVal);
+    // County selected
+    if (countyVal && countyVal !== "All Counties") {
+      const countyZipSet = houstonZipsByCounty[countyVal];
+      if (!countyZipSet) return false;
+      return clientZips.some(z => countyZipSet.has(z));
+    }
+    // No geographic filter - show all
+    return true;
+  }, [houstonZipsByCounty]);
+
+  // === Map 2 Assistance dropdown state ===
+  const [map2PanelOpen, setMap2PanelOpen] = useState(false);
+  const map2PanelRef = useRef(null);
+  const map2AssistBtnRef = useRef(null);
+
+  // Get selected assistance info (for chip display)
+  const map2SelectedAssistInfo = useMemo(() => {
+    if (!map2AssistanceType) return null;
+    const match = assistance.find(a => a.assistance === map2AssistanceType);
+    if (!match) return null;
+    return {
+      name: match.assistance,
+      icon: match.icon,
+      group: match.group,
+      assist_id: match.assist_id,
+    };
+  }, [map2AssistanceType, assistance]);
+
+  // Whether any geographic/org filter is set (for prompting state)
+  const map2HasAnyFilter = Boolean(
+    (map2County && map2County !== "All Counties") || map2ZipCode || map2ParentOrg || map2Organization
+  );
+
+  // Handle selecting a type in the Map 2 dropdown (click = select and close)
+  const handleMap2AssistSelect = useCallback((assistanceName) => {
+    onMap2AssistanceTypeChange(assistanceName);
+    setMap2PanelOpen(false);
+  }, [onMap2AssistanceTypeChange]);
+
+  // Close Map 2 dropdown on click outside
+  useEffect(() => {
+    function handleMap2ClickOutside(event) {
+      if (!map2PanelOpen) return;
+      const isOutsidePanel = map2PanelRef.current && !map2PanelRef.current.contains(event.target);
+      const isOutsideButton = map2AssistBtnRef.current && !map2AssistBtnRef.current.contains(event.target);
+      if (isOutsidePanel && isOutsideButton) {
+        setMap2PanelOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleMap2ClickOutside);
+    return () => document.removeEventListener("mousedown", handleMap2ClickOutside);
+  }, [map2PanelOpen]);
+
+  // === Coverage Report Assistance dropdown state ===
+  const [coveragePanelOpen, setCoveragePanelOpen] = useState(false);
+  const coveragePanelRef = useRef(null);
+  const coverageAssistBtnRef = useRef(null);
 
   // === Cross-filtered coverage report options ===
   // Each dropdown shows only options that exist given ALL other filter selections.
@@ -513,31 +651,89 @@ export default function NavBar2Reports({
     return ["All Counties", ...counties.sort()];
   }, [directory, zipCodes, statusId, assistId, coverageParentOrg, coverageChildOrg]);
 
-  // Parent org options: filtered by status + assistance (not by child)
+  // Zip code options for coverage: filtered by county (or all houston-area zips)
+  const coverageZipCodeOptions = useMemo(() => {
+    if (coverageCounty && coverageCounty !== "All Counties") {
+      const countyZipSet = houstonZipsByCounty[coverageCounty];
+      return countyZipSet ? [...countyZipSet].sort() : [];
+    }
+    return [...allHoustonZips].sort();
+  }, [coverageCounty, houstonZipsByCounty, allHoustonZips]);
+
+  // Parent org options: filtered by status + assistance + county/zip (via client_zip_codes)
   const parentOrgOptions = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === statusId);
     if (assistId) filtered = filtered.filter(r => r.assist_id === assistId);
+    filtered = filtered.filter(r => orgServesArea(r, coverageCounty, coverageZipCode));
     const parents = [...new Set(filtered.map(r => r.org_parent).filter(Boolean))];
     return parents.sort();
-  }, [directory, statusId, assistId]);
+  }, [directory, statusId, assistId, coverageCounty, coverageZipCode, orgServesArea]);
 
-  // Child org options: filtered by status + assistance + parent
+  // Child org options: filtered by status + assistance + county/zip + parent
   const childOrgOptions = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === statusId);
     if (assistId) filtered = filtered.filter(r => r.assist_id === assistId);
+    filtered = filtered.filter(r => orgServesArea(r, coverageCounty, coverageZipCode));
     if (coverageParentOrg) filtered = filtered.filter(r => r.org_parent === coverageParentOrg);
     const children = [...new Set(filtered.map(r => r.organization).filter(Boolean))];
     return children.sort();
-  }, [directory, statusId, assistId, coverageParentOrg]);
+  }, [directory, statusId, assistId, coverageCounty, coverageZipCode, coverageParentOrg, orgServesArea]);
 
-  // Assistance options: filtered by status + parent + child
+  // Assistance options: filtered by status + county/zip + parent + child
   const availableAssistance = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === statusId);
+    filtered = filtered.filter(r => orgServesArea(r, coverageCounty, coverageZipCode));
     if (coverageParentOrg) filtered = filtered.filter(r => r.org_parent === coverageParentOrg);
     if (coverageChildOrg) filtered = filtered.filter(r => r.organization === coverageChildOrg);
     const availableIds = new Set(filtered.map(r => r.assist_id));
     return assistance.filter(a => availableIds.has(a.assist_id));
-  }, [directory, assistance, statusId, coverageParentOrg, coverageChildOrg]);
+  }, [directory, assistance, statusId, coverageCounty, coverageZipCode, coverageParentOrg, coverageChildOrg, orgServesArea]);
+
+  // Selected assistance info for chip display (coverage)
+  const coverageSelectedAssistInfo = useMemo(() => {
+    if (!coverageAssistanceType) return null;
+    const match = assistance.find(a => a.assistance === coverageAssistanceType);
+    if (!match) return null;
+    return {
+      name: match.assistance,
+      icon: match.icon,
+      group: match.group,
+      assist_id: match.assist_id,
+    };
+  }, [coverageAssistanceType, assistance]);
+
+  // Whether any non-assistance filter is set (for prompting state)
+  const coverageHasAnyFilter = Boolean(
+    (coverageCounty && coverageCounty !== "All Counties") || coverageZipCode || coverageParentOrg || coverageChildOrg
+  );
+
+  // Handle selecting a type in the coverage dropdown (click = select and close)
+  const handleCoverageAssistSelect = useCallback((assistanceName) => {
+    onCoverageAssistanceTypeChange(assistanceName);
+    setCoveragePanelOpen(false);
+  }, [onCoverageAssistanceTypeChange]);
+
+  // Close coverage dropdown on click outside
+  useEffect(() => {
+    function handleCoverageClickOutside(event) {
+      if (!coveragePanelOpen) return;
+      const isOutsidePanel = coveragePanelRef.current && !coveragePanelRef.current.contains(event.target);
+      const isOutsideButton = coverageAssistBtnRef.current && !coverageAssistBtnRef.current.contains(event.target);
+      if (isOutsidePanel && isOutsideButton) {
+        setCoveragePanelOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleCoverageClickOutside);
+    return () => document.removeEventListener("mousedown", handleCoverageClickOutside);
+  }, [coveragePanelOpen]);
+
+  // Auto-clear coverage zip code if county changes and zip is no longer in that county
+  useEffect(() => {
+    if (coverageZipCode && !coverageZipCodeOptions.includes(coverageZipCode)) {
+      onCoverageZipCodeChange?.("");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coverageZipCodeOptions]);
 
   // When parent changes, reset child if it's no longer valid
   useEffect(() => {
@@ -559,19 +755,87 @@ export default function NavBar2Reports({
     onViewModeChange(viewMode === "daily" ? "monthly" : "daily");
   };
 
-  // === Map report options ===
-  // Poverty level options from zip_codes data
-  const povertyLevelOptions = useMemo(() => {
-    const levels = [...new Set(
-      zipCodes.filter(z => z.houston_area === "Y" && z.poverty_level != null).map(z => String(z.poverty_level))
-    )].sort((a, b) => parseInt(a) - parseInt(b));
-    return levels.map(l => `Level ${l}`);
+  // === Zip Code Map (Mapbox) cross-filtered options ===
+  // Filter order: County → Zip Code → Parent Org → Organization → Assistance → Status (frozen Active)
+  // Filtering is based on client_zip_codes (where assistance is provided), NOT org_zip_code.
+  // 99999 in client_zip_codes = org serves all Houston-area zips (wildcard).
+  // Uses shared helpers: houstonZipsByCounty, allHoustonZips, orgServesArea (defined above)
+
+  // County options - all houston-area counties (always full list)
+  const map2CountyOptions = useMemo(() => {
+    const counties = [...new Set(
+      zipCodes.filter(z => z.houston_area === "Y").map(z => z.county).filter(Boolean)
+    )];
+    return ["All Counties", ...counties.sort()];
   }, [zipCodes]);
 
-  // Zip code options for map (houston_area only)
-  const mapZipOptions = useMemo(() => {
-    return zipCodes.filter(z => z.houston_area === "Y").map(z => z.zip_code).sort();
-  }, [zipCodes]);
+  // Zip code options - filtered by county (or all houston-area zips if All Counties)
+  const map2ZipCodeOptions = useMemo(() => {
+    if (map2County && map2County !== "All Counties") {
+      const countyZipSet = houstonZipsByCounty[map2County];
+      return countyZipSet ? [...countyZipSet].sort() : [];
+    }
+    return [...allHoustonZips].sort();
+  }, [map2County, houstonZipsByCounty, allHoustonZips]);
+
+  // Parent org options - filtered by county/zip via client_zip_codes
+  const map2ParentOrgOptions = useMemo(() => {
+    let filtered = directory.filter(r => r.status_id === 1);
+    filtered = filtered.filter(r => orgServesArea(r, map2County, map2ZipCode));
+    const parents = [...new Set(filtered.map(r => r.org_parent).filter(Boolean))];
+    return parents.sort();
+  }, [directory, map2County, map2ZipCode, orgServesArea]);
+
+  // Organization options - filtered by county/zip + parent
+  const map2OrgOptions = useMemo(() => {
+    let filtered = directory.filter(r => r.status_id === 1);
+    filtered = filtered.filter(r => orgServesArea(r, map2County, map2ZipCode));
+    if (map2ParentOrg) filtered = filtered.filter(r => r.org_parent === map2ParentOrg);
+    const orgs = [...new Set(filtered.map(r => r.organization).filter(Boolean))];
+    return orgs.sort();
+  }, [directory, map2County, map2ZipCode, map2ParentOrg, orgServesArea]);
+
+  // Assistance options - filtered by county/zip + parent + org
+  const map2AvailableAssistance = useMemo(() => {
+    let filtered = directory.filter(r => r.status_id === 1);
+    filtered = filtered.filter(r => orgServesArea(r, map2County, map2ZipCode));
+    if (map2ParentOrg) filtered = filtered.filter(r => r.org_parent === map2ParentOrg);
+    if (map2Organization) filtered = filtered.filter(r => r.organization === map2Organization);
+    const availableIds = new Set(filtered.map(r => r.assist_id));
+    return assistance.filter(a => availableIds.has(a.assist_id));
+  }, [directory, assistance, map2County, map2ZipCode, map2ParentOrg, map2Organization, orgServesArea]);
+
+  // Auto-clear zip code if county changes and zip is no longer in that county
+  useEffect(() => {
+    if (map2ZipCode && !map2ZipCodeOptions.includes(map2ZipCode)) {
+      onMap2ZipCodeChange?.("");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map2ZipCodeOptions]);
+
+  // Auto-clear parent org if no longer valid
+  useEffect(() => {
+    if (map2ParentOrg && !map2ParentOrgOptions.includes(map2ParentOrg)) {
+      onMap2ParentOrgChange?.("");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map2ParentOrgOptions]);
+
+  // Auto-clear organization if no longer valid
+  useEffect(() => {
+    if (map2Organization && !map2OrgOptions.includes(map2Organization)) {
+      onMap2OrganizationChange?.("");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map2OrgOptions]);
+
+  // Auto-clear assistance if no longer valid
+  useEffect(() => {
+    if (map2AssistanceType && !map2AvailableAssistance.find(a => a.assistance === map2AssistanceType)) {
+      onMap2AssistanceTypeChange?.("");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map2AvailableAssistance]);
 
   return (
     <nav
@@ -582,40 +846,120 @@ export default function NavBar2Reports({
         paddingRight: "var(--padding-navbar2-right)",
       }}
     >
-      {selectedReport === "map" ? (
-        /* Map report filters */
+      {selectedReport === "map2" ? (
+        /* Zip Code Map filters: County → Zip → Parent → Organization → Assistance → Status */
         <div
           className="flex items-center"
           style={{ gap: "var(--gap-navbar2-filters)" }}
         >
+          {/* County - Format 1 styling */}
           <HoverDropdown
-            value={mapPovertyLevel || ""}
-            options={povertyLevelOptions}
+            value={map2County}
+            options={map2CountyOptions}
             onChange={(val) => {
-              onMapPovertyLevelChange(val);
-              onMapZipCodeChange(""); // Clear zip when poverty level selected
+              onMap2CountyChange(val);
+              onMap2ZipCodeChange("");
             }}
-            placeholder="-- Poverty Level --"
-            inactiveValue=""
+            placeholder="All Counties"
+            inactiveValue="All Counties"
+            format1={true}
           />
-          <span className="font-opensans text-white/50" style={{ fontSize: "14px" }}>or</span>
+          {/* Zip Code - Format 1 styling */}
           <HoverDropdown
-            value={mapZipCode || ""}
-            options={mapZipOptions}
-            onChange={(val) => {
-              onMapZipCodeChange(val);
-              onMapPovertyLevelChange(""); // Clear poverty level when zip selected
-            }}
+            value={map2ZipCode || ""}
+            options={map2ZipCodeOptions}
+            onChange={onMap2ZipCodeChange}
             placeholder="-- Zip Code --"
             inactiveValue=""
+            format1={true}
           />
-          <AssistanceChipSelector
-            assistance={assistance}
-            value={mapAssistanceType}
-            onChange={onMapAssistanceTypeChange}
+          {/* Parent Organization - Format 1 styling */}
+          <SearchableDropdown
+            placeholder="-- Parent Org --"
+            options={map2ParentOrgOptions}
+            value={map2ParentOrg}
+            onChange={onMap2ParentOrgChange}
+            format1={true}
           />
+          {/* Organization - Format 1 styling */}
+          <SearchableDropdown
+            placeholder="-- Organization --"
+            options={map2OrgOptions}
+            value={map2Organization}
+            onChange={onMap2OrganizationChange}
+            format1={true}
+          />
+          {/* Choose/Change Assistance + chip */}
+          <div className="relative flex items-center gap-2">
+            <Map2AssistanceButton
+              hasSelection={Boolean(map2AssistanceType)}
+              hasAnyFilter={map2HasAnyFilter}
+              onClick={() => setMap2PanelOpen(!map2PanelOpen)}
+              buttonRef={map2AssistBtnRef}
+            />
+            {/* Selected assistance chip with group color (no X) */}
+            {map2SelectedAssistInfo && (() => {
+              const groupColor = GROUP_COLORS[map2SelectedAssistInfo.group] || GROUP_COLORS[1];
+              const iconResult = map2SelectedAssistInfo.icon ? getIconByName(map2SelectedAssistInfo.icon) : null;
+              const IconComponents = iconResult
+                ? (Array.isArray(iconResult) ? iconResult : [iconResult])
+                : [];
+              return (
+                <div
+                  className="font-opensans flex items-center gap-2"
+                  style={{
+                    height: "var(--height-navbar2-btn)",
+                    paddingLeft: "12px",
+                    paddingRight: "12px",
+                    borderRadius: "var(--radius-assistance-chip)",
+                    fontSize: "var(--font-size-assistance-chip)",
+                    letterSpacing: "var(--letter-spacing-assistance-chip)",
+                    fontWeight: 500,
+                    backgroundColor: groupColor,
+                    color: "var(--color-assistance-text)",
+                    border: "1px solid transparent",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {IconComponents.map((IconComp, idx) => (
+                    <IconComp key={idx} size={20} />
+                  ))}
+                  {map2SelectedAssistInfo.name}
+                </div>
+              );
+            })()}
+            {/* Assistance chip dropdown */}
+            <AssistanceChipDropdown
+              isOpen={map2PanelOpen}
+              assistanceList={map2AvailableAssistance}
+              selectedName={map2AssistanceType}
+              onSelect={handleMap2AssistSelect}
+              panelRef={map2PanelRef}
+            />
+          </div>
+          {/* Frozen Active status - teal bg, white text, 50% opacity */}
+          <div
+            className="flex items-center font-opensans"
+            style={{
+              height: "var(--height-navbar2-btn)",
+              paddingLeft: "var(--padding-navbar2-btn-x)",
+              paddingRight: "var(--padding-navbar2-btn-x)",
+              borderRadius: "var(--radius-navbar2-btn)",
+              fontSize: "var(--font-size-navbar2-btn)",
+              fontWeight: "var(--font-weight-navbar2-btn)",
+              letterSpacing: "var(--letter-spacing-navbar2-btn)",
+              backgroundColor: "var(--color-navbar2-btn-active-bg)",
+              color: "var(--color-navbar2-btn-active-text)",
+              border: "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)",
+              whiteSpace: "nowrap",
+              opacity: 0.5,
+            }}
+            title="Only active organizations are shown"
+          >
+            Active
+          </div>
           <button
-            onClick={onMapReset}
+            onClick={onMap2Reset}
             className="font-opensans transition-all duration-200 hover:brightness-125"
             style={{
               fontSize: "13px",
@@ -631,43 +975,106 @@ export default function NavBar2Reports({
           </button>
         </div>
       ) : selectedReport === "coverage" ? (
-        /* Coverage report filters - all inline with same gap */
+        /* Coverage report filters - Format 1/2/3 styling (matches Map 2) */
         <div
           className="flex items-center"
           style={{ gap: "var(--gap-navbar2-filters)" }}
         >
+          {/* County - Format 1 styling */}
           <HoverDropdown
             value={coverageCounty}
             options={countyOptions}
-            onChange={onCoverageCountyChange}
+            onChange={(val) => {
+              onCoverageCountyChange(val);
+              onCoverageZipCodeChange("");
+            }}
             placeholder="All Counties"
             inactiveValue="All Counties"
+            format1={true}
           />
+          {/* Zip Code - Format 1 styling */}
+          <HoverDropdown
+            value={coverageZipCode || ""}
+            options={coverageZipCodeOptions}
+            onChange={onCoverageZipCodeChange}
+            placeholder="-- Zip Code --"
+            inactiveValue=""
+            format1={true}
+          />
+          {/* Parent Organization - Format 1 styling */}
           <SearchableDropdown
-            placeholder="-- Select Parent Organization --"
+            placeholder="-- Parent Org --"
             options={parentOrgOptions}
             value={coverageParentOrg}
             onChange={onCoverageParentOrgChange}
+            format1={true}
           />
+          {/* Child Organization - Format 1 styling */}
           <SearchableDropdown
-            placeholder="-- Select Child Organization --"
+            placeholder="-- Child Org --"
             options={childOrgOptions}
             value={coverageChildOrg}
             onChange={onCoverageChildOrgChange}
+            format1={true}
           />
-          <AssistanceChipSelector
-            assistance={availableAssistance}
-            value={coverageAssistanceType}
-            onChange={onCoverageAssistanceTypeChange}
-          />
+          {/* Choose/Change Assistance + chip */}
+          <div className="relative flex items-center gap-2">
+            <Map2AssistanceButton
+              hasSelection={Boolean(coverageAssistanceType)}
+              hasAnyFilter={coverageHasAnyFilter}
+              onClick={() => setCoveragePanelOpen(!coveragePanelOpen)}
+              buttonRef={coverageAssistBtnRef}
+            />
+            {/* Selected assistance chip with group color (no X) */}
+            {coverageSelectedAssistInfo && (() => {
+              const groupColor = GROUP_COLORS[coverageSelectedAssistInfo.group] || GROUP_COLORS[1];
+              const iconResult = coverageSelectedAssistInfo.icon ? getIconByName(coverageSelectedAssistInfo.icon) : null;
+              const IconComponents = iconResult
+                ? (Array.isArray(iconResult) ? iconResult : [iconResult])
+                : [];
+              return (
+                <div
+                  className="font-opensans flex items-center gap-2"
+                  style={{
+                    height: "var(--height-navbar2-btn)",
+                    paddingLeft: "12px",
+                    paddingRight: "12px",
+                    borderRadius: "var(--radius-assistance-chip)",
+                    fontSize: "var(--font-size-assistance-chip)",
+                    letterSpacing: "var(--letter-spacing-assistance-chip)",
+                    fontWeight: 500,
+                    backgroundColor: groupColor,
+                    color: "var(--color-assistance-text)",
+                    border: "1px solid transparent",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {IconComponents.map((IconComp, idx) => (
+                    <IconComp key={idx} size={20} />
+                  ))}
+                  {coverageSelectedAssistInfo.name}
+                </div>
+              );
+            })()}
+            {/* Assistance chip dropdown */}
+            <AssistanceChipDropdown
+              isOpen={coveragePanelOpen}
+              assistanceList={availableAssistance}
+              selectedName={coverageAssistanceType}
+              onSelect={handleCoverageAssistSelect}
+              panelRef={coveragePanelRef}
+            />
+          </div>
+          {/* Status - Format 1 styling (functional filter) */}
           <HoverDropdown
             value={coverageStatus}
             options={STATUS_OPTIONS}
             onChange={onCoverageStatusChange}
             placeholder="Status"
             inactiveValue={null}
+            format1={true}
           />
-          {/* Reset link - inline with filters */}
+          {/* Reset link */}
           <button
             onClick={onCoverageReset}
             className="font-opensans transition-all duration-200 hover:brightness-125"

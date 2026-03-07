@@ -2,7 +2,7 @@
 // Main Reports page container
 // Shows NavBar1Reports, NavBar2Reports, NavBar3Reports, and selected report content
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import NavBar1Reports from "../layout/NavBar1Reports";
 import NavBar2Reports from "../layout/NavBar2Reports";
 import NavBar3Reports from "../layout/NavBar3Reports";
@@ -13,7 +13,7 @@ import EmailsReport from "../components/reports/EmailsReport";
 import PdfsReport from "../components/reports/PdfsReport";
 import UsageDataTables from "../components/reports/UsageDataTables";
 import CoverageReport from "../components/reports/CoverageReport";
-import ZipCodeMap from "../components/reports/ZipCodeMap";
+import MapboxMap from "../components/reports/MapboxMap";
 
 export default function ReportsPage() {
   // State for report selection
@@ -27,6 +27,7 @@ export default function ReportsPage() {
 
   // Coverage Report filter state
   const [coverageCounty, setCoverageCounty] = useState("All Counties");
+  const [coverageZipCode, setCoverageZipCode] = useState("");
   const [coverageParentOrg, setCoverageParentOrg] = useState("");
   const [coverageChildOrg, setCoverageChildOrg] = useState("");
   const [coverageAssistanceType, setCoverageAssistanceType] = useState("");
@@ -51,6 +52,7 @@ export default function ReportsPage() {
   // Reset all coverage filters
   const handleCoverageReset = useCallback(() => {
     setCoverageCounty("All Counties");
+    setCoverageZipCode("");
     setCoverageParentOrg("");
     setCoverageChildOrg("");
     setCoverageAssistanceType("");
@@ -62,22 +64,34 @@ export default function ReportsPage() {
   // Coverage filters object for download header
   const coverageFilters = useMemo(() => ({
     county: coverageCounty,
+    zipCode: coverageZipCode,
     parentOrg: coverageParentOrg,
     childOrg: coverageChildOrg,
     assistanceType: coverageAssistanceType,
     status: coverageStatus,
-  }), [coverageCounty, coverageParentOrg, coverageChildOrg, coverageAssistanceType, coverageStatus]);
+  }), [coverageCounty, coverageZipCode, coverageParentOrg, coverageChildOrg, coverageAssistanceType, coverageStatus]);
 
-  // Map Report filter state
-  const [mapPovertyLevel, setMapPovertyLevel] = useState("");
-  const [mapZipCode, setMapZipCode] = useState("");
-  const [mapAssistanceType, setMapAssistanceType] = useState("");
+  // Zip Code Map (Mapbox) filter state
+  const [map2County, setMap2County] = useState("All Counties");
+  const [map2ZipCode, setMap2ZipCode] = useState("");
+  const [map2ParentOrg, setMap2ParentOrg] = useState("");
+  const [map2Organization, setMap2Organization] = useState("");
+  const [map2AssistanceType, setMap2AssistanceType] = useState("");
 
-  const handleMapReset = useCallback(() => {
-    setMapPovertyLevel("");
-    setMapZipCode("");
-    setMapAssistanceType("");
+  const handleMap2Reset = useCallback(() => {
+    setMap2County("All Counties");
+    setMap2ZipCode("");
+    setMap2ParentOrg("");
+    setMap2Organization("");
+    setMap2AssistanceType("");
   }, []);
+
+  // Reset Map 2 filters when navigating away
+  useEffect(() => {
+    if (selectedReport !== "map2") {
+      handleMap2Reset();
+    }
+  }, [selectedReport, handleMap2Reset]);
 
   // Render the selected report
   const renderReport = () => {
@@ -91,6 +105,7 @@ export default function ReportsPage() {
         return (
           <CoverageReport
             county={coverageCounty}
+            zipCode={coverageZipCode}
             parentOrg={coverageParentOrg}
             childOrg={coverageChildOrg}
             assistanceType={coverageAssistanceType}
@@ -109,12 +124,14 @@ export default function ReportsPage() {
         return <PdfsReport {...commonProps} />;
       case "usage-tables":
         return <UsageDataTables {...commonProps} />;
-      case "map":
+      case "map2":
         return (
-          <ZipCodeMap
-            povertyLevel={mapPovertyLevel}
-            zipCode={mapZipCode}
-            assistanceType={mapAssistanceType}
+          <MapboxMap
+            county={map2County}
+            zipCode={map2ZipCode}
+            parentOrg={map2ParentOrg}
+            organization={map2Organization}
+            assistanceType={map2AssistanceType}
           />
         );
       default:
@@ -139,6 +156,8 @@ export default function ReportsPage() {
           onViewModeChange={setViewMode}
           coverageCounty={coverageCounty}
           onCoverageCountyChange={setCoverageCounty}
+          coverageZipCode={coverageZipCode}
+          onCoverageZipCodeChange={setCoverageZipCode}
           coverageParentOrg={coverageParentOrg}
           onCoverageParentOrgChange={setCoverageParentOrg}
           coverageChildOrg={coverageChildOrg}
@@ -148,15 +167,19 @@ export default function ReportsPage() {
           coverageStatus={coverageStatus}
           onCoverageStatusChange={setCoverageStatus}
           onCoverageReset={handleCoverageReset}
-          mapPovertyLevel={mapPovertyLevel}
-          onMapPovertyLevelChange={setMapPovertyLevel}
-          mapZipCode={mapZipCode}
-          onMapZipCodeChange={setMapZipCode}
-          mapAssistanceType={mapAssistanceType}
-          onMapAssistanceTypeChange={setMapAssistanceType}
-          onMapReset={handleMapReset}
+          map2County={map2County}
+          onMap2CountyChange={setMap2County}
+          map2ZipCode={map2ZipCode}
+          onMap2ZipCodeChange={setMap2ZipCode}
+          map2ParentOrg={map2ParentOrg}
+          onMap2ParentOrgChange={setMap2ParentOrg}
+          map2Organization={map2Organization}
+          onMap2OrganizationChange={setMap2Organization}
+          map2AssistanceType={map2AssistanceType}
+          onMap2AssistanceTypeChange={setMap2AssistanceType}
+          onMap2Reset={handleMap2Reset}
         />
-        {selectedReport !== "map" && <NavBar3Reports
+        {selectedReport !== "map2" && <NavBar3Reports
           selectedReport={selectedReport}
           coverageSummary={coverageSummary}
           coverageDisplayFilter={coverageDisplayFilter}
@@ -168,7 +191,7 @@ export default function ReportsPage() {
         />}
 
         {/* Report content - UsageDataTables handles its own scroll for sticky header */}
-        <main className={`flex-1 bg-gray-50 ${selectedReport === "usage-tables" || selectedReport === "map" ? "overflow-hidden" : "overflow-auto"}`}>
+        <main className={`flex-1 bg-gray-50 ${selectedReport === "usage-tables" || selectedReport === "map" || selectedReport === "map2" ? "overflow-hidden" : "overflow-auto"}`}>
           {renderReport()}
         </main>
 

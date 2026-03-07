@@ -23,6 +23,7 @@ export { ChevronLeftIcon } from './ChevronLeftIcon';
 export { ChevronRightIcon } from './ChevronRightIcon';
 export { ChevronDownIcon } from './ChevronDownIcon';
 export { FunnelIcon } from './FunnelIcon';
+export { MapPinIcon } from './MapPinIcon';
 
 // currentColor icons (inherit color from CSS)
 export { RentIcon } from './RentIcon';
