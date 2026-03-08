@@ -8,6 +8,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { fetchOrganizations } from "../services/usageService";
 import { useAppData } from "../Contexts/AppDataContext";
 import { ChevronDownIcon } from "../icons/ChevronDownIcon";
+import { DownloadIcon } from "../icons/DownloadIcon";
 import { getIconByName } from "../icons/iconMap";
 
 // Group colors for the 6 assistance groups (matches NavBar3)
@@ -500,6 +501,7 @@ export default function NavBar2Reports({
   map2AssistanceType,
   onMap2AssistanceTypeChange,
   onMap2Reset,
+  onMap2Download,
 }) {
   const [registeredOrgs, setRegisteredOrgs] = useState([]);
   const { organizations, assistance, zipCodes, directory } = useAppData();
@@ -849,6 +851,9 @@ export default function NavBar2Reports({
       {selectedReport === "map2" ? (
         /* Zip Code Map filters: County → Zip → Parent → Organization → Assistance → Status */
         <div
+          className="flex items-center justify-between w-full"
+        >
+        <div
           className="flex items-center"
           style={{ gap: "var(--gap-navbar2-filters)" }}
         >
@@ -864,13 +869,12 @@ export default function NavBar2Reports({
             inactiveValue="All Counties"
             format1={true}
           />
-          {/* Zip Code - Format 1 styling */}
-          <HoverDropdown
-            value={map2ZipCode || ""}
-            options={map2ZipCodeOptions}
-            onChange={onMap2ZipCodeChange}
+          {/* Zip Code - Format 1 styling (searchable for type-ahead) */}
+          <SearchableDropdown
             placeholder="-- Zip Code --"
-            inactiveValue=""
+            options={map2ZipCodeOptions}
+            value={map2ZipCode}
+            onChange={onMap2ZipCodeChange}
             format1={true}
           />
           {/* Parent Organization - Format 1 styling */}
@@ -974,6 +978,27 @@ export default function NavBar2Reports({
             Reset Filters
           </button>
         </div>
+        {/* Download button - right-aligned, matches Matt Report style */}
+        <button
+          onClick={onMap2Download}
+          className="flex items-center gap-2 transition-all duration-200 hover:brightness-125"
+          style={{
+            background: "#4285F4",
+            border: "none",
+            borderRadius: "6px",
+            padding: "6px 14px",
+            cursor: "pointer",
+            color: "#FFFFFF",
+            whiteSpace: "nowrap",
+          }}
+          title="Download map as PNG"
+        >
+          <DownloadIcon size={20} color="#FFFFFF" />
+          <span className="font-opensans" style={{ fontSize: "18px", fontWeight: 400 }}>
+            Download
+          </span>
+        </button>
+        </div>
       ) : selectedReport === "coverage" ? (
         /* Coverage report filters - Format 1/2/3 styling (matches Map 2) */
         <div
@@ -992,13 +1017,12 @@ export default function NavBar2Reports({
             inactiveValue="All Counties"
             format1={true}
           />
-          {/* Zip Code - Format 1 styling */}
-          <HoverDropdown
-            value={coverageZipCode || ""}
-            options={coverageZipCodeOptions}
-            onChange={onCoverageZipCodeChange}
+          {/* Zip Code - Format 1 styling (searchable for type-ahead) */}
+          <SearchableDropdown
             placeholder="-- Zip Code --"
-            inactiveValue=""
+            options={coverageZipCodeOptions}
+            value={coverageZipCode}
+            onChange={onCoverageZipCodeChange}
             format1={true}
           />
           {/* Parent Organization - Format 1 styling */}

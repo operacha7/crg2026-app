@@ -5,7 +5,7 @@
 // 3. Assistance + parent selected → purple density choropleth + pins + teal overlay on click
 // Filters: assistance type, county, parent org, organization (status frozen to Active)
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, forwardRef, useImperativeHandle } from "react";
 import MapGL, { Source, Layer, Marker, NavigationControl } from "react-map-gl/mapbox";
 import { useAppData } from "../../Contexts/AppDataContext";
 import { MapPinIcon } from "../../icons/MapPinIcon";
@@ -72,6 +72,7 @@ function DraggableInfoBox({ info, onClose }) {
 
   return (
     <div
+      data-info-box="true"
       onMouseDown={handleMouseDown}
       className="absolute z-50 rounded-lg shadow-xl"
       style={{
@@ -248,10 +249,17 @@ const zipLabelStyle = {
     "text-ignore-placement": false,
   },
   paint: {
-    "text-color": "#B8001F",
+    "text-color": [
+      "case",
+      ["boolean", ["feature-state", "childHighlighted"], false],
+      "#ff0000",
+      ["boolean", ["feature-state", "highlighted"], false],
+      "#ff0000",
+      "#000000",
+    ],
     "text-halo-color": "#FFFFFF",
     "text-halo-width": 1.5,
-    "text-opacity": 0.8,
+    "text-opacity": 1,
   },
 };
 
@@ -327,6 +335,7 @@ function DensityLegend({ maxDensity, parentOrgName, assistanceLabel, orgCount, c
 
   return (
     <div
+      data-legend="true"
       className="absolute bottom-6 left-4 rounded-lg shadow-lg"
       style={{
         backgroundColor: "rgba(255,255,255,0.95)",
@@ -409,6 +418,7 @@ function DensityLegend({ maxDensity, parentOrgName, assistanceLabel, orgCount, c
 function SimpleLegend({ assistanceLabel, orgCount, county, outOfAreaOrgs, onOutOfAreaToggle }) {
   return (
     <div
+      data-legend="true"
       className="absolute bottom-6 left-4 rounded-lg shadow-lg"
       style={{
         backgroundColor: "rgba(255,255,255,0.95)",
@@ -454,15 +464,29 @@ function SimpleLegend({ assistanceLabel, orgCount, county, outOfAreaOrgs, onOutO
   );
 }
 
-export default function MapboxMap({
+const MapboxMap = forwardRef(function MapboxMap({
   county,
   zipCode,
   parentOrg,
   organization,
   assistanceType,
-}) {
+}, ref) {
   const { directory, assistance, zipCodes } = useAppData();
   const mapRef = useRef(null);
+  const mapContainerRef = useRef(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  // Zoom level tracking for org labels feature
+  const [currentZoom, setCurrentZoom] = useState(DEFAULT_ZOOM);
+  const [showOrgLabels, setShowOrgLabels] = useState(false);
+  const ORG_LABEL_ZOOM_THRESHOLD = 9;
+
+  // Draggable org label button position
+  const [orgLabelBtnPos, setOrgLabelBtnPos] = useState(null); // null = center
+  const orgLabelBtnDrag = useRef({ isDragging: false, startX: 0, startY: 0 });
+
+  // Hover tooltip state
+  const [hoveredOrg, setHoveredOrg] = useState(null);
 
   // GeoJSON data for zip boundaries
   const [allGeoJsonData, setAllGeoJsonData] = useState(null);
@@ -474,6 +498,9 @@ export default function MapboxMap({
 
   // Track highlighted zip codes (teal - individual child click)
   const childHighlightedRef = useRef(new Set());
+
+  // Track base highlighted zip (from zip code filter dropdown)
+  const baseHighlightedRef = useRef(null);
 
   // Hovered feature for boundary hover
   const hoveredFeatureRef = useRef(null);
@@ -678,6 +705,37 @@ export default function MapboxMap({
     childHighlightedRef.current.clear();
   }, []);
 
+  // Clear and set the base zip highlight (from zip code filter)
+  const clearBaseHighlight = useCallback(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !map.getSource("zip-boundaries")) return;
+    if (baseHighlightedRef.current !== null) {
+      map.setFeatureState(
+        { source: "zip-boundaries", id: baseHighlightedRef.current },
+        { highlighted: false }
+      );
+      baseHighlightedRef.current = null;
+    }
+  }, []);
+
+  const setBaseHighlight = useCallback(
+    (zip) => {
+      const map = mapRef.current?.getMap();
+      if (!map || !map.getSource("zip-boundaries")) return;
+      clearBaseHighlight();
+      if (!zip) return;
+      const featureId = zipToFeatureId[zip];
+      if (featureId !== undefined) {
+        map.setFeatureState(
+          { source: "zip-boundaries", id: featureId },
+          { highlighted: true }
+        );
+        baseHighlightedRef.current = featureId;
+      }
+    },
+    [zipToFeatureId, clearBaseHighlight]
+  );
+
   // Highlight child's served zips in teal
   // For 99999 wildcard orgs, highlight all boundary zips
   const highlightChildZips = useCallback(
@@ -756,7 +814,11 @@ export default function MapboxMap({
     clearChildHighlights();
     setInfoBoxData(null);
     setSelectedOrgKey(null);
-  }, [clearChildHighlights]);
+    // Restore base zip highlight if a zip filter is active
+    if (zipCode) {
+      setBaseHighlight(zipCode);
+    }
+  }, [clearChildHighlights, zipCode, setBaseHighlight]);
 
   // Handle boundary hover
   const handleMouseMove = useCallback((e) => {
@@ -796,19 +858,85 @@ export default function MapboxMap({
     hoveredFeatureRef.current = null;
   }, []);
 
-  // Close info box
+  // Close info box - clear pin highlights but restore base zip highlight
   const handleInfoBoxClose = useCallback(() => {
     setInfoBoxData(null);
     setSelectedOrgKey(null);
     clearChildHighlights();
-  }, [clearChildHighlights]);
+    // Restore base zip highlight if a zip filter is active
+    if (zipCode) {
+      setBaseHighlight(zipCode);
+    }
+  }, [clearChildHighlights, zipCode, setBaseHighlight]);
 
   // Clear selection when any filter changes (density is data-driven, auto-updates)
   useEffect(() => {
     setInfoBoxData(null);
     setSelectedOrgKey(null);
     clearChildHighlights();
-  }, [assistanceType, county, zipCode, parentOrg, organization, clearChildHighlights]);
+    clearBaseHighlight();
+  }, [assistanceType, county, zipCode, parentOrg, organization, clearChildHighlights, clearBaseHighlight]);
+
+  // Set base zip highlight when zip filter is active and assistance is selected
+  useEffect(() => {
+    if (zipCode && selectedAssistId) {
+      // Small delay to ensure map source is ready after filter-change clear
+      const timer = setTimeout(() => {
+        setBaseHighlight(zipCode);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [zipCode, selectedAssistId, setBaseHighlight]);
+
+  // Auto-highlight served zip codes, open info box, and activate pin
+  // when a single organization is selected via the filter dropdown
+  useEffect(() => {
+    if (!organization || orgPins.length === 0) return;
+
+    // Use the first matching pin (the selected org)
+    const org = orgPins[0];
+    const clientZips = org.clientZips || [];
+    const isWildcard = clientZips.includes("99999");
+    const displayZipCount = isWildcard ? boundaryZips.size : clientZips.length;
+
+    // Small delay to ensure the clear effect runs first
+    const timer = setTimeout(() => {
+      // Highlight served zip codes in teal
+      highlightChildZips(clientZips);
+
+      // Turn pin green by setting selected org key
+      setSelectedOrgKey(org.key);
+
+      // Open info box as if pin was clicked
+      setInfoBoxData({
+        organization: org.organization,
+        orgParent: org.org_parent,
+        assistance: org.assistance,
+        telephone: org.org_telephone || "",
+        address: [
+          org.org_address1,
+          org.org_address2,
+          `${org.org_city || ""}, ${org.org_state || ""} ${org.org_zip_code || ""}`,
+        ]
+          .filter(Boolean)
+          .join(", "),
+        status: org.status,
+        clientZips,
+        zipCount: displayZipCount,
+        isWildcard,
+      });
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [organization, orgPins, highlightChildZips, boundaryZips]);
+
+  // Handle zoom changes - track level and auto-hide labels when zooming out
+  const handleZoom = useCallback((e) => {
+    const zoom = e.viewState.zoom;
+    setCurrentZoom(zoom);
+    if (zoom < ORG_LABEL_ZOOM_THRESHOLD && showOrgLabels) {
+      setShowOrgLabels(false);
+    }
+  }, [showOrgLabels, ORG_LABEL_ZOOM_THRESHOLD]);
 
   // Get assistance type label for display
   const assistanceLabel = useMemo(() => {
@@ -819,6 +947,435 @@ export default function MapboxMap({
 
   // Determine if we have an assistance type selected (required to show anything)
   const hasAssistance = Boolean(selectedAssistId);
+
+  // Helper: draw a rounded rectangle on canvas
+  const drawRoundedRect = (ctx, x, y, w, h, r, fillColor) => {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+  };
+
+  // Helper: truncate text to fit maxWidth on canvas
+  const truncateText = (ctx, text, maxW) => {
+    if (ctx.measureText(text).width <= maxW) return text;
+    let t = text;
+    while (t.length > 0 && ctx.measureText(t + "…").width > maxW) {
+      t = t.slice(0, -1);
+    }
+    return t + "…";
+  };
+
+  // Draw the info box directly on canvas (bypasses dom-to-image artifacts)
+  const drawInfoBoxOnCanvas = (ctx, info, containerEl) => {
+    if (!info) return;
+    const el = containerEl.querySelector("[data-info-box]");
+    if (!el) return;
+
+    const cRect = containerEl.getBoundingClientRect();
+    const eRect = el.getBoundingClientRect();
+    const x = eRect.left - cRect.left;
+    const y = eRect.top - cRect.top;
+    const w = eRect.width;
+    const h = eRect.height;
+    const pad = 14;
+    const maxTextW = w - pad * 2 - 20;
+
+    drawRoundedRect(ctx, x, y, w, h, 8, "rgba(34, 40, 49, 0.95)");
+    ctx.textBaseline = "top";
+
+    // Header: green pin circle + org name
+    let cy = y + 10;
+    ctx.fillStyle = "#00CC44";
+    ctx.beginPath();
+    ctx.arc(x + pad + 6, cy + 8, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.font = "600 14px Lexend, sans-serif";
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText(truncateText(ctx, info.organization, maxTextW), x + pad + 20, cy);
+    cy += 26;
+
+    // Header divider
+    ctx.strokeStyle = "rgba(255,255,255,0.1)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + pad, cy);
+    ctx.lineTo(x + w - pad, cy);
+    ctx.stroke();
+    cy += 10;
+
+    // Parent org (if different)
+    if (info.orgParent !== info.organization) {
+      ctx.font = "400 11px Lexend, sans-serif";
+      ctx.fillStyle = "#AAAAAA";
+      ctx.fillText(truncateText(ctx, info.orgParent, w - pad * 2), x + pad, cy);
+      cy += 16;
+    }
+
+    // Assistance type
+    ctx.font = "500 12px Lexend, sans-serif";
+    ctx.fillStyle = "#FFC857";
+    ctx.fillText(info.assistance, x + pad, cy);
+    cy += 16;
+
+    // Phone
+    if (info.telephone) {
+      ctx.font = "600 13px Lexend, sans-serif";
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillText(info.telephone, x + pad, cy);
+      cy += 16;
+    }
+
+    // Address
+    ctx.font = "400 11px Lexend, sans-serif";
+    ctx.fillStyle = "#CCCCCC";
+    ctx.fillText(truncateText(ctx, info.address, w - pad * 2), x + pad, cy);
+    cy += 20;
+
+    // Divider
+    ctx.strokeStyle = "rgba(255,255,255,0.15)";
+    ctx.beginPath();
+    ctx.moveTo(x + pad, cy);
+    ctx.lineTo(x + w - pad, cy);
+    ctx.stroke();
+    cy += 10;
+
+    // Zip count
+    ctx.font = "500 12px Lexend, sans-serif";
+    ctx.fillStyle = "#00A8A8";
+    const zipText = `Serves ${info.zipCount} zip code${info.zipCount !== 1 ? "s" : ""}`;
+    ctx.fillText(zipText, x + pad, cy);
+    const tw = ctx.measureText(zipText).width;
+    ctx.font = "400 12px Lexend, sans-serif";
+    ctx.fillStyle = "#888888";
+    ctx.fillText(" (highlighted on map)", x + pad + tw, cy);
+  };
+
+  // Draw a simple legend directly on canvas
+  const drawSimpleLegendOnCanvas = (ctx, label, count, countyName, containerEl) => {
+    const el = containerEl.querySelector("[data-legend]");
+    if (!el) return;
+
+    const cRect = containerEl.getBoundingClientRect();
+    const eRect = el.getBoundingClientRect();
+    const x = eRect.left - cRect.left;
+    const y = eRect.top - cRect.top;
+    const w = eRect.width;
+    const h = eRect.height;
+    const pad = 16;
+
+    drawRoundedRect(ctx, x, y, w, h, 8, "rgba(255, 255, 255, 0.95)");
+    ctx.textBaseline = "top";
+    let cy = y + 12;
+
+    // Assistance label
+    if (label) {
+      ctx.font = "600 13px Lexend, sans-serif";
+      ctx.fillStyle = "#222831";
+      ctx.fillText(label, x + pad, cy);
+      cy += 22;
+    }
+
+    // Red pin circle + "Organization location"
+    ctx.fillStyle = "#ff0000";
+    ctx.beginPath();
+    ctx.arc(x + pad + 5, cy + 6, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = "400 12px Lexend, sans-serif";
+    ctx.fillStyle = "#444444";
+    ctx.fillText("Organization location", x + pad + 18, cy);
+    cy += 20;
+
+    // Green pin circle + "Selected organization"
+    ctx.fillStyle = "#00CC44";
+    ctx.beginPath();
+    ctx.arc(x + pad + 5, cy + 6, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#444444";
+    ctx.fillText("Selected organization", x + pad + 18, cy);
+    cy += 20;
+
+    // Teal square + "Zip codes served (on click)"
+    ctx.fillStyle = "rgba(0, 168, 168, 0.5)";
+    ctx.fillRect(x + pad + 1, cy + 2, 10, 10);
+    ctx.fillStyle = "#444444";
+    ctx.fillText("Zip codes served (on click)", x + pad + 18, cy);
+    cy += 22;
+
+    // Org count
+    ctx.font = "400 11px Lexend, sans-serif";
+    ctx.fillStyle = "#888888";
+    let countText = `${count} organization${count !== 1 ? "s" : ""} shown`;
+    if (countyName && countyName !== "All Counties") {
+      countText += ` · ${countyName} County`;
+    }
+    ctx.fillText(countText, x + pad, cy);
+  };
+
+  // Draw a density legend directly on canvas
+  const drawDensityLegendOnCanvas = (ctx, label, parentName, count, maxDens, countyName, containerEl) => {
+    const el = containerEl.querySelector("[data-legend]");
+    if (!el) return;
+
+    const cRect = containerEl.getBoundingClientRect();
+    const eRect = el.getBoundingClientRect();
+    const x = eRect.left - cRect.left;
+    const y = eRect.top - cRect.top;
+    const w = eRect.width;
+    const h = eRect.height;
+    const pad = 16;
+
+    drawRoundedRect(ctx, x, y, w, h, 8, "rgba(255, 255, 255, 0.95)");
+    ctx.textBaseline = "top";
+    let cy = y + 12;
+
+    // Assistance label
+    if (label) {
+      ctx.font = "600 13px Lexend, sans-serif";
+      ctx.fillStyle = "#222831";
+      ctx.fillText(label, x + pad, cy);
+      cy += 18;
+    }
+
+    // Parent org
+    if (parentName) {
+      ctx.font = "500 12px Lexend, sans-serif";
+      ctx.fillStyle = "#652C57";
+      ctx.fillText(truncateText(ctx, `${parentName} — ${count} child${count !== 1 ? "ren" : ""}`, w - pad * 2), x + pad, cy);
+      cy += 22;
+    }
+
+    // "Coverage density"
+    ctx.font = "500 11px Lexend, sans-serif";
+    ctx.fillStyle = "#444444";
+    ctx.fillText("Coverage density", x + pad, cy);
+    cy += 18;
+
+    // Gradient bar
+    const barW = w - pad * 2;
+    const barH = 14;
+    const steps = Math.min(maxDens, 4);
+    const stepW = barW / steps;
+    for (let i = 1; i <= steps; i++) {
+      ctx.fillStyle = getDensityColor(i);
+      const bx = x + pad + (i - 1) * stepW;
+      const r = i === 1 ? 3 : i === steps ? 3 : 0;
+      ctx.fillRect(bx, cy, stepW, barH);
+    }
+    cy += barH + 4;
+
+    // Bar labels
+    ctx.font = "400 10px Lexend, sans-serif";
+    ctx.fillStyle = "#666666";
+    ctx.fillText("1 org", x + pad, cy);
+    const maxLabel = maxDens >= 4 ? "4+ orgs" : `${maxDens} orgs`;
+    const maxLabelW = ctx.measureText(maxLabel).width;
+    ctx.fillText(maxLabel, x + w - pad - maxLabelW, cy);
+    cy += 18;
+
+    // Divider
+    ctx.strokeStyle = "#E0E0E0";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + pad, cy);
+    ctx.lineTo(x + w - pad, cy);
+    ctx.stroke();
+    cy += 10;
+
+    // Red pin + "Organization location"
+    ctx.fillStyle = "#ff0000";
+    ctx.beginPath();
+    ctx.arc(x + pad + 5, cy + 6, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = "400 12px Lexend, sans-serif";
+    ctx.fillStyle = "#444444";
+    ctx.fillText("Organization location", x + pad + 18, cy);
+    cy += 20;
+
+    // Green pin + "Selected organization"
+    ctx.fillStyle = "#00CC44";
+    ctx.beginPath();
+    ctx.arc(x + pad + 5, cy + 6, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#444444";
+    ctx.fillText("Selected organization", x + pad + 18, cy);
+    cy += 20;
+
+    // Teal square + "Selected org's zips"
+    ctx.fillStyle = "rgba(0, 168, 168, 0.6)";
+    ctx.fillRect(x + pad + 1, cy + 2, 10, 10);
+    ctx.fillStyle = "#444444";
+    ctx.fillText("Selected org's zips", x + pad + 18, cy);
+    cy += 22;
+
+    // County
+    if (countyName && countyName !== "All Counties") {
+      ctx.font = "400 11px Lexend, sans-serif";
+      ctx.fillStyle = "#888888";
+      ctx.fillText(`${countyName} County`, x + pad, cy);
+    }
+  };
+
+  // Draw a map pin directly on canvas at given pixel position
+  const drawPin = (ctx, x, y, isActive, pinSize = 30) => {
+    const scale = pinSize / 48; // SVG viewBox is 48x48
+    ctx.save();
+    // Anchor bottom: shift up by full height, center horizontally
+    ctx.translate(x - (24 * scale), y - (48 * scale));
+    ctx.scale(scale, scale);
+
+    // Shaft (thin needle)
+    ctx.fillStyle = "#889097";
+    ctx.beginPath();
+    ctx.moveTo(25, 20);
+    ctx.lineTo(23, 20);
+    ctx.lineTo(23, 41);
+    ctx.quadraticCurveTo(24, 45, 24, 45);
+    ctx.quadraticCurveTo(24, 45, 25, 41);
+    ctx.lineTo(25, 20);
+    ctx.closePath();
+    ctx.fill();
+
+    // Head (circle)
+    const headColor = isActive ? "#00CC44" : "#ff0000";
+    ctx.fillStyle = headColor;
+    ctx.beginPath();
+    ctx.arc(24, 13, 9, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  };
+
+  // Download map as PNG image
+  // Uses Mapbox's preserveDrawingBuffer to capture the WebGL canvas,
+  // then draws pins directly on canvas for crisp output
+  const handleDownload = useCallback(async () => {
+    if (!mapContainerRef.current || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const map = mapRef.current?.getMap();
+      if (!map) throw new Error("Map not ready");
+
+      const container = mapContainerRef.current;
+      const { width, height } = container.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+
+      // Create output canvas at device pixel ratio for crisp output
+      const outputCanvas = document.createElement("canvas");
+      outputCanvas.width = width * dpr;
+      outputCanvas.height = height * dpr;
+      const ctx = outputCanvas.getContext("2d");
+      ctx.scale(dpr, dpr);
+
+      // Step 1: Capture the Mapbox WebGL canvas
+      map.triggerRepaint();
+      await new Promise((resolve) => map.once("render", resolve));
+
+      const mapCanvas = map.getCanvas();
+      ctx.drawImage(mapCanvas, 0, 0, width, height);
+
+      // Step 2: Draw pins directly on canvas (avoids dom-to-image SVG issues)
+      if (hasAssistance) {
+        orgPins.forEach((org) => {
+          const point = map.project([org.lng, org.lat]);
+          const isActive = selectedOrgKey === org.key;
+          const pinSize = isActive ? 30 * 1.05 : 30;
+          drawPin(ctx, point.x, point.y, isActive, pinSize);
+        });
+
+        // Step 2b: Draw org labels on canvas when toggle is active
+        if (showOrgLabels) {
+          ctx.font = "500 10px Lexend, sans-serif";
+          ctx.textBaseline = "middle";
+          orgPins.forEach((org) => {
+            const point = map.project([org.lng, org.lat]);
+            const label = org.organization;
+            const labelX = point.x + 18; // offset right of pin
+            const labelY = point.y - 26; // near pin head
+
+            const textWidth = ctx.measureText(label).width;
+            const maxWidth = 180;
+            const displayWidth = Math.min(textWidth, maxWidth);
+
+            // Background
+            ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
+            ctx.strokeStyle = "rgba(0, 0, 0, 0.15)";
+            ctx.lineWidth = 0.5;
+            const bgPad = 4;
+            const bgHeight = 16;
+            const bgRadius = 3;
+
+            // Rounded rect background
+            const bx = labelX - bgPad;
+            const by = labelY - bgHeight / 2;
+            const bw = displayWidth + bgPad * 2;
+            const bh = bgHeight;
+            ctx.beginPath();
+            ctx.moveTo(bx + bgRadius, by);
+            ctx.lineTo(bx + bw - bgRadius, by);
+            ctx.quadraticCurveTo(bx + bw, by, bx + bw, by + bgRadius);
+            ctx.lineTo(bx + bw, by + bh - bgRadius);
+            ctx.quadraticCurveTo(bx + bw, by + bh, bx + bw - bgRadius, by + bh);
+            ctx.lineTo(bx + bgRadius, by + bh);
+            ctx.quadraticCurveTo(bx, by + bh, bx, by + bh - bgRadius);
+            ctx.lineTo(bx, by + bgRadius);
+            ctx.quadraticCurveTo(bx, by, bx + bgRadius, by);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Text (clipped to maxWidth)
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(labelX - bgPad, by, displayWidth + bgPad * 2, bh);
+            ctx.clip();
+            ctx.fillStyle = "#222831";
+            ctx.fillText(label, labelX, labelY);
+            ctx.restore();
+          });
+        }
+      }
+
+      // Step 3: Draw info box and legend directly on canvas (avoids dom-to-image border artifacts)
+      drawInfoBoxOnCanvas(ctx, infoBoxData, container);
+
+      if (isDensityMode && densityData.maxDensity > 0) {
+        drawDensityLegendOnCanvas(ctx, assistanceLabel, parentOrg, orgPins.length, densityData.maxDensity, county, container);
+      } else if (hasAssistance) {
+        drawSimpleLegendOnCanvas(ctx, assistanceLabel, orgPins.length, county, container);
+      }
+
+      // Step 4: Download
+      const link = document.createElement("a");
+      const dateStr = new Date().toISOString().split("T")[0];
+      const assistLabel = assistanceLabel || "map";
+      link.download = `CRG-ZipCodeMap-${assistLabel}-${dateStr}.png`;
+      link.href = outputCanvas.toDataURL("image/png");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Map download failed:", err);
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [isDownloading, assistanceLabel, hasAssistance, orgPins, selectedOrgKey, showOrgLabels, infoBoxData, isDensityMode, densityData, parentOrg, county]);
+
+  // Expose download method to parent via ref
+  useImperativeHandle(ref, () => ({
+    download: handleDownload,
+    isDownloading,
+  }), [handleDownload, isDownloading]);
 
   if (!MAPBOX_TOKEN) {
     return (
@@ -831,7 +1388,7 @@ export default function MapboxMap({
   }
 
   return (
-    <div className="relative w-full h-full">
+    <div ref={mapContainerRef} className="relative w-full h-full">
       <MapGL
         ref={mapRef}
         mapboxAccessToken={MAPBOX_TOKEN}
@@ -841,9 +1398,11 @@ export default function MapboxMap({
         }}
         style={{ width: "100%", height: "100%" }}
         mapStyle="mapbox://styles/mapbox/light-v11"
+        preserveDrawingBuffer={true}
         onClick={handleMapClick}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
+        onZoom={handleZoom}
       >
         <NavigationControl position="top-right" />
 
@@ -879,20 +1438,142 @@ export default function MapboxMap({
               style={{ cursor: "pointer" }}
             >
               <div
+                onMouseEnter={() => setHoveredOrg(org.key)}
+                onMouseLeave={() => setHoveredOrg(null)}
                 style={{
-                  transform: selectedOrgKey === org.key ? "scale(1.3)" : "scale(1)",
+                  transform: selectedOrgKey === org.key ? "scale(1.05)" : "scale(1)",
                   transition: "transform 0.15s ease",
                   transformOrigin: "bottom center",
+                  position: "relative",
                 }}
               >
                 <MapPinIcon
                   size={30}
                   active={selectedOrgKey === org.key}
                 />
+                {/* Hover tooltip */}
+                {hoveredOrg === org.key && selectedOrgKey !== org.key && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      bottom: "100%",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      marginBottom: "4px",
+                      backgroundColor: "rgba(34, 40, 49, 0.92)",
+                      color: "#FFFFFF",
+                      fontSize: "11px",
+                      fontFamily: "Lexend, sans-serif",
+                      fontWeight: 500,
+                      padding: "4px 8px",
+                      borderRadius: "4px",
+                      whiteSpace: "nowrap",
+                      pointerEvents: "none",
+                      zIndex: 40,
+                      maxWidth: "220px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {org.organization}
+                  </div>
+                )}
+                {/* Persistent org label (zoom-gated, toggle-controlled) */}
+                {showOrgLabels && (
+                  <div
+                    data-org-label="true"
+                    style={{
+                      position: "absolute",
+                      top: "-2px",
+                      left: "calc(100% + 4px)",
+                      backgroundColor: "rgba(255, 255, 255, 0.88)",
+                      color: "#222831",
+                      fontSize: "10px",
+                      fontFamily: "Lexend, sans-serif",
+                      fontWeight: 500,
+                      padding: "2px 5px",
+                      borderRadius: "3px",
+                      whiteSpace: "nowrap",
+                      pointerEvents: "none",
+                      zIndex: 30,
+                      maxWidth: "180px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      border: "0.5px solid rgba(0,0,0,0.15)",
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {org.organization}
+                  </div>
+                )}
               </div>
             </Marker>
           ))}
       </MapGL>
+
+      {/* Zoom-gated Org Labels toggle button (draggable, starts centered) */}
+      {hasAssistance && currentZoom >= ORG_LABEL_ZOOM_THRESHOLD && (
+        <button
+          data-org-label-btn="true"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            const btn = e.currentTarget;
+            const rect = btn.getBoundingClientRect();
+            orgLabelBtnDrag.current = {
+              isDragging: false,
+              moved: false,
+              startMouseX: e.clientX,
+              startMouseY: e.clientY,
+              startBtnX: rect.left,
+              startBtnY: rect.top,
+            };
+            const containerRect = mapContainerRef.current.getBoundingClientRect();
+
+            const onMove = (ev) => {
+              const dx = ev.clientX - orgLabelBtnDrag.current.startMouseX;
+              const dy = ev.clientY - orgLabelBtnDrag.current.startMouseY;
+              if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+                orgLabelBtnDrag.current.moved = true;
+              }
+              if (orgLabelBtnDrag.current.moved) {
+                setOrgLabelBtnPos({
+                  x: orgLabelBtnDrag.current.startBtnX + dx - containerRect.left,
+                  y: orgLabelBtnDrag.current.startBtnY + dy - containerRect.top,
+                });
+              }
+            };
+            const onUp = () => {
+              if (!orgLabelBtnDrag.current.moved) {
+                setShowOrgLabels((prev) => !prev);
+              }
+              window.removeEventListener("mousemove", onMove);
+              window.removeEventListener("mouseup", onUp);
+            };
+            window.addEventListener("mousemove", onMove);
+            window.addEventListener("mouseup", onUp);
+          }}
+          style={{
+            position: "absolute",
+            ...(orgLabelBtnPos
+              ? { top: `${orgLabelBtnPos.y}px`, left: `${orgLabelBtnPos.x}px` }
+              : { top: "50%", left: "50%", transform: "translate(-50%, -50%)" }),
+            zIndex: 20,
+            backgroundColor: showOrgLabels ? "#005C72" : "#222831",
+            color: "#FFFFFF",
+            border: showOrgLabels ? "1px solid #005C72" : "1px solid #222831",
+            borderRadius: "6px",
+            padding: "8px 16px",
+            fontSize: "13px",
+            fontFamily: "Lexend, sans-serif",
+            fontWeight: 500,
+            cursor: "grab",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
+            userSelect: "none",
+          }}
+        >
+          {showOrgLabels ? "Hide Org Labels" : "Show Org Labels"}
+        </button>
+      )}
 
       {/* Draggable info box */}
       <DraggableInfoBox info={infoBoxData} onClose={handleInfoBoxClose} />
@@ -924,4 +1605,6 @@ export default function MapboxMap({
       {/* No assistance selected - empty map, no message */}
     </div>
   );
-}
+});
+
+export default MapboxMap;

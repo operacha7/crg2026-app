@@ -2,7 +2,7 @@
 // Main Reports page container
 // Shows NavBar1Reports, NavBar2Reports, NavBar3Reports, and selected report content
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import NavBar1Reports from "../layout/NavBar1Reports";
 import NavBar2Reports from "../layout/NavBar2Reports";
 import NavBar3Reports from "../layout/NavBar3Reports";
@@ -78,6 +78,13 @@ export default function ReportsPage() {
   const [map2Organization, setMap2Organization] = useState("");
   const [map2AssistanceType, setMap2AssistanceType] = useState("");
 
+  // Ref to MapboxMap for download trigger
+  const mapboxMapRef = useRef(null);
+
+  const handleMap2Download = useCallback(() => {
+    mapboxMapRef.current?.download();
+  }, []);
+
   const handleMap2Reset = useCallback(() => {
     setMap2County("All Counties");
     setMap2ZipCode("");
@@ -127,6 +134,7 @@ export default function ReportsPage() {
       case "map2":
         return (
           <MapboxMap
+            ref={mapboxMapRef}
             county={map2County}
             zipCode={map2ZipCode}
             parentOrg={map2ParentOrg}
@@ -178,6 +186,7 @@ export default function ReportsPage() {
           map2AssistanceType={map2AssistanceType}
           onMap2AssistanceTypeChange={setMap2AssistanceType}
           onMap2Reset={handleMap2Reset}
+          onMap2Download={handleMap2Download}
         />
         {selectedReport !== "map2" && <NavBar3Reports
           selectedReport={selectedReport}

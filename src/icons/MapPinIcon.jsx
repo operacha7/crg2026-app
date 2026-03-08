@@ -5,8 +5,8 @@
 
 export const MapPinIcon = ({ size = 32, active = false, className = "" }) => {
   // Red (inactive) vs Green (active/selected)
-  const headColor = active ? "#228B22" : "#ff0000";
-  const headColorEnd = active ? "#1B6B1B" : "#000000";
+  const headColor = active ? "#00CC44" : "#ff0000";
+  const headColorEnd = active ? "#009930" : "#000000";
 
   return (
     <svg
@@ -29,7 +29,7 @@ export const MapPinIcon = ({ size = 32, active = false, className = "" }) => {
       </linearGradient>
       <path
         fill={`url(#pin-shaft-${active ? "active" : "inactive"})`}
-        d="M26,20h-4c0,0,0,19,0,21s2,4,2,4s2-2,2-4S26,20,26,20z"
+        d="M25,20h-2c0,0,0,19,0,21s1,4,1,4s1-2,1-4S25,20,25,20z"
       />
       {/* Round head */}
       <linearGradient
