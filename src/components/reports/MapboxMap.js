@@ -1482,6 +1482,66 @@ const MapboxMap = forwardRef(function MapboxMap({
     return cy + 14; // return new y position
   };
 
+  // Draw base legend on canvas (standalone metric bar in bottom-left, no filters applied)
+  const drawBaseLegendOnCanvas = (ctx, containerEl, mode) => {
+    const { height } = containerEl.getBoundingClientRect();
+    const w = 200;
+    const pad = 12;
+    const boxH = 70;
+    const x = 16;
+    const y = height - boxH - 24;
+
+    // White background box
+    drawRoundedRect(ctx, x, y, w, boxH, 8);
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
+    ctx.fill();
+
+    // Draw the metric bar inside the box (skip the divider by starting below top padding)
+    const labels = { distress: "Distress score", working_poor: "Working Poor Index", population: "Population" };
+    let cy = y + 10;
+    ctx.font = "500 11px Lexend, sans-serif";
+    ctx.fillStyle = "#444444";
+    ctx.textBaseline = "top";
+    ctx.textAlign = "left";
+    ctx.fillText(labels[mode] || "Distress score", x + pad, cy);
+    cy += 16;
+
+    // Color bars
+    const barW = w - pad * 2;
+    const barH = 10;
+    const colors = {
+      distress: ["rgba(76, 175, 80, 0.45)", "rgba(255, 193, 7, 0.45)", "rgba(220, 50, 50, 0.50)"],
+      working_poor: ["rgba(139, 0, 0, 0.55)", "rgba(220, 80, 80, 0.45)", "rgba(255, 180, 180, 0.45)"],
+      population: ["rgba(200, 170, 230, 0.45)", "rgba(128, 60, 170, 0.50)", "rgba(75, 0, 130, 0.55)"],
+    };
+    const c = colors[mode] || colors.distress;
+    const widths = mode === "distress" ? [barW * 0.25, barW * 0.5, barW * 0.25] : [barW / 3, barW / 3, barW / 3];
+    let bx = x + pad;
+    c.forEach((color, i) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(bx, cy, widths[i], barH);
+      bx += widths[i];
+    });
+    cy += barH + 4;
+
+    // Scale labels
+    ctx.font = "400 10px Lexend, sans-serif";
+    ctx.fillStyle = "#666666";
+    const scaleLabels = {
+      distress: ["Low", "Mid", "High"],
+      working_poor: ["Worse", "Mid", "Better"],
+      population: ["Low", "Mid", "High"],
+    };
+    const sl = scaleLabels[mode] || scaleLabels.distress;
+    ctx.textAlign = "left";
+    ctx.fillText(sl[0], x + pad, cy);
+    ctx.textAlign = "center";
+    ctx.fillText(sl[1], x + w / 2, cy);
+    ctx.textAlign = "right";
+    ctx.fillText(sl[2], x + w - pad, cy);
+    ctx.textAlign = "left";
+  };
+
   // Draw a map pin directly on canvas at given pixel position
   const drawPin = (ctx, x, y, isActive, pinSize = 30) => {
     const scale = pinSize / 48; // SVG viewBox is 48x48
@@ -1602,16 +1662,26 @@ const MapboxMap = forwardRef(function MapboxMap({
         }
       }
 
-      // Step 3: Draw info box and legend directly on canvas (avoids dom-to-image border artifacts)
+      // Step 3: Draw base map title on canvas (top left)
+      const baseMapLabels = { distress: "Distress Levels", working_poor: "Working Poor", population: "Population" };
+      const baseMapTitle = `Base Map: ${baseMapLabels[displayMetric] || "Distress Levels"}`;
+      ctx.font = "700 16px 'Open Sans', sans-serif";
+      ctx.fillStyle = "#2E5A88";
+      ctx.textBaseline = "top";
+      ctx.fillText(baseMapTitle, 20, 14);
+
+      // Step 4: Draw info box and legend directly on canvas (avoids dom-to-image border artifacts)
       drawInfoBoxOnCanvas(ctx, infoBoxData, container);
 
       if (isDensityMode && parentCoverage.servedZips.size > 0) {
         drawParentCoverageLegendOnCanvas(ctx, assistanceLabel, parentOrg, orgPins.length, county, container, displayMetric);
       } else if (hasAssistance) {
         drawSimpleLegendOnCanvas(ctx, assistanceLabel, orgPins.length, county, container, displayMetric);
+      } else {
+        drawBaseLegendOnCanvas(ctx, container, displayMetric);
       }
 
-      // Step 4: Download
+      // Step 5: Download
       const link = document.createElement("a");
       const dateStr = new Date().toISOString().split("T")[0];
       const assistLabel = assistanceLabel || "map";
