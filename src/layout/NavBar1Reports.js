@@ -13,7 +13,14 @@ const REPORT_OPTIONS = [
   { id: 'map2', label: 'Zip Code Map', color: '#9df784' },
 ];
 
-export default function NavBar1Reports({ selectedReport, onReportChange }) {
+const BASE_MAP_LABELS = {
+  distress: "Distress Levels",
+  working_poor: "Working Poor",
+  population: "Population",
+  filter_view: "Filter View",
+};
+
+export default function NavBar1Reports({ selectedReport, onReportChange, map2ViewMode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [hoveredOption, setHoveredOption] = useState(null);

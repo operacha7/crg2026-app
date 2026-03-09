@@ -39,7 +39,7 @@ const POP_DARK = "rgba(75, 0, 130, 0.50)";       // above p75 (indigo)
 // Unified fill layer - one color per zip at any given time
 // Priority: childHighlighted (teal) > base highlight > hover > [parent coverage in filter view] > metric colors
 // Uses feature-state for interactive states, GeoJSON property "density" for parent coverage
-function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thresholds = {}) {
+function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thresholds = {}, showInteractiveHighlights = true) {
   // Build metric color expression based on active metric
   let metricExpression;
   if (metric === "working_poor") {
@@ -81,16 +81,25 @@ function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thr
   // Build the full case expression
   const fillColorExpr = [
     "case",
-    // Priority 1: Child teal (pin click)
-    ["boolean", ["feature-state", "childHighlighted"], false],
-    "rgba(0, 168, 168, 0.40)",
-    // Priority 2: Base zip highlight (zip code filter)
-    ["boolean", ["feature-state", "highlighted"], false],
-    "rgba(0, 168, 168, 0.35)",
-    // Priority 3: Hover
+  ];
+
+  // Priority 1 & 2: Interactive highlights - only in filter view
+  if (showInteractiveHighlights) {
+    fillColorExpr.push(
+      // Priority 1: Child teal (pin click)
+      ["boolean", ["feature-state", "childHighlighted"], false],
+      "rgba(0, 168, 168, 0.40)",
+      // Priority 2: Base zip highlight (zip code filter)
+      ["boolean", ["feature-state", "highlighted"], false],
+      "rgba(0, 168, 168, 0.35)",
+    );
+  }
+
+  // Priority 3: Hover
+  fillColorExpr.push(
     ["boolean", ["feature-state", "hovered"], false],
     "rgba(184, 0, 31, 0.15)",
-  ];
+  );
 
   // Priority 4: Parent coverage blue - only in filter view
   if (showParentCoverage) {
@@ -699,7 +708,7 @@ const MapboxMap = forwardRef(function MapboxMap({
 
   // Memoized unified fill style - recomputed when viewMode, activeBase, or thresholds change
   const unifiedFillStyle = useMemo(() => {
-    return getUnifiedFillStyle(displayMetric, !isBaseView, metricThresholds);
+    return getUnifiedFillStyle(displayMetric, !isBaseView, metricThresholds, !isBaseView);
   }, [displayMetric, isBaseView, metricThresholds]);
 
   // Zip codes by county lookup
@@ -1056,15 +1065,37 @@ const MapboxMap = forwardRef(function MapboxMap({
     clearBaseHighlight();
   }, [assistanceType, county, zipCode, parentOrg, organization, clearChildHighlights, clearBaseHighlight]);
 
-  // Clear teal highlights when entering base view (pins/overlay hidden, highlights should go too)
+  // Hide info box when entering base view, restore when returning to filter view
   useEffect(() => {
     if (isBaseView) {
-      clearChildHighlights();
-      clearBaseHighlight();
       setInfoBoxData(null);
-      setSelectedOrgKey(null);
+    } else if (selectedOrgKey && orgPins.length > 0) {
+      // Returning to filter view — restore info box from the previously selected org
+      const org = orgPins.find((p) => p.key === selectedOrgKey);
+      if (org) {
+        const clientZips = org.clientZips || [];
+        const isWildcard = clientZips.includes("99999");
+        const displayZipCount = isWildcard ? boundaryZips.size : clientZips.length;
+        setInfoBoxData({
+          organization: org.organization,
+          orgParent: org.org_parent,
+          assistance: org.assistance,
+          telephone: org.org_telephone || "",
+          address: [
+            org.org_address1,
+            org.org_address2,
+            `${org.org_city || ""}, ${org.org_state || ""} ${org.org_zip_code || ""}`,
+          ]
+            .filter(Boolean)
+            .join(", "),
+          status: org.status,
+          clientZips,
+          zipCount: displayZipCount,
+          isWildcard,
+        });
+      }
     }
-  }, [isBaseView, clearChildHighlights, clearBaseHighlight]);
+  }, [isBaseView, selectedOrgKey, orgPins, boundaryZips]);
 
   // Set base zip highlight when zip filter is active and assistance is selected
   useEffect(() => {
@@ -1748,98 +1779,86 @@ const MapboxMap = forwardRef(function MapboxMap({
           ))}
       </MapGL>
 
-      {/* Zoom-gated Org Labels toggle button (draggable, starts centered) */}
-      {!isBaseView && hasAssistance && currentZoom >= ORG_LABEL_ZOOM_THRESHOLD && (
-        <button
-          data-org-label-btn="true"
-          onMouseDown={(e) => {
-            e.preventDefault();
-            const btn = e.currentTarget;
-            const rect = btn.getBoundingClientRect();
-            orgLabelBtnDrag.current = {
-              isDragging: false,
-              moved: false,
-              startMouseX: e.clientX,
-              startMouseY: e.clientY,
-              startBtnX: rect.left,
-              startBtnY: rect.top,
-            };
-            const containerRect = mapContainerRef.current.getBoundingClientRect();
-
-            const onMove = (ev) => {
-              const dx = ev.clientX - orgLabelBtnDrag.current.startMouseX;
-              const dy = ev.clientY - orgLabelBtnDrag.current.startMouseY;
-              if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
-                orgLabelBtnDrag.current.moved = true;
-              }
-              if (orgLabelBtnDrag.current.moved) {
-                setOrgLabelBtnPos({
-                  x: orgLabelBtnDrag.current.startBtnX + dx - containerRect.left,
-                  y: orgLabelBtnDrag.current.startBtnY + dy - containerRect.top,
-                });
-              }
-            };
-            const onUp = () => {
-              if (!orgLabelBtnDrag.current.moved) {
-                setShowOrgLabels((prev) => !prev);
-              }
-              window.removeEventListener("mousemove", onMove);
-              window.removeEventListener("mouseup", onUp);
-            };
-            window.addEventListener("mousemove", onMove);
-            window.addEventListener("mouseup", onUp);
-          }}
+      {/* Base map title + View Mode dropdown - top left */}
+      <div
+        className="absolute"
+        style={{
+          top: "10px",
+          left: "20px",
+          zIndex: 10,
+          display: "flex",
+          flexDirection: "column",
+          gap: "9px",
+        }}
+      >
+        {/* Base map title - plain text, no background */}
+        <div
           style={{
-            position: "absolute",
-            ...(orgLabelBtnPos
-              ? { top: `${orgLabelBtnPos.y}px`, left: `${orgLabelBtnPos.x}px` }
-              : { top: "10px", left: "10px" }),
-            zIndex: 20,
-            backgroundColor: showOrgLabels ? "#005C72" : "#222831",
-            color: "#FFFFFF",
-            border: showOrgLabels ? "1px solid #005C72" : "1px solid #222831",
-            borderRadius: "6px",
-            padding: "8px 16px",
-            fontSize: "13px",
-            fontFamily: "Lexend, sans-serif",
-            fontWeight: 500,
-            cursor: "grab",
-            boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
+            fontFamily: "'Open Sans', sans-serif",
+            fontSize: "clamp(13px, 1.3vw, 20px)",
+            fontWeight: 700,
+            color: "#2E5A88",
+            letterSpacing: "0.5px",
             userSelect: "none",
           }}
         >
-          {showOrgLabels ? "Hide Org Labels" : "Show Org Labels"}
-        </button>
-      )}
+          Base Map: {{ distress: "Distress Levels", working_poor: "Working Poor", population: "Population" }[displayMetric] || "Distress Levels"}
+        </div>
 
-      {/* View Mode dropdown - top right, left of zoom controls */}
-      {onViewModeChange && (
-        <select
-          value={viewMode}
-          onChange={(e) => onViewModeChange(e.target.value)}
+        {/* View Mode dropdown */}
+        {onViewModeChange && (
+          <select
+            value={viewMode}
+            onChange={(e) => onViewModeChange(e.target.value)}
+            className="transition-all duration-200 hover:brightness-125"
+            style={{
+              height: "36px",
+              padding: "0 12px",
+              borderRadius: "6px",
+              fontFamily: "'Open Sans', sans-serif",
+              fontSize: "14px",
+              fontWeight: 500,
+              backgroundColor: "rgba(34, 40, 49, 0.85)",
+              color: "#FFFFFF",
+              border: "1px solid rgba(255,255,255,0.2)",
+              cursor: "pointer",
+              backdropFilter: "blur(4px)",
+            }}
+          >
+            <option value="filter_view">Filter View</option>
+            <option value="distress">Distress</option>
+            <option value="working_poor">Working Poor</option>
+            <option value="population">Population</option>
+          </select>
+        )}
+      </div>
+
+      {/* Org Labels toggle button - top right, left of zoom controls */}
+      {!isBaseView && hasAssistance && currentZoom >= ORG_LABEL_ZOOM_THRESHOLD && (
+        <button
+          data-org-label-btn="true"
+          onClick={() => setShowOrgLabels((prev) => !prev)}
           className="absolute transition-all duration-200 hover:brightness-125"
           style={{
             top: "10px",
             right: "52px",
-            zIndex: 10,
-            height: "40px",
-            padding: "0 14px",
+            zIndex: 20,
+            backgroundColor: showOrgLabels ? "#005C72" : "rgba(34, 40, 49, 0.85)",
+            color: "#FFFFFF",
+            border: showOrgLabels ? "1px solid #005C72" : "1px solid rgba(255,255,255,0.2)",
             borderRadius: "6px",
+            padding: "8px 14px",
             fontFamily: "'Open Sans', sans-serif",
-            fontSize: "16px",
-            fontWeight: 600,
-            backgroundColor: "rgba(34, 40, 49, 0.90)",
-            color: "#FFC857",
-            border: "2px solid rgba(255, 200, 87, 0.4)",
+            fontSize: "13px",
+            fontWeight: 500,
             cursor: "pointer",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
             backdropFilter: "blur(4px)",
+            userSelect: "none",
           }}
         >
-          <option value="filter_view">Filter View</option>
-          <option value="distress">Distress</option>
-          <option value="working_poor">Working Poor</option>
-          <option value="population">Population</option>
-        </select>
+          {showOrgLabels ? "Hide Labels" : "Show Labels"}
+        </button>
       )}
 
       {/* Draggable info box - only in filter view */}

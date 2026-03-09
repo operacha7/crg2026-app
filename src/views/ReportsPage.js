@@ -194,6 +194,7 @@ export default function ReportsPage() {
         <NavBar1Reports
           selectedReport={selectedReport}
           onReportChange={setSelectedReport}
+          map2ViewMode={map2ViewMode}
         />
         <NavBar2Reports
           selectedReport={selectedReport}
