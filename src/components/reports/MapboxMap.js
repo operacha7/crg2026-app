@@ -17,7 +17,7 @@ const HOUSTON_CENTER = { longitude: -95.37, latitude: 29.76 };
 const DEFAULT_ZOOM = 9.5;
 
 // Parent coverage color - blue for served zips (related to child teal, distinct from distress)
-const PARENT_COVERAGE_COLOR = "rgba(40, 100, 180, 0.35)"; // medium blue at 35%
+const PARENT_COVERAGE_COLOR = "rgba(0, 28, 168, 0.5)"; // medium blue at 35%
 
 // Distress score colors - flat green/amber/red bands
 // Range: 58–818. Bottom 25% green, middle 50% amber, top 25% red.
@@ -88,10 +88,10 @@ function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thr
     fillColorExpr.push(
       // Priority 1: Child teal (pin click)
       ["boolean", ["feature-state", "childHighlighted"], false],
-      "rgba(0, 168, 168, 0.40)",
+      "rgba(0, 253, 253, 0.50)",
       // Priority 2: Base zip highlight (zip code filter)
       ["boolean", ["feature-state", "highlighted"], false],
-      "rgba(0, 168, 168, 0.35)",
+      "rgba(0, 168, 168, 0.55)",
     );
   }
 
@@ -266,22 +266,8 @@ const boundaryLineStyle = {
   id: "zip-boundaries-line",
   type: "line",
   paint: {
-    "line-color": [
-      "case",
-      ["boolean", ["feature-state", "childHighlighted"], false],
-      "#00A8A8",
-      ["boolean", ["feature-state", "highlighted"], false],
-      "#00A8A8",
-      "#B8001F",
-    ],
-    "line-width": [
-      "case",
-      ["boolean", ["feature-state", "childHighlighted"], false],
-      3,
-      ["boolean", ["feature-state", "highlighted"], false],
-      3,
-      1.5,
-    ],
+    "line-color": "#B8001F",
+    "line-width": 1.5,
     "line-opacity": 0.7,
   },
 };
