@@ -77,6 +77,40 @@ export default function ReportsPage() {
   const [map2ParentOrg, setMap2ParentOrg] = useState("");
   const [map2Organization, setMap2Organization] = useState("");
   const [map2AssistanceType, setMap2AssistanceType] = useState("");
+  const [map2ViewMode, setMap2ViewMode] = useState("distress");
+  const [map2ActiveBase, setMap2ActiveBase] = useState("distress");
+
+  // When user selects a base, update both viewMode and activeBase
+  // When user selects Filter View, only viewMode changes (activeBase preserved)
+  const handleMap2ViewModeChange = useCallback((newMode) => {
+    setMap2ViewMode(newMode);
+    if (newMode !== "filter_view") {
+      setMap2ActiveBase(newMode);
+    }
+  }, []);
+
+  // Wrapped filter setters: auto-switch to filter_view when user applies a filter from a base view
+  // Only triggers on non-empty values (so auto-clear logic in NavBar2Reports won't cause a switch)
+  const handleMap2CountyChange = useCallback((v) => {
+    setMap2County(v);
+    if (v && v !== "All Counties") setMap2ViewMode("filter_view");
+  }, []);
+  const handleMap2ZipCodeChange = useCallback((v) => {
+    setMap2ZipCode(v);
+    if (v) setMap2ViewMode("filter_view");
+  }, []);
+  const handleMap2ParentOrgChange = useCallback((v) => {
+    setMap2ParentOrg(v);
+    if (v) setMap2ViewMode("filter_view");
+  }, []);
+  const handleMap2OrganizationChange = useCallback((v) => {
+    setMap2Organization(v);
+    if (v) setMap2ViewMode("filter_view");
+  }, []);
+  const handleMap2AssistanceTypeChange = useCallback((v) => {
+    setMap2AssistanceType(v);
+    if (v) setMap2ViewMode("filter_view");
+  }, []);
 
   // Ref to MapboxMap for download trigger
   const mapboxMapRef = useRef(null);
@@ -91,6 +125,8 @@ export default function ReportsPage() {
     setMap2ParentOrg("");
     setMap2Organization("");
     setMap2AssistanceType("");
+    setMap2ViewMode("distress");
+    setMap2ActiveBase("distress");
   }, []);
 
   // Reset Map 2 filters when navigating away
@@ -140,6 +176,9 @@ export default function ReportsPage() {
             parentOrg={map2ParentOrg}
             organization={map2Organization}
             assistanceType={map2AssistanceType}
+            viewMode={map2ViewMode}
+            activeBase={map2ActiveBase}
+            onViewModeChange={handleMap2ViewModeChange}
           />
         );
       default:
@@ -176,15 +215,15 @@ export default function ReportsPage() {
           onCoverageStatusChange={setCoverageStatus}
           onCoverageReset={handleCoverageReset}
           map2County={map2County}
-          onMap2CountyChange={setMap2County}
+          onMap2CountyChange={handleMap2CountyChange}
           map2ZipCode={map2ZipCode}
-          onMap2ZipCodeChange={setMap2ZipCode}
+          onMap2ZipCodeChange={handleMap2ZipCodeChange}
           map2ParentOrg={map2ParentOrg}
-          onMap2ParentOrgChange={setMap2ParentOrg}
+          onMap2ParentOrgChange={handleMap2ParentOrgChange}
           map2Organization={map2Organization}
-          onMap2OrganizationChange={setMap2Organization}
+          onMap2OrganizationChange={handleMap2OrganizationChange}
           map2AssistanceType={map2AssistanceType}
-          onMap2AssistanceTypeChange={setMap2AssistanceType}
+          onMap2AssistanceTypeChange={handleMap2AssistanceTypeChange}
           onMap2Reset={handleMap2Reset}
           onMap2Download={handleMap2Download}
         />

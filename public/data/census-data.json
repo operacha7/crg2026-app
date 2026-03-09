@@ -1,0 +1,91 @@
+{
+  "metadata": {
+    "source": "US Census Bureau, American Community Survey",
+    "dataset": "ACS 2023 5-Year Estimates",
+    "texasMedianHouseholdIncome": 73035,
+    "fetched": "2026-03-08T20:08:00.051Z",
+    "indicators": {
+      "poverty_rate": {
+        "code": "DP03_0128PE",
+        "label": "Poverty rate (%)"
+      },
+      "median_household_income": {
+        "code": "DP03_0062E",
+        "label": "Median household income ($)"
+      },
+      "income_ratio": {
+        "codes": [
+          "DP03_0062E"
+        ],
+        "label": "Income ratio (zip median / TX median)",
+        "derived": true
+      },
+      "unemployment_rate": {
+        "code": "DP03_0009PE",
+        "label": "Unemployment rate (%)"
+      },
+      "uninsured_pct": {
+        "code": "DP03_0099PE",
+        "label": "No health insurance (%)"
+      },
+      "snap_pct": {
+        "code": "DP03_0074PE",
+        "label": "SNAP recipients (%)"
+      },
+      "no_hs_diploma_pct": {
+        "codes": [
+          "DP02_0060PE",
+          "DP02_0061PE"
+        ],
+        "label": "No high school diploma (%)",
+        "derived": true
+      },
+      "vacancy_rate": {
+        "code": "DP04_0003PE",
+        "label": "Vacancy rate (%)"
+      },
+      "owner_occupancy_rate": {
+        "code": "DP04_0046PE",
+        "label": "Owner occupancy rate (%)"
+      },
+      "no_vehicle_pct": {
+        "code": "DP04_0058PE",
+        "label": "No vehicle (%)"
+      },
+      "population": {
+        "code": "DP05_0001E",
+        "label": "Total population"
+      }
+    }
+  },
+  "data": [
+    {
+      "zip_code": "77019",
+      "poverty_rate": 10.1,
+      "median_household_income": 108353,
+      "unemployment_rate": 6,
+      "uninsured_pct": 6.4,
+      "snap_pct": 4.5,
+      "vacancy_rate": 10.8,
+      "owner_occupancy_rate": 41.2,
+      "no_vehicle_pct": 5.1,
+      "population": 23662,
+      "no_hs_diploma_pct": 1.6,
+      "income_ratio": 1.48
+    },
+    {
+      "zip_code": "77081",
+      "poverty_rate": 33.5,
+      "median_household_income": 42228,
+      "unemployment_rate": 5.6,
+      "uninsured_pct": 46.4,
+      "snap_pct": 20.8,
+      "vacancy_rate": 8.6,
+      "owner_occupancy_rate": 6.5,
+      "no_vehicle_pct": 18.9,
+      "population": 51366,
+      "no_hs_diploma_pct": 44.7,
+      "income_ratio": 0.58
+    }
+  ]
+}

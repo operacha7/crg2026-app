@@ -540,6 +540,27 @@ export default function NavBar2Reports({
     return new Set(zipCodes.filter(z => z.houston_area === "Y").map(z => z.zip_code));
   }, [zipCodes]);
 
+  // Reverse lookup: zip code → county name
+  const zipToCountyLookup = useMemo(() => {
+    const lookup = {};
+    zipCodes.filter(z => z.houston_area === "Y").forEach(z => {
+      lookup[z.zip_code] = z.county;
+    });
+    return lookup;
+  }, [zipCodes]);
+
+  // Helper: get all counties served by an org (via client_zip_codes)
+  const getServedCounties = useCallback((r) => {
+    const clientZips = Array.isArray(r.client_zip_codes) ? r.client_zip_codes : [];
+    if (clientZips.includes("99999")) return null; // null = serves all counties
+    const counties = new Set();
+    clientZips.forEach(z => {
+      const c = zipToCountyLookup[z];
+      if (c) counties.add(c);
+    });
+    return counties;
+  }, [zipToCountyLookup]);
+
   // Helper: does this org serve the selected geographic area?
   // Checks client_zip_codes against county zips, specific zip, or all Houston zips
   const orgServesArea = useCallback((r, countyVal, zipVal) => {
@@ -619,7 +640,16 @@ export default function NavBar2Reports({
 
   // County options: counties that have zip codes served by orgs matching other filters
   // (Always include "All Counties" at top)
+  // If a specific zip is selected, narrow to just that zip's county
   const countyOptions = useMemo(() => {
+    // If a specific zip is selected, just return its county
+    if (coverageZipCode) {
+      const zipRecord = zipCodes.find(z => z.zip_code === coverageZipCode);
+      if (zipRecord && zipRecord.county) {
+        return ["All Counties", zipRecord.county];
+      }
+    }
+
     // Filter directory by status + assistance + parent + child
     let filtered = directory.filter(r => r.status_id === statusId);
     if (assistId) filtered = filtered.filter(r => r.assist_id === assistId);
@@ -651,27 +681,44 @@ export default function NavBar2Reports({
         .filter(Boolean)
     )];
     return ["All Counties", ...counties.sort()];
-  }, [directory, zipCodes, statusId, assistId, coverageParentOrg, coverageChildOrg]);
+  }, [directory, zipCodes, statusId, assistId, coverageParentOrg, coverageChildOrg, coverageZipCode]);
 
-  // Zip code options for coverage: filtered by county (or all houston-area zips)
+  // Zip code options for coverage: mutually filtered by all OTHER filters
   const coverageZipCodeOptions = useMemo(() => {
-    if (coverageCounty && coverageCounty !== "All Counties") {
-      const countyZipSet = houstonZipsByCounty[coverageCounty];
-      return countyZipSet ? [...countyZipSet].sort() : [];
-    }
-    return [...allHoustonZips].sort();
-  }, [coverageCounty, houstonZipsByCounty, allHoustonZips]);
+    let filtered = directory.filter(r => r.status_id === statusId);
+    if (assistId) filtered = filtered.filter(r => r.assist_id === assistId);
+    filtered = filtered.filter(r => orgServesArea(r, coverageCounty, null)); // county but not zip
+    if (coverageParentOrg) filtered = filtered.filter(r => r.org_parent === coverageParentOrg);
+    if (coverageChildOrg) filtered = filtered.filter(r => r.organization === coverageChildOrg);
 
-  // Parent org options: filtered by status + assistance + county/zip (via client_zip_codes)
+    const servedZips = new Set();
+    let hasWildcard = false;
+    filtered.forEach(r => {
+      const cz = Array.isArray(r.client_zip_codes) ? r.client_zip_codes : [];
+      if (cz.includes("99999")) { hasWildcard = true; } else { cz.forEach(z => servedZips.add(z)); }
+    });
+
+    let validZips;
+    if (coverageCounty && coverageCounty !== "All Counties") {
+      const countyZipSet = houstonZipsByCounty[coverageCounty] || new Set();
+      validZips = hasWildcard ? [...countyZipSet] : [...servedZips].filter(z => countyZipSet.has(z));
+    } else {
+      validZips = hasWildcard ? [...allHoustonZips] : [...servedZips].filter(z => allHoustonZips.has(z));
+    }
+    return validZips.sort();
+  }, [directory, statusId, assistId, coverageCounty, coverageParentOrg, coverageChildOrg, orgServesArea, houstonZipsByCounty, allHoustonZips]);
+
+  // Parent org options: mutually filtered by all OTHER filters
   const parentOrgOptions = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === statusId);
     if (assistId) filtered = filtered.filter(r => r.assist_id === assistId);
     filtered = filtered.filter(r => orgServesArea(r, coverageCounty, coverageZipCode));
+    if (coverageChildOrg) filtered = filtered.filter(r => r.organization === coverageChildOrg);
     const parents = [...new Set(filtered.map(r => r.org_parent).filter(Boolean))];
     return parents.sort();
-  }, [directory, statusId, assistId, coverageCounty, coverageZipCode, orgServesArea]);
+  }, [directory, statusId, assistId, coverageCounty, coverageZipCode, coverageChildOrg, orgServesArea]);
 
-  // Child org options: filtered by status + assistance + county/zip + parent
+  // Child org options: mutually filtered by all OTHER filters
   const childOrgOptions = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === statusId);
     if (assistId) filtered = filtered.filter(r => r.assist_id === assistId);
@@ -681,7 +728,7 @@ export default function NavBar2Reports({
     return children.sort();
   }, [directory, statusId, assistId, coverageCounty, coverageZipCode, coverageParentOrg, orgServesArea]);
 
-  // Assistance options: filtered by status + county/zip + parent + child
+  // Assistance options: mutually filtered by all OTHER filters
   const availableAssistance = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === statusId);
     filtered = filtered.filter(r => orgServesArea(r, coverageCounty, coverageZipCode));
@@ -729,7 +776,14 @@ export default function NavBar2Reports({
     return () => document.removeEventListener("mousedown", handleCoverageClickOutside);
   }, [coveragePanelOpen]);
 
-  // Auto-clear coverage zip code if county changes and zip is no longer in that county
+  // Auto-clear coverage filters when their options no longer include the current value
+  useEffect(() => {
+    if (coverageCounty && coverageCounty !== "All Counties" && !countyOptions.includes(coverageCounty)) {
+      onCoverageCountyChange?.("All Counties");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [countyOptions]);
+
   useEffect(() => {
     if (coverageZipCode && !coverageZipCodeOptions.includes(coverageZipCode)) {
       onCoverageZipCodeChange?.("");
@@ -737,15 +791,20 @@ export default function NavBar2Reports({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coverageZipCodeOptions]);
 
-  // When parent changes, reset child if it's no longer valid
+  useEffect(() => {
+    if (coverageParentOrg && !parentOrgOptions.includes(coverageParentOrg)) {
+      onCoverageParentOrgChange?.("");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parentOrgOptions]);
+
   useEffect(() => {
     if (coverageChildOrg && !childOrgOptions.includes(coverageChildOrg)) {
       onCoverageChildOrgChange?.("");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coverageParentOrg, childOrgOptions]);
+  }, [childOrgOptions]);
 
-  // When filters change, clear assistance if it's no longer available
   useEffect(() => {
     if (coverageAssistanceType && !availableAssistance.find(a => a.assistance === coverageAssistanceType)) {
       onCoverageAssistanceTypeChange?.("");
@@ -757,47 +816,99 @@ export default function NavBar2Reports({
     onViewModeChange(viewMode === "daily" ? "monthly" : "daily");
   };
 
-  // === Zip Code Map (Mapbox) cross-filtered options ===
-  // Filter order: County → Zip Code → Parent Org → Organization → Assistance → Status (frozen Active)
-  // Filtering is based on client_zip_codes (where assistance is provided), NOT org_zip_code.
-  // 99999 in client_zip_codes = org serves all Houston-area zips (wildcard).
-  // Uses shared helpers: houstonZipsByCounty, allHoustonZips, orgServesArea (defined above)
+  // === Zip Code Map (Mapbox) MUTUAL cross-filtered options ===
+  // Every dropdown's options reflect ALL other currently-set filters.
+  // Status is frozen to Active (status_id === 1).
+  // Filtering is based on client_zip_codes (service area), NOT org_zip_code.
 
-  // County options - all houston-area counties (always full list)
+  // Resolve map2 assistance to assist_id for filtering
+  const map2AssistId = useMemo(() => {
+    if (!map2AssistanceType) return null;
+    const match = assistance.find(a => a.assistance === map2AssistanceType);
+    return match ? match.assist_id : null;
+  }, [map2AssistanceType, assistance]);
+
+  // County options - filtered by all OTHER filters (assistance, parent, org, zip)
+  // If a specific zip is selected, narrow county to just that zip's county
   const map2CountyOptions = useMemo(() => {
-    const counties = [...new Set(
-      zipCodes.filter(z => z.houston_area === "Y").map(z => z.county).filter(Boolean)
-    )];
-    return ["All Counties", ...counties.sort()];
-  }, [zipCodes]);
-
-  // Zip code options - filtered by county (or all houston-area zips if All Counties)
-  const map2ZipCodeOptions = useMemo(() => {
-    if (map2County && map2County !== "All Counties") {
-      const countyZipSet = houstonZipsByCounty[map2County];
-      return countyZipSet ? [...countyZipSet].sort() : [];
+    // If a specific zip is selected, just return its county
+    if (map2ZipCode) {
+      const zipRecord = zipCodes.find(z => z.zip_code === map2ZipCode);
+      if (zipRecord && zipRecord.county) {
+        return ["All Counties", zipRecord.county];
+      }
     }
-    return [...allHoustonZips].sort();
-  }, [map2County, houstonZipsByCounty, allHoustonZips]);
 
-  // Parent org options - filtered by county/zip via client_zip_codes
+    let filtered = directory.filter(r => r.status_id === 1);
+    if (map2AssistId) filtered = filtered.filter(r => r.assist_id === map2AssistId);
+    if (map2ParentOrg) filtered = filtered.filter(r => r.org_parent === map2ParentOrg);
+    if (map2Organization) filtered = filtered.filter(r => r.organization === map2Organization);
+
+    // Collect counties served by matching orgs
+    const counties = new Set();
+    let hasWildcard = false;
+    filtered.forEach(r => {
+      const served = getServedCounties(r);
+      if (served === null) { hasWildcard = true; } else { served.forEach(c => counties.add(c)); }
+    });
+
+    if (hasWildcard) {
+      const allCounties = [...new Set(
+        zipCodes.filter(z => z.houston_area === "Y").map(z => z.county).filter(Boolean)
+      )];
+      return ["All Counties", ...allCounties.sort()];
+    }
+    return ["All Counties", ...[...counties].sort()];
+  }, [directory, zipCodes, map2AssistId, map2ParentOrg, map2Organization, map2ZipCode, getServedCounties]);
+
+  // Zip code options - filtered by all OTHER filters (county, assistance, parent, org)
+  const map2ZipCodeOptions = useMemo(() => {
+    let filtered = directory.filter(r => r.status_id === 1);
+    if (map2AssistId) filtered = filtered.filter(r => r.assist_id === map2AssistId);
+    filtered = filtered.filter(r => orgServesArea(r, map2County, null)); // county but not zip (we're computing zip options)
+    if (map2ParentOrg) filtered = filtered.filter(r => r.org_parent === map2ParentOrg);
+    if (map2Organization) filtered = filtered.filter(r => r.organization === map2Organization);
+
+    // Collect all served zips from matching orgs
+    const servedZips = new Set();
+    let hasWildcard = false;
+    filtered.forEach(r => {
+      const cz = Array.isArray(r.client_zip_codes) ? r.client_zip_codes : [];
+      if (cz.includes("99999")) { hasWildcard = true; } else { cz.forEach(z => servedZips.add(z)); }
+    });
+
+    // Intersect with county filter and houston-area zips
+    let validZips;
+    if (map2County && map2County !== "All Counties") {
+      const countyZipSet = houstonZipsByCounty[map2County] || new Set();
+      validZips = hasWildcard ? [...countyZipSet] : [...servedZips].filter(z => countyZipSet.has(z));
+    } else {
+      validZips = hasWildcard ? [...allHoustonZips] : [...servedZips].filter(z => allHoustonZips.has(z));
+    }
+    return validZips.sort();
+  }, [directory, map2County, map2AssistId, map2ParentOrg, map2Organization, orgServesArea, houstonZipsByCounty, allHoustonZips]);
+
+  // Parent org options - filtered by all OTHER filters (county, zip, assistance, org)
   const map2ParentOrgOptions = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === 1);
+    if (map2AssistId) filtered = filtered.filter(r => r.assist_id === map2AssistId);
     filtered = filtered.filter(r => orgServesArea(r, map2County, map2ZipCode));
+    if (map2Organization) filtered = filtered.filter(r => r.organization === map2Organization);
     const parents = [...new Set(filtered.map(r => r.org_parent).filter(Boolean))];
     return parents.sort();
-  }, [directory, map2County, map2ZipCode, orgServesArea]);
+  }, [directory, map2County, map2ZipCode, map2AssistId, map2Organization, orgServesArea]);
 
-  // Organization options - filtered by county/zip + parent
+  // Organization options - filtered by all OTHER filters (county, zip, assistance, parent)
   const map2OrgOptions = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === 1);
+    if (map2AssistId) filtered = filtered.filter(r => r.assist_id === map2AssistId);
     filtered = filtered.filter(r => orgServesArea(r, map2County, map2ZipCode));
     if (map2ParentOrg) filtered = filtered.filter(r => r.org_parent === map2ParentOrg);
     const orgs = [...new Set(filtered.map(r => r.organization).filter(Boolean))];
     return orgs.sort();
-  }, [directory, map2County, map2ZipCode, map2ParentOrg, orgServesArea]);
+  }, [directory, map2County, map2ZipCode, map2AssistId, map2ParentOrg, orgServesArea]);
 
-  // Assistance options - filtered by county/zip + parent + org
+  // Assistance options - filtered by all OTHER filters (county, zip, parent, org)
   const map2AvailableAssistance = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === 1);
     filtered = filtered.filter(r => orgServesArea(r, map2County, map2ZipCode));
@@ -807,7 +918,14 @@ export default function NavBar2Reports({
     return assistance.filter(a => availableIds.has(a.assist_id));
   }, [directory, assistance, map2County, map2ZipCode, map2ParentOrg, map2Organization, orgServesArea]);
 
-  // Auto-clear zip code if county changes and zip is no longer in that county
+  // Auto-clear map2 filters when their options no longer include the current value
+  useEffect(() => {
+    if (map2County && map2County !== "All Counties" && !map2CountyOptions.includes(map2County)) {
+      onMap2CountyChange?.("All Counties");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map2CountyOptions]);
+
   useEffect(() => {
     if (map2ZipCode && !map2ZipCodeOptions.includes(map2ZipCode)) {
       onMap2ZipCodeChange?.("");
@@ -815,7 +933,6 @@ export default function NavBar2Reports({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map2ZipCodeOptions]);
 
-  // Auto-clear parent org if no longer valid
   useEffect(() => {
     if (map2ParentOrg && !map2ParentOrgOptions.includes(map2ParentOrg)) {
       onMap2ParentOrgChange?.("");
@@ -823,7 +940,6 @@ export default function NavBar2Reports({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map2ParentOrgOptions]);
 
-  // Auto-clear organization if no longer valid
   useEffect(() => {
     if (map2Organization && !map2OrgOptions.includes(map2Organization)) {
       onMap2OrganizationChange?.("");
@@ -831,7 +947,6 @@ export default function NavBar2Reports({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map2OrgOptions]);
 
-  // Auto-clear assistance if no longer valid
   useEffect(() => {
     if (map2AssistanceType && !map2AvailableAssistance.find(a => a.assistance === map2AssistanceType)) {
       onMap2AssistanceTypeChange?.("");

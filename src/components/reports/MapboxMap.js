@@ -16,18 +16,104 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 const HOUSTON_CENTER = { longitude: -95.37, latitude: 29.76 };
 const DEFAULT_ZOOM = 9.5;
 
-// Density gradient - purple shades for coverage intensity
-// 1 child = lightest, 4+ = deepest
-const DENSITY_COLORS = {
-  1: "rgba(180, 130, 200, 0.30)", // light purple
-  2: "rgba(140, 80, 170, 0.42)",  // medium purple
-  3: "rgba(110, 40, 150, 0.54)",  // darker purple
-  4: "rgba(80, 10, 130, 0.66)",   // deepest purple
-};
+// Parent coverage color - blue for served zips (related to child teal, distinct from distress)
+const PARENT_COVERAGE_COLOR = "rgba(40, 100, 180, 0.35)"; // medium blue at 35%
 
-function getDensityColor(count) {
-  if (count >= 4) return DENSITY_COLORS[4];
-  return DENSITY_COLORS[count] || "transparent";
+// Distress score colors - flat green/amber/red bands
+// Range: 58–818. Bottom 25% green, middle 50% amber, top 25% red.
+// These values are used inline in the unified fill expression.
+const DISTRESS_GREEN = "rgba(76, 175, 80, 0.30)";
+const DISTRESS_AMBER = "rgba(255, 193, 7, 0.30)";
+const DISTRESS_RED = "rgba(220, 50, 50, 0.35)";
+
+// Working poor colors - red gradient (lower = worse = darker red)
+const WP_LIGHT = "rgba(255, 180, 180, 0.35)";   // above p75 (better)
+const WP_MID = "rgba(220, 80, 80, 0.40)";        // between p25-p75
+const WP_DARK = "rgba(139, 0, 0, 0.50)";         // below p25 (worst)
+
+// Population colors - purple gradient (higher = darker purple)
+const POP_LIGHT = "rgba(200, 170, 230, 0.30)";   // below p25 (light lavender)
+const POP_MID = "rgba(128, 60, 170, 0.40)";      // between p25-p75 (medium purple)
+const POP_DARK = "rgba(75, 0, 130, 0.50)";       // above p75 (indigo)
+
+// Unified fill layer - one color per zip at any given time
+// Priority: childHighlighted (teal) > base highlight > hover > [parent coverage in filter view] > metric colors
+// Uses feature-state for interactive states, GeoJSON property "density" for parent coverage
+function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thresholds = {}) {
+  // Build metric color expression based on active metric
+  let metricExpression;
+  if (metric === "working_poor") {
+    const wp25 = thresholds.workingPoor?.p25 ?? 0;
+    const wp75 = thresholds.workingPoor?.p75 ?? 0;
+    // Lower = worse = darker. Below p25 = dark, p25-p75 = mid, above p75 = light
+    metricExpression = [
+      ["<=", ["coalesce", ["get", "working_poor"], 0], wp25],
+      WP_DARK,
+      ["<=", ["coalesce", ["get", "working_poor"], 0], wp75],
+      WP_MID,
+      ["!=", ["coalesce", ["get", "working_poor"], 0], 0],
+      WP_LIGHT,
+    ];
+  } else if (metric === "population") {
+    const pop25 = thresholds.population?.p25 ?? 0;
+    const pop75 = thresholds.population?.p75 ?? 0;
+    // Higher = more population = darker blue
+    metricExpression = [
+      [">=", ["coalesce", ["get", "population"], 0], pop75],
+      POP_DARK,
+      [">=", ["coalesce", ["get", "population"], 0], pop25],
+      POP_MID,
+      [">", ["coalesce", ["get", "population"], 0], 0],
+      POP_LIGHT,
+    ];
+  } else {
+    // distress (default)
+    metricExpression = [
+      [">=", ["coalesce", ["get", "distress_score"], 0], 628],
+      DISTRESS_RED,
+      [">=", ["coalesce", ["get", "distress_score"], 0], 248],
+      DISTRESS_AMBER,
+      [">=", ["coalesce", ["get", "distress_score"], 0], 58],
+      DISTRESS_GREEN,
+    ];
+  }
+
+  // Build the full case expression
+  const fillColorExpr = [
+    "case",
+    // Priority 1: Child teal (pin click)
+    ["boolean", ["feature-state", "childHighlighted"], false],
+    "rgba(0, 168, 168, 0.40)",
+    // Priority 2: Base zip highlight (zip code filter)
+    ["boolean", ["feature-state", "highlighted"], false],
+    "rgba(0, 168, 168, 0.35)",
+    // Priority 3: Hover
+    ["boolean", ["feature-state", "hovered"], false],
+    "rgba(184, 0, 31, 0.15)",
+  ];
+
+  // Priority 4: Parent coverage blue - only in filter view
+  if (showParentCoverage) {
+    fillColorExpr.push(
+      [">=", ["coalesce", ["get", "density"], 0], 1],
+      PARENT_COVERAGE_COLOR
+    );
+  }
+
+  // Priority 5: Metric colors
+  fillColorExpr.push(...metricExpression);
+
+  // Fallback: no data
+  fillColorExpr.push("rgba(0, 0, 0, 0)");
+
+  return {
+    id: "unified-fill",
+    type: "fill",
+    paint: {
+      "fill-color": fillColorExpr,
+      "fill-opacity": 1,
+    },
+  };
 }
 
 // Draggable info box component
@@ -165,54 +251,7 @@ function DraggableInfoBox({ info, onClose }) {
   );
 }
 
-// Zip code boundary layer styles - base boundaries (no density)
-const boundaryFillStyle = {
-  id: "zip-boundaries-fill",
-  type: "fill",
-  paint: {
-    "fill-color": [
-      "case",
-      ["boolean", ["feature-state", "childHighlighted"], false],
-      "#00A8A8",
-      ["boolean", ["feature-state", "highlighted"], false],
-      "#00A8A8",
-      ["boolean", ["feature-state", "hovered"], false],
-      "#B8001F",
-      "transparent",
-    ],
-    "fill-opacity": [
-      "case",
-      ["boolean", ["feature-state", "childHighlighted"], false],
-      0.45,
-      ["boolean", ["feature-state", "highlighted"], false],
-      0.35,
-      ["boolean", ["feature-state", "hovered"], false],
-      0.15,
-      0,
-    ],
-  },
-};
-
-// Density fill layer - reads density from GeoJSON properties (not feature-state)
-const densityFillStyle = {
-  id: "density-fill",
-  type: "fill",
-  paint: {
-    "fill-color": [
-      "case",
-      [">=", ["coalesce", ["get", "density"], 0], 4],
-      DENSITY_COLORS[4],
-      [">=", ["coalesce", ["get", "density"], 0], 3],
-      DENSITY_COLORS[3],
-      [">=", ["coalesce", ["get", "density"], 0], 2],
-      DENSITY_COLORS[2],
-      [">=", ["coalesce", ["get", "density"], 0], 1],
-      DENSITY_COLORS[1],
-      "transparent",
-    ],
-    "fill-opacity": 1,
-  },
-};
+// (Fill layers consolidated into getUnifiedFillStyle() above)
 
 const boundaryLineStyle = {
   id: "zip-boundaries-line",
@@ -324,15 +363,8 @@ function OutOfAreaSection({ outOfAreaOrgs, onExpandChange }) {
   );
 }
 
-// Gradient legend component for density mode
-function DensityLegend({ maxDensity, parentOrgName, assistanceLabel, orgCount, county, outOfAreaOrgs, onOutOfAreaToggle }) {
-  // Build gradient steps based on actual max
-  const steps = [];
-  const displayMax = Math.min(maxDensity, 4);
-  for (let i = 1; i <= displayMax; i++) {
-    steps.push({ count: i, color: getDensityColor(i) });
-  }
-
+// Parent coverage legend component - shows flat purple swatch for parent mode
+function ParentCoverageLegend({ parentOrgName, assistanceLabel, orgCount, county, outOfAreaOrgs, onOutOfAreaToggle, viewMode }) {
   return (
     <div
       data-legend="true"
@@ -356,30 +388,22 @@ function DensityLegend({ maxDensity, parentOrgName, assistanceLabel, orgCount, c
         </div>
       )}
 
-      {/* Density gradient bar */}
-      <div style={{ marginBottom: "6px", color: "#444", fontWeight: 500, fontSize: "11px" }}>
-        Coverage density
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: "2px", marginBottom: "4px" }}>
-        {steps.map((s) => (
-          <div
-            key={s.count}
-            style={{
-              flex: 1,
-              height: "14px",
-              backgroundColor: s.color,
-              borderRadius: s.count === 1 ? "3px 0 0 3px" : s.count === displayMax ? "0 3px 3px 0" : "0",
-            }}
-          />
-        ))}
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#666" }}>
-        <span>1 org</span>
-        <span>{maxDensity >= 4 ? "4+" : maxDensity} orgs</span>
+      {/* Parent coverage swatch */}
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+        <div
+          style={{
+            width: "14px",
+            height: "14px",
+            borderRadius: "4px",
+            backgroundColor: PARENT_COVERAGE_COLOR,
+            marginLeft: "2px",
+          }}
+        />
+        <span style={{ color: "#444" }}>Parent coverage area</span>
       </div>
 
       {/* Pin legend */}
-      <div style={{ marginTop: "10px", borderTop: "1px solid #E0E0E0", paddingTop: "8px" }}>
+      <div style={{ marginTop: "6px", borderTop: "1px solid #E0E0E0", paddingTop: "8px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
           <MapPinIcon size={18} active={false} />
           <span style={{ color: "#444" }}>Organization location</span>
@@ -394,8 +418,7 @@ function DensityLegend({ maxDensity, parentOrgName, assistanceLabel, orgCount, c
               width: "14px",
               height: "14px",
               borderRadius: "4px",
-              backgroundColor: "#00A8A8",
-              opacity: 0.6,
+              backgroundColor: "rgba(0, 168, 168, 0.40)",
               marginLeft: "2px",
             }}
           />
@@ -409,13 +432,104 @@ function DensityLegend({ maxDensity, parentOrgName, assistanceLabel, orgCount, c
         </div>
       )}
 
+      <MetricLegendBar viewMode={viewMode} />
+
       <OutOfAreaSection outOfAreaOrgs={outOfAreaOrgs} onExpandChange={onOutOfAreaToggle} />
     </div>
   );
 }
 
+// Distress score legend bar - smooth gradient matching the map overlay
+function DistressLegendBar({ standalone }) {
+  return (
+    <div style={standalone ? {} : { marginTop: "10px", borderTop: "1px solid #E0E0E0", paddingTop: "8px" }}>
+      <div style={{ fontWeight: 500, fontSize: "11px", color: "#444", marginBottom: "4px" }}>
+        Distress score
+      </div>
+      <div style={{ display: "flex", gap: "2px", marginBottom: "2px" }}>
+        <div style={{ flex: 1, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(76, 175, 80, 0.45)" }} />
+        <div style={{ flex: 2, height: "10px", backgroundColor: "rgba(255, 193, 7, 0.45)" }} />
+        <div style={{ flex: 1, height: "10px", borderRadius: "0 3px 3px 0", backgroundColor: "rgba(220, 50, 50, 0.50)" }} />
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#666" }}>
+        <span>Low</span>
+        <span>Mid</span>
+        <span>High</span>
+      </div>
+    </div>
+  );
+}
+
+// Working poor legend bar - red gradient (lower = worse = darker)
+function WorkingPoorLegendBar({ standalone }) {
+  return (
+    <div style={standalone ? {} : { marginTop: "10px", borderTop: "1px solid #E0E0E0", paddingTop: "8px" }}>
+      <div style={{ fontWeight: 500, fontSize: "11px", color: "#444", marginBottom: "4px" }}>
+        Working Poor Index
+      </div>
+      <div style={{ display: "flex", gap: "2px", marginBottom: "2px" }}>
+        <div style={{ flex: 1, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(139, 0, 0, 0.55)" }} />
+        <div style={{ flex: 2, height: "10px", backgroundColor: "rgba(220, 80, 80, 0.45)" }} />
+        <div style={{ flex: 1, height: "10px", borderRadius: "0 3px 3px 0", backgroundColor: "rgba(255, 180, 180, 0.45)" }} />
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#666" }}>
+        <span>Worse</span>
+        <span>Mid</span>
+        <span>Better</span>
+      </div>
+    </div>
+  );
+}
+
+// Population legend bar - blue gradient (higher = more = darker)
+function PopulationLegendBar({ standalone }) {
+  return (
+    <div style={standalone ? {} : { marginTop: "10px", borderTop: "1px solid #E0E0E0", paddingTop: "8px" }}>
+      <div style={{ fontWeight: 500, fontSize: "11px", color: "#444", marginBottom: "4px" }}>
+        Population
+      </div>
+      <div style={{ display: "flex", gap: "2px", marginBottom: "2px" }}>
+        <div style={{ flex: 1, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(200, 170, 230, 0.45)" }} />
+        <div style={{ flex: 2, height: "10px", backgroundColor: "rgba(128, 60, 170, 0.50)" }} />
+        <div style={{ flex: 1, height: "10px", borderRadius: "0 3px 3px 0", backgroundColor: "rgba(75, 0, 130, 0.55)" }} />
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#666" }}>
+        <span>Low</span>
+        <span>Mid</span>
+        <span>High</span>
+      </div>
+    </div>
+  );
+}
+
+// Metric legend bar switcher - renders the correct legend bar based on viewMode
+function MetricLegendBar({ viewMode, standalone }) {
+  if (viewMode === "working_poor") return <WorkingPoorLegendBar standalone={standalone} />;
+  if (viewMode === "population") return <PopulationLegendBar standalone={standalone} />;
+  return <DistressLegendBar standalone={standalone} />;
+}
+
+// Base legend - always visible, shows distress colors from the start
+function BaseLegend({ viewMode }) {
+  return (
+    <div
+      data-legend="true"
+      className="absolute bottom-6 left-4 rounded-lg shadow-lg"
+      style={{
+        backgroundColor: "rgba(255,255,255,0.95)",
+        padding: "12px 16px",
+        fontFamily: "Lexend, sans-serif",
+        fontSize: "12px",
+        maxWidth: "240px",
+      }}
+    >
+      <MetricLegendBar viewMode={viewMode} standalone />
+    </div>
+  );
+}
+
 // Simple legend for non-density mode (assistance selected, no parent)
-function SimpleLegend({ assistanceLabel, orgCount, county, outOfAreaOrgs, onOutOfAreaToggle }) {
+function SimpleLegend({ assistanceLabel, orgCount, county, outOfAreaOrgs, onOutOfAreaToggle, viewMode }) {
   return (
     <div
       data-legend="true"
@@ -459,6 +573,8 @@ function SimpleLegend({ assistanceLabel, orgCount, county, outOfAreaOrgs, onOutO
         {county && county !== "All Counties" && <span> · {county} County</span>}
       </div>
 
+      <MetricLegendBar viewMode={viewMode} />
+
       <OutOfAreaSection outOfAreaOrgs={outOfAreaOrgs} onExpandChange={onOutOfAreaToggle} />
     </div>
   );
@@ -470,6 +586,9 @@ const MapboxMap = forwardRef(function MapboxMap({
   parentOrg,
   organization,
   assistanceType,
+  viewMode = "filter_view",
+  activeBase = "distress",
+  onViewModeChange,
 }, ref) {
   const { directory, assistance, zipCodes } = useAppData();
   const mapRef = useRef(null);
@@ -512,6 +631,76 @@ const MapboxMap = forwardRef(function MapboxMap({
       zipCodes.filter((z) => z.houston_area === "Y").map((z) => z.zip_code)
     );
   }, [zipCodes]);
+
+  // Distress score lookup: zip_code -> distress_score
+  const distressLookup = useMemo(() => {
+    const lookup = {};
+    if (!zipCodes) return lookup;
+    zipCodes.forEach((z) => {
+      if (z.houston_area === "Y" && z.distress_score != null) {
+        lookup[z.zip_code] = Number(z.distress_score) || 0;
+      }
+    });
+    return lookup;
+  }, [zipCodes]);
+
+  // Working poor lookup: zip_code -> working_poor value
+  const workingPoorLookup = useMemo(() => {
+    const lookup = {};
+    if (!zipCodes) return lookup;
+    zipCodes.forEach((z) => {
+      if (z.houston_area === "Y" && z.working_poor != null) {
+        lookup[z.zip_code] = Number(z.working_poor) || 0;
+      }
+    });
+    return lookup;
+  }, [zipCodes]);
+
+  // Population lookup: zip_code -> population value
+  const populationLookup = useMemo(() => {
+    const lookup = {};
+    if (!zipCodes) return lookup;
+    zipCodes.forEach((z) => {
+      if (z.houston_area === "Y" && z.population != null) {
+        lookup[z.zip_code] = Number(z.population) || 0;
+      }
+    });
+    return lookup;
+  }, [zipCodes]);
+
+  // Dynamic thresholds for working_poor and population (25th/75th percentile)
+  const metricThresholds = useMemo(() => {
+    const wpValues = Object.values(workingPoorLookup).filter(v => v !== 0).sort((a, b) => a - b);
+    const popValues = Object.values(populationLookup).filter(v => v > 0).sort((a, b) => a - b);
+
+    const percentile = (arr, p) => {
+      if (arr.length === 0) return 0;
+      const idx = Math.floor(arr.length * p);
+      return arr[Math.min(idx, arr.length - 1)];
+    };
+
+    return {
+      workingPoor: {
+        p25: percentile(wpValues, 0.25),
+        p75: percentile(wpValues, 0.75),
+      },
+      population: {
+        p25: percentile(popValues, 0.25),
+        p75: percentile(popValues, 0.75),
+      },
+    };
+  }, [workingPoorLookup, populationLookup]);
+
+  // Is the map in base view (clean metric) vs filter view (overlay + metric)?
+  const isBaseView = viewMode !== "filter_view";
+
+  // Which metric to display: in base view use viewMode, in filter view use activeBase
+  const displayMetric = isBaseView ? viewMode : activeBase;
+
+  // Memoized unified fill style - recomputed when viewMode, activeBase, or thresholds change
+  const unifiedFillStyle = useMemo(() => {
+    return getUnifiedFillStyle(displayMetric, !isBaseView, metricThresholds);
+  }, [displayMetric, isBaseView, metricThresholds]);
 
   // Zip codes by county lookup
   const houstonZipsByCounty = useMemo(() => {
@@ -616,35 +805,22 @@ const MapboxMap = forwardRef(function MapboxMap({
   // Determine if we're in density mode (parent org selected with assistance)
   const isDensityMode = Boolean(parentOrg && selectedAssistId);
 
-  // Compute density data: zip -> count of children serving it
-  // For 99999 orgs, they count toward every displayed boundary zip
-  const densityData = useMemo(() => {
-    if (!isDensityMode) return { zipCounts: {}, maxDensity: 0 };
+  // Compute parent coverage: which zips are served by the parent's children
+  // Returns a set of zip codes and a simple count (for legend display)
+  const parentCoverage = useMemo(() => {
+    if (!isDensityMode) return { servedZips: new Set(), childCount: 0 };
 
-    const zipCounts = {};
-    const zipChildSets = {};
+    const servedZips = new Set();
 
     filteredOrgs.forEach((r) => {
       const clientZips = Array.isArray(r.client_zip_codes) ? r.client_zip_codes : [];
       const isWildcard = clientZips.includes("99999");
 
-      // For wildcard orgs, count them against every boundary zip
-      const zipsToCount = isWildcard ? [...boundaryZips] : clientZips;
-
-      zipsToCount.forEach((zip) => {
-        if (!zipChildSets[zip]) zipChildSets[zip] = new Set();
-        zipChildSets[zip].add(r.organization);
-      });
+      const zipsToMark = isWildcard ? [...boundaryZips] : clientZips;
+      zipsToMark.forEach((zip) => servedZips.add(zip));
     });
 
-    let maxDensity = 0;
-    Object.entries(zipChildSets).forEach(([zip, children]) => {
-      const count = children.size;
-      zipCounts[zip] = count;
-      if (count > maxDensity) maxDensity = count;
-    });
-
-    return { zipCounts, maxDensity };
+    return { servedZips, childCount: filteredOrgs.length };
   }, [isDensityMode, filteredOrgs, boundaryZips]);
 
   // Load all GeoJSON boundaries once
@@ -661,10 +837,10 @@ const MapboxMap = forwardRef(function MapboxMap({
       });
   }, []);
 
-  // Filter GeoJSON by county + inject density into feature properties
+  // Filter GeoJSON by county + inject parent coverage into feature properties
   const geoJsonData = useMemo(() => {
     if (!allGeoJsonData) return null;
-    const { zipCounts } = densityData;
+    const { servedZips } = parentCoverage;
     const filtered = {
       ...allGeoJsonData,
       features: allGeoJsonData.features
@@ -674,12 +850,15 @@ const MapboxMap = forwardRef(function MapboxMap({
           id: i,
           properties: {
             ...f.properties,
-            density: zipCounts[f.properties.ZCTA5CE20] || 0,
+            density: servedZips.has(f.properties.ZCTA5CE20) ? 1 : 0,
+            distress_score: distressLookup[f.properties.ZCTA5CE20] || 0,
+            working_poor: workingPoorLookup[f.properties.ZCTA5CE20] ?? 0,
+            population: populationLookup[f.properties.ZCTA5CE20] || 0,
           },
         })),
     };
     return filtered;
-  }, [allGeoJsonData, boundaryZips, densityData]);
+  }, [allGeoJsonData, boundaryZips, parentCoverage, distressLookup, workingPoorLookup, populationLookup]);
 
   // Zip code -> feature id lookup
   const zipToFeatureId = useMemo(() => {
@@ -823,10 +1002,10 @@ const MapboxMap = forwardRef(function MapboxMap({
   // Handle boundary hover
   const handleMouseMove = useCallback((e) => {
     const map = mapRef.current?.getMap();
-    if (!map || !map.getLayer("zip-boundaries-fill")) return;
+    if (!map || !map.getLayer("unified-fill")) return;
 
     const features = map.queryRenderedFeatures(e.point, {
-      layers: ["zip-boundaries-fill"],
+      layers: ["unified-fill"],
     });
 
     if (hoveredFeatureRef.current !== null) {
@@ -876,6 +1055,16 @@ const MapboxMap = forwardRef(function MapboxMap({
     clearChildHighlights();
     clearBaseHighlight();
   }, [assistanceType, county, zipCode, parentOrg, organization, clearChildHighlights, clearBaseHighlight]);
+
+  // Clear teal highlights when entering base view (pins/overlay hidden, highlights should go too)
+  useEffect(() => {
+    if (isBaseView) {
+      clearChildHighlights();
+      clearBaseHighlight();
+      setInfoBoxData(null);
+      setSelectedOrgKey(null);
+    }
+  }, [isBaseView, clearChildHighlights, clearBaseHighlight]);
 
   // Set base zip highlight when zip filter is active and assistance is selected
   useEffect(() => {
@@ -1062,7 +1251,7 @@ const MapboxMap = forwardRef(function MapboxMap({
   };
 
   // Draw a simple legend directly on canvas
-  const drawSimpleLegendOnCanvas = (ctx, label, count, countyName, containerEl) => {
+  const drawSimpleLegendOnCanvas = (ctx, label, count, countyName, containerEl, mode) => {
     const el = containerEl.querySelector("[data-legend]");
     if (!el) return;
 
@@ -1120,10 +1309,14 @@ const MapboxMap = forwardRef(function MapboxMap({
       countText += ` · ${countyName} County`;
     }
     ctx.fillText(countText, x + pad, cy);
+    cy += 16;
+
+    // Metric legend bar
+    drawMetricBarOnCanvas(ctx, x, cy, w, pad, mode);
   };
 
-  // Draw a density legend directly on canvas
-  const drawDensityLegendOnCanvas = (ctx, label, parentName, count, maxDens, countyName, containerEl) => {
+  // Draw parent coverage legend directly on canvas
+  const drawParentCoverageLegendOnCanvas = (ctx, label, parentName, count, countyName, containerEl, mode) => {
     const el = containerEl.querySelector("[data-legend]");
     if (!el) return;
 
@@ -1155,33 +1348,13 @@ const MapboxMap = forwardRef(function MapboxMap({
       cy += 22;
     }
 
-    // "Coverage density"
-    ctx.font = "500 11px Lexend, sans-serif";
+    // Purple swatch + "Parent coverage area"
+    ctx.fillStyle = PARENT_COVERAGE_COLOR;
+    ctx.fillRect(x + pad + 1, cy + 2, 10, 10);
+    ctx.font = "400 12px Lexend, sans-serif";
     ctx.fillStyle = "#444444";
-    ctx.fillText("Coverage density", x + pad, cy);
-    cy += 18;
-
-    // Gradient bar
-    const barW = w - pad * 2;
-    const barH = 14;
-    const steps = Math.min(maxDens, 4);
-    const stepW = barW / steps;
-    for (let i = 1; i <= steps; i++) {
-      ctx.fillStyle = getDensityColor(i);
-      const bx = x + pad + (i - 1) * stepW;
-      const r = i === 1 ? 3 : i === steps ? 3 : 0;
-      ctx.fillRect(bx, cy, stepW, barH);
-    }
-    cy += barH + 4;
-
-    // Bar labels
-    ctx.font = "400 10px Lexend, sans-serif";
-    ctx.fillStyle = "#666666";
-    ctx.fillText("1 org", x + pad, cy);
-    const maxLabel = maxDens >= 4 ? "4+ orgs" : `${maxDens} orgs`;
-    const maxLabelW = ctx.measureText(maxLabel).width;
-    ctx.fillText(maxLabel, x + w - pad - maxLabelW, cy);
-    cy += 18;
+    ctx.fillText("Parent coverage area", x + pad + 18, cy);
+    cy += 22;
 
     // Divider
     ctx.strokeStyle = "#E0E0E0";
@@ -1212,7 +1385,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     cy += 20;
 
     // Teal square + "Selected org's zips"
-    ctx.fillStyle = "rgba(0, 168, 168, 0.6)";
+    ctx.fillStyle = "rgba(0, 168, 168, 0.4)";
     ctx.fillRect(x + pad + 1, cy + 2, 10, 10);
     ctx.fillStyle = "#444444";
     ctx.fillText("Selected org's zips", x + pad + 18, cy);
@@ -1223,7 +1396,73 @@ const MapboxMap = forwardRef(function MapboxMap({
       ctx.font = "400 11px Lexend, sans-serif";
       ctx.fillStyle = "#888888";
       ctx.fillText(`${countyName} County`, x + pad, cy);
+      cy += 16;
     }
+
+    // Metric legend bar
+    drawMetricBarOnCanvas(ctx, x, cy, w, pad, mode);
+  };
+
+  // Draw metric legend bar on canvas (distress/working poor/population)
+  const drawMetricBarOnCanvas = (ctx, x, y, w, pad, mode) => {
+    let cy = y;
+    // Divider
+    ctx.strokeStyle = "#E0E0E0";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + pad, cy);
+    ctx.lineTo(x + w - pad, cy);
+    ctx.stroke();
+    cy += 10;
+
+    // Label
+    ctx.font = "500 11px Lexend, sans-serif";
+    ctx.fillStyle = "#444444";
+    const labels = {
+      distress: "Distress score",
+      working_poor: "Working Poor Index",
+      population: "Population",
+    };
+    ctx.fillText(labels[mode] || "Distress score", x + pad, cy);
+    cy += 16;
+
+    // Color bars
+    const barW = w - pad * 2;
+    const barH = 10;
+    const colors = {
+      distress: ["rgba(76, 175, 80, 0.45)", "rgba(255, 193, 7, 0.45)", "rgba(220, 50, 50, 0.50)"],
+      working_poor: ["rgba(139, 0, 0, 0.55)", "rgba(220, 80, 80, 0.45)", "rgba(255, 180, 180, 0.45)"],
+      population: ["rgba(200, 170, 230, 0.45)", "rgba(128, 60, 170, 0.50)", "rgba(75, 0, 130, 0.55)"],
+    };
+    const c = colors[mode] || colors.distress;
+    const widths = mode === "distress" ? [barW * 0.25, barW * 0.5, barW * 0.25] : [barW / 3, barW / 3, barW / 3];
+
+    let bx = x + pad;
+    c.forEach((color, i) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(bx, cy, widths[i], barH);
+      bx += widths[i];
+    });
+    cy += barH + 4;
+
+    // Scale labels
+    ctx.font = "400 10px Lexend, sans-serif";
+    ctx.fillStyle = "#666666";
+    const scaleLabels = {
+      distress: ["Low", "Mid", "High"],
+      working_poor: ["Worse", "Mid", "Better"],
+      population: ["Low", "Mid", "High"],
+    };
+    const sl = scaleLabels[mode] || scaleLabels.distress;
+    ctx.textAlign = "left";
+    ctx.fillText(sl[0], x + pad, cy);
+    ctx.textAlign = "center";
+    ctx.fillText(sl[1], x + w / 2, cy);
+    ctx.textAlign = "right";
+    ctx.fillText(sl[2], x + w - pad, cy);
+    ctx.textAlign = "left"; // reset
+
+    return cy + 14; // return new y position
   };
 
   // Draw a map pin directly on canvas at given pixel position
@@ -1349,10 +1588,10 @@ const MapboxMap = forwardRef(function MapboxMap({
       // Step 3: Draw info box and legend directly on canvas (avoids dom-to-image border artifacts)
       drawInfoBoxOnCanvas(ctx, infoBoxData, container);
 
-      if (isDensityMode && densityData.maxDensity > 0) {
-        drawDensityLegendOnCanvas(ctx, assistanceLabel, parentOrg, orgPins.length, densityData.maxDensity, county, container);
+      if (isDensityMode && parentCoverage.servedZips.size > 0) {
+        drawParentCoverageLegendOnCanvas(ctx, assistanceLabel, parentOrg, orgPins.length, county, container, displayMetric);
       } else if (hasAssistance) {
-        drawSimpleLegendOnCanvas(ctx, assistanceLabel, orgPins.length, county, container);
+        drawSimpleLegendOnCanvas(ctx, assistanceLabel, orgPins.length, county, container, displayMetric);
       }
 
       // Step 4: Download
@@ -1369,7 +1608,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     } finally {
       setIsDownloading(false);
     }
-  }, [isDownloading, assistanceLabel, hasAssistance, orgPins, selectedOrgKey, showOrgLabels, infoBoxData, isDensityMode, densityData, parentOrg, county]);
+  }, [isDownloading, assistanceLabel, hasAssistance, orgPins, selectedOrgKey, showOrgLabels, infoBoxData, isDensityMode, parentCoverage, parentOrg, county, displayMetric, isBaseView]);
 
   // Expose download method to parent via ref
   useImperativeHandle(ref, () => ({
@@ -1414,17 +1653,15 @@ const MapboxMap = forwardRef(function MapboxMap({
             data={geoJsonData}
             generateId={false}
           >
-            {/* Density fill layer - rendered below the interactive layer */}
-            <Layer {...densityFillStyle} />
-            {/* Interactive fill (teal for child selection, hover) */}
-            <Layer {...boundaryFillStyle} />
+            {/* Unified fill: child teal > [parent coverage in filter view] > metric colors */}
+            <Layer {...unifiedFillStyle} />
             <Layer {...boundaryLineStyle} />
             <Layer {...zipLabelStyle} />
           </Source>
         )}
 
-        {/* Organization pin markers - only when assistance is selected */}
-        {hasAssistance &&
+        {/* Organization pin markers - only in filter view when assistance is selected */}
+        {!isBaseView && hasAssistance &&
           orgPins.map((org) => (
             <Marker
               key={org.key}
@@ -1512,7 +1749,7 @@ const MapboxMap = forwardRef(function MapboxMap({
       </MapGL>
 
       {/* Zoom-gated Org Labels toggle button (draggable, starts centered) */}
-      {hasAssistance && currentZoom >= ORG_LABEL_ZOOM_THRESHOLD && (
+      {!isBaseView && hasAssistance && currentZoom >= ORG_LABEL_ZOOM_THRESHOLD && (
         <button
           data-org-label-btn="true"
           onMouseDown={(e) => {
@@ -1556,7 +1793,7 @@ const MapboxMap = forwardRef(function MapboxMap({
             position: "absolute",
             ...(orgLabelBtnPos
               ? { top: `${orgLabelBtnPos.y}px`, left: `${orgLabelBtnPos.x}px` }
-              : { top: "50%", left: "50%", transform: "translate(-50%, -50%)" }),
+              : { top: "10px", left: "10px" }),
             zIndex: 20,
             backgroundColor: showOrgLabels ? "#005C72" : "#222831",
             color: "#FFFFFF",
@@ -1575,34 +1812,69 @@ const MapboxMap = forwardRef(function MapboxMap({
         </button>
       )}
 
-      {/* Draggable info box */}
-      <DraggableInfoBox info={infoBoxData} onClose={handleInfoBoxClose} />
+      {/* View Mode dropdown - top right, left of zoom controls */}
+      {onViewModeChange && (
+        <select
+          value={viewMode}
+          onChange={(e) => onViewModeChange(e.target.value)}
+          className="absolute transition-all duration-200 hover:brightness-125"
+          style={{
+            top: "10px",
+            right: "52px",
+            zIndex: 10,
+            height: "40px",
+            padding: "0 14px",
+            borderRadius: "6px",
+            fontFamily: "'Open Sans', sans-serif",
+            fontSize: "16px",
+            fontWeight: 600,
+            backgroundColor: "rgba(34, 40, 49, 0.90)",
+            color: "#FFC857",
+            border: "2px solid rgba(255, 200, 87, 0.4)",
+            cursor: "pointer",
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <option value="filter_view">Filter View</option>
+          <option value="distress">Distress</option>
+          <option value="working_poor">Working Poor</option>
+          <option value="population">Population</option>
+        </select>
+      )}
 
-      {/* Density legend (parent org mode) */}
-      {isDensityMode && densityData.maxDensity > 0 && (
-        <DensityLegend
-          maxDensity={densityData.maxDensity}
+      {/* Draggable info box - only in filter view */}
+      {!isBaseView && <DraggableInfoBox info={infoBoxData} onClose={handleInfoBoxClose} />}
+
+      {/* Base view: always show clean metric legend */}
+      {isBaseView && <BaseLegend viewMode={displayMetric} />}
+
+      {/* Filter view: show appropriate filter legend */}
+      {!isBaseView && isDensityMode && parentCoverage.servedZips.size > 0 && (
+        <ParentCoverageLegend
           parentOrgName={parentOrg}
           assistanceLabel={assistanceLabel}
           orgCount={orgPins.length}
           county={county}
           outOfAreaOrgs={outOfAreaOrgs}
           onOutOfAreaToggle={handleOutOfAreaToggle}
+          viewMode={displayMetric}
         />
       )}
 
-      {/* Simple legend (assistance selected, no parent) */}
-      {hasAssistance && !isDensityMode && (
+      {/* Filter view: simple legend (assistance selected, no parent) */}
+      {!isBaseView && hasAssistance && !isDensityMode && (
         <SimpleLegend
           assistanceLabel={assistanceLabel}
           orgCount={orgPins.length}
           county={county}
           outOfAreaOrgs={outOfAreaOrgs}
           onOutOfAreaToggle={handleOutOfAreaToggle}
+          viewMode={displayMetric}
         />
       )}
 
-      {/* No assistance selected - empty map, no message */}
+      {/* Filter view: base legend when no assistance selected */}
+      {!isBaseView && !hasAssistance && <BaseLegend viewMode={displayMetric} />}
     </div>
   );
 });
