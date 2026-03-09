@@ -150,6 +150,20 @@ export const dataService = {
     return data;
   },
 
+  // ======= DISTRESS DATA (census socioeconomic indicators by zip) =======
+  async getDistressData() {
+    const { data, error } = await supabase
+      .from('distress_data')
+      .select('*')
+      .order('zip_code', { ascending: true });
+
+    if (error) {
+      console.error("Error fetching distress data:", error);
+      return [];
+    }
+    return data;
+  },
+
   // ======= REGISTERED ORGANIZATIONS (auth - implement last) =======
   async getRegisteredOrganizations() {
     const { data, error } = await supabase

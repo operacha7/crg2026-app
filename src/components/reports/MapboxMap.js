@@ -19,11 +19,12 @@ const DEFAULT_ZOOM = 9.5;
 // Parent coverage color - blue for served zips (related to child teal, distinct from distress)
 const PARENT_COVERAGE_COLOR = "rgba(0, 28, 168, 0.5)"; // medium blue at 35%
 
-// Distress score colors - flat green/amber/red bands
-// Range: 58–818. Bottom 25% green, middle 50% amber, top 25% red.
-// These values are used inline in the unified fill expression.
+// Distress colors - 5 flat bands based on percentile
+// p0-20: dark green (least distressed), p20-40: green, p40-60: amber, p60-80: orange, p80-100: red (most distressed)
+const DISTRESS_DARK_GREEN = "rgba(46, 125, 50, 0.35)";
 const DISTRESS_GREEN = "rgba(76, 175, 80, 0.30)";
 const DISTRESS_AMBER = "rgba(255, 193, 7, 0.30)";
+const DISTRESS_ORANGE = "rgba(245, 124, 0, 0.32)";
 const DISTRESS_RED = "rgba(220, 50, 50, 0.35)";
 
 // Working poor colors - red gradient (lower = worse = darker red)
@@ -67,14 +68,18 @@ function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thr
       POP_LIGHT,
     ];
   } else {
-    // distress (default)
+    // distress (default) - 5 bands based on percentile
     metricExpression = [
-      [">=", ["coalesce", ["get", "distress_score"], 0], 628],
+      [">=", ["coalesce", ["get", "percentile"], 0], 80],
       DISTRESS_RED,
-      [">=", ["coalesce", ["get", "distress_score"], 0], 248],
+      [">=", ["coalesce", ["get", "percentile"], 0], 60],
+      DISTRESS_ORANGE,
+      [">=", ["coalesce", ["get", "percentile"], 0], 40],
       DISTRESS_AMBER,
-      [">=", ["coalesce", ["get", "distress_score"], 0], 58],
+      [">=", ["coalesce", ["get", "percentile"], 0], 20],
       DISTRESS_GREEN,
+      [">", ["coalesce", ["get", "percentile"], 0], 0],
+      DISTRESS_DARK_GREEN,
     ];
   }
 
@@ -91,7 +96,7 @@ function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thr
       "rgba(0, 253, 253, 0.50)",
       // Priority 2: Base zip highlight (zip code filter)
       ["boolean", ["feature-state", "highlighted"], false],
-      "rgba(0, 168, 168, 0.55)",
+      "rgba(0, 253, 253, 0.50)",
     );
   }
 
@@ -260,15 +265,318 @@ function DraggableInfoBox({ info, onClose }) {
   );
 }
 
+// Census data source citation
+const CENSUS_SOURCE = "U.S. Census Bureau, ACS 2019–2023 5-Year Estimates";
+
+// Get the distress band color for a given percentile value (solid colors for the circle indicator)
+function getDistressBandColor(percentile) {
+  if (percentile == null) return "#888";
+  if (percentile >= 80) return "rgba(220, 50, 50, 0.85)";     // Red
+  if (percentile >= 60) return "rgba(245, 124, 0, 0.85)";     // Orange
+  if (percentile >= 40) return "rgba(255, 193, 7, 0.85)";     // Amber
+  if (percentile >= 20) return "rgba(76, 175, 80, 0.85)";     // Green
+  return "rgba(46, 125, 50, 0.85)";                           // Dark green
+}
+
+// Ordinal suffix helper (1st, 2nd, 3rd, 4th, etc.)
+function ordinalSuffix(n) {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+// Texas median household income (from Census ACS, same as fetch-census-data.js)
+const TX_MEDIAN_HOUSEHOLD_INCOME = 73035;
+
+// Distress data field labels for display in the table
+// showMedian: true = show Houston metro median in comparison column
+const DISTRESS_FIELDS = [
+  { key: "percentile", label: "Distress Percentile", format: (v) => v != null ? ordinalSuffix(Math.round(v)) : "—", highlight: true },
+  { key: "distress_score", label: "Distress Score", format: (v) => v != null ? v.toLocaleString() : "—", showMedian: true },
+  { key: "population", label: "Population", format: (v) => v != null ? v.toLocaleString() : "—", showMedian: true },
+  { key: "poverty_rate", label: "Poverty Rate", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
+  { key: "median_household_inc", label: "Median Household Income", format: (v) => v != null ? `$${v.toLocaleString()}` : "—", showMedian: true, medianFormat: (v) => `$${v.toLocaleString()}` },
+  { key: "income_ratio_tx", label: "Income Ratio (TX)", format: (v) => v != null ? v.toFixed(2) : "—", showMedian: true, medianFormat: (v) => v.toFixed(2) },
+  { key: "unemp_rate", label: "Unemployment Rate", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
+  { key: "no_health_ins", label: "No Health Insurance", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
+  { key: "snap", label: "SNAP Recipients", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
+  { key: "no_hs_diploma", label: "No HS Diploma", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
+  { key: "vacancy_rate", label: "Vacancy Rate", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
+  { key: "owner_occupancy", label: "Owner Occupancy", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
+  { key: "no_vehicle", label: "No Vehicle", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
+];
+
+// Compute Houston metro medians from distress_data array
+function computeHoustonMedians(distressData) {
+  if (!distressData || distressData.length === 0) return {};
+  const medians = {};
+  const medianFields = DISTRESS_FIELDS.filter(f => f.showMedian).map(f => f.key);
+
+  medianFields.forEach(field => {
+    const values = distressData
+      .map(d => d[field])
+      .filter(v => v != null && !isNaN(v))
+      .sort((a, b) => a - b);
+    if (values.length === 0) { medians[field] = null; return; }
+    const mid = Math.floor(values.length / 2);
+    medians[field] = values.length % 2 === 0
+      ? Math.round(((values[mid - 1] + values[mid]) / 2) * 100) / 100
+      : values[mid];
+  });
+  return medians;
+}
+
+// Draggable distress data table component - shows census indicators for a clicked zip
+function DraggableDistressTable({ data, zipCode, neighborhood, houstonMedians, onClose }) {
+  const dragState = useRef({ isDragging: false, startX: 0, startY: 0 });
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  // Reset position when zip changes
+  useEffect(() => {
+    setPosition({ x: 0, y: 0 });
+  }, [zipCode]);
+
+  const handleMouseDown = (e) => {
+    if (!e.target.closest("[data-drag-handle]")) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragState.current = {
+      isDragging: true,
+      startX: e.clientX - position.x,
+      startY: e.clientY - position.y,
+    };
+
+    const handleMouseMove = (e) => {
+      if (!dragState.current.isDragging) return;
+      setPosition({
+        x: e.clientX - dragState.current.startX,
+        y: e.clientY - dragState.current.startY,
+      });
+    };
+
+    const handleMouseUp = () => {
+      dragState.current.isDragging = false;
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  if (!data || !zipCode) return null;
+
+  return (
+    <div
+      data-distress-table="true"
+      onMouseDown={handleMouseDown}
+      className="absolute z-50 rounded-lg shadow-xl"
+      style={{
+        top: "80px",
+        right: "60px",
+        transform: `translate(${position.x}px, ${position.y}px)`,
+        width: "420px",
+        backgroundColor: "rgba(34, 40, 49, 0.95)",
+        fontFamily: "Lexend, sans-serif",
+        userSelect: "none",
+      }}
+    >
+      {/* Drag handle header */}
+      <div
+        data-drag-handle="true"
+        className="flex items-center justify-between rounded-t-lg"
+        style={{
+          padding: "10px 14px 8px",
+          cursor: "grab",
+          borderBottom: "1px solid rgba(255,255,255,0.1)",
+        }}
+      >
+        <div>
+          <h3
+            style={{
+              fontSize: "15px",
+              color: "#FFC857",
+              fontWeight: 600,
+              margin: 0,
+            }}
+          >
+            Zip Code {zipCode}
+          </h3>
+          {neighborhood && (
+            <p style={{
+              fontSize: "10px",
+              color: "#8FB6FF",
+              margin: "2px 0 0",
+              lineHeight: 1.3,
+            }}>
+              {neighborhood}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          style={{
+            background: "none",
+            border: "none",
+            color: "#999",
+            cursor: "pointer",
+            fontSize: "18px",
+            lineHeight: 1,
+            padding: "0 4px",
+            alignSelf: "flex-start",
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Column headers */}
+      <div style={{
+        display: "flex",
+        padding: "6px 14px 4px",
+        borderBottom: "1px solid rgba(255,255,255,0.12)",
+      }}>
+        <span style={{ flex: 1, fontSize: "9px", color: "#888", fontWeight: 500 }}></span>
+        <span style={{ width: "72px", textAlign: "right", fontSize: "9px", color: "#FFFFFF", fontWeight: 600 }}>
+          Zip
+        </span>
+        <span style={{ width: "72px", textAlign: "right", fontSize: "9px", color: "#8FB6FF", fontWeight: 600 }}>
+          Houston*
+        </span>
+      </div>
+
+      {/* Data rows */}
+      <div style={{ padding: "4px 14px 2px" }}>
+        {DISTRESS_FIELDS.map(({ key, label, format, highlight, showMedian, medianFormat }) => {
+          // TX median household income reference line
+          const isTxRef = key === "income_ratio_tx";
+          const medianVal = houstonMedians?.[key];
+          const fmtMedian = showMedian && medianVal != null
+            ? (medianFormat ? medianFormat(medianVal) : medianVal.toLocaleString())
+            : "";
+
+          return (
+            <div key={key}>
+              {/* TX median reference line - inserted before income_ratio */}
+              {isTxRef && (
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "3px 0",
+                  borderTop: "1px solid rgba(255,255,255,0.06)",
+                }}>
+                  <span style={{ flex: 1, fontSize: "11px", color: "#999", fontStyle: "italic" }}>
+                    TX Median Household Income
+                  </span>
+                  <span style={{ width: "72px", textAlign: "right", fontSize: "12px", color: "#999", fontWeight: 500 }}>
+                    ${TX_MEDIAN_HOUSEHOLD_INCOME.toLocaleString()}
+                  </span>
+                  <span style={{ width: "72px" }}></span>
+                </div>
+              )}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: highlight ? "6px 0" : "3px 0",
+                  borderBottom: highlight ? "1px solid rgba(255,255,255,0.1)" : "none",
+                }}
+              >
+                {/* Label */}
+                <span style={{
+                  flex: 1,
+                  fontSize: highlight ? "12px" : "11px",
+                  color: highlight ? "#FFC857" : "#CCC",
+                  fontWeight: highlight ? 600 : 400,
+                }}>
+                  {label}
+                </span>
+                {/* Zip value */}
+                <span style={{
+                  width: "72px",
+                  textAlign: "right",
+                  fontSize: highlight ? "14px" : "12px",
+                  color: "#FFFFFF",
+                  fontWeight: highlight ? 700 : 500,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: "6px",
+                }}>
+                  {highlight && (
+                    <span style={{
+                      display: "inline-block",
+                      width: "12px",
+                      height: "12px",
+                      borderRadius: "50%",
+                      backgroundColor: getDistressBandColor(data.percentile),
+                      flexShrink: 0,
+                    }} />
+                  )}
+                  {format(data[key])}
+                </span>
+                {/* Houston median value */}
+                <span style={{
+                  width: "72px",
+                  textAlign: "right",
+                  fontSize: "11px",
+                  color: "#8FB6FF",
+                  fontWeight: 400,
+                }}>
+                  {fmtMedian}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Source citation + footnote */}
+      <div
+        style={{
+          padding: "6px 14px 10px",
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+        }}
+      >
+        <span style={{ fontSize: "9px", color: "#888", fontStyle: "italic" }}>
+          Source: {CENSUS_SOURCE}
+        </span>
+        <br />
+        <span style={{ fontSize: "9px", color: "#8FB6FF", fontStyle: "italic" }}>
+          * Houston metro area median
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // (Fill layers consolidated into getUnifiedFillStyle() above)
 
 const boundaryLineStyle = {
   id: "zip-boundaries-line",
   type: "line",
   paint: {
-    "line-color": "#B8001F",
-    "line-width": 1.5,
-    "line-opacity": 0.7,
+    "line-color": [
+      "case",
+      ["boolean", ["feature-state", "distressSelected"], false],
+      "#222831",
+      "#B8001F",
+    ],
+    "line-width": [
+      "case",
+      ["boolean", ["feature-state", "distressSelected"], false],
+      3.5,
+      1.5,
+    ],
+    "line-opacity": [
+      "case",
+      ["boolean", ["feature-state", "distressSelected"], false],
+      1,
+      0.7,
+    ],
   },
 };
 
@@ -285,6 +593,8 @@ const zipLabelStyle = {
   paint: {
     "text-color": [
       "case",
+      ["boolean", ["feature-state", "distressSelected"], false],
+      "#222831",
       ["boolean", ["feature-state", "childHighlighted"], false],
       "#ff0000",
       ["boolean", ["feature-state", "highlighted"], false],
@@ -413,7 +723,7 @@ function ParentCoverageLegend({ parentOrgName, assistanceLabel, orgCount, county
               width: "14px",
               height: "14px",
               borderRadius: "4px",
-              backgroundColor: "rgba(0, 168, 168, 0.40)",
+              backgroundColor: "rgba(0, 253, 253, 0.50)",
               marginLeft: "2px",
             }}
           />
@@ -439,17 +749,22 @@ function DistressLegendBar({ standalone }) {
   return (
     <div style={standalone ? {} : { marginTop: "10px", borderTop: "1px solid #E0E0E0", paddingTop: "8px" }}>
       <div style={{ fontWeight: 500, fontSize: "11px", color: "#444", marginBottom: "4px" }}>
-        Distress score
+        Distress Percentile
       </div>
-      <div style={{ display: "flex", gap: "2px", marginBottom: "2px" }}>
-        <div style={{ flex: 1, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(76, 175, 80, 0.45)" }} />
-        <div style={{ flex: 2, height: "10px", backgroundColor: "rgba(255, 193, 7, 0.45)" }} />
+      <div style={{ display: "flex", gap: "1px", marginBottom: "2px" }}>
+        <div style={{ flex: 1, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(46, 125, 50, 0.45)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(76, 175, 80, 0.40)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(255, 193, 7, 0.40)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(245, 124, 0, 0.45)" }} />
         <div style={{ flex: 1, height: "10px", borderRadius: "0 3px 3px 0", backgroundColor: "rgba(220, 50, 50, 0.50)" }} />
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#666" }}>
-        <span>Low</span>
-        <span>Mid</span>
-        <span>High</span>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "#666" }}>
+        <span>0</span>
+        <span>20</span>
+        <span>40</span>
+        <span>60</span>
+        <span>80</span>
+        <span>100</span>
       </div>
     </div>
   );
@@ -585,7 +900,7 @@ const MapboxMap = forwardRef(function MapboxMap({
   activeBase = "distress",
   onViewModeChange,
 }, ref) {
-  const { directory, assistance, zipCodes } = useAppData();
+  const { directory, assistance, zipCodes, distressData } = useAppData();
   const mapRef = useRef(null);
   const mapContainerRef = useRef(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -609,6 +924,10 @@ const MapboxMap = forwardRef(function MapboxMap({
   // Selected org for showing served zips (teal overlay)
   const [selectedOrgKey, setSelectedOrgKey] = useState(null);
   const [infoBoxData, setInfoBoxData] = useState(null);
+
+  // Distress data table state (base view zip click)
+  const [distressTableZip, setDistressTableZip] = useState(null);
+  const distressSelectedRef = useRef(null); // feature id of currently highlighted zip
 
   // Track highlighted zip codes (teal - individual child click)
   const childHighlightedRef = useRef(new Set());
@@ -662,6 +981,33 @@ const MapboxMap = forwardRef(function MapboxMap({
     });
     return lookup;
   }, [zipCodes]);
+
+  // Distress data lookup: zip_code -> full distress record (for popup table)
+  const distressDataLookup = useMemo(() => {
+    const lookup = {};
+    if (!distressData) return lookup;
+    distressData.forEach((d) => {
+      if (d.zip_code) {
+        lookup[d.zip_code] = d;
+      }
+    });
+    return lookup;
+  }, [distressData]);
+
+  // Houston metro medians computed from distress_data (for comparison column)
+  const houstonMedians = useMemo(() => computeHoustonMedians(distressData), [distressData]);
+
+  // Percentile lookup: zip_code -> percentile (for 5-band map coloring)
+  const percentileLookup = useMemo(() => {
+    const lookup = {};
+    if (!distressData) return lookup;
+    distressData.forEach((d) => {
+      if (d.zip_code && d.percentile != null) {
+        lookup[d.zip_code] = Number(d.percentile) || 0;
+      }
+    });
+    return lookup;
+  }, [distressData]);
 
   // Dynamic thresholds for working_poor and population (25th/75th percentile)
   const metricThresholds = useMemo(() => {
@@ -847,13 +1193,14 @@ const MapboxMap = forwardRef(function MapboxMap({
             ...f.properties,
             density: servedZips.has(f.properties.ZCTA5CE20) ? 1 : 0,
             distress_score: distressLookup[f.properties.ZCTA5CE20] || 0,
+            percentile: percentileLookup[f.properties.ZCTA5CE20] || 0,
             working_poor: workingPoorLookup[f.properties.ZCTA5CE20] ?? 0,
             population: populationLookup[f.properties.ZCTA5CE20] || 0,
           },
         })),
     };
     return filtered;
-  }, [allGeoJsonData, boundaryZips, parentCoverage, distressLookup, workingPoorLookup, populationLookup]);
+  }, [allGeoJsonData, boundaryZips, parentCoverage, distressLookup, percentileLookup, workingPoorLookup, populationLookup]);
 
   // Zip code -> feature id lookup
   const zipToFeatureId = useMemo(() => {
@@ -982,9 +1329,29 @@ const MapboxMap = forwardRef(function MapboxMap({
     [highlightChildZips, boundaryZips]
   );
 
-  // Handle clicking empty map area
-  const handleMapClick = useCallback(() => {
-    // In density mode, only clear the child highlight, keep density
+  // Handle clicking map area
+  const handleMapClick = useCallback((e) => {
+    // In distress base view, clicking a zip boundary opens the distress data table
+    if (isBaseView && displayMetric === "distress") {
+      const map = mapRef.current?.getMap();
+      if (map && map.getLayer("unified-fill")) {
+        const features = map.queryRenderedFeatures(e.point, {
+          layers: ["unified-fill"],
+        });
+        if (features.length > 0) {
+          const clickedZip = features[0].properties.ZCTA5CE20;
+          if (clickedZip && distressDataLookup[clickedZip]) {
+            setDistressTableZip(clickedZip);
+            return; // Don't clear other state
+          }
+        }
+      }
+      // Clicked outside any zip boundary - close the table
+      setDistressTableZip(null);
+      return;
+    }
+
+    // Filter view: clear child highlights and info box
     clearChildHighlights();
     setInfoBoxData(null);
     setSelectedOrgKey(null);
@@ -992,7 +1359,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     if (zipCode) {
       setBaseHighlight(zipCode);
     }
-  }, [clearChildHighlights, zipCode, setBaseHighlight]);
+  }, [clearChildHighlights, zipCode, setBaseHighlight, isBaseView, displayMetric, distressDataLookup]);
 
   // Handle boundary hover
   const handleMouseMove = useCallback((e) => {
@@ -1032,7 +1399,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     hoveredFeatureRef.current = null;
   }, []);
 
-  // Close info box - clear pin highlights but restore base zip highlight
+  // Close info box - clear pin highlights but restore base/county highlights
   const handleInfoBoxClose = useCallback(() => {
     setInfoBoxData(null);
     setSelectedOrgKey(null);
@@ -1050,6 +1417,40 @@ const MapboxMap = forwardRef(function MapboxMap({
     clearChildHighlights();
     clearBaseHighlight();
   }, [assistanceType, county, zipCode, parentOrg, organization, clearChildHighlights, clearBaseHighlight]);
+
+  // Close distress data table when leaving distress base view
+  useEffect(() => {
+    if (!isBaseView || displayMetric !== "distress") {
+      setDistressTableZip(null);
+    }
+  }, [isBaseView, displayMetric]);
+
+  // Sync distress-selected visual highlight with distressTableZip
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !map.getSource("zip-boundaries")) return;
+
+    // Clear previous selection
+    if (distressSelectedRef.current !== null) {
+      map.setFeatureState(
+        { source: "zip-boundaries", id: distressSelectedRef.current },
+        { distressSelected: false }
+      );
+      distressSelectedRef.current = null;
+    }
+
+    // Set new selection
+    if (distressTableZip) {
+      const featureId = zipToFeatureId[distressTableZip];
+      if (featureId !== undefined) {
+        map.setFeatureState(
+          { source: "zip-boundaries", id: featureId },
+          { distressSelected: true }
+        );
+        distressSelectedRef.current = featureId;
+      }
+    }
+  }, [distressTableZip, zipToFeatureId]);
 
   // Hide info box when entering base view, restore when returning to filter view
   useEffect(() => {
@@ -1436,47 +1837,56 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.font = "500 11px Lexend, sans-serif";
     ctx.fillStyle = "#444444";
     const labels = {
-      distress: "Distress score",
+      distress: "Distress Percentile",
       working_poor: "Working Poor Index",
       population: "Population",
     };
-    ctx.fillText(labels[mode] || "Distress score", x + pad, cy);
+    ctx.fillText(labels[mode] || "Distress Percentile", x + pad, cy);
     cy += 16;
 
     // Color bars
     const barW = w - pad * 2;
     const barH = 10;
     const colors = {
-      distress: ["rgba(76, 175, 80, 0.45)", "rgba(255, 193, 7, 0.45)", "rgba(220, 50, 50, 0.50)"],
+      distress: ["rgba(46, 125, 50, 0.45)", "rgba(76, 175, 80, 0.40)", "rgba(255, 193, 7, 0.40)", "rgba(245, 124, 0, 0.45)", "rgba(220, 50, 50, 0.50)"],
       working_poor: ["rgba(139, 0, 0, 0.55)", "rgba(220, 80, 80, 0.45)", "rgba(255, 180, 180, 0.45)"],
       population: ["rgba(200, 170, 230, 0.45)", "rgba(128, 60, 170, 0.50)", "rgba(75, 0, 130, 0.55)"],
     };
     const c = colors[mode] || colors.distress;
-    const widths = mode === "distress" ? [barW * 0.25, barW * 0.5, barW * 0.25] : [barW / 3, barW / 3, barW / 3];
+    const segmentW = barW / c.length;
 
     let bx = x + pad;
-    c.forEach((color, i) => {
+    c.forEach((color) => {
       ctx.fillStyle = color;
-      ctx.fillRect(bx, cy, widths[i], barH);
-      bx += widths[i];
+      ctx.fillRect(bx, cy, segmentW, barH);
+      bx += segmentW;
     });
     cy += barH + 4;
 
     // Scale labels
-    ctx.font = "400 10px Lexend, sans-serif";
+    ctx.font = "400 9px Lexend, sans-serif";
     ctx.fillStyle = "#666666";
-    const scaleLabels = {
-      distress: ["Low", "Mid", "High"],
-      working_poor: ["Worse", "Mid", "Better"],
-      population: ["Low", "Mid", "High"],
-    };
-    const sl = scaleLabels[mode] || scaleLabels.distress;
-    ctx.textAlign = "left";
-    ctx.fillText(sl[0], x + pad, cy);
-    ctx.textAlign = "center";
-    ctx.fillText(sl[1], x + w / 2, cy);
-    ctx.textAlign = "right";
-    ctx.fillText(sl[2], x + w - pad, cy);
+    if (mode === "distress") {
+      // 5-band: labels at 0, 20, 40, 60, 80, 100
+      const scaleValues = ["0", "20", "40", "60", "80", "100"];
+      scaleValues.forEach((val, i) => {
+        const lx = x + pad + (barW * i / 5);
+        ctx.textAlign = i === 0 ? "left" : i === 5 ? "right" : "center";
+        ctx.fillText(val, lx, cy);
+      });
+    } else {
+      const scaleLabels = {
+        working_poor: ["Worse", "Mid", "Better"],
+        population: ["Low", "Mid", "High"],
+      };
+      const sl = scaleLabels[mode] || ["Low", "Mid", "High"];
+      ctx.textAlign = "left";
+      ctx.fillText(sl[0], x + pad, cy);
+      ctx.textAlign = "center";
+      ctx.fillText(sl[1], x + w / 2, cy);
+      ctx.textAlign = "right";
+      ctx.fillText(sl[2], x + w - pad, cy);
+    }
     ctx.textAlign = "left"; // reset
 
     return cy + 14; // return new y position
@@ -1485,9 +1895,9 @@ const MapboxMap = forwardRef(function MapboxMap({
   // Draw base legend on canvas (standalone metric bar in bottom-left, no filters applied)
   const drawBaseLegendOnCanvas = (ctx, containerEl, mode) => {
     const { height } = containerEl.getBoundingClientRect();
-    const w = 200;
+    const w = 220;
     const pad = 12;
-    const boxH = 70;
+    const boxH = 75;
     const x = 16;
     const y = height - boxH - 24;
 
@@ -1497,49 +1907,57 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.fill();
 
     // Draw the metric bar inside the box (skip the divider by starting below top padding)
-    const labels = { distress: "Distress score", working_poor: "Working Poor Index", population: "Population" };
+    const labels = { distress: "Distress Percentile", working_poor: "Working Poor Index", population: "Population" };
     let cy = y + 10;
     ctx.font = "500 11px Lexend, sans-serif";
     ctx.fillStyle = "#444444";
     ctx.textBaseline = "top";
     ctx.textAlign = "left";
-    ctx.fillText(labels[mode] || "Distress score", x + pad, cy);
+    ctx.fillText(labels[mode] || "Distress Percentile", x + pad, cy);
     cy += 16;
 
     // Color bars
     const barW = w - pad * 2;
     const barH = 10;
     const colors = {
-      distress: ["rgba(76, 175, 80, 0.45)", "rgba(255, 193, 7, 0.45)", "rgba(220, 50, 50, 0.50)"],
+      distress: ["rgba(46, 125, 50, 0.45)", "rgba(76, 175, 80, 0.40)", "rgba(255, 193, 7, 0.40)", "rgba(245, 124, 0, 0.45)", "rgba(220, 50, 50, 0.50)"],
       working_poor: ["rgba(139, 0, 0, 0.55)", "rgba(220, 80, 80, 0.45)", "rgba(255, 180, 180, 0.45)"],
       population: ["rgba(200, 170, 230, 0.45)", "rgba(128, 60, 170, 0.50)", "rgba(75, 0, 130, 0.55)"],
     };
     const c = colors[mode] || colors.distress;
-    const widths = mode === "distress" ? [barW * 0.25, barW * 0.5, barW * 0.25] : [barW / 3, barW / 3, barW / 3];
+    const segmentW = barW / c.length;
     let bx = x + pad;
-    c.forEach((color, i) => {
+    c.forEach((color) => {
       ctx.fillStyle = color;
-      ctx.fillRect(bx, cy, widths[i], barH);
-      bx += widths[i];
+      ctx.fillRect(bx, cy, segmentW, barH);
+      bx += segmentW;
     });
     cy += barH + 4;
 
     // Scale labels
-    ctx.font = "400 10px Lexend, sans-serif";
+    ctx.font = "400 9px Lexend, sans-serif";
     ctx.fillStyle = "#666666";
-    const scaleLabels = {
-      distress: ["Low", "Mid", "High"],
-      working_poor: ["Worse", "Mid", "Better"],
-      population: ["Low", "Mid", "High"],
-    };
-    const sl = scaleLabels[mode] || scaleLabels.distress;
-    ctx.textAlign = "left";
-    ctx.fillText(sl[0], x + pad, cy);
-    ctx.textAlign = "center";
-    ctx.fillText(sl[1], x + w / 2, cy);
-    ctx.textAlign = "right";
-    ctx.fillText(sl[2], x + w - pad, cy);
-    ctx.textAlign = "left";
+    if (mode === "distress") {
+      const scaleValues = ["0", "20", "40", "60", "80", "100"];
+      scaleValues.forEach((val, i) => {
+        const lx = x + pad + (barW * i / 5);
+        ctx.textAlign = i === 0 ? "left" : i === 5 ? "right" : "center";
+        ctx.fillText(val, lx, cy);
+      });
+    } else {
+      const scaleLabels = {
+        working_poor: ["Worse", "Mid", "Better"],
+        population: ["Low", "Mid", "High"],
+      };
+      const sl = scaleLabels[mode] || ["Low", "Mid", "High"];
+      ctx.textAlign = "left";
+      ctx.fillText(sl[0], x + pad, cy);
+      ctx.textAlign = "center";
+      ctx.fillText(sl[1], x + w / 2, cy);
+      ctx.textAlign = "right";
+      ctx.fillText(sl[2], x + w - pad, cy);
+    }
+    ctx.textAlign = "left"; // reset
   };
 
   // Draw a map pin directly on canvas at given pixel position
@@ -1918,7 +2336,19 @@ const MapboxMap = forwardRef(function MapboxMap({
       )}
 
       {/* Draggable info box - only in filter view */}
+      {/* Draggable info box - only in filter view */}
       {!isBaseView && <DraggableInfoBox info={infoBoxData} onClose={handleInfoBoxClose} />}
+
+      {/* Draggable distress data table - only in distress base view */}
+      {isBaseView && displayMetric === "distress" && distressTableZip && (
+        <DraggableDistressTable
+          data={distressDataLookup[distressTableZip]}
+          zipCode={distressTableZip}
+          neighborhood={zipCodes?.find(z => z.zip_code === distressTableZip)?.neighborhood || ""}
+          houstonMedians={houstonMedians}
+          onClose={() => setDistressTableZip(null)}
+        />
+      )}
 
       {/* Base view: always show clean metric legend */}
       {isBaseView && <BaseLegend viewMode={displayMetric} />}

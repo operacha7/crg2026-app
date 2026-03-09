@@ -34,6 +34,10 @@ const ACS_DATASET = `${ACS_YEAR}/acs/acs5/profile`;
 // Census API base URL
 const CENSUS_BASE = "https://api.census.gov/data";
 
+// Data source citation - referenced by MapboxMap distress data table
+// Keep this in sync with the CENSUS_SOURCE constant in MapboxMap.js
+const DATA_SOURCE = "U.S. Census Bureau, ACS 2019–2023 5-Year Estimates";
+
 // Output path
 const CSV_OUTPUT = path.resolve(__dirname, "../public/data/census-data.csv");
 

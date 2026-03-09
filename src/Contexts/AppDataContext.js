@@ -93,6 +93,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
   const [zipCodes, setZipCodes] = useState([]);
   const [organizations, setOrganizations] = useState([]); // Derived from directory for NavBar2 dropdowns
   const [orgAssistanceMap, setOrgAssistanceMap] = useState({}); // org name → assist_ids array
+  const [distressData, setDistressData] = useState([]); // Census socioeconomic indicators by zip
 
   // Loading state
   const [loading, setLoading] = useState(true);
@@ -164,10 +165,12 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
           directoryData,
           assistanceData,
           zipCodesData,
+          distressDataResult,
         ] = await Promise.all([
           dataService.getDirectory(),
           dataService.getAssistance(),
           dataService.getZipCodes(),
+          dataService.getDistressData(),
         ]);
 
         if (!mounted) return;
@@ -186,11 +189,12 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
         setZipCodes(zipCodesData);
         setOrganizations(orgsList);
         setOrgAssistanceMap(assistanceMap);
+        setDistressData(distressDataResult);
         setLoading(false);
 
         const loadTime = Math.round(performance.now() - startTime);
         console.log(`✅ AppDataContext: Data loaded in ${loadTime}ms`);
-        console.log(`   directory: ${directoryData.length}, assistance: ${assistanceData.length}, zipCodes: ${zipCodesData.length}, organizations: ${orgsList.length}, orgAssistanceMap: ${Object.keys(assistanceMap).length} orgs`);
+        console.log(`   directory: ${directoryData.length}, assistance: ${assistanceData.length}, zipCodes: ${zipCodesData.length}, organizations: ${orgsList.length}, orgAssistanceMap: ${Object.keys(assistanceMap).length} orgs, distressData: ${distressDataResult.length}`);
 
         // Debug: Log sample data to verify field formats
         if (mappedDirectory.length > 0) {
@@ -249,6 +253,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
     zipCodes,
     organizations, // Derived from directory for NavBar2 dropdowns
     orgAssistanceMap, // org name → array of assist_ids (for Assistance column icons)
+    distressData, // Census socioeconomic indicators by zip (from distress_data table)
 
     // Auth
     loggedInUser, // Passed from App level for logging

@@ -13,10 +13,34 @@ const TABLES = [
   { sheetName: 'organizations', supabaseTable: 'organizations' },
   { sheetName: 'registered_organizations', supabaseTable: 'registered_organizations' },
   { sheetName: 'announcements', supabaseTable: 'announcements', transform: transformAnnouncement },
+  { sheetName: 'distress_data', supabaseTable: 'distress_data', transform: transformDistressData },
 ];
 
 // Columns that contain JSON data and should be parsed before inserting
 const JSON_COLUMNS = ['org_hours'];
+
+// Transform function for distress_data
+// Converts spreadsheet string values to proper numeric types for Supabase
+// Dynamically handles all columns - no need to update when columns are added/renamed
+const DISTRESS_TEXT_COLUMNS = ['zip_code'];
+function transformDistressData(row) {
+  const result = {};
+  for (const [key, value] of Object.entries(row)) {
+    if (DISTRESS_TEXT_COLUMNS.includes(key)) {
+      result[key] = value || null;
+    } else {
+      result[key] = parseNumericOrNull(value);
+    }
+  }
+  return result;
+}
+
+// Parse a value as a number (int or float), returning null if not numeric
+function parseNumericOrNull(val) {
+  if (val === null || val === undefined || val === '') return null;
+  const parsed = Number(val);
+  return isNaN(parsed) ? null : parsed;
+}
 
 // Transform function for announcements
 // Converts format_1/para_1, format_2/para_2, etc. into a single message_html field
@@ -290,6 +314,7 @@ async function logSyncResults(syncCounts) {
     organizations_count: syncCounts.organizations,
     registered_organizations_count: syncCounts.registered_organizations,
     announcements_count: syncCounts.announcements,
+    distress_data_count: syncCounts.distress_data,
   };
 
   const { error } = await supabase
