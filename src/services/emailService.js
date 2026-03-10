@@ -239,8 +239,46 @@ export function formatPdfResourcesHtml(selectedData, includeAssistanceHeaders = 
 }
 
 /**
+ * Translate HTML content to target language via Google Cloud Translation API
+ * Falls back to original content if translation fails
+ *
+ * @param {string} htmlBody - HTML content to translate
+ * @param {string} subject - Email subject line (plain text)
+ * @param {string} language - Target language code ("en", "es", etc.)
+ * @returns {Promise<{htmlBody: string, subject: string}>}
+ */
+async function translateHtml(htmlBody, subject, language) {
+  if (!language || language === "en") {
+    return { htmlBody, subject };
+  }
+
+  const translateUrl =
+    window.location.hostname === "localhost"
+      ? "http://localhost:8788/translate"
+      : "/translate";
+
+  const res = await fetch(translateUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      htmlBody,
+      subject,
+      targetLanguage: language,
+    }),
+  });
+
+  const result = await res.json();
+  if (!result.success) {
+    throw new Error(result.message || "Translation failed");
+  }
+
+  return { htmlBody: result.htmlBody, subject: result.subject };
+}
+
+/**
  * Send email with selected resources
  * Uses React Email for template rendering
+ * Supports translation to other languages (e.g., Spanish)
  */
 export async function sendEmail({
   recipient,
@@ -248,6 +286,7 @@ export async function sendEmail({
   searchContext,
   loggedInUser,
   orgPhone,
+  language = "en",
   // Legacy prop - still supported for backwards compatibility
   selectedZip,
 }) {
@@ -265,10 +304,23 @@ export async function sendEmail({
     })
   );
 
+  // Translate if language is not English (falls back to English on error)
+  let finalHtml = emailHtml;
+  let finalSubject = "Resources & Support Information";
+  if (language && language !== "en") {
+    try {
+      const translated = await translateHtml(emailHtml, finalSubject, language);
+      finalHtml = translated.htmlBody;
+      finalSubject = translated.subject;
+    } catch (err) {
+      console.error("Translation failed, sending in English:", err);
+    }
+  }
+
   const payload = {
     recipient,
-    subject: "Resources & Support Information",
-    htmlBody: emailHtml,
+    subject: finalSubject,
+    htmlBody: finalHtml,
     organization: loggedInUser?.reg_organization,
     headers: {
       "X-Entity-Ref-ID": "logo-signature",
@@ -303,6 +355,7 @@ export async function createPdf({
   selectedData,
   searchContext,
   loggedInUser,
+  language = "en",
   // Legacy prop - still supported for backwards compatibility
   selectedZip,
 }) {
@@ -366,12 +419,23 @@ ${htmlContent}
 
   const filename = `CRG - ${selectionText} - ${getCurrentDate()}.pdf`;
 
+  // Translate PDF HTML if language is not English (falls back to English on error)
+  let finalPdfHtml = pdfHtml;
+  if (language && language !== "en") {
+    try {
+      const translated = await translateHtml(pdfHtml, "", language);
+      finalPdfHtml = translated.htmlBody;
+    } catch (err) {
+      console.error("PDF translation failed, creating in English:", err);
+    }
+  }
+
   // PDF footer (repeats on every page) - must start with "<" (PDFShift requirement)
   // Note: Header is only on page 1 (in body HTML) - PDFShift repeating headers don't render Base64 images correctly
   const pdfFooter = `<div style="width: 100%; padding: 10px 0.75in 0 0.75in; font-family: Arial, sans-serif; box-sizing: border-box;"><div style="text-align: right; font-size: 11px; font-style: italic; color: #666;">Page {{page}} of {{total}}</div></div>`;
 
   const pdfPayload = {
-    htmlBody: pdfHtml,
+    htmlBody: finalPdfHtml,
     filename,
     organization: loggedInUser?.reg_organization,
     footer: {

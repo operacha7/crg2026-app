@@ -45,7 +45,10 @@ export default function EmailPanel({
   // Track which view to show: "warning" or "input"
   const [currentView, setCurrentView] = useState("input");
   const [recipient, setRecipient] = useState("");
-  const [previewHtml, setPreviewHtml] = useState("");
+  const [language, setLanguage] = useState("en");
+  const [previewHtml, setPreviewHtml] = useState(""); // English preview (base)
+  const [displayPreviewHtml, setDisplayPreviewHtml] = useState(""); // What's shown (English or translated)
+  const [isTranslatingPreview, setIsTranslatingPreview] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
   // Generate email preview HTML when panel opens (email mode only)
@@ -61,6 +64,7 @@ export default function EmailPanel({
             })
           );
           setPreviewHtml(html);
+          setDisplayPreviewHtml(html);
         } catch (err) {
           console.error("Error generating email preview:", err);
           setPreviewHtml("");
@@ -70,10 +74,58 @@ export default function EmailPanel({
     }
   }, [isOpen, isPdfMode, selectedData, headerText, orgPhone]);
 
+  // Translate preview when language changes
+  useEffect(() => {
+    if (!previewHtml || isPdfMode) return;
+
+    // If English, just show the original
+    if (language === "en") {
+      setDisplayPreviewHtml(previewHtml);
+      return;
+    }
+
+    // Translate the preview HTML
+    let cancelled = false;
+    const translatePreview = async () => {
+      setIsTranslatingPreview(true);
+      try {
+        const translateUrl =
+          window.location.hostname === "localhost"
+            ? "http://localhost:8788/translate"
+            : "/translate";
+
+        const res = await fetch(translateUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            htmlBody: previewHtml,
+            subject: "",
+            targetLanguage: language,
+          }),
+        });
+
+        const result = await res.json();
+        if (!cancelled && result.success) {
+          setDisplayPreviewHtml(result.htmlBody);
+        }
+      } catch (err) {
+        console.error("Preview translation failed:", err);
+        // Fall back to English preview
+        if (!cancelled) setDisplayPreviewHtml(previewHtml);
+      } finally {
+        if (!cancelled) setIsTranslatingPreview(false);
+      }
+    };
+
+    translatePreview();
+    return () => { cancelled = true; };
+  }, [language, previewHtml, isPdfMode]);
+
   // Reset state when panel opens
   useEffect(() => {
     if (isOpen) {
       setRecipient("");
+      setLanguage("en");
       setShowPreview(false);
       // Show warning first if there are inactive resources
       setCurrentView(hasInactiveResources ? "warning" : "input");
@@ -90,9 +142,9 @@ export default function EmailPanel({
     onCancel();
   };
 
-  // Handle OK/Send
+  // Handle OK/Send - pass language along with recipient
   const handleSend = () => {
-    onSend(recipient);
+    onSend(recipient, language);
   };
 
   if (!isOpen) return null;
@@ -222,6 +274,38 @@ export default function EmailPanel({
       okDisabled={!isPdfMode && !recipient}
     >
       <div className="flex flex-col gap-4">
+        {/* Language selector - visible in both email and PDF modes */}
+        <div className="flex items-center gap-3">
+          <label
+            className="font-opensans"
+            style={{
+              color: "#FFFFFF",
+              fontSize: "14px",
+              fontWeight: "500",
+            }}
+          >
+            Language:
+          </label>
+          <select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            className="font-opensans"
+            style={{
+              backgroundColor: "#005C72",
+              color: "#FFFFFF",
+              padding: "8px 12px",
+              borderRadius: "4px",
+              fontSize: "14px",
+              fontWeight: "500",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            <option value="en">English</option>
+            <option value="es">Español</option>
+          </select>
+        </div>
+
         {/* Email input - only for email mode */}
         {!isPdfMode && (
           <>
@@ -270,10 +354,31 @@ export default function EmailPanel({
                   borderRadius: "var(--radius-panel-btn)",
                   overflow: "hidden",
                   maxHeight: "400px",
+                  position: "relative",
                 }}
               >
+                {isTranslatingPreview && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: "rgba(255,255,255,0.8)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      zIndex: 10,
+                    }}
+                  >
+                    <span className="font-opensans" style={{ fontSize: "14px", color: "#333" }}>
+                      Translating...
+                    </span>
+                  </div>
+                )}
                 <iframe
-                  srcDoc={previewHtml}
+                  srcDoc={displayPreviewHtml}
                   title="Email Preview"
                   style={{
                     width: "100%",

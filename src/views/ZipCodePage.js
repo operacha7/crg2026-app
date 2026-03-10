@@ -354,7 +354,7 @@ export default function ZipCodePage({
   });
 
   // Email success handler - called from NavBar1 panel
-  const handleEmailSuccess = async (recipient) => {
+  const handleEmailSuccess = async (recipient, language) => {
     const dataToSend = selectedRows?.map((i) => displayDirectory[i]).filter(Boolean);
 
     // Send the email using the service
@@ -364,6 +364,7 @@ export default function ZipCodePage({
       searchContext: buildSearchContext(),
       loggedInUser,
       orgPhone,
+      language,
     });
 
     // Reset selections and show toast
@@ -375,7 +376,7 @@ export default function ZipCodePage({
   };
 
   // PDF success handler - called from NavBar1 panel
-  const handlePdfSuccess = async () => {
+  const handlePdfSuccess = async (language) => {
     const dataToSend = selectedRows?.map((i) => displayDirectory[i]).filter(Boolean);
 
     // Create the PDF using the service
@@ -384,6 +385,7 @@ export default function ZipCodePage({
       searchContext: buildSearchContext(),
       loggedInUser,
       orgPhone,
+      language,
     });
 
     // Reset selections and show toast
