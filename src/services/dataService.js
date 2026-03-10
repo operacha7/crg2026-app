@@ -164,6 +164,20 @@ export const dataService = {
     return data;
   },
 
+  // ======= WORKING POOR DATA (census working poor indicators by zip) =======
+  async getWorkingPoorData() {
+    const { data, error } = await supabase
+      .from('working_poor_data')
+      .select('*')
+      .order('zip_code', { ascending: true });
+
+    if (error) {
+      console.error("Error fetching working poor data:", error);
+      return [];
+    }
+    return data;
+  },
+
   // ======= REGISTERED ORGANIZATIONS (auth - implement last) =======
   async getRegisteredOrganizations() {
     const { data, error } = await supabase

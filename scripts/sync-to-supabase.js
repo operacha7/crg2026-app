@@ -14,6 +14,7 @@ const TABLES = [
   { sheetName: 'registered_organizations', supabaseTable: 'registered_organizations' },
   { sheetName: 'announcements', supabaseTable: 'announcements', transform: transformAnnouncement },
   { sheetName: 'distress_data', supabaseTable: 'distress_data', transform: transformDistressData },
+  { sheetName: 'working_poor_data', supabaseTable: 'working_poor_data', transform: transformWorkingPoorData },
 ];
 
 // Columns that contain JSON data and should be parsed before inserting
@@ -27,6 +28,21 @@ function transformDistressData(row) {
   const result = {};
   for (const [key, value] of Object.entries(row)) {
     if (DISTRESS_TEXT_COLUMNS.includes(key)) {
+      result[key] = value || null;
+    } else {
+      result[key] = parseNumericOrNull(value);
+    }
+  }
+  return result;
+}
+
+// Transform function for working_poor_data
+// Same pattern as distress_data: zip_code is text, all other columns are numeric
+const WORKING_POOR_TEXT_COLUMNS = ['zip_code'];
+function transformWorkingPoorData(row) {
+  const result = {};
+  for (const [key, value] of Object.entries(row)) {
+    if (WORKING_POOR_TEXT_COLUMNS.includes(key)) {
       result[key] = value || null;
     } else {
       result[key] = parseNumericOrNull(value);
@@ -315,6 +331,7 @@ async function logSyncResults(syncCounts) {
     registered_organizations_count: syncCounts.registered_organizations,
     announcements_count: syncCounts.announcements,
     distress_data_count: syncCounts.distress_data,
+    working_poor_data_count: syncCounts.working_poor_data,
   };
 
   const { error } = await supabase
