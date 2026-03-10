@@ -322,6 +322,7 @@ src/
 ### Cloudflare Functions
 - `functions/sendEmail.js` - Resend integration for email delivery
 - `functions/createPdf.js` - PDFShift integration for PDF generation
+- `functions/translate.js` - Google Cloud Translation API v2 for email/PDF translation
 - `functions/help.js` - LLM help assistant (Anthropic Claude API)
 - `functions/geocode.js` - Geocodio API for address geocoding
 - `functions/distance.js` - Google Distance Matrix API for driving distances
@@ -628,10 +629,11 @@ All design values defined as CSS custom properties, referenced by Tailwind confi
 - **Email Templates:** React Email components (`src/emails/`)
 - **Email Service:** Resend API via Cloudflare Function (`functions/sendEmail.js`)
 - **PDF Service:** PDFShift API via Cloudflare Function (`functions/createPdf.js`)
+- **Translation Service:** Google Cloud Translation API v2 via Cloudflare Function (`functions/translate.js`)
 - **From Address:** `info@crghouston.operacha.org` (configured in Resend)
 - **Email Service Module:** `src/services/emailService.js` - Centralized email/PDF logic
 - **UI Components:**
-  - `src/components/EmailPanel.js` - Dropdown panel UI for email/PDF entry with preview
+  - `src/components/EmailPanel.js` - Dropdown panel UI for email/PDF entry with preview and language selector
   - `src/components/DropPanel.js` - Reusable dropdown panel component (shared styling)
 
 ### React Email Integration (January 2026)
@@ -840,9 +842,55 @@ PDFSHIFT_API_KEY=xxx
 GEOCODIO_API_KEY=xxx
 ANTHROPIC_API_KEY=xxx
 GOOGLE_MAPS_API_KEY=xxx
+GOOGLE_TRANSLATE_API_KEY=xxx
 ```
 
 **Production:** Cloudflare dashboard → Pages → Settings → Environment variables
+
+### Translation System (March 2026)
+
+The email and PDF system supports translation to Spanish (and other languages) using Google Cloud Translation API v2. Translation happens as a post-processing step — HTML content is assembled in English first, then translated with HTML tag preservation before sending.
+
+**How it works:**
+1. User selects "Español" from language dropdown in EmailPanel (visible in both email and PDF modes)
+2. For email: preview translates live when language changes (with "Translating..." overlay)
+3. On send/create: `emailService.js` calls `translateHtml()` which sends assembled HTML to `/translate` Cloudflare Function
+4. Cloudflare Function calls Google Cloud Translation API v2 with `format=html` (preserves all HTML tags)
+5. Translated HTML is used for the email body / PDF content
+6. Email subject line is also translated; PDF filename stays English (filesystem compatibility)
+7. If translation fails for any reason, the email/PDF is sent in English (graceful fallback)
+
+**Language selector UI:**
+- Dropdown with "English" / "Español" options
+- Styled with teal background (`#005C72`) matching other dropdowns
+- Visible in both email and PDF panel modes
+- Resets to English each time panel opens
+
+**Email preview translation:**
+- When language is switched to Español with preview open, the preview iframe updates to show translated content
+- Uses same `/translate` endpoint as send flow
+- "Translating..." overlay appears during translation
+- Falls back to English preview if translation fails
+- Switching back to English is instant (uses cached original HTML, no API call)
+
+**Data flow for language parameter:**
+`EmailPanel` (language state) → `onSend(recipient, language)` → `NavBar1` (passes through) → `ZipCodePage` handler → `emailService.sendEmail/createPdf({ language })`
+
+**Key files:**
+- `functions/translate.js` - Cloudflare Function calling Google Cloud Translation API v2
+- `src/components/EmailPanel.js` - Language dropdown + translated preview
+- `src/services/emailService.js` - `translateHtml()` helper, used by both `sendEmail()` and `createPdf()`
+
+**Google Cloud Translation API v2:**
+- Pricing: $20 per million characters (first 500,000 chars/month free)
+- Quota: Set to 50,000 characters/day in Google Cloud Console (adjustable)
+- When quota is exceeded, translation fails gracefully and content is sent in English
+- API key restricted to Cloud Translation API only
+- Environment variable: `GOOGLE_TRANSLATE_API_KEY` in `.dev.vars` and Cloudflare
+- Google Cloud Console: APIs & Services → Cloud Translation API → Quotas & System Limits
+
+**Adding more languages:**
+To add another language, add an `<option>` to the language `<select>` in `EmailPanel.js` with the Google Translate language code (e.g., `fr` for French, `zh` for Chinese). No other code changes needed — the translation function and Cloudflare Function are language-agnostic.
 
 ## Toast Notifications
 

@@ -1668,6 +1668,160 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.fillText(" (highlighted on map)", x + pad + tw, cy);
   };
 
+  // Draw distress data table on canvas (for base view zip code selection)
+  const drawDistressTableOnCanvas = (ctx, data, zipCode, neighborhood, medians, containerEl) => {
+    if (!data || !zipCode) return;
+    const el = containerEl.querySelector("[data-distress-table]");
+    if (!el) return;
+
+    const cRect = containerEl.getBoundingClientRect();
+    const eRect = el.getBoundingClientRect();
+    const x = eRect.left - cRect.left;
+    const y = eRect.top - cRect.top;
+    const w = eRect.width;
+    const h = eRect.height;
+    const pad = 14;
+
+    // Background
+    drawRoundedRect(ctx, x, y, w, h, 8, "rgba(34, 40, 49, 0.95)");
+    ctx.textBaseline = "top";
+
+    let cy = y + 10;
+
+    // Header: "Zip Code XXXXX"
+    ctx.font = "600 15px Lexend, sans-serif";
+    ctx.fillStyle = "#FFC857";
+    ctx.fillText(`Zip Code ${zipCode}`, x + pad, cy);
+    cy += 20;
+
+    // Neighborhood (if present)
+    if (neighborhood) {
+      ctx.font = "400 10px Lexend, sans-serif";
+      ctx.fillStyle = "#8FB6FF";
+      ctx.fillText(truncateText(ctx, neighborhood, w - pad * 2), x + pad, cy);
+      cy += 14;
+    }
+
+    // Header divider
+    ctx.strokeStyle = "rgba(255,255,255,0.1)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + pad, cy);
+    ctx.lineTo(x + w - pad, cy);
+    ctx.stroke();
+    cy += 8;
+
+    // Column headers
+    const valColW = 72;
+    const valCol1X = x + w - pad - valColW * 2;  // Zip value column
+    const valCol2X = x + w - pad - valColW;       // Houston value column
+
+    ctx.font = "600 9px Lexend, sans-serif";
+    ctx.fillStyle = "#FFFFFF";
+    ctx.textAlign = "right";
+    ctx.fillText("Zip", valCol1X + valColW, cy);
+    ctx.fillStyle = "#8FB6FF";
+    ctx.fillText("Houston*", valCol2X + valColW, cy);
+    ctx.textAlign = "left";
+    cy += 14;
+
+    // Divider after column headers
+    ctx.strokeStyle = "rgba(255,255,255,0.12)";
+    ctx.beginPath();
+    ctx.moveTo(x + pad, cy);
+    ctx.lineTo(x + w - pad, cy);
+    ctx.stroke();
+    cy += 6;
+
+    // Data rows
+    DISTRESS_FIELDS.forEach(({ key, label, format, highlight, showMedian, medianFormat }) => {
+      const isTxRef = key === "income_ratio_tx";
+
+      // TX median reference line before income_ratio_tx
+      if (isTxRef) {
+        ctx.strokeStyle = "rgba(255,255,255,0.06)";
+        ctx.beginPath();
+        ctx.moveTo(x + pad, cy);
+        ctx.lineTo(x + w - pad, cy);
+        ctx.stroke();
+        cy += 4;
+
+        ctx.font = "italic 11px Lexend, sans-serif";
+        ctx.fillStyle = "#999999";
+        ctx.textAlign = "left";
+        ctx.fillText("TX Median Household Income", x + pad, cy);
+        ctx.textAlign = "right";
+        ctx.font = "500 12px Lexend, sans-serif";
+        ctx.fillText(`$${TX_MEDIAN_HOUSEHOLD_INCOME.toLocaleString()}`, valCol1X + valColW, cy);
+        ctx.textAlign = "left";
+        cy += 16;
+      }
+
+      // Row with highlight styling for distress percentile
+      const rowPadY = highlight ? 6 : 3;
+      cy += rowPadY;
+
+      // Label
+      ctx.font = highlight ? "600 12px Lexend, sans-serif" : "400 11px Lexend, sans-serif";
+      ctx.fillStyle = highlight ? "#FFC857" : "#CCCCCC";
+      ctx.textAlign = "left";
+      ctx.fillText(label, x + pad, cy);
+
+      // Zip value (with distress band circle for highlight row)
+      ctx.textAlign = "right";
+      const formattedVal = format(data[key]);
+      if (highlight) {
+        // Draw distress band color circle
+        const circleX = valCol1X + valColW - ctx.measureText(formattedVal).width - 18;
+        ctx.fillStyle = getDistressBandColor(data.percentile);
+        ctx.beginPath();
+        ctx.arc(circleX, cy + 6, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.font = highlight ? "700 14px Lexend, sans-serif" : "500 12px Lexend, sans-serif";
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillText(formattedVal, valCol1X + valColW, cy);
+
+      // Houston median value
+      const medianVal = medians?.[key];
+      if (showMedian && medianVal != null) {
+        ctx.font = "400 11px Lexend, sans-serif";
+        ctx.fillStyle = "#8FB6FF";
+        const fmtMedian = medianFormat ? medianFormat(medianVal) : medianVal.toLocaleString();
+        ctx.fillText(fmtMedian, valCol2X + valColW, cy);
+      }
+
+      ctx.textAlign = "left";
+      cy += (highlight ? 14 : 12) + rowPadY;
+
+      // Bottom border for highlight row
+      if (highlight) {
+        ctx.strokeStyle = "rgba(255,255,255,0.1)";
+        ctx.beginPath();
+        ctx.moveTo(x + pad, cy);
+        ctx.lineTo(x + w - pad, cy);
+        ctx.stroke();
+        cy += 2;
+      }
+    });
+
+    // Source citation
+    cy += 4;
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.beginPath();
+    ctx.moveTo(x + pad, cy);
+    ctx.lineTo(x + w - pad, cy);
+    ctx.stroke();
+    cy += 8;
+
+    ctx.font = "italic 9px Lexend, sans-serif";
+    ctx.fillStyle = "#888888";
+    ctx.fillText(`Source: ${CENSUS_SOURCE}`, x + pad, cy);
+    cy += 12;
+    ctx.fillStyle = "#8FB6FF";
+    ctx.fillText("* Houston metro area median", x + pad, cy);
+  };
+
   // Draw a simple legend directly on canvas
   const drawSimpleLegendOnCanvas = (ctx, label, count, countyName, containerEl, mode) => {
     const el = containerEl.querySelector("[data-legend]");
@@ -2088,8 +2242,13 @@ const MapboxMap = forwardRef(function MapboxMap({
       ctx.textBaseline = "top";
       ctx.fillText(baseMapTitle, 20, 14);
 
-      // Step 4: Draw info box and legend directly on canvas (avoids dom-to-image border artifacts)
+      // Step 4: Draw info box / distress table and legend directly on canvas (avoids dom-to-image border artifacts)
       drawInfoBoxOnCanvas(ctx, infoBoxData, container);
+      if (isBaseView && distressTableZip) {
+        const distressRecord = distressDataLookup[distressTableZip];
+        const neighborhood = zipCodes?.find(z => z.zip_code === distressTableZip)?.neighborhood || "";
+        drawDistressTableOnCanvas(ctx, distressRecord, distressTableZip, neighborhood, houstonMedians, container);
+      }
 
       if (isDensityMode && parentCoverage.servedZips.size > 0) {
         drawParentCoverageLegendOnCanvas(ctx, assistanceLabel, parentOrg, orgPins.length, county, container, displayMetric);
@@ -2113,7 +2272,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     } finally {
       setIsDownloading(false);
     }
-  }, [isDownloading, assistanceLabel, hasAssistance, orgPins, selectedOrgKey, showOrgLabels, infoBoxData, isDensityMode, parentCoverage, parentOrg, county, displayMetric, isBaseView]);
+  }, [isDownloading, assistanceLabel, hasAssistance, orgPins, selectedOrgKey, showOrgLabels, infoBoxData, isDensityMode, parentCoverage, parentOrg, county, displayMetric, isBaseView, distressTableZip, distressDataLookup, houstonMedians, zipCodes]);
 
   // Expose download method to parent via ref
   useImperativeHandle(ref, () => ({
