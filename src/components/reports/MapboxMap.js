@@ -98,7 +98,7 @@ function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thr
     fillColorExpr.push(
       // Priority 1: Child teal (pin click)
       ["boolean", ["feature-state", "childHighlighted"], false],
-      "rgba(0, 253, 253, 0.50)",
+      "rgba(0, 253, 253, 0.40)",
       // Priority 2: Base zip highlight (zip code filter)
       ["boolean", ["feature-state", "highlighted"], false],
       "rgba(0, 253, 253, 0.50)",
