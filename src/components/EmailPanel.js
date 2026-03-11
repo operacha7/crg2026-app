@@ -50,6 +50,7 @@ export default function EmailPanel({
   const [displayPreviewHtml, setDisplayPreviewHtml] = useState(""); // What's shown (English or translated)
   const [isTranslatingPreview, setIsTranslatingPreview] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [translationError, setTranslationError] = useState("");
 
   // Generate email preview HTML when panel opens (email mode only)
   useEffect(() => {
@@ -81,8 +82,12 @@ export default function EmailPanel({
     // If English, just show the original
     if (language === "en") {
       setDisplayPreviewHtml(previewHtml);
+      setTranslationError("");
       return;
     }
+
+    // Clear previous translation error
+    setTranslationError("");
 
     // Translate the preview HTML
     let cancelled = false;
@@ -107,6 +112,9 @@ export default function EmailPanel({
         const result = await res.json();
         if (!cancelled && result.success) {
           setDisplayPreviewHtml(result.htmlBody);
+        } else if (!cancelled && result.code === "QUOTA_EXCEEDED") {
+          setDisplayPreviewHtml(previewHtml);
+          setTranslationError("Translation quota has been reached. Please contact the administrator. Content will be sent in English.");
         }
       } catch (err) {
         console.error("Preview translation failed:", err);
@@ -127,6 +135,7 @@ export default function EmailPanel({
       setRecipient("");
       setLanguage("en");
       setShowPreview(false);
+      setTranslationError("");
       // Show warning first if there are inactive resources
       setCurrentView(hasInactiveResources ? "warning" : "input");
     }
@@ -414,6 +423,20 @@ export default function EmailPanel({
             }}
           >
             {isPdfMode ? "Creating PDF..." : "Sending..."}
+          </p>
+        )}
+
+        {/* Translation quota error */}
+        {translationError && (
+          <p
+            className="font-opensans text-center"
+            style={{
+              color: "#FF6B6B",
+              fontSize: "14px",
+              marginBottom: "8px",
+            }}
+          >
+            {translationError}
           </p>
         )}
 

@@ -66,7 +66,21 @@ export async function onRequest({ request, env }) {
     const htmlData = await htmlResponse.json();
     if (!htmlResponse.ok || htmlData.error) {
       const errorMsg = htmlData.error?.message || "Translation API error";
-      console.error("❌ HTML translation failed:", errorMsg);
+      const errorReason = htmlData.error?.errors?.[0]?.reason || "";
+      console.error("❌ HTML translation failed:", errorMsg, "reason:", errorReason);
+
+      // Detect quota exceeded (403 with rateLimitExceeded or dailyLimitExceeded)
+      if (htmlResponse.status === 403 || errorReason.includes("Limit") || errorReason.includes("quota")) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            code: "QUOTA_EXCEEDED",
+            message: "Translation quota has been reached. Please contact the administrator to increase the limit. Your content will be sent in English.",
+          }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       throw new Error(errorMsg);
     }
 

@@ -269,7 +269,9 @@ async function translateHtml(htmlBody, subject, language) {
 
   const result = await res.json();
   if (!result.success) {
-    throw new Error(result.message || "Translation failed");
+    const error = new Error(result.message || "Translation failed");
+    error.code = result.code || "TRANSLATION_ERROR";
+    throw error;
   }
 
   return { htmlBody: result.htmlBody, subject: result.subject };
@@ -313,6 +315,9 @@ export async function sendEmail({
       finalHtml = translated.htmlBody;
       finalSubject = translated.subject;
     } catch (err) {
+      if (err.code === "QUOTA_EXCEEDED") {
+        throw err; // Surface quota errors to the user
+      }
       console.error("Translation failed, sending in English:", err);
     }
   }
@@ -426,6 +431,9 @@ ${htmlContent}
       const translated = await translateHtml(pdfHtml, "", language);
       finalPdfHtml = translated.htmlBody;
     } catch (err) {
+      if (err.code === "QUOTA_EXCEEDED") {
+        throw err; // Surface quota errors to the user
+      }
       console.error("PDF translation failed, creating in English:", err);
     }
   }
