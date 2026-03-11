@@ -420,7 +420,7 @@ function DraggableDistressTable({ data, zipCode, neighborhood, houstonMedians, o
       onMouseDown={handleMouseDown}
       className="absolute z-50 rounded-lg shadow-xl"
       style={{
-        top: "80px",
+        bottom: "60px",
         right: "60px",
         transform: `translate(${position.x}px, ${position.y}px)`,
         width: "420px",
@@ -647,7 +647,7 @@ function DraggableWorkingPoorTable({ data, zipCode, neighborhood, houstonMedians
       onMouseDown={handleMouseDown}
       className="absolute z-50 rounded-lg shadow-xl"
       style={{
-        top: "80px",
+        bottom: "60px",
         right: "60px",
         transform: `translate(${position.x}px, ${position.y}px)`,
         width: "420px",
@@ -1589,6 +1589,15 @@ const MapboxMap = forwardRef(function MapboxMap({
   // Handle pin click
   const handlePinClick = useCallback(
     (org) => {
+      // Toggle: if clicking the same pin, close the info box
+      if (selectedOrgKey === org.key) {
+        setInfoBoxData(null);
+        setSelectedOrgKey(null);
+        clearChildHighlights();
+        if (zipCode) setBaseHighlight(zipCode);
+        return;
+      }
+
       const clientZips = org.clientZips || [];
       const isWildcard = clientZips.includes("99999");
       const displayZipCount = isWildcard ? boundaryZips.size : clientZips.length;
@@ -1614,12 +1623,12 @@ const MapboxMap = forwardRef(function MapboxMap({
       setSelectedOrgKey(org.key);
       highlightChildZips(clientZips);
     },
-    [highlightChildZips, boundaryZips]
+    [highlightChildZips, boundaryZips, selectedOrgKey, clearChildHighlights, zipCode, setBaseHighlight]
   );
 
   // Handle clicking map area
   const handleMapClick = useCallback((e) => {
-    // In distress base view, clicking a zip boundary opens the distress data table
+    // In distress base view, clicking a zip boundary opens/toggles the distress data table
     if (isBaseView && displayMetric === "distress") {
       const map = mapRef.current?.getMap();
       if (map && map.getLayer("unified-fill")) {
@@ -1629,8 +1638,8 @@ const MapboxMap = forwardRef(function MapboxMap({
         if (features.length > 0) {
           const clickedZip = features[0].properties.ZCTA5CE20;
           if (clickedZip && distressDataLookup[clickedZip]) {
-            setDistressTableZip(clickedZip);
-            return; // Don't clear other state
+            setDistressTableZip(prev => prev === clickedZip ? null : clickedZip);
+            return;
           }
         }
       }
@@ -1639,7 +1648,7 @@ const MapboxMap = forwardRef(function MapboxMap({
       return;
     }
 
-    // In working poor base view, clicking a zip boundary opens the working poor data table
+    // In working poor base view, clicking a zip boundary opens/toggles the working poor data table
     if (isBaseView && displayMetric === "working_poor") {
       const map = mapRef.current?.getMap();
       if (map && map.getLayer("unified-fill")) {
@@ -1649,8 +1658,8 @@ const MapboxMap = forwardRef(function MapboxMap({
         if (features.length > 0) {
           const clickedZip = features[0].properties.ZCTA5CE20;
           if (clickedZip && workingPoorDataLookup[clickedZip]) {
-            setWorkingPoorTableZip(clickedZip);
-            return; // Don't clear other state
+            setWorkingPoorTableZip(prev => prev === clickedZip ? null : clickedZip);
+            return;
           }
         }
       }
@@ -1659,15 +1668,37 @@ const MapboxMap = forwardRef(function MapboxMap({
       return;
     }
 
-    // Filter view: clear child highlights and info box
+    // Filter view: check for zip boundary click first
+    const map = mapRef.current?.getMap();
+    if (map && map.getLayer("unified-fill")) {
+      const features = map.queryRenderedFeatures(e.point, {
+        layers: ["unified-fill"],
+      });
+      if (features.length > 0) {
+        const clickedZip = features[0].properties.ZCTA5CE20;
+
+        if (activeBase === "working_poor" && clickedZip && workingPoorDataLookup[clickedZip]) {
+          setWorkingPoorTableZip(prev => prev === clickedZip ? null : clickedZip);
+          setDistressTableZip(null);
+          return;
+        } else if (clickedZip && distressDataLookup[clickedZip]) {
+          setDistressTableZip(prev => prev === clickedZip ? null : clickedZip);
+          setWorkingPoorTableZip(null);
+          return;
+        }
+      }
+    }
+
+    // Clicked outside any boundary - close zip tables, clear org selection
     clearChildHighlights();
     setInfoBoxData(null);
     setSelectedOrgKey(null);
-    // Restore base zip highlight if a zip filter is active
+    setDistressTableZip(null);
+    setWorkingPoorTableZip(null);
     if (zipCode) {
       setBaseHighlight(zipCode);
     }
-  }, [clearChildHighlights, zipCode, setBaseHighlight, isBaseView, displayMetric, distressDataLookup, workingPoorDataLookup]);
+  }, [clearChildHighlights, zipCode, setBaseHighlight, isBaseView, displayMetric, distressDataLookup, workingPoorDataLookup, activeBase]);
 
   // Handle boundary hover
   const handleMouseMove = useCallback((e) => {
@@ -1726,12 +1757,10 @@ const MapboxMap = forwardRef(function MapboxMap({
     clearBaseHighlight();
   }, [assistanceType, county, zipCode, parentOrg, organization, clearChildHighlights, clearBaseHighlight]);
 
-  // Close distress data table when leaving distress base view
+  // Close distress data table on any view mode change
   useEffect(() => {
-    if (!isBaseView || displayMetric !== "distress") {
-      setDistressTableZip(null);
-    }
-  }, [isBaseView, displayMetric]);
+    setDistressTableZip(null);
+  }, [viewMode]);
 
   // Sync distress-selected visual highlight with distressTableZip
   useEffect(() => {
@@ -1760,12 +1789,10 @@ const MapboxMap = forwardRef(function MapboxMap({
     }
   }, [distressTableZip, zipToFeatureId]);
 
-  // Close working poor data table when leaving working poor base view
+  // Close working poor data table on any view mode change
   useEffect(() => {
-    if (!isBaseView || displayMetric !== "working_poor") {
-      setWorkingPoorTableZip(null);
-    }
-  }, [isBaseView, displayMetric]);
+    setWorkingPoorTableZip(null);
+  }, [viewMode]);
 
   // Sync working-poor-selected visual highlight with workingPoorTableZip
   useEffect(() => {
@@ -2564,7 +2591,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     // Scale labels
     ctx.font = "400 9px Lexend, sans-serif";
     ctx.fillStyle = "#666666";
-    if (mode === "distress") {
+    if (mode === "distress" || mode === "working_poor") {
       const scaleValues = ["0", "20", "40", "60", "80", "100"];
       scaleValues.forEach((val, i) => {
         const lx = x + pad + (barW * i / 5);
@@ -2572,11 +2599,7 @@ const MapboxMap = forwardRef(function MapboxMap({
         ctx.fillText(val, lx, cy);
       });
     } else {
-      const scaleLabels = {
-        working_poor: ["Worse", "Mid", "Better"],
-        population: ["Low", "Mid", "High"],
-      };
-      const sl = scaleLabels[mode] || ["Low", "Mid", "High"];
+      const sl = ["Low", "Mid", "High"];
       ctx.textAlign = "left";
       ctx.fillText(sl[0], x + pad, cy);
       ctx.textAlign = "center";
@@ -2717,12 +2740,12 @@ const MapboxMap = forwardRef(function MapboxMap({
 
       // Step 4: Draw info box / distress table and legend directly on canvas (avoids dom-to-image border artifacts)
       drawInfoBoxOnCanvas(ctx, infoBoxData, container);
-      if (isBaseView && distressTableZip) {
+      if (distressTableZip) {
         const distressRecord = distressDataLookup[distressTableZip];
         const neighborhood = zipCodes?.find(z => z.zip_code === distressTableZip)?.neighborhood || "";
         drawDistressTableOnCanvas(ctx, distressRecord, distressTableZip, neighborhood, houstonMedians, container);
       }
-      if (isBaseView && workingPoorTableZip) {
+      if (workingPoorTableZip) {
         const wpRecord = workingPoorDataLookup[workingPoorTableZip];
         const neighborhood = zipCodes?.find(z => z.zip_code === workingPoorTableZip)?.neighborhood || "";
         drawWorkingPoorTableOnCanvas(ctx, wpRecord, workingPoorTableZip, neighborhood, workingPoorMedians, container);
@@ -2976,8 +2999,8 @@ const MapboxMap = forwardRef(function MapboxMap({
       {/* Draggable info box - only in filter view */}
       {!isBaseView && <DraggableInfoBox info={infoBoxData} onClose={handleInfoBoxClose} />}
 
-      {/* Draggable distress data table - only in distress base view */}
-      {isBaseView && displayMetric === "distress" && distressTableZip && (
+      {/* Draggable distress data table - in distress base view or when activeBase is distress in filter view */}
+      {(isBaseView ? displayMetric === "distress" : activeBase === "distress") && distressTableZip && (
         <DraggableDistressTable
           data={distressDataLookup[distressTableZip]}
           zipCode={distressTableZip}
@@ -2987,8 +3010,8 @@ const MapboxMap = forwardRef(function MapboxMap({
         />
       )}
 
-      {/* Draggable working poor data table - only in working poor base view */}
-      {isBaseView && displayMetric === "working_poor" && workingPoorTableZip && (
+      {/* Draggable working poor data table - in working poor base view or when activeBase is working_poor in filter view */}
+      {(isBaseView ? displayMetric === "working_poor" : activeBase === "working_poor") && workingPoorTableZip && (
         <DraggableWorkingPoorTable
           data={workingPoorDataLookup[workingPoorTableZip]}
           zipCode={workingPoorTableZip}
