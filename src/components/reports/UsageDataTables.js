@@ -124,6 +124,58 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
     return [...rows, totalsRow];
   }, [data, dateColumns, viewMode]);
 
+  // Build data for Reports section (dynamic - auto-discovers report names from data)
+  const reportsData = useMemo(() => {
+    const dateKey = viewMode === "daily" ? "log_date" : "month";
+
+    // Discover all report names from the data (search_mode values where action_type === 'reports')
+    const reportNames = [...new Set(
+      data
+        .filter(row => row.action_type === 'reports' && row.search_mode)
+        .map(row => row.search_mode)
+    )].sort();
+
+    if (reportNames.length === 0) return [];
+
+    const rows = reportNames.map(name => {
+      const rowData = { metric: name };
+      let total = 0;
+
+      dateColumns.forEach(date => {
+        const count = data
+          .filter(row => row[dateKey] === date && row.action_type === 'reports' && row.search_mode === name)
+          .reduce((sum, row) => sum + row.count, 0);
+        rowData[date] = count;
+        total += count;
+      });
+
+      rowData._total = total;
+      return rowData;
+    });
+
+    // Calculate totals row
+    const totalsRow = { metric: "Total", _isTotal: true };
+    let grandTotal = 0;
+    dateColumns.forEach(date => {
+      const columnTotal = rows.reduce((sum, row) => sum + (row[date] || 0), 0);
+      totalsRow[date] = columnTotal;
+      grandTotal += columnTotal;
+    });
+    totalsRow._total = grandTotal;
+
+    // Calculate percentages
+    rows.forEach(row => {
+      const lastDate = dateColumns[dateColumns.length - 1];
+      const lastColumnTotal = totalsRow[lastDate] || 0;
+      row._daMo = lastColumnTotal > 0 ? Math.round((row[lastDate] / lastColumnTotal) * 100) : 0;
+      row._moYr = grandTotal > 0 ? Math.round((row._total / grandTotal) * 100) : 0;
+    });
+    totalsRow._daMo = 100;
+    totalsRow._moYr = 100;
+
+    return [...rows, totalsRow];
+  }, [data, dateColumns, viewMode]);
+
   // Build data for Search section
   const searchData = useMemo(() => {
     const dateKey = viewMode === "daily" ? "log_date" : "month";
@@ -323,6 +375,14 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
           {/* Communications Section */}
           {renderSectionHeader("Communications", true)}
           {renderDataRows(communicationsData, 0)}
+
+          {/* Reports Section */}
+          {reportsData.length > 0 && (
+            <>
+              {renderSectionHeader("Reports")}
+              {renderDataRows(reportsData, 0)}
+            </>
+          )}
 
           {/* Search Section */}
           {renderSectionHeader("Search")}

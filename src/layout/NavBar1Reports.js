@@ -2,12 +2,15 @@
 // Top navigation bar for Reports page
 // Logo + title on left, Reports dropdown on right (hover to open)
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useAppData } from "../Contexts/AppDataContext";
+import { logUsage } from "../services/usageService";
 
 const REPORT_OPTIONS = [
-  { id: 'zip-code', label: 'Zip Code Searches' },
-  { id: 'emails-sent', label: 'Emails Sent' },
-  { id: 'pdfs-created', label: 'PDFs Created' },
+  { id: 'zip-code', label: 'Zip Code Chart' },
+  { id: 'emails-sent', label: 'Emails Chart' },
+  { id: 'pdfs-created', label: 'PDFs Chart' },
+  { id: 'reports-chart', label: 'Reports Chart' },
   { id: 'usage-tables', label: 'Usage Data Tables' },
   { id: 'coverage', label: 'The Matt Report', color: '#f79184' },
   { id: 'map2', label: 'Zip Code Map', color: '#9df784' },
@@ -21,11 +24,34 @@ const BASE_MAP_LABELS = {
 };
 
 export default function NavBar1Reports({ selectedReport, onReportChange, map2ViewMode }) {
+  const { loggedInUser } = useAppData();
   const [isOpen, setIsOpen] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [hoveredOption, setHoveredOption] = useState(null);
   const containerRef = useRef(null);
   const closeTimeoutRef = useRef(null);
+  const hasLoggedInitialRef = useRef(false);
+
+  // Log usage for a report view (skip Administrator to avoid skewing data)
+  const logReportUsage = useCallback((reportId) => {
+    const regOrg = loggedInUser?.reg_organization || 'Guest';
+    if (regOrg === 'Administrator') return;
+    const option = REPORT_OPTIONS.find(r => r.id === reportId);
+    if (!option) return;
+    logUsage({
+      reg_organization: regOrg,
+      action_type: 'reports',
+      search_mode: option.label,
+    });
+  }, [loggedInUser]);
+
+  // Log the initial default report view on mount
+  useEffect(() => {
+    if (!hasLoggedInitialRef.current) {
+      hasLoggedInitialRef.current = true;
+      logReportUsage('zip-code');
+    }
+  }, [logReportUsage]);
 
   // Handle click outside to close dropdown
   useEffect(() => {
@@ -70,6 +96,7 @@ export default function NavBar1Reports({ selectedReport, onReportChange, map2Vie
 
   const handleReportSelect = (reportId) => {
     onReportChange(reportId);
+    logReportUsage(reportId);
     setIsOpen(false);
     setIsLocked(false);
   };

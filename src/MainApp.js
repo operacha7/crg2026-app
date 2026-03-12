@@ -131,7 +131,7 @@ function AppContent({ loggedInUser }) {
         <Route path="*" element={<Navigate to="/" replace />} />
         <Route
           path="/reports"
-          element={<ReportsPage />}
+          element={loggedInUser?.isGuest ? <Navigate to="/" replace /> : <ReportsPage />}
         />
         <Route path="/privacy" element={<LegalPage loggedInUser={loggedInUser} />} />
         <Route path="/support" element={<SupportPage loggedInUser={loggedInUser} />} />

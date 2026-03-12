@@ -11,6 +11,7 @@ import VerticalNavBar from "../layout/VerticalNavBar";
 import ZipCodeReport from "../components/reports/ZipCodeReport";
 import EmailsReport from "../components/reports/EmailsReport";
 import PdfsReport from "../components/reports/PdfsReport";
+import ReportsReport from "../components/reports/ReportsReport";
 import UsageDataTables from "../components/reports/UsageDataTables";
 import CoverageReport from "../components/reports/CoverageReport";
 import MapboxMap from "../components/reports/MapboxMap";
@@ -165,6 +166,8 @@ export default function ReportsPage() {
         return <EmailsReport {...commonProps} />;
       case "pdfs-created":
         return <PdfsReport {...commonProps} />;
+      case "reports-chart":
+        return <ReportsReport {...commonProps} />;
       case "usage-tables":
         return <UsageDataTables {...commonProps} />;
       case "map2":
