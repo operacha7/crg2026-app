@@ -779,7 +779,7 @@ export default function ResultRow({
                   className="flex items-start gap-2"
                   style={idx === 0 ? {
                     fontWeight: record.is_first_bold ? "bold" : undefined,
-                    color: record.is_first_red ? "#B8001F" : undefined,
+                    color: record.is_first_red ? "#ed0060" : undefined,
                   } : undefined}
                 >
                   <span>•</span>
