@@ -178,6 +178,20 @@ export const dataService = {
     return data;
   },
 
+  // ======= EVICTIONS DATA (eviction indicators by zip) =======
+  async getEvictionsData() {
+    const { data, error } = await supabase
+      .from('evictions_data')
+      .select('*')
+      .order('zip_code', { ascending: true });
+
+    if (error) {
+      console.error("Error fetching evictions data:", error);
+      return [];
+    }
+    return data;
+  },
+
   // ======= REGISTERED ORGANIZATIONS (auth - implement last) =======
   async getRegisteredOrganizations() {
     const { data, error } = await supabase

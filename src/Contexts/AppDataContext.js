@@ -95,6 +95,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
   const [orgAssistanceMap, setOrgAssistanceMap] = useState({}); // org name → assist_ids array
   const [distressData, setDistressData] = useState([]); // Census socioeconomic indicators by zip
   const [workingPoorData, setWorkingPoorData] = useState([]); // Census working poor indicators by zip
+  const [evictionsData, setEvictionsData] = useState([]); // Eviction indicators by zip
 
   // Loading state
   const [loading, setLoading] = useState(true);
@@ -168,12 +169,14 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
           zipCodesData,
           distressDataResult,
           workingPoorDataResult,
+          evictionsDataResult,
         ] = await Promise.all([
           dataService.getDirectory(),
           dataService.getAssistance(),
           dataService.getZipCodes(),
           dataService.getDistressData(),
           dataService.getWorkingPoorData(),
+          dataService.getEvictionsData(),
         ]);
 
         if (!mounted) return;
@@ -194,11 +197,12 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
         setOrgAssistanceMap(assistanceMap);
         setDistressData(distressDataResult);
         setWorkingPoorData(workingPoorDataResult);
+        setEvictionsData(evictionsDataResult);
         setLoading(false);
 
         const loadTime = Math.round(performance.now() - startTime);
         console.log(`✅ AppDataContext: Data loaded in ${loadTime}ms`);
-        console.log(`   directory: ${directoryData.length}, assistance: ${assistanceData.length}, zipCodes: ${zipCodesData.length}, organizations: ${orgsList.length}, orgAssistanceMap: ${Object.keys(assistanceMap).length} orgs, distressData: ${distressDataResult.length}, workingPoorData: ${workingPoorDataResult.length}`);
+        console.log(`   directory: ${directoryData.length}, assistance: ${assistanceData.length}, zipCodes: ${zipCodesData.length}, organizations: ${orgsList.length}, orgAssistanceMap: ${Object.keys(assistanceMap).length} orgs, distressData: ${distressDataResult.length}, workingPoorData: ${workingPoorDataResult.length}, evictionsData: ${evictionsDataResult.length}`);
 
         // Debug: Log sample data to verify field formats
         if (mappedDirectory.length > 0) {
@@ -259,6 +263,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
     orgAssistanceMap, // org name → array of assist_ids (for Assistance column icons)
     distressData, // Census socioeconomic indicators by zip (from distress_data table)
     workingPoorData, // Census working poor indicators by zip (from working_poor_data table)
+    evictionsData, // Eviction indicators by zip (from evictions_data table)
 
     // Auth
     loggedInUser, // Passed from App level for logging
