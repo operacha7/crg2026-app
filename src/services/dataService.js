@@ -164,6 +164,20 @@ export const dataService = {
     return data;
   },
 
+  // ======= DISTRESS DATA 2023 (archive for year-over-year comparison) =======
+  async getDistressData2023() {
+    const { data, error } = await supabase
+      .from('distress_data_2023')
+      .select('*')
+      .order('zip_code', { ascending: true });
+
+    if (error) {
+      console.error("Error fetching distress data 2023:", error);
+      return [];
+    }
+    return data;
+  },
+
   // ======= WORKING POOR DATA (census working poor indicators by zip) =======
   async getWorkingPoorData() {
     const { data, error } = await supabase
@@ -173,6 +187,20 @@ export const dataService = {
 
     if (error) {
       console.error("Error fetching working poor data:", error);
+      return [];
+    }
+    return data;
+  },
+
+  // ======= WORKING POOR DATA 2023 (archive for year-over-year comparison) =======
+  async getWorkingPoorData2023() {
+    const { data, error } = await supabase
+      .from('working_poor_data_2023')
+      .select('*')
+      .order('zip_code', { ascending: true });
+
+    if (error) {
+      console.error("Error fetching working poor data 2023:", error);
       return [];
     }
     return data;

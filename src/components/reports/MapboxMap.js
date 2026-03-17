@@ -45,31 +45,31 @@ const POP_DARK = "rgba(75, 0, 130, 0.50)";       // above p75 (indigo)
 // Unified fill layer - one color per zip at any given time
 // Priority: childHighlighted (teal) > base highlight > hover > [parent coverage in filter view] > metric colors
 // Uses feature-state for interactive states, GeoJSON property "density" for parent coverage
-function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thresholds = {}, showInteractiveHighlights = true) {
+function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thresholds = {}, showInteractiveHighlights = true, yoyMode = false) {
   // Build metric color expression based on active metric
   let metricExpression;
   if (metric === "working_poor") {
-    // 5 bands based on working_poor_percentile (matching distress pattern)
+    // 4 bands based on working_poor_score (0-100 scale, -1 = no data)
     metricExpression = [
-      [">=", ["coalesce", ["get", "working_poor_percentile"], 0], 90],
+      [">=", ["coalesce", ["get", "working_poor_score"], -1], 90],
       WP_BAND_4,
-      [">=", ["coalesce", ["get", "working_poor_percentile"], 0], 60],
+      [">=", ["coalesce", ["get", "working_poor_score"], -1], 60],
       WP_BAND_3,
-      [">=", ["coalesce", ["get", "working_poor_percentile"], 0], 30],
+      [">=", ["coalesce", ["get", "working_poor_score"], -1], 30],
       WP_BAND_2,
-      [">", ["coalesce", ["get", "working_poor_percentile"], 0], 0],
+      [">=", ["coalesce", ["get", "working_poor_score"], -1], 0],
       WP_BAND_1,
     ];
   } else if (metric === "evictions") {
-    // 4 bands: top 10% highlighted, rest in thirds (orange gradient)
+    // 4 bands based on evictions_score (0-100 scale, -1 = no data)
     metricExpression = [
-      [">=", ["coalesce", ["get", "evictions_percentile"], 0], 90],
+      [">=", ["coalesce", ["get", "evictions_score"], -1], 90],
       EV_BAND_4,
-      [">=", ["coalesce", ["get", "evictions_percentile"], 0], 60],
+      [">=", ["coalesce", ["get", "evictions_score"], -1], 60],
       EV_BAND_3,
-      [">=", ["coalesce", ["get", "evictions_percentile"], 0], 30],
+      [">=", ["coalesce", ["get", "evictions_score"], -1], 30],
       EV_BAND_2,
-      [">", ["coalesce", ["get", "evictions_percentile"], 0], 0],
+      [">=", ["coalesce", ["get", "evictions_score"], -1], 0],
       EV_BAND_1,
     ];
   } else if (metric === "population") {
@@ -85,15 +85,15 @@ function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thr
       POP_LIGHT,
     ];
   } else {
-    // distress (default) - 4 bands: top 10% highlighted, rest in thirds
+    // distress (default) - 4 bands based on distress_score (0-100 scale, -1 = no data)
     metricExpression = [
-      [">=", ["coalesce", ["get", "percentile"], 0], 90],
+      [">=", ["coalesce", ["get", "distress_score"], -1], 90],
       DISTRESS_RED,
-      [">=", ["coalesce", ["get", "percentile"], 0], 60],
+      [">=", ["coalesce", ["get", "distress_score"], -1], 60],
       DISTRESS_ORANGE,
-      [">=", ["coalesce", ["get", "percentile"], 0], 30],
+      [">=", ["coalesce", ["get", "distress_score"], -1], 30],
       DISTRESS_YELLOW,
-      [">", ["coalesce", ["get", "percentile"], 0], 0],
+      [">=", ["coalesce", ["get", "distress_score"], -1], 0],
       DISTRESS_GREEN,
     ];
   }
@@ -129,11 +129,22 @@ function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thr
     );
   }
 
-  // Priority 5: Metric colors
-  fillColorExpr.push(...metricExpression);
+  // Priority 5: YoY overlay (when active, replaces metric colors)
+  if (yoyMode) {
+    // Single green for all improved zips, single red for all declined zips
+    fillColorExpr.push(
+      [">=", ["coalesce", ["get", "yoy_improved_rank"], 0], 1], "rgba(46, 125, 50, 0.50)",
+      [">=", ["coalesce", ["get", "yoy_declined_rank"], 0], 1], "rgba(211, 47, 47, 0.50)",
+    );
+    // All other zips: white/transparent
+    fillColorExpr.push("rgba(255, 255, 255, 0.08)");
+  } else {
+    // Priority 5: Metric colors
+    fillColorExpr.push(...metricExpression);
 
-  // Fallback: no data
-  fillColorExpr.push("rgba(0, 0, 0, 0)");
+    // Fallback: no data
+    fillColorExpr.push("rgba(0, 0, 0, 0)");
+  }
 
   return {
     id: "unified-fill",
@@ -281,43 +292,54 @@ function DraggableInfoBox({ info, onClose }) {
 }
 
 // Census data source citation
-const CENSUS_SOURCE = "U.S. Census Bureau, ACS 2019–2023 5-Year Estimates";
+const CENSUS_SOURCE = "U.S. Census Bureau, ACS 5-Year Estimates (ZCTA)";
 
-// Get the distress band color for a given percentile value (solid colors for the circle indicator)
-function getDistressBandColor(percentile) {
-  if (percentile == null) return "#888";
-  if (percentile >= 90) return "rgba(220, 50, 50, 0.85)";     // Red - top 10%
-  if (percentile >= 60) return "rgba(245, 124, 0, 0.85)";     // Orange
-  if (percentile >= 30) return "rgba(255, 213, 0, 0.85)";     // Yellow
-  return "rgba(76, 175, 80, 0.85)";                           // Light green
+// Get the distress band color for a given score value (solid colors for the circle indicator)
+function getDistressBandColor(score) {
+  if (score == null) return "#888";
+  if (score >= 90) return "rgba(220, 50, 50, 0.85)";     // Red
+  if (score >= 60) return "rgba(245, 124, 0, 0.85)";     // Orange
+  if (score >= 30) return "rgba(255, 213, 0, 0.85)";     // Yellow
+  return "rgba(76, 175, 80, 0.85)";                       // Light green
 }
 
-// Ordinal suffix helper (1st, 2nd, 3rd, 4th, etc.)
-function ordinalSuffix(n) {
-  const s = ["th", "st", "nd", "rd"];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
-}
+// Fields where higher values are GOOD (up arrow green, down arrow red)
+const HIGHER_IS_GOOD = new Set(["median_household_inc", "owner_occupancy", "income_ratio"]);
+// Fields where values are neutral (no trend arrow)
+const NEUTRAL_FIELDS = new Set(["population"]);
 
-// Texas median household income (from Census ACS, same as fetch-census-data.js)
-const TX_MEDIAN_HOUSEHOLD_INCOME = 73035;
+// Trend arrow: direction = which way the number moved, color = good or bad
+function getTrendArrow(key, val2024, val2023) {
+  if (val2024 == null || val2023 == null || NEUTRAL_FIELDS.has(key)) return null;
+  const diff = val2024 - val2023;
+  if (diff === 0) return null;
+  const wentUp = diff > 0;
+  const isGood = HIGHER_IS_GOOD.has(key) ? wentUp : !wentUp;
+  return { arrow: wentUp ? "▲" : "▼", color: isGood ? "#4CAF50" : "#E74C3E" };
+}
 
 // Distress data field labels for display in the table
 // showMedian: true = show Houston metro median in comparison column
+const fmtPct = (v) => v != null ? `${Number(v).toFixed(1)}%` : "—";
+const fmtDollar = (v) => v != null ? `$${Math.round(Number(v)).toLocaleString()}` : "—";
+const fmtPop = (v) => v != null ? Math.round(Number(v)).toLocaleString() : "—";
+const fmtRatio = (v) => v != null ? Number(v).toFixed(2) : "—";
+const fmtScore = (v) => v != null ? Number(v).toFixed(1) : "—";
+
 const DISTRESS_FIELDS = [
-  { key: "percentile", label: "Distress Percentile", format: (v) => v != null ? ordinalSuffix(Math.round(v)) : "—", highlight: true },
-  { key: "distress_score", label: "Distress Score", format: (v) => v != null ? v.toLocaleString() : "—", showMedian: true },
-  { key: "population", label: "Population", format: (v) => v != null ? v.toLocaleString() : "—", showMedian: true },
-  { key: "poverty_rate", label: "Poverty Rate", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
-  { key: "median_household_inc", label: "Median Household Income", format: (v) => v != null ? `$${v.toLocaleString()}` : "—", showMedian: true, medianFormat: (v) => `$${v.toLocaleString()}` },
-  { key: "income_ratio_tx", label: "Income Ratio (TX)", format: (v) => v != null ? v.toFixed(2) : "—", showMedian: true, medianFormat: (v) => v.toFixed(2) },
-  { key: "unemp_rate", label: "Unemployment Rate", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
-  { key: "no_health_ins", label: "No Health Insurance", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
-  { key: "snap", label: "SNAP Recipients", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
-  { key: "no_hs_diploma", label: "No HS Diploma", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
-  { key: "vacancy_rate", label: "Vacancy Rate", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
-  { key: "owner_occupancy", label: "Owner Occupancy", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
-  { key: "no_vehicle", label: "No Vehicle", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
+  { key: "distress_score", label: "Distress Score", format: fmtScore, highlight: true, showMedian: true, medianFormat: fmtScore },
+  { key: "rank", label: "Rank", format: (v, total) => v != null ? `${v} of ${total}` : "—", isRank: true },
+  { key: "population", label: "Population", format: fmtPop, showMedian: true, medianFormat: fmtPop },
+  { key: "poverty_rate", label: "Poverty Rate", format: fmtPct, showMedian: true, medianFormat: fmtPct },
+  { key: "median_household_inc", label: "Median Household Income", format: fmtDollar, showMedian: true, medianFormat: fmtDollar },
+  { key: "income_ratio", label: "Income Ratio", format: fmtRatio, showMedian: true, medianFormat: fmtRatio },
+  { key: "unemp_rate", label: "Unemployment Rate", format: fmtPct, showMedian: true, medianFormat: fmtPct },
+  { key: "no_health_ins", label: "No Health Insurance", format: fmtPct, showMedian: true, medianFormat: fmtPct },
+  { key: "snap", label: "SNAP Recipients", format: fmtPct, showMedian: true, medianFormat: fmtPct },
+  { key: "no_hs_diploma", label: "No HS Diploma", format: fmtPct, showMedian: true, medianFormat: fmtPct },
+  { key: "vacancy_rate", label: "Vacancy Rate", format: fmtPct, showMedian: true, medianFormat: fmtPct },
+  { key: "owner_occupancy", label: "Owner Occupancy", format: fmtPct, showMedian: true, medianFormat: fmtPct },
+  { key: "no_vehicle", label: "No Vehicle", format: fmtPct, showMedian: true, medianFormat: fmtPct },
 ];
 
 // Compute Houston metro medians from distress_data array
@@ -325,9 +347,11 @@ function computeHoustonMedians(distressData) {
   if (!distressData || distressData.length === 0) return {};
   const medians = {};
   const medianFields = DISTRESS_FIELDS.filter(f => f.showMedian).map(f => f.key);
+  // Only include fully scored zips (exclude === 2) in aggregate calculations
+  const reliableData = distressData.filter(d => d.exclude === 2);
 
   medianFields.forEach(field => {
-    const values = distressData
+    const values = reliableData
       .map(d => d[field])
       .filter(v => v != null && !isNaN(v))
       .sort((a, b) => a - b);
@@ -343,14 +367,14 @@ function computeHoustonMedians(distressData) {
 // Working poor data field labels for display in the table
 // showMedian: true = show Houston metro median in comparison column
 const WORKING_POOR_FIELDS = [
-  { key: "working_poor_percentile", label: "Working Poor Percentile", format: (v) => v != null ? ordinalSuffix(Math.round(v)) : "—", highlight: true },
-  { key: "working_poor_score", label: "Working Poor Score", format: (v) => v != null ? v.toLocaleString() : "—", showMedian: true },
-  { key: "population", label: "Population", format: (v) => v != null ? v.toLocaleString() : "—", showMedian: true },
-  { key: "poverty_rate", label: "Poverty Rate", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
-  { key: "unemp_rate", label: "Unemployment Rate", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
-  { key: "no_health_ins", label: "No Health Insurance", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
-  { key: "snap", label: "SNAP Recipients", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
-  { key: "no_hs_diploma", label: "No HS Diploma", format: (v) => v != null ? `${v}%` : "—", showMedian: true, medianFormat: (v) => `${v}%` },
+  { key: "working_poor_score", label: "Working Poor Score", format: fmtScore, highlight: true, showMedian: true, medianFormat: fmtScore },
+  { key: "working_poor_rank", label: "Rank", format: (v, total) => v != null ? `${v} of ${total}` : "—", isRank: true },
+  { key: "population", label: "Population", format: fmtPop, showMedian: true, medianFormat: fmtPop },
+  { key: "poverty_rate", label: "Poverty Rate", format: fmtPct, showMedian: true, medianFormat: fmtPct },
+  { key: "unemp_rate", label: "Unemployment Rate", format: fmtPct, showMedian: true, medianFormat: fmtPct },
+  { key: "no_health_ins", label: "No Health Insurance", format: fmtPct, showMedian: true, medianFormat: fmtPct },
+  { key: "snap", label: "SNAP Recipients", format: fmtPct, showMedian: true, medianFormat: fmtPct },
+  { key: "no_hs_diploma", label: "No HS Diploma", format: fmtPct, showMedian: true, medianFormat: fmtPct },
 ];
 
 // Compute Houston metro medians from working_poor_data array
@@ -358,9 +382,11 @@ function computeWorkingPoorMedians(workingPoorData) {
   if (!workingPoorData || workingPoorData.length === 0) return {};
   const medians = {};
   const medianFields = WORKING_POOR_FIELDS.filter(f => f.showMedian).map(f => f.key);
+  // All working poor records are exclude === 2, so no filter needed
+  const reliableData = workingPoorData;
 
   medianFields.forEach(field => {
-    const values = workingPoorData
+    const values = reliableData
       .map(d => d[field])
       .filter(v => v != null && !isNaN(v))
       .sort((a, b) => a - b);
@@ -373,32 +399,34 @@ function computeWorkingPoorMedians(workingPoorData) {
   return medians;
 }
 
-// Get the working poor band color for a given percentile value (solid colors for the circle indicator)
-function getWorkingPoorBandColor(percentile) {
-  if (percentile == null) return "#888";
-  if (percentile >= 90) return "rgba(100, 0, 0, 0.85)";       // Deep maroon - top 10%
-  if (percentile >= 60) return "rgba(198, 40, 40, 0.85)";     // Dark red
-  if (percentile >= 30) return "rgba(239, 130, 130, 0.85)";   // Salmon
-  return "rgba(255, 205, 210, 0.85)";                         // Lightest rose
+// Get the working poor band color for a given score value (solid colors for the circle indicator)
+function getWorkingPoorBandColor(score) {
+  if (score == null) return "#888";
+  if (score >= 90) return "rgba(100, 0, 0, 0.85)";       // Deep maroon
+  if (score >= 60) return "rgba(198, 40, 40, 0.85)";     // Dark red
+  if (score >= 30) return "rgba(239, 130, 130, 0.85)";   // Salmon
+  return "rgba(255, 205, 210, 0.85)";                     // Lightest rose
 }
 
 // Evictions data field labels for display in the table
 // showMedian: true = show Houston metro median in comparison column
 const EVICTIONS_FIELDS = [
-  { key: "evictions_percentile", label: "Evictions Percentile", format: (v) => v != null ? ordinalSuffix(Math.round(v)) : "—", highlight: true },
-  { key: "filings_count", label: "Filings Count", format: (v) => v != null ? v.toLocaleString() : "—", showMedian: true },
-  { key: "amount_per_filing", label: "Amount per Filing", format: (v) => v != null ? `$${Math.round(Number(v)).toLocaleString()}` : "—", showMedian: true, medianFormat: (v) => `$${Math.round(Number(v)).toLocaleString()}` },
-  { key: "per_filing_percentile", label: "Per Filing Percentile", format: (v) => v != null ? ordinalSuffix(Math.round(v)) : "—" },
+  { key: "evictions_score", label: "Evictions Score", format: fmtScore, highlight: true, showMedian: true, medianFormat: fmtScore },
+  { key: "rank", label: "Rank", format: (v, total) => v != null ? `${v} of ${total}` : "—", isRank: true },
+  { key: "claim_amount", label: "Total Claims", format: fmtDollar, showMedian: true, medianFormat: fmtDollar },
+  { key: "filings_count", label: "Filings Count", format: (v) => v != null ? Math.round(Number(v)).toLocaleString() : "—", showMedian: true, medianFormat: (v) => Math.round(Number(v)).toLocaleString() },
+  { key: "amount_per_filing", label: "Amount per Filing", format: fmtDollar, showMedian: true, medianFormat: fmtDollar },
 ];
 
-// Compute Houston metro medians from evictions_data array
+// Compute Houston metro medians from evictions_data array (exclude=2 only)
 function computeEvictionsMedians(evictionsData) {
   if (!evictionsData || evictionsData.length === 0) return {};
+  const reliableData = evictionsData.filter(d => d.exclude === 2);
   const medians = {};
   const medianFields = EVICTIONS_FIELDS.filter(f => f.showMedian).map(f => f.key);
 
   medianFields.forEach(field => {
-    const values = evictionsData
+    const values = reliableData
       .map(d => d[field])
       .filter(v => v != null && !isNaN(v))
       .sort((a, b) => a - b);
@@ -411,17 +439,19 @@ function computeEvictionsMedians(evictionsData) {
   return medians;
 }
 
-// Get the evictions band color for a given percentile value (solid colors for the circle indicator)
-function getEvictionsBandColor(percentile) {
-  if (percentile == null) return "#888";
-  if (percentile >= 90) return "rgba(150, 40, 0, 0.85)";        // Dark burnt - top 10%
-  if (percentile >= 60) return "rgba(230, 100, 0, 0.85)";       // Deep orange
-  if (percentile >= 30) return "rgba(245, 166, 35, 0.85)";      // Warm amber
-  return "rgba(255, 224, 178, 0.85)";                           // Light peach
+// Get the evictions band color for a given score value (solid colors for the circle indicator)
+function getEvictionsBandColor(score) {
+  if (score == null) return "#888";
+  if (score >= 90) return "rgba(150, 40, 0, 0.85)";        // Dark burnt - top 10%
+  if (score >= 60) return "rgba(230, 100, 0, 0.85)";       // Deep orange
+  if (score >= 30) return "rgba(245, 166, 35, 0.85)";      // Warm amber
+  return "rgba(255, 224, 178, 0.85)";                       // Light peach
 }
 
+// Ranked counts are computed dynamically from data (count of exclude===2 records)
+
 // Draggable distress data table component - shows census indicators for a clicked zip
-function DraggableDistressTable({ data, zipCode, neighborhood, houstonMedians, onClose }) {
+function DraggableDistressTable({ data, data2023, zipCode, neighborhood, houstonMedians, rankedCount, onClose }) {
   const dragState = useRef({ isDragging: false, startX: 0, startY: 0 });
   const [position, setPosition] = useState({ x: 0, y: 0 });
 
@@ -469,8 +499,8 @@ function DraggableDistressTable({ data, zipCode, neighborhood, houstonMedians, o
         bottom: "60px",
         right: "60px",
         transform: `translate(${position.x}px, ${position.y}px)`,
-        width: "420px",
-        backgroundColor: "rgba(34, 40, 49, 0.95)",
+        width: "400px",
+        backgroundColor: data.exclude === 1 ? "rgba(105, 105, 118, 0.95)" : "rgba(34, 40, 49, 0.95)",
         fontFamily: "Lexend, sans-serif",
         userSelect: "none",
       }}
@@ -527,6 +557,23 @@ function DraggableDistressTable({ data, zipCode, neighborhood, houstonMedians, o
         </button>
       </div>
 
+      {/* Banner for exclude=1 (small population) */}
+      {data.exclude === 1 && (
+        <div style={{
+          padding: "6px 14px",
+          backgroundColor: "rgba(255, 179, 2, 0.15)",
+          borderBottom: "1px solid rgba(255, 179, 2, 0.25)",
+        }}>
+          <span style={{ fontSize: "10px", color: "#FFB302", fontWeight: 500 }}>
+            Small population — data shown for reference only
+          </span>
+          <br />
+          <span style={{ fontSize: "9px", color: "#999", fontStyle: "italic" }}>
+            Not scored or ranked. Excluded from Houston metro statistics.
+          </span>
+        </div>
+      )}
+
       {/* Column headers */}
       <div style={{
         display: "flex",
@@ -534,98 +581,123 @@ function DraggableDistressTable({ data, zipCode, neighborhood, houstonMedians, o
         borderBottom: "1px solid rgba(255,255,255,0.12)",
       }}>
         <span style={{ flex: 1, fontSize: "9px", color: "#888", fontWeight: 500 }}></span>
-        <span style={{ width: "72px", textAlign: "right", fontSize: "9px", color: "#FFFFFF", fontWeight: 600 }}>
-          Zip
+        <span style={{ width: "60px", textAlign: "right", fontSize: "9px", color: "#FFFFFF", fontWeight: 600 }}>
+          2023
         </span>
-        <span style={{ width: "72px", textAlign: "right", fontSize: "9px", color: "#8FB6FF", fontWeight: 600 }}>
+        <span style={{ width: "72px", textAlign: "right", fontSize: "9px", color: "#FFFFFF", fontWeight: 600 }}>
+          2024
+        </span>
+        <span style={{ width: "60px", textAlign: "right", fontSize: "9px", color: "#8FB6FF", fontWeight: 600 }}>
           Houston*
         </span>
       </div>
 
       {/* Data rows */}
       <div style={{ padding: "4px 14px 2px" }}>
-        {DISTRESS_FIELDS.map(({ key, label, format, highlight, showMedian, medianFormat }) => {
-          // TX median household income reference line
-          const isTxRef = key === "income_ratio_tx";
-          const medianVal = houstonMedians?.[key];
-          const fmtMedian = showMedian && medianVal != null
-            ? (medianFormat ? medianFormat(medianVal) : medianVal.toLocaleString())
-            : "";
-
-          return (
-            <div key={key}>
-              {/* TX median reference line - inserted before income_ratio */}
-              {isTxRef && (
-                <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "3px 0",
-                  borderTop: "1px solid rgba(255,255,255,0.06)",
-                }}>
-                  <span style={{ flex: 1, fontSize: "11px", color: "#999", fontStyle: "italic" }}>
-                    TX Median Household Income
-                  </span>
-                  <span style={{ width: "72px", textAlign: "right", fontSize: "12px", color: "#999", fontWeight: 500 }}>
-                    ${TX_MEDIAN_HOUSEHOLD_INCOME.toLocaleString()}
-                  </span>
-                  <span style={{ width: "72px" }}></span>
-                </div>
-              )}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  padding: highlight ? "6px 0" : "3px 0",
-                  borderBottom: highlight ? "1px solid rgba(255,255,255,0.1)" : "none",
-                }}
-              >
-                {/* Label */}
-                <span style={{
-                  flex: 1,
-                  fontSize: highlight ? "12px" : "11px",
-                  color: highlight ? "#FFC857" : "#CCC",
-                  fontWeight: highlight ? 600 : 400,
-                }}>
-                  {label}
-                </span>
-                {/* Zip value */}
-                <span style={{
-                  width: "72px",
-                  textAlign: "right",
-                  fontSize: highlight ? "14px" : "12px",
-                  color: "#FFFFFF",
-                  fontWeight: highlight ? 700 : 500,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-end",
-                  gap: "6px",
-                }}>
-                  {highlight && (
-                    <span style={{
-                      display: "inline-block",
-                      width: "12px",
-                      height: "12px",
-                      borderRadius: "50%",
-                      backgroundColor: getDistressBandColor(data.percentile),
-                      flexShrink: 0,
-                    }} />
-                  )}
-                  {format(data[key])}
-                </span>
-                {/* Houston median value */}
-                <span style={{
-                  width: "72px",
-                  textAlign: "right",
-                  fontSize: "11px",
-                  color: "#8FB6FF",
-                  fontWeight: 400,
-                }}>
-                  {fmtMedian}
-                </span>
-              </div>
+        {data.exclude === 0 ? (
+          /* Exclude=0: garbage data — show population only + "no data available" */
+          <>
+            <div style={{ display: "flex", alignItems: "center", padding: "3px 0" }}>
+              <span style={{ flex: 1, fontSize: "11px", color: "#CCC" }}>Population</span>
+              <span style={{ fontSize: "12px", color: "#FFFFFF", fontWeight: 500 }}>
+                {data.population != null ? data.population.toLocaleString() : "—"}
+              </span>
             </div>
-          );
-        })}
+            <div style={{ padding: "12px 0", textAlign: "center" }}>
+              <span style={{ fontSize: "12px", color: "#888", fontStyle: "italic" }}>No data available</span>
+            </div>
+          </>
+        ) : (
+          /* Exclude=1 or 2: show data rows */
+          DISTRESS_FIELDS.map(({ key, label, format, highlight, showMedian, medianFormat, isRank }) => {
+            // Skip score and rank rows for exclude=1 (small population, raw data only)
+            if (data.exclude === 1 && (highlight || isRank)) return null;
+
+            const medianVal = houstonMedians?.[key];
+            const fmtMedian = showMedian && medianVal != null
+              ? (medianFormat ? medianFormat(medianVal) : medianVal.toLocaleString())
+              : "";
+            const val2023 = data2023?.[key];
+            const trend = (data.exclude === 2 && !isRank) ? getTrendArrow(key, data[key], val2023) : null;
+
+            return (
+              <div key={key}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    padding: highlight ? "6px 0" : "3px 0",
+                    borderBottom: highlight ? "1px solid rgba(255,255,255,0.1)" : "none",
+                  }}
+                >
+                  {/* Label */}
+                  <span style={{
+                    flex: 1,
+                    fontSize: highlight ? "12px" : isRank ? "10px" : "11px",
+                    color: highlight ? "#FFC857" : isRank ? "#AAA" : "#CCC",
+                    fontWeight: highlight ? 600 : 400,
+                  }}>
+                    {label}
+                  </span>
+                  {/* 2023 value (skip for rank rows) */}
+                  <span style={{
+                    width: "60px",
+                    textAlign: "right",
+                    fontSize: highlight ? "13px" : "11px",
+                    color: "#999",
+                    fontWeight: highlight ? 600 : 400,
+                  }}>
+                    {isRank ? "" : (val2023 != null ? format(val2023) : "—")}
+                  </span>
+                  {/* 2024 value + trend arrow */}
+                  <span style={{
+                    width: "72px",
+                    textAlign: "right",
+                    fontSize: highlight ? "14px" : isRank ? "10px" : "12px",
+                    color: isRank ? "#AAA" : "#FFFFFF",
+                    fontWeight: highlight ? 700 : 500,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    gap: "4px",
+                  }}>
+                    {highlight && (
+                      <span style={{
+                        display: "inline-block",
+                        width: "12px",
+                        height: "12px",
+                        borderRadius: "50%",
+                        backgroundColor: getDistressBandColor(data.distress_score),
+                        flexShrink: 0,
+                      }} />
+                    )}
+                    {isRank ? format(data[key], rankedCount) : format(data[key])}
+                    {trend && (
+                      <span style={{
+                        fontSize: "9px",
+                        color: trend.color,
+                        flexShrink: 0,
+                        lineHeight: 1,
+                      }}>
+                        {trend.arrow}
+                      </span>
+                    )}
+                  </span>
+                  {/* Houston median value (skip for rank rows) */}
+                  <span style={{
+                    width: "60px",
+                    textAlign: "right",
+                    fontSize: "11px",
+                    color: "#8FB6FF",
+                    fontWeight: 400,
+                  }}>
+                    {isRank ? "" : fmtMedian}
+                  </span>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* Source citation + footnote */}
@@ -647,8 +719,328 @@ function DraggableDistressTable({ data, zipCode, neighborhood, houstonMedians, o
   );
 }
 
+// Fields used in distress score (exclude rank, population, and score itself — they're not score inputs)
+const DISTRESS_SCORE_DRIVERS = DISTRESS_FIELDS.filter(
+  f => f.showMedian && !f.isRank && f.key !== "population" && f.key !== "distress_score"
+);
+
+// Draggable YoY summary panel for distress data — Houston metro trends
+function DraggableDistressYoY({ distressData, distressData2023, houstonMedians, houstonMedians2023, onClose }) {
+  const dragState = useRef({ isDragging: false, startX: 0, startY: 0 });
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  const handleMouseDown = (e) => {
+    if (!e.target.closest("[data-drag-handle]")) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragState.current = {
+      isDragging: true,
+      startX: e.clientX - position.x,
+      startY: e.clientY - position.y,
+    };
+    const handleMouseMove = (e) => {
+      if (!dragState.current.isDragging) return;
+      setPosition({
+        x: e.clientX - dragState.current.startX,
+        y: e.clientY - dragState.current.startY,
+      });
+    };
+    const handleMouseUp = () => {
+      dragState.current.isDragging = false;
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  // Compute per-zip score changes and find top/bottom 5 (only fully scored zips)
+  const { top5Improved, top5Declined } = useMemo(() => {
+    if (!distressData?.length || !distressData2023?.length) return { top5Improved: [], top5Declined: [] };
+
+    const lookup2023 = {};
+    distressData2023.forEach(d => { if (d.zip_code) lookup2023[d.zip_code] = d; });
+
+    const changes = distressData
+      .filter(d => d.zip_code && d.exclude === 2 && d.distress_score != null && lookup2023[d.zip_code]?.distress_score != null)
+      .map(d => {
+        const prev = lookup2023[d.zip_code];
+        const scoreDiff = d.distress_score - prev.distress_score;
+
+        // Find top 2-3 key changes using percentage change (normalized comparison)
+        const metricChanges = [];
+        DISTRESS_SCORE_DRIVERS.forEach(({ key, label, format }) => {
+          const v2024 = d[key];
+          const v2023 = prev[key];
+          if (v2024 != null && v2023 != null && v2023 !== 0) {
+            const pctChange = ((v2024 - v2023) / Math.abs(v2023)) * 100;
+            // Only include meaningful changes (>1% change)
+            if (Math.abs(pctChange) > 1) {
+              const isGood = HIGHER_IS_GOOD.has(key) ? (v2024 > v2023) : (v2024 < v2023);
+              metricChanges.push({ key, label, pctChange, isGood, format, v2024 });
+            }
+          }
+        });
+        // Sort by absolute percentage change descending, take top 3
+        metricChanges.sort((a, b) => Math.abs(b.pctChange) - Math.abs(a.pctChange));
+        const keyChanges = metricChanges.slice(0, 3);
+
+        return {
+          zip: d.zip_code,
+          score2024: d.distress_score,
+          score2023: prev.distress_score,
+          diff: scoreDiff,
+          keyChanges,
+        };
+      });
+
+    // Sort by diff ascending (most improved = biggest negative diff)
+    const sorted = [...changes].sort((a, b) => a.diff - b.diff);
+    const top5Improved = sorted.slice(0, 5);
+    const top5Declined = sorted.slice(-5).reverse(); // worst at top
+
+    return { top5Improved, top5Declined };
+  }, [distressData, distressData2023]);
+
+  if (!houstonMedians || !houstonMedians2023) return null;
+
+  const fmtDiff = (diff) => {
+    const sign = diff > 0 ? "+" : "";
+    return `${sign}${diff.toLocaleString()}`;
+  };
+
+  // Metrics to show in Houston Metro summary (skip percentile)
+  const metroFields = DISTRESS_FIELDS.filter(f => f.showMedian && f.key !== "population");
+
+  return (
+    <div
+      data-distress-yoy="true"
+      onMouseDown={handleMouseDown}
+      className="absolute z-50 rounded-lg shadow-xl"
+      style={{
+        bottom: "60px",
+        left: "20px",
+        transform: `translate(${position.x}px, ${position.y}px)`,
+        width: "460px",
+        maxHeight: "85vh",
+        overflowY: "auto",
+        backgroundColor: "rgba(34, 40, 49, 0.95)",
+        fontFamily: "Lexend, sans-serif",
+        userSelect: "none",
+      }}
+    >
+      {/* Drag handle header */}
+      <div
+        data-drag-handle="true"
+        className="flex items-center justify-between rounded-t-lg"
+        style={{
+          padding: "10px 14px 8px",
+          cursor: "grab",
+          borderBottom: "1px solid rgba(255,255,255,0.1)",
+        }}
+      >
+        <h3 style={{
+          fontSize: "15px",
+          color: "#FFC857",
+          fontWeight: 600,
+          margin: 0,
+        }}>
+          Distress — Year over Year Change
+        </h3>
+        <button
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          style={{
+            background: "none",
+            border: "none",
+            color: "#999",
+            cursor: "pointer",
+            fontSize: "18px",
+            lineHeight: 1,
+            padding: "0 4px",
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Section 1: Houston Metro Medians */}
+      <div style={{ padding: "8px 14px 4px" }}>
+        <div style={{
+          fontSize: "12px",
+          color: "#8FB6FF",
+          fontWeight: 600,
+          marginBottom: "6px",
+        }}>
+          Houston Metro Area Medians
+        </div>
+
+        {/* Column headers */}
+        <div style={{ display: "flex", padding: "0 0 4px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+          <span style={{ flex: 1, fontSize: "9px", color: "#888" }}></span>
+          <span style={{ width: "60px", textAlign: "right", fontSize: "9px", color: "#FFF", fontWeight: 600 }}>2023</span>
+          <span style={{ width: "60px", textAlign: "right", fontSize: "9px", color: "#FFF", fontWeight: 600 }}>2024</span>
+          <span style={{ width: "55px", textAlign: "right", fontSize: "9px", color: "#FFF", fontWeight: 600 }}>Change</span>
+        </div>
+
+        {metroFields.map(({ key, label, medianFormat, format }) => {
+          const v2023 = houstonMedians2023[key];
+          const v2024 = houstonMedians[key];
+          const fmt = medianFormat || format;
+          const trend = getTrendArrow(key, v2024, v2023);
+
+          return (
+            <div key={key} style={{
+              display: "flex",
+              alignItems: "center",
+              padding: key === "distress_score" ? "5px 0" : "2px 0",
+              borderBottom: key === "distress_score" ? "1px solid rgba(255,255,255,0.08)" : "none",
+            }}>
+              <span style={{
+                flex: 1,
+                fontSize: key === "distress_score" ? "11px" : "10px",
+                color: key === "distress_score" ? "#FFC857" : "#CCC",
+                fontWeight: key === "distress_score" ? 600 : 400,
+              }}>
+                {label}
+              </span>
+              <span style={{ width: "60px", textAlign: "right", fontSize: "10px", color: "#999" }}>
+                {v2023 != null ? fmt(v2023) : "—"}
+              </span>
+              <span style={{ width: "60px", textAlign: "right", fontSize: "10px", color: "#FFF", fontWeight: 500 }}>
+                {v2024 != null ? fmt(v2024) : "—"}
+              </span>
+              <span style={{
+                width: "55px",
+                textAlign: "right",
+                fontSize: "10px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                gap: "3px",
+              }}>
+                {trend && (
+                  <span style={{ color: trend.color, fontSize: "9px" }}>{trend.arrow}</span>
+                )}
+                <span style={{ color: "#CCC", fontSize: "9px" }}>
+                  {v2024 != null && v2023 != null ? (() => {
+                    const diff = Math.abs(v2024 - v2023);
+                    if (key === "distress_score") return Math.round(diff).toLocaleString();
+                    if (key === "median_household_inc") return `$${Math.round(diff).toLocaleString()}`;
+                    if (key === "income_ratio") return diff.toFixed(2);
+                    return `${Math.round(diff * 10) / 10}%`;
+                  })() : "—"}
+                </span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Section 2: Most Improved Zip Codes */}
+      <div style={{ padding: "8px 14px 4px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+        <div style={{
+          fontSize: "12px",
+          color: "#4CAF50",
+          fontWeight: 600,
+          marginBottom: "6px",
+        }}>
+          Most Improved Zip Codes
+        </div>
+
+        <div style={{ display: "flex", padding: "0 0 4px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+          <span style={{ width: "50px", fontSize: "9px", color: "#888" }}>Zip</span>
+          <span style={{ width: "50px", textAlign: "right", fontSize: "9px", color: "#FFF", fontWeight: 600 }}>Score</span>
+          <span style={{ width: "45px", textAlign: "right", fontSize: "9px", color: "#FFF", fontWeight: 600 }}>Chg</span>
+          <span style={{ flex: 1, fontSize: "9px", color: "#888", paddingLeft: "12px" }}>Key Changes</span>
+        </div>
+
+        {top5Improved.map((z) => {
+          const scoreTrend = getTrendArrow("distress_score", z.score2024, z.score2023);
+          return (
+            <div key={z.zip} style={{ display: "flex", alignItems: "flex-start", padding: "3px 0" }}>
+              <span style={{ width: "50px", fontSize: "11px", color: "#FFF", fontWeight: 500 }}>{z.zip}</span>
+              <span style={{ width: "50px", textAlign: "right", fontSize: "10px", color: "#FFF" }}>{z.score2024.toLocaleString()}</span>
+              <span style={{ width: "45px", textAlign: "right", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "2px" }}>
+                {scoreTrend && <span style={{ color: scoreTrend.color, fontSize: "9px" }}>{scoreTrend.arrow}</span>}
+                <span style={{ color: "#4CAF50", fontSize: "9px" }}>{fmtDiff(Math.round(z.diff))}</span>
+              </span>
+              <div style={{ flex: 1, paddingLeft: "12px" }}>
+                {z.keyChanges.length > 0 ? z.keyChanges.map((c, i) => (
+                  <div key={c.key} style={{ fontSize: "9px", color: "#CCC", lineHeight: "14px" }}>
+                    <span>{c.label}</span>
+                    <span style={{ color: c.isGood ? "#4CAF50" : "#E74C3E", marginLeft: "4px" }}>
+                      {c.pctChange > 0 ? "+" : ""}{c.pctChange.toFixed(1)}%
+                    </span>
+                  </div>
+                )) : <span style={{ fontSize: "9px", color: "#888" }}>—</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Section 3: Most Declined Zip Codes */}
+      <div style={{ padding: "8px 14px 4px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+        <div style={{
+          fontSize: "12px",
+          color: "#E74C3E",
+          fontWeight: 600,
+          marginBottom: "6px",
+        }}>
+          Most Declined Zip Codes
+        </div>
+
+        <div style={{ display: "flex", padding: "0 0 4px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+          <span style={{ width: "50px", fontSize: "9px", color: "#888" }}>Zip</span>
+          <span style={{ width: "50px", textAlign: "right", fontSize: "9px", color: "#FFF", fontWeight: 600 }}>Score</span>
+          <span style={{ width: "45px", textAlign: "right", fontSize: "9px", color: "#FFF", fontWeight: 600 }}>Chg</span>
+          <span style={{ flex: 1, fontSize: "9px", color: "#888", paddingLeft: "12px" }}>Key Changes</span>
+        </div>
+
+        {top5Declined.map((z) => {
+          const scoreTrend = getTrendArrow("distress_score", z.score2024, z.score2023);
+          return (
+            <div key={z.zip} style={{ display: "flex", alignItems: "flex-start", padding: "3px 0" }}>
+              <span style={{ width: "50px", fontSize: "11px", color: "#FFF", fontWeight: 500 }}>{z.zip}</span>
+              <span style={{ width: "50px", textAlign: "right", fontSize: "10px", color: "#FFF" }}>{z.score2024.toLocaleString()}</span>
+              <span style={{ width: "45px", textAlign: "right", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "2px" }}>
+                {scoreTrend && <span style={{ color: scoreTrend.color, fontSize: "9px" }}>{scoreTrend.arrow}</span>}
+                <span style={{ color: "#E74C3E", fontSize: "9px" }}>{fmtDiff(Math.round(z.diff))}</span>
+              </span>
+              <div style={{ flex: 1, paddingLeft: "12px" }}>
+                {z.keyChanges.length > 0 ? z.keyChanges.map((c, i) => (
+                  <div key={c.key} style={{ fontSize: "9px", color: "#CCC", lineHeight: "14px" }}>
+                    <span>{c.label}</span>
+                    <span style={{ color: c.isGood ? "#4CAF50" : "#E74C3E", marginLeft: "4px" }}>
+                      {c.pctChange > 0 ? "+" : ""}{c.pctChange.toFixed(1)}%
+                    </span>
+                  </div>
+                )) : <span style={{ fontSize: "9px", color: "#888" }}>—</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer */}
+      <div style={{
+        padding: "6px 14px 10px",
+        borderTop: "1px solid rgba(255,255,255,0.08)",
+      }}>
+        <span style={{ fontSize: "9px", color: "#888", fontStyle: "italic" }}>
+          Source: {CENSUS_SOURCE}
+        </span>
+        <br />
+        <span style={{ fontSize: "9px", color: "#888", fontStyle: "italic" }}>
+          Score change based on distress score (composite of all indicators).
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // Draggable working poor data table component - shows working poor indicators for a clicked zip
-function DraggableWorkingPoorTable({ data, zipCode, neighborhood, houstonMedians, onClose }) {
+function DraggableWorkingPoorTable({ data, data2023, zipCode, neighborhood, houstonMedians, rankedCount, onClose }) {
   const dragState = useRef({ isDragging: false, startX: 0, startY: 0 });
   const [position, setPosition] = useState({ x: 0, y: 0 });
 
@@ -696,7 +1088,7 @@ function DraggableWorkingPoorTable({ data, zipCode, neighborhood, houstonMedians
         bottom: "60px",
         right: "60px",
         transform: `translate(${position.x}px, ${position.y}px)`,
-        width: "420px",
+        width: "400px",
         backgroundColor: "rgba(34, 40, 49, 0.95)",
         fontFamily: "Lexend, sans-serif",
         userSelect: "none",
@@ -761,21 +1153,26 @@ function DraggableWorkingPoorTable({ data, zipCode, neighborhood, houstonMedians
         borderBottom: "1px solid rgba(255,255,255,0.12)",
       }}>
         <span style={{ flex: 1, fontSize: "9px", color: "#888", fontWeight: 500 }}></span>
-        <span style={{ width: "72px", textAlign: "right", fontSize: "9px", color: "#FFFFFF", fontWeight: 600 }}>
-          Zip
+        <span style={{ width: "60px", textAlign: "right", fontSize: "9px", color: "#FFFFFF", fontWeight: 600 }}>
+          2023
         </span>
-        <span style={{ width: "72px", textAlign: "right", fontSize: "9px", color: "#8FB6FF", fontWeight: 600 }}>
+        <span style={{ width: "72px", textAlign: "right", fontSize: "9px", color: "#FFFFFF", fontWeight: 600 }}>
+          2024
+        </span>
+        <span style={{ width: "60px", textAlign: "right", fontSize: "9px", color: "#8FB6FF", fontWeight: 600 }}>
           Houston*
         </span>
       </div>
 
       {/* Data rows */}
       <div style={{ padding: "4px 14px 2px" }}>
-        {WORKING_POOR_FIELDS.map(({ key, label, format, highlight, showMedian, medianFormat }) => {
+        {WORKING_POOR_FIELDS.map(({ key, label, format, highlight, showMedian, medianFormat, isRank }) => {
           const medianVal = houstonMedians?.[key];
           const fmtMedian = showMedian && medianVal != null
             ? (medianFormat ? medianFormat(medianVal) : medianVal.toLocaleString())
             : "";
+          const val2023 = data2023?.[key];
+          const trend = !isRank ? getTrendArrow(key, data[key], val2023) : null;
 
           return (
             <div key={key}>
@@ -790,23 +1187,33 @@ function DraggableWorkingPoorTable({ data, zipCode, neighborhood, houstonMedians
                 {/* Label */}
                 <span style={{
                   flex: 1,
-                  fontSize: highlight ? "12px" : "11px",
-                  color: highlight ? "#FFC857" : "#CCC",
+                  fontSize: highlight ? "12px" : isRank ? "10px" : "11px",
+                  color: highlight ? "#FFC857" : isRank ? "#AAA" : "#CCC",
                   fontWeight: highlight ? 600 : 400,
                 }}>
                   {label}
                 </span>
-                {/* Zip value */}
+                {/* 2023 value (skip for rank rows) */}
+                <span style={{
+                  width: "60px",
+                  textAlign: "right",
+                  fontSize: highlight ? "13px" : "11px",
+                  color: "#999",
+                  fontWeight: highlight ? 600 : 400,
+                }}>
+                  {isRank ? "" : (val2023 != null ? format(val2023) : "—")}
+                </span>
+                {/* 2024 value + trend arrow */}
                 <span style={{
                   width: "72px",
                   textAlign: "right",
-                  fontSize: highlight ? "14px" : "12px",
-                  color: "#FFFFFF",
+                  fontSize: highlight ? "14px" : isRank ? "10px" : "12px",
+                  color: isRank ? "#AAA" : "#FFFFFF",
                   fontWeight: highlight ? 700 : 500,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "flex-end",
-                  gap: "6px",
+                  gap: "4px",
                 }}>
                   {highlight && (
                     <span style={{
@@ -814,21 +1221,31 @@ function DraggableWorkingPoorTable({ data, zipCode, neighborhood, houstonMedians
                       width: "12px",
                       height: "12px",
                       borderRadius: "50%",
-                      backgroundColor: getWorkingPoorBandColor(data.working_poor_percentile),
+                      backgroundColor: getWorkingPoorBandColor(data.working_poor_score),
                       flexShrink: 0,
                     }} />
                   )}
-                  {format(data[key])}
+                  {isRank ? format(data[key], rankedCount) : format(data[key])}
+                  {trend && (
+                    <span style={{
+                      fontSize: "9px",
+                      color: trend.color,
+                      flexShrink: 0,
+                      lineHeight: 1,
+                    }}>
+                      {trend.arrow}
+                    </span>
+                  )}
                 </span>
-                {/* Houston median value */}
+                {/* Houston median value (skip for rank rows) */}
                 <span style={{
-                  width: "72px",
+                  width: "60px",
                   textAlign: "right",
                   fontSize: "11px",
                   color: "#8FB6FF",
                   fontWeight: 400,
                 }}>
-                  {fmtMedian}
+                  {isRank ? "" : fmtMedian}
                 </span>
               </div>
             </div>
@@ -856,7 +1273,7 @@ function DraggableWorkingPoorTable({ data, zipCode, neighborhood, houstonMedians
 }
 
 // Draggable evictions data table component - shows eviction indicators for a clicked zip
-function DraggableEvictionsTable({ data, zipCode, neighborhood, houstonMedians, onClose }) {
+function DraggableEvictionsTable({ data, zipCode, neighborhood, houstonMedians, rankedCount, onClose }) {
   const dragState = useRef({ isDragging: false, startX: 0, startY: 0 });
   const [position, setPosition] = useState({ x: 0, y: 0 });
 
@@ -904,7 +1321,7 @@ function DraggableEvictionsTable({ data, zipCode, neighborhood, houstonMedians, 
         right: "60px",
         transform: `translate(${position.x}px, ${position.y}px)`,
         width: "420px",
-        backgroundColor: "rgba(34, 40, 49, 0.95)",
+        backgroundColor: data.exclude === 1 ? "rgba(105, 105, 118, 0.95)" : "rgba(34, 40, 49, 0.95)",
         fontFamily: "Lexend, sans-serif",
         userSelect: "none",
       }}
@@ -961,6 +1378,23 @@ function DraggableEvictionsTable({ data, zipCode, neighborhood, houstonMedians, 
         </button>
       </div>
 
+      {/* Exclude=1 amber banner */}
+      {data.exclude === 1 && (
+        <div style={{
+          padding: "6px 14px",
+          backgroundColor: "rgba(255, 179, 2, 0.15)",
+          borderBottom: "1px solid rgba(255, 179, 2, 0.25)",
+        }}>
+          <span style={{ fontSize: "10px", color: "#FFB302", fontWeight: 500 }}>
+            Small population — data shown for reference only
+          </span>
+          <br />
+          <span style={{ fontSize: "9px", color: "#999", fontStyle: "italic" }}>
+            Not scored or ranked. Excluded from Houston metro statistics.
+          </span>
+        </div>
+      )}
+
       {/* Column headers */}
       <div style={{
         display: "flex",
@@ -978,66 +1412,77 @@ function DraggableEvictionsTable({ data, zipCode, neighborhood, houstonMedians, 
 
       {/* Data rows */}
       <div style={{ padding: "4px 14px 2px" }}>
-        {EVICTIONS_FIELDS.map(({ key, label, format, highlight, showMedian, medianFormat }) => {
-          const medianVal = houstonMedians?.[key];
-          const fmtMedian = showMedian && medianVal != null
-            ? (medianFormat ? medianFormat(medianVal) : medianVal.toLocaleString())
-            : "";
+        {data.exclude === 0 ? (
+          /* Exclude=0: garbage data — show only "no data available" */
+          <div style={{ padding: "12px 0", textAlign: "center" }}>
+            <span style={{ fontSize: "12px", color: "#888", fontStyle: "italic" }}>No data available</span>
+          </div>
+        ) : (
+          /* Exclude=1 or 2: show data rows */
+          EVICTIONS_FIELDS.map(({ key, label, format, highlight, showMedian, medianFormat, isRank }) => {
+            // Skip score and rank rows for exclude=1
+            if (data.exclude === 1 && (highlight || isRank)) return null;
 
-          return (
-            <div key={key}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  padding: highlight ? "6px 0" : "3px 0",
-                  borderBottom: highlight ? "1px solid rgba(255,255,255,0.1)" : "none",
-                }}
-              >
-                <span style={{
-                  flex: 1,
-                  fontSize: highlight ? "12px" : "11px",
-                  color: highlight ? "#FFC857" : "#CCC",
-                  fontWeight: highlight ? 600 : 400,
-                }}>
-                  {label}
-                </span>
-                <span style={{
-                  width: "72px",
-                  textAlign: "right",
-                  fontSize: highlight ? "14px" : "12px",
-                  color: "#FFFFFF",
-                  fontWeight: highlight ? 700 : 500,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-end",
-                  gap: "6px",
-                }}>
-                  {highlight && (
-                    <span style={{
-                      display: "inline-block",
-                      width: "12px",
-                      height: "12px",
-                      borderRadius: "50%",
-                      backgroundColor: getEvictionsBandColor(data.evictions_percentile),
-                      flexShrink: 0,
-                    }} />
-                  )}
-                  {format(data[key])}
-                </span>
-                <span style={{
-                  width: "72px",
-                  textAlign: "right",
-                  fontSize: "11px",
-                  color: "#8FB6FF",
-                  fontWeight: 400,
-                }}>
-                  {fmtMedian}
-                </span>
+            const medianVal = houstonMedians?.[key];
+            const fmtMedian = showMedian && medianVal != null
+              ? (medianFormat ? medianFormat(medianVal) : medianVal.toLocaleString())
+              : "";
+
+            return (
+              <div key={key}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    padding: highlight ? "6px 0" : "3px 0",
+                    borderBottom: highlight ? "1px solid rgba(255,255,255,0.1)" : "none",
+                  }}
+                >
+                  <span style={{
+                    flex: 1,
+                    fontSize: highlight ? "12px" : isRank ? "10px" : "11px",
+                    color: highlight ? "#FFC857" : isRank ? "#AAA" : "#CCC",
+                    fontWeight: highlight ? 600 : 400,
+                  }}>
+                    {label}
+                  </span>
+                  <span style={{
+                    width: "72px",
+                    textAlign: "right",
+                    fontSize: highlight ? "14px" : "12px",
+                    color: "#FFFFFF",
+                    fontWeight: highlight ? 700 : 500,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    gap: "6px",
+                  }}>
+                    {highlight && (
+                      <span style={{
+                        display: "inline-block",
+                        width: "12px",
+                        height: "12px",
+                        borderRadius: "50%",
+                        backgroundColor: getEvictionsBandColor(data.evictions_score),
+                        flexShrink: 0,
+                      }} />
+                    )}
+                    {isRank ? format(data[key], rankedCount) : format(data[key])}
+                  </span>
+                  <span style={{
+                    width: "72px",
+                    textAlign: "right",
+                    fontSize: "11px",
+                    color: "#8FB6FF",
+                    fontWeight: 400,
+                  }}>
+                    {fmtMedian}
+                  </span>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
 
       {/* Source citation + footnote */}
@@ -1255,7 +1700,7 @@ function DistressLegendBar({ standalone }) {
   return (
     <div style={standalone ? {} : { marginTop: "10px", borderTop: "1px solid #E0E0E0", paddingTop: "8px" }}>
       <div style={{ fontWeight: 500, fontSize: "11px", color: "#444", marginBottom: "4px" }}>
-        Distress Percentile
+        Distress Score
       </div>
       <div style={{ display: "flex", gap: "1px", marginBottom: "2px" }}>
         <div style={{ flex: 3, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(76, 175, 80, 0.40)" }} />
@@ -1274,12 +1719,12 @@ function DistressLegendBar({ standalone }) {
   );
 }
 
-// Working poor legend bar - 5-band red gradient matching percentile bands
+// Working poor legend bar - 4-band red gradient matching score bands
 function WorkingPoorLegendBar({ standalone }) {
   return (
     <div style={standalone ? {} : { marginTop: "10px", borderTop: "1px solid #E0E0E0", paddingTop: "8px" }}>
       <div style={{ fontWeight: 500, fontSize: "11px", color: "#444", marginBottom: "4px" }}>
-        Working Poor Percentile
+        Working Poor Score
       </div>
       <div style={{ display: "flex", gap: "1px", marginBottom: "2px" }}>
         <div style={{ flex: 3, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(255, 205, 210, 0.45)" }} />
@@ -1324,7 +1769,7 @@ function EvictionsLegendBar({ standalone }) {
   return (
     <div style={standalone ? {} : { marginTop: "10px", borderTop: "1px solid #E0E0E0", paddingTop: "8px" }}>
       <div style={{ fontWeight: 500, fontSize: "11px", color: "#444", marginBottom: "4px" }}>
-        Evictions Percentile
+        Evictions Score
       </div>
       <div style={{ display: "flex", gap: "1px", marginBottom: "2px" }}>
         <div style={{ flex: 3, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(255, 224, 178, 0.45)" }} />
@@ -1432,7 +1877,7 @@ const MapboxMap = forwardRef(function MapboxMap({
   activeBase = "distress",
   onViewModeChange,
 }, ref) {
-  const { directory, assistance, zipCodes, distressData, workingPoorData, evictionsData } = useAppData();
+  const { directory, assistance, zipCodes, distressData, distressData2023, workingPoorData, workingPoorData2023, evictionsData } = useAppData();
   const mapRef = useRef(null);
   const mapContainerRef = useRef(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -1469,6 +1914,9 @@ const MapboxMap = forwardRef(function MapboxMap({
   const [evictionsTableZip, setEvictionsTableZip] = useState(null);
   const evictionsSelectedRef = useRef(null); // feature id of currently highlighted zip
 
+  // Zip search state
+  const [searchZipValue, setSearchZipValue] = useState("");
+
   // Track highlighted zip codes (teal - individual child click)
   const childHighlightedRef = useRef(new Set());
 
@@ -1486,17 +1934,18 @@ const MapboxMap = forwardRef(function MapboxMap({
     );
   }, [zipCodes]);
 
-  // Distress score lookup: zip_code -> distress_score
+  // Distress score lookup: zip_code -> distress_score (only exclude === 2 get colored on map)
+  // Uses -1 sentinel for zips without data so score 0 (best zip) still gets colored
   const distressLookup = useMemo(() => {
     const lookup = {};
-    if (!zipCodes) return lookup;
-    zipCodes.forEach((z) => {
-      if (z.houston_area === "Y" && z.distress_score != null) {
-        lookup[z.zip_code] = Number(z.distress_score) || 0;
+    if (!distressData) return lookup;
+    distressData.forEach((d) => {
+      if (d.zip_code && d.exclude === 2 && d.distress_score != null) {
+        lookup[d.zip_code] = Number(d.distress_score);
       }
     });
     return lookup;
-  }, [zipCodes]);
+  }, [distressData]);
 
   // Working poor lookup: zip_code -> working_poor_score value (from working_poor_data table)
   const workingPoorLookup = useMemo(() => {
@@ -1510,17 +1959,17 @@ const MapboxMap = forwardRef(function MapboxMap({
     return lookup;
   }, [workingPoorData]);
 
-  // Population lookup: zip_code -> population value
+  // Population lookup: zip_code -> population value (from distress data, includes all exclude levels)
   const populationLookup = useMemo(() => {
     const lookup = {};
-    if (!zipCodes) return lookup;
-    zipCodes.forEach((z) => {
-      if (z.houston_area === "Y" && z.population != null) {
-        lookup[z.zip_code] = Number(z.population) || 0;
+    if (!distressData) return lookup;
+    distressData.forEach((d) => {
+      if (d.zip_code && d.population != null) {
+        lookup[d.zip_code] = Number(d.population) || 0;
       }
     });
     return lookup;
-  }, [zipCodes]);
+  }, [distressData]);
 
   // Distress data lookup: zip_code -> full distress record (for popup table)
   const distressDataLookup = useMemo(() => {
@@ -1534,20 +1983,45 @@ const MapboxMap = forwardRef(function MapboxMap({
     return lookup;
   }, [distressData]);
 
-  // Houston metro medians computed from distress_data (for comparison column)
-  const houstonMedians = useMemo(() => computeHoustonMedians(distressData), [distressData]);
-
-  // Percentile lookup: zip_code -> percentile (for 5-band map coloring)
-  const percentileLookup = useMemo(() => {
+  // Distress data 2023 lookup: zip_code -> full 2023 distress record (for YoY comparison)
+  const distressData2023Lookup = useMemo(() => {
     const lookup = {};
-    if (!distressData) return lookup;
-    distressData.forEach((d) => {
-      if (d.zip_code && d.percentile != null) {
-        lookup[d.zip_code] = Number(d.percentile) || 0;
+    if (!distressData2023) return lookup;
+    distressData2023.forEach((d) => {
+      if (d.zip_code) {
+        lookup[d.zip_code] = d;
       }
     });
     return lookup;
-  }, [distressData]);
+  }, [distressData2023]);
+
+  // Houston metro medians computed from distress_data (for comparison column)
+  const houstonMedians = useMemo(() => computeHoustonMedians(distressData), [distressData]);
+  const houstonMedians2023 = useMemo(() => computeHoustonMedians(distressData2023), [distressData2023]);
+
+  // YoY summary panel state
+  const [showDistressYoY, setShowDistressYoY] = useState(false);
+
+  // YoY top/bottom 5 zip codes for map highlighting (lightweight — just zip + rank, only fully scored zips)
+  const distressYoYZips = useMemo(() => {
+    if (!distressData?.length || !distressData2023?.length) return null;
+    const lookup2023 = {};
+    distressData2023.forEach(d => { if (d.zip_code) lookup2023[d.zip_code] = d; });
+    const changes = distressData
+      .filter(d => d.zip_code && d.exclude === 2 && d.distress_score != null && lookup2023[d.zip_code]?.distress_score != null)
+      .map(d => ({ zip: d.zip_code, diff: d.distress_score - lookup2023[d.zip_code].distress_score }));
+    const sorted = [...changes].sort((a, b) => a.diff - b.diff);
+    // improved = map of zip → rank 1-5 (1 = most improved)
+    const improved = {};
+    sorted.slice(0, 5).forEach((z, i) => { improved[z.zip] = i + 1; });
+    // declined = map of zip → rank 1-5 (1 = most declined)
+    const declined = {};
+    sorted.slice(-5).reverse().forEach((z, i) => { declined[z.zip] = i + 1; });
+    return { improved, declined };
+  }, [distressData, distressData2023]);
+
+  // Note: distressLookup only includes exclude===2 zips, so exclude=0/1 get score 0 (no map color).
+  // Info box data comes from distressDataLookup which includes all exclude levels.
 
   // Working poor data lookup: zip_code -> full working poor record (for popup table)
   const workingPoorDataLookup = useMemo(() => {
@@ -1561,28 +2035,31 @@ const MapboxMap = forwardRef(function MapboxMap({
     return lookup;
   }, [workingPoorData]);
 
-  // Working poor metro medians computed from working_poor_data (for comparison column)
-  const workingPoorMedians = useMemo(() => computeWorkingPoorMedians(workingPoorData), [workingPoorData]);
-
-  // Working poor percentile lookup: zip_code -> working_poor_percentile (for 5-band map coloring)
-  const workingPoorPercentileLookup = useMemo(() => {
+  // Working poor data 2023 lookup: zip_code -> full 2023 working poor record (for YoY comparison)
+  const workingPoorData2023Lookup = useMemo(() => {
     const lookup = {};
-    if (!workingPoorData) return lookup;
-    workingPoorData.forEach((d) => {
-      if (d.zip_code && d.working_poor_percentile != null) {
-        lookup[d.zip_code] = Number(d.working_poor_percentile) || 0;
+    if (!workingPoorData2023) return lookup;
+    workingPoorData2023.forEach((d) => {
+      if (d.zip_code) {
+        lookup[d.zip_code] = d;
       }
     });
     return lookup;
-  }, [workingPoorData]);
+  }, [workingPoorData2023]);
 
-  // Evictions lookup: zip_code -> evictions_percentile value (for 5-band map coloring)
+  // Working poor metro medians computed from working_poor_data (for comparison column)
+  const workingPoorMedians = useMemo(() => computeWorkingPoorMedians(workingPoorData), [workingPoorData]);
+
+  // Working poor score lookup for map coloring: zip_code -> working_poor_score (already in workingPoorLookup)
+  // (No separate percentile lookup needed — using score directly for map coloring)
+
+  // Evictions lookup: zip_code -> evictions_score (only exclude===2, for map coloring)
   const evictionsLookup = useMemo(() => {
     const lookup = {};
     if (!evictionsData) return lookup;
     evictionsData.forEach((d) => {
-      if (d.zip_code && d.evictions_percentile != null) {
-        lookup[d.zip_code] = Number(d.evictions_percentile) || 0;
+      if (d.zip_code && d.exclude === 2 && d.evictions_score != null) {
+        lookup[d.zip_code] = Number(d.evictions_score);
       }
     });
     return lookup;
@@ -1602,6 +2079,22 @@ const MapboxMap = forwardRef(function MapboxMap({
 
   // Evictions metro medians computed from evictions_data (for comparison column)
   const evictionsMedians = useMemo(() => computeEvictionsMedians(evictionsData), [evictionsData]);
+
+  // Dynamic ranked counts — count of exclude===2 records in each dataset
+  const distressRankedCount = useMemo(() => {
+    if (!distressData) return 0;
+    return distressData.filter(d => d.exclude === 2).length;
+  }, [distressData]);
+
+  const workingPoorRankedCount = useMemo(() => {
+    if (!workingPoorData) return 0;
+    return workingPoorData.filter(d => d.exclude === 2).length;
+  }, [workingPoorData]);
+
+  const evictionsRankedCount = useMemo(() => {
+    if (!evictionsData) return 0;
+    return evictionsData.filter(d => d.exclude === 2).length;
+  }, [evictionsData]);
 
   // Dynamic thresholds for population (25th/75th percentile)
   const metricThresholds = useMemo(() => {
@@ -1627,10 +2120,11 @@ const MapboxMap = forwardRef(function MapboxMap({
   // Which metric to display: in base view use viewMode, in filter view use activeBase
   const displayMetric = isBaseView ? viewMode : activeBase;
 
-  // Memoized unified fill style - recomputed when viewMode, activeBase, or thresholds change
+  // Memoized unified fill style - recomputed when viewMode, activeBase, thresholds, or YoY mode change
+  const isDistressYoYActive = showDistressYoY && (isBaseView ? displayMetric === "distress" : activeBase === "distress");
   const unifiedFillStyle = useMemo(() => {
-    return getUnifiedFillStyle(displayMetric, !isBaseView, metricThresholds, !isBaseView);
-  }, [displayMetric, isBaseView, metricThresholds]);
+    return getUnifiedFillStyle(displayMetric, !isBaseView, metricThresholds, !isBaseView, isDistressYoYActive);
+  }, [displayMetric, isBaseView, metricThresholds, isDistressYoYActive]);
 
   // Zip codes by county lookup
   const houstonZipsByCounty = useMemo(() => {
@@ -1781,17 +2275,17 @@ const MapboxMap = forwardRef(function MapboxMap({
           properties: {
             ...f.properties,
             density: servedZips.has(f.properties.ZCTA5CE20) ? 1 : 0,
-            distress_score: distressLookup[f.properties.ZCTA5CE20] || 0,
-            percentile: percentileLookup[f.properties.ZCTA5CE20] || 0,
-            working_poor: workingPoorLookup[f.properties.ZCTA5CE20] ?? 0,
-            working_poor_percentile: workingPoorPercentileLookup[f.properties.ZCTA5CE20] || 0,
+            distress_score: distressLookup[f.properties.ZCTA5CE20] ?? -1,
+            working_poor_score: workingPoorLookup[f.properties.ZCTA5CE20] ?? -1,
             population: populationLookup[f.properties.ZCTA5CE20] || 0,
-            evictions_percentile: evictionsLookup[f.properties.ZCTA5CE20] || 0,
+            evictions_score: evictionsLookup[f.properties.ZCTA5CE20] ?? -1,
+            yoy_improved_rank: distressYoYZips?.improved[f.properties.ZCTA5CE20] || 0,
+            yoy_declined_rank: distressYoYZips?.declined[f.properties.ZCTA5CE20] || 0,
           },
         })),
     };
     return filtered;
-  }, [allGeoJsonData, boundaryZips, parentCoverage, distressLookup, percentileLookup, workingPoorLookup, workingPoorPercentileLookup, populationLookup, evictionsLookup]);
+  }, [allGeoJsonData, boundaryZips, parentCoverage, distressLookup, workingPoorLookup, populationLookup, evictionsLookup, distressYoYZips]);
 
   // Zip code -> feature id lookup
   const zipToFeatureId = useMemo(() => {
@@ -2030,6 +2524,48 @@ const MapboxMap = forwardRef(function MapboxMap({
       setBaseHighlight(zipCode);
     }
   }, [clearChildHighlights, zipCode, setBaseHighlight, isBaseView, displayMetric, distressDataLookup, workingPoorDataLookup, evictionsDataLookup, activeBase]);
+
+  // Handle zip search — fly to zip and open its info box
+  const handleZipSearch = useCallback((zipStr) => {
+    const zip = zipStr.trim();
+    if (!zip) return;
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+
+    // Find centroid from zipCodes table
+    const zipRecord = zipCodes?.find(z => z.zip_code === zip);
+    if (!zipRecord?.coordinates) return;
+
+    const coords = zipRecord.coordinates.split(",").map(c => parseFloat(c.trim()));
+    if (coords.length !== 2 || coords.some(isNaN)) return;
+
+    // Fly to the zip
+    map.flyTo({ center: [coords[1], coords[0]], zoom: 12, duration: 1500 });
+
+    // Open the appropriate info box based on current view
+    setDistressTableZip(null);
+    setWorkingPoorTableZip(null);
+    setEvictionsTableZip(null);
+
+    if (isBaseView) {
+      if (displayMetric === "distress" && distressDataLookup[zip]) {
+        setDistressTableZip(zip);
+      } else if (displayMetric === "working_poor" && workingPoorDataLookup[zip]) {
+        setWorkingPoorTableZip(zip);
+      } else if (displayMetric === "evictions" && evictionsDataLookup[zip]) {
+        setEvictionsTableZip(zip);
+      }
+    } else {
+      // Filter view — use activeBase
+      if (activeBase === "evictions" && evictionsDataLookup[zip]) {
+        setEvictionsTableZip(zip);
+      } else if (activeBase === "working_poor" && workingPoorDataLookup[zip]) {
+        setWorkingPoorTableZip(zip);
+      } else if (distressDataLookup[zip]) {
+        setDistressTableZip(zip);
+      }
+    }
+  }, [zipCodes, isBaseView, displayMetric, activeBase, distressDataLookup, workingPoorDataLookup, evictionsDataLookup]);
 
   // Handle boundary hover
   const handleMouseMove = useCallback((e) => {
@@ -2401,7 +2937,7 @@ const MapboxMap = forwardRef(function MapboxMap({
   };
 
   // Draw distress data table on canvas (for base view zip code selection)
-  const drawDistressTableOnCanvas = (ctx, data, zipCode, neighborhood, medians, containerEl) => {
+  const drawDistressTableOnCanvas = (ctx, data, data2023, zipCode, neighborhood, medians, containerEl) => {
     if (!data || !zipCode) return;
     const el = containerEl.querySelector("[data-distress-table]");
     if (!el) return;
@@ -2414,8 +2950,9 @@ const MapboxMap = forwardRef(function MapboxMap({
     const h = eRect.height;
     const pad = 14;
 
-    // Background
-    drawRoundedRect(ctx, x, y, w, h, 8, "rgba(34, 40, 49, 0.95)");
+    // Background (lighter for exclude=1)
+    const bgColor = data.exclude === 1 ? "rgba(105, 100, 110, 0.95)" : "rgba(34, 40, 49, 0.95)";
+    drawRoundedRect(ctx, x, y, w, h, 8, bgColor);
     ctx.textBaseline = "top";
 
     let cy = y + 10;
@@ -2434,6 +2971,26 @@ const MapboxMap = forwardRef(function MapboxMap({
       cy += 14;
     }
 
+    // Banner for exclude=1 (small population)
+    if (data.exclude === 1) {
+      ctx.fillStyle = "rgba(255, 179, 2, 0.15)";
+      ctx.fillRect(x, cy, w, 30);
+      ctx.strokeStyle = "rgba(255, 179, 2, 0.25)";
+      ctx.beginPath();
+      ctx.moveTo(x, cy + 30);
+      ctx.lineTo(x + w, cy + 30);
+      ctx.stroke();
+      cy += 6;
+      ctx.font = "500 10px Lexend, sans-serif";
+      ctx.fillStyle = "#FFB302";
+      ctx.fillText("Small population — data shown for reference only", x + pad, cy);
+      cy += 13;
+      ctx.font = "italic 9px Lexend, sans-serif";
+      ctx.fillStyle = "#999999";
+      ctx.fillText("Not scored or ranked. Excluded from Houston metro statistics.", x + pad, cy);
+      cy += 15;
+    }
+
     // Header divider
     ctx.strokeStyle = "rgba(255,255,255,0.1)";
     ctx.lineWidth = 1;
@@ -2443,17 +3000,21 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.stroke();
     cy += 8;
 
-    // Column headers
-    const valColW = 72;
-    const valCol1X = x + w - pad - valColW * 2;  // Zip value column
-    const valCol2X = x + w - pad - valColW;       // Houston value column
+    // Column headers: 2023 | 2024 | Houston*
+    const col2023W = 60;
+    const col2024W = 72;
+    const colHoustonW = 60;
+    const colHoustonX = x + w - pad - colHoustonW;
+    const col2024X = colHoustonX - col2024W;
+    const col2023X = col2024X - col2023W;
 
     ctx.font = "600 9px Lexend, sans-serif";
-    ctx.fillStyle = "#FFFFFF";
     ctx.textAlign = "right";
-    ctx.fillText("Zip", valCol1X + valColW, cy);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText("2023", col2023X + col2023W, cy);
+    ctx.fillText("2024", col2024X + col2024W, cy);
     ctx.fillStyle = "#8FB6FF";
-    ctx.fillText("Houston*", valCol2X + valColW, cy);
+    ctx.fillText("Houston*", colHoustonX + colHoustonW, cy);
     ctx.textAlign = "left";
     cy += 14;
 
@@ -2466,30 +3027,8 @@ const MapboxMap = forwardRef(function MapboxMap({
     cy += 6;
 
     // Data rows
-    DISTRESS_FIELDS.forEach(({ key, label, format, highlight, showMedian, medianFormat }) => {
-      const isTxRef = key === "income_ratio_tx";
-
-      // TX median reference line before income_ratio_tx
-      if (isTxRef) {
-        ctx.strokeStyle = "rgba(255,255,255,0.06)";
-        ctx.beginPath();
-        ctx.moveTo(x + pad, cy);
-        ctx.lineTo(x + w - pad, cy);
-        ctx.stroke();
-        cy += 4;
-
-        ctx.font = "italic 11px Lexend, sans-serif";
-        ctx.fillStyle = "#999999";
-        ctx.textAlign = "left";
-        ctx.fillText("TX Median Household Income", x + pad, cy);
-        ctx.textAlign = "right";
-        ctx.font = "500 12px Lexend, sans-serif";
-        ctx.fillText(`$${TX_MEDIAN_HOUSEHOLD_INCOME.toLocaleString()}`, valCol1X + valColW, cy);
-        ctx.textAlign = "left";
-        cy += 16;
-      }
-
-      // Row with highlight styling for distress percentile
+    DISTRESS_FIELDS.forEach(({ key, label, format, highlight, showMedian, medianFormat, isRank }) => {
+      // Row with highlight styling for distress score
       const rowPadY = highlight ? 6 : 3;
       cy += rowPadY;
 
@@ -2499,20 +3038,34 @@ const MapboxMap = forwardRef(function MapboxMap({
       ctx.textAlign = "left";
       ctx.fillText(label, x + pad, cy);
 
-      // Zip value (with distress band circle for highlight row)
+      // 2023 value
       ctx.textAlign = "right";
-      const formattedVal = format(data[key]);
+      const val2023 = data2023?.[key];
+      ctx.font = highlight ? "600 13px Lexend, sans-serif" : "400 11px Lexend, sans-serif";
+      ctx.fillStyle = "#999999";
+      ctx.fillText(val2023 != null ? format(val2023) : "—", col2023X + col2023W, cy);
+
+      // 2024 value (with distress band circle for highlight row)
+      const formattedVal = isRank ? format(data[key], distressRankedCount) : format(data[key]);
       if (highlight) {
         // Draw distress band color circle
-        const circleX = valCol1X + valColW - ctx.measureText(formattedVal).width - 18;
-        ctx.fillStyle = getDistressBandColor(data.percentile);
+        const circleX = col2024X + col2024W - ctx.measureText(formattedVal).width - 18;
+        ctx.fillStyle = getDistressBandColor(data.distress_score);
         ctx.beginPath();
         ctx.arc(circleX, cy + 6, 6, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.font = highlight ? "700 14px Lexend, sans-serif" : "500 12px Lexend, sans-serif";
       ctx.fillStyle = "#FFFFFF";
-      ctx.fillText(formattedVal, valCol1X + valColW, cy);
+      ctx.fillText(formattedVal, col2024X + col2024W, cy);
+
+      // Trend arrow on every row (direction = number movement, color = good/bad)
+      const trend = getTrendArrow(key, data[key], val2023);
+      if (trend) {
+        ctx.font = "9px Lexend, sans-serif";
+        ctx.fillStyle = trend.color;
+        ctx.fillText(trend.arrow, col2024X + col2024W + 2, cy);
+      }
 
       // Houston median value
       const medianVal = medians?.[key];
@@ -2520,7 +3073,7 @@ const MapboxMap = forwardRef(function MapboxMap({
         ctx.font = "400 11px Lexend, sans-serif";
         ctx.fillStyle = "#8FB6FF";
         const fmtMedian = medianFormat ? medianFormat(medianVal) : medianVal.toLocaleString();
-        ctx.fillText(fmtMedian, valCol2X + valColW, cy);
+        ctx.fillText(fmtMedian, colHoustonX + colHoustonW, cy);
       }
 
       ctx.textAlign = "left";
@@ -2555,7 +3108,7 @@ const MapboxMap = forwardRef(function MapboxMap({
   };
 
   // Draw working poor data table on canvas (for base view zip code selection)
-  const drawWorkingPoorTableOnCanvas = (ctx, data, zipCode, neighborhood, medians, containerEl) => {
+  const drawWorkingPoorTableOnCanvas = (ctx, data, data2023, zipCode, neighborhood, medians, containerEl) => {
     if (!data || !zipCode) return;
     const el = containerEl.querySelector("[data-working-poor-table]");
     if (!el) return;
@@ -2597,17 +3150,21 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.stroke();
     cy += 8;
 
-    // Column headers
-    const valColW = 72;
-    const valCol1X = x + w - pad - valColW * 2;  // Zip value column
-    const valCol2X = x + w - pad - valColW;       // Houston value column
+    // Column headers: 2023 | 2024 | Houston*
+    const col2023W = 60;
+    const col2024W = 72;
+    const colHoustonW = 60;
+    const colHoustonX = x + w - pad - colHoustonW;
+    const col2024X = colHoustonX - col2024W;
+    const col2023X = col2024X - col2023W;
 
     ctx.font = "600 9px Lexend, sans-serif";
-    ctx.fillStyle = "#FFFFFF";
     ctx.textAlign = "right";
-    ctx.fillText("Zip", valCol1X + valColW, cy);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText("2023", col2023X + col2023W, cy);
+    ctx.fillText("2024", col2024X + col2024W, cy);
     ctx.fillStyle = "#8FB6FF";
-    ctx.fillText("Houston*", valCol2X + valColW, cy);
+    ctx.fillText("Houston*", colHoustonX + colHoustonW, cy);
     ctx.textAlign = "left";
     cy += 14;
 
@@ -2620,8 +3177,8 @@ const MapboxMap = forwardRef(function MapboxMap({
     cy += 6;
 
     // Data rows
-    WORKING_POOR_FIELDS.forEach(({ key, label, format, highlight, showMedian, medianFormat }) => {
-      // Row with highlight styling for working poor percentile
+    WORKING_POOR_FIELDS.forEach(({ key, label, format, highlight, showMedian, medianFormat, isRank }) => {
+      // Row with highlight styling for working poor score
       const rowPadY = highlight ? 6 : 3;
       cy += rowPadY;
 
@@ -2631,20 +3188,34 @@ const MapboxMap = forwardRef(function MapboxMap({
       ctx.textAlign = "left";
       ctx.fillText(label, x + pad, cy);
 
-      // Zip value (with working poor band circle for highlight row)
+      // 2023 value
       ctx.textAlign = "right";
-      const formattedVal = format(data[key]);
+      const val2023 = data2023?.[key];
+      ctx.font = highlight ? "600 13px Lexend, sans-serif" : "400 11px Lexend, sans-serif";
+      ctx.fillStyle = "#999999";
+      ctx.fillText(val2023 != null ? format(val2023) : "—", col2023X + col2023W, cy);
+
+      // 2024 value (with working poor band circle for highlight row)
+      const formattedVal = isRank ? format(data[key], workingPoorRankedCount) : format(data[key]);
       if (highlight) {
         // Draw working poor band color circle
-        const circleX = valCol1X + valColW - ctx.measureText(formattedVal).width - 18;
-        ctx.fillStyle = getWorkingPoorBandColor(data.working_poor_percentile);
+        const circleX = col2024X + col2024W - ctx.measureText(formattedVal).width - 18;
+        ctx.fillStyle = getWorkingPoorBandColor(data.working_poor_score);
         ctx.beginPath();
         ctx.arc(circleX, cy + 6, 6, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.font = highlight ? "700 14px Lexend, sans-serif" : "500 12px Lexend, sans-serif";
       ctx.fillStyle = "#FFFFFF";
-      ctx.fillText(formattedVal, valCol1X + valColW, cy);
+      ctx.fillText(formattedVal, col2024X + col2024W, cy);
+
+      // Trend arrow on every row (direction = number movement, color = good/bad)
+      const trend = getTrendArrow(key, data[key], val2023);
+      if (trend) {
+        ctx.font = "9px Lexend, sans-serif";
+        ctx.fillStyle = trend.color;
+        ctx.fillText(trend.arrow, col2024X + col2024W + 2, cy);
+      }
 
       // Houston median value
       const medianVal = medians?.[key];
@@ -2652,7 +3223,7 @@ const MapboxMap = forwardRef(function MapboxMap({
         ctx.font = "400 11px Lexend, sans-serif";
         ctx.fillStyle = "#8FB6FF";
         const fmtMedian = medianFormat ? medianFormat(medianVal) : medianVal.toLocaleString();
-        ctx.fillText(fmtMedian, valCol2X + valColW, cy);
+        ctx.fillText(fmtMedian, colHoustonX + colHoustonW, cy);
       }
 
       ctx.textAlign = "left";
@@ -2700,7 +3271,8 @@ const MapboxMap = forwardRef(function MapboxMap({
     const h = eRect.height;
     const pad = 14;
 
-    drawRoundedRect(ctx, x, y, w, h, 8, "rgba(34, 40, 49, 0.95)");
+    const bgColor = data.exclude === 1 ? "rgba(105, 105, 118, 0.95)" : "rgba(34, 40, 49, 0.95)";
+    drawRoundedRect(ctx, x, y, w, h, 8, bgColor);
     ctx.textBaseline = "top";
 
     let cy = y + 10;
@@ -2715,6 +3287,22 @@ const MapboxMap = forwardRef(function MapboxMap({
       ctx.fillStyle = "#8FB6FF";
       ctx.fillText(truncateText(ctx, neighborhood, w - pad * 2), x + pad, cy);
       cy += 14;
+    }
+
+    // Exclude=1 amber banner
+    if (data.exclude === 1) {
+      ctx.fillStyle = "rgba(255, 179, 2, 0.15)";
+      ctx.fillRect(x, cy, w, 30);
+      ctx.strokeStyle = "rgba(255, 179, 2, 0.25)";
+      ctx.beginPath(); ctx.moveTo(x, cy + 30); ctx.lineTo(x + w, cy + 30); ctx.stroke();
+      ctx.font = "500 10px Lexend, sans-serif";
+      ctx.fillStyle = "#FFB302";
+      ctx.textAlign = "left";
+      ctx.fillText("Small population — data shown for reference only", x + pad, cy + 6);
+      ctx.font = "italic 9px Lexend, sans-serif";
+      ctx.fillStyle = "#999999";
+      ctx.fillText("Not scored or ranked. Excluded from Houston metro statistics.", x + pad, cy + 18);
+      cy += 34;
     }
 
     ctx.strokeStyle = "rgba(255,255,255,0.1)";
@@ -2745,7 +3333,20 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.stroke();
     cy += 6;
 
-    EVICTIONS_FIELDS.forEach(({ key, label, format, highlight, showMedian, medianFormat }) => {
+    if (data.exclude === 0) {
+      // Exclude=0: no data available
+      cy += 12;
+      ctx.font = "italic 12px Lexend, sans-serif";
+      ctx.fillStyle = "#888888";
+      ctx.textAlign = "center";
+      ctx.fillText("No data available", x + w / 2, cy);
+      ctx.textAlign = "left";
+      cy += 20;
+    } else {
+    EVICTIONS_FIELDS.forEach(({ key, label, format, highlight, showMedian, medianFormat, isRank }) => {
+      // Skip score and rank rows for exclude=1
+      if (data.exclude === 1 && (highlight || isRank)) return;
+
       const rowPadY = highlight ? 6 : 3;
       cy += rowPadY;
 
@@ -2755,10 +3356,10 @@ const MapboxMap = forwardRef(function MapboxMap({
       ctx.fillText(label, x + pad, cy);
 
       ctx.textAlign = "right";
-      const formattedVal = format(data[key]);
+      const formattedVal = isRank ? format(data[key], evictionsRankedCount) : format(data[key]);
       if (highlight) {
         const circleX = valCol1X + valColW - ctx.measureText(formattedVal).width - 18;
-        ctx.fillStyle = getEvictionsBandColor(data.evictions_percentile);
+        ctx.fillStyle = getEvictionsBandColor(data.evictions_score);
         ctx.beginPath();
         ctx.arc(circleX, cy + 6, 6, 0, Math.PI * 2);
         ctx.fill();
@@ -2787,6 +3388,7 @@ const MapboxMap = forwardRef(function MapboxMap({
         cy += 2;
       }
     });
+    } // end else (exclude !== 0)
 
     cy += 4;
     ctx.strokeStyle = "rgba(255,255,255,0.08)";
@@ -2973,12 +3575,12 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.font = "500 11px Lexend, sans-serif";
     ctx.fillStyle = "#444444";
     const labels = {
-      distress: "Distress Percentile",
-      working_poor: "Working Poor Percentile",
-      evictions: "Evictions Percentile",
+      distress: "Distress Score",
+      working_poor: "Working Poor Score",
+      evictions: "Evictions Score",
       population: "Population",
     };
-    ctx.fillText(labels[mode] || "Distress Percentile", x + pad, cy);
+    ctx.fillText(labels[mode] || "Distress Score", x + pad, cy);
     cy += 16;
 
     // Color bars
@@ -3045,13 +3647,13 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.fill();
 
     // Draw the metric bar inside the box (skip the divider by starting below top padding)
-    const labels = { distress: "Distress Percentile", working_poor: "Working Poor Percentile", evictions: "Evictions Percentile", population: "Population" };
+    const labels = { distress: "Distress Score", working_poor: "Working Poor Score", evictions: "Evictions Score", population: "Population" };
     let cy = y + 10;
     ctx.font = "500 11px Lexend, sans-serif";
     ctx.fillStyle = "#444444";
     ctx.textBaseline = "top";
     ctx.textAlign = "left";
-    ctx.fillText(labels[mode] || "Distress Percentile", x + pad, cy);
+    ctx.fillText(labels[mode] || "Distress Score", x + pad, cy);
     cy += 16;
 
     // Color bars
@@ -3232,13 +3834,15 @@ const MapboxMap = forwardRef(function MapboxMap({
       drawInfoBoxOnCanvas(ctx, infoBoxData, container);
       if (distressTableZip) {
         const distressRecord = distressDataLookup[distressTableZip];
+        const distressRecord2023 = distressData2023Lookup[distressTableZip];
         const neighborhood = zipCodes?.find(z => z.zip_code === distressTableZip)?.neighborhood || "";
-        drawDistressTableOnCanvas(ctx, distressRecord, distressTableZip, neighborhood, houstonMedians, container);
+        drawDistressTableOnCanvas(ctx, distressRecord, distressRecord2023, distressTableZip, neighborhood, houstonMedians, container);
       }
       if (workingPoorTableZip) {
         const wpRecord = workingPoorDataLookup[workingPoorTableZip];
+        const wpRecord2023 = workingPoorData2023Lookup[workingPoorTableZip];
         const neighborhood = zipCodes?.find(z => z.zip_code === workingPoorTableZip)?.neighborhood || "";
-        drawWorkingPoorTableOnCanvas(ctx, wpRecord, workingPoorTableZip, neighborhood, workingPoorMedians, container);
+        drawWorkingPoorTableOnCanvas(ctx, wpRecord, wpRecord2023, workingPoorTableZip, neighborhood, workingPoorMedians, container);
       }
       if (evictionsTableZip) {
         const evRecord = evictionsDataLookup[evictionsTableZip];
@@ -3268,7 +3872,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     } finally {
       setIsDownloading(false);
     }
-  }, [isDownloading, assistanceLabel, hasAssistance, orgPins, selectedOrgKey, showOrgLabels, infoBoxData, isDensityMode, parentCoverage, parentOrg, county, displayMetric, isBaseView, distressTableZip, distressDataLookup, houstonMedians, workingPoorTableZip, workingPoorDataLookup, workingPoorMedians, evictionsTableZip, evictionsDataLookup, evictionsMedians, zipCodes]);
+  }, [isDownloading, assistanceLabel, hasAssistance, orgPins, selectedOrgKey, showOrgLabels, infoBoxData, isDensityMode, parentCoverage, parentOrg, county, displayMetric, isBaseView, distressTableZip, distressDataLookup, distressData2023Lookup, houstonMedians, workingPoorTableZip, workingPoorDataLookup, workingPoorData2023Lookup, workingPoorMedians, evictionsTableZip, evictionsDataLookup, evictionsMedians, zipCodes]);
 
   // Expose download method to parent via ref
   useImperativeHandle(ref, () => ({
@@ -3461,20 +4065,53 @@ const MapboxMap = forwardRef(function MapboxMap({
             <option value="population">Population</option>
           </select>
         )}
+
+        {/* YoY Change button - only when distress map is active */}
+        {(isBaseView ? displayMetric === "distress" : activeBase === "distress") && (
+          <button
+            onClick={() => setShowDistressYoY(prev => !prev)}
+            className="transition-all duration-200 hover:brightness-125"
+            style={{
+              height: "36px",
+              padding: "0 14px",
+              borderRadius: "6px",
+              fontFamily: "'Open Sans', sans-serif",
+              fontSize: "13px",
+              fontWeight: 500,
+              backgroundColor: showDistressYoY ? "#005C72" : "rgba(34, 40, 49, 0.85)",
+              color: showDistressYoY ? "#FFC857" : "#FFFFFF",
+              border: showDistressYoY ? "1px solid #005C72" : "1px solid rgba(255,255,255,0.2)",
+              cursor: "pointer",
+              backdropFilter: "blur(4px)",
+              userSelect: "none",
+            }}
+          >
+            Year over Year Change
+          </button>
+        )}
       </div>
 
-      {/* Org Labels toggle button - top right, left of zoom controls */}
-      {!isBaseView && hasAssistance && currentZoom >= ORG_LABEL_ZOOM_THRESHOLD && (
+      {/* Top-right control stack: Show Labels + Zip search */}
+      <div
+        className="absolute"
+        style={{
+          top: "10px",
+          right: "52px",
+          zIndex: 20,
+          display: "flex",
+          flexDirection: "column",
+          gap: "6px",
+          alignItems: "flex-end",
+        }}
+      >
+        {/* Org Labels toggle button - always visible */}
         <button
           data-org-label-btn="true"
           onClick={() => setShowOrgLabels((prev) => !prev)}
-          className="absolute transition-all duration-200 hover:brightness-125"
+          className="transition-all duration-200 hover:brightness-125"
           style={{
-            top: "10px",
-            right: "52px",
-            zIndex: 20,
             backgroundColor: showOrgLabels ? "#005C72" : "rgba(34, 40, 49, 0.85)",
-            color: "#FFFFFF",
+            color: showOrgLabels ? "#FFC857" : "#FFFFFF",
             border: showOrgLabels ? "1px solid #005C72" : "1px solid rgba(255,255,255,0.2)",
             borderRadius: "6px",
             padding: "8px 14px",
@@ -3489,7 +4126,51 @@ const MapboxMap = forwardRef(function MapboxMap({
         >
           {showOrgLabels ? "Hide Labels" : "Show Labels"}
         </button>
-      )}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleZipSearch(searchZipValue);
+          }}
+          style={{ display: "flex", gap: "0" }}
+        >
+          <input
+            type="text"
+            value={searchZipValue}
+            onChange={(e) => setSearchZipValue(e.target.value)}
+            placeholder="Zip code"
+            style={{
+              width: "90px",
+              padding: "7px 10px",
+              backgroundColor: "rgba(34, 40, 49, 0.85)",
+              color: "#FFFFFF",
+              border: "1px solid rgba(255,255,255,0.2)",
+              borderRadius: "6px 0 0 6px",
+              fontFamily: "'Open Sans', sans-serif",
+              fontSize: "13px",
+              outline: "none",
+              backdropFilter: "blur(4px)",
+            }}
+          />
+          <button
+            type="submit"
+            className="transition-all duration-200 hover:brightness-125"
+            style={{
+              padding: "7px 10px",
+              backgroundColor: "rgba(34, 40, 49, 0.85)",
+              color: "#FFFFFF",
+              border: "1px solid rgba(255,255,255,0.2)",
+              borderLeft: "none",
+              borderRadius: "0 6px 6px 0",
+              fontFamily: "'Open Sans', sans-serif",
+              fontSize: "13px",
+              cursor: "pointer",
+              backdropFilter: "blur(4px)",
+            }}
+          >
+            Go
+          </button>
+        </form>
+      </div>
 
       {/* Draggable info box - only in filter view */}
       {/* Draggable info box - only in filter view */}
@@ -3499,10 +4180,23 @@ const MapboxMap = forwardRef(function MapboxMap({
       {(isBaseView ? displayMetric === "distress" : activeBase === "distress") && distressTableZip && (
         <DraggableDistressTable
           data={distressDataLookup[distressTableZip]}
+          data2023={distressData2023Lookup[distressTableZip]}
           zipCode={distressTableZip}
           neighborhood={zipCodes?.find(z => z.zip_code === distressTableZip)?.neighborhood || ""}
           houstonMedians={houstonMedians}
+          rankedCount={distressRankedCount}
           onClose={() => setDistressTableZip(null)}
+        />
+      )}
+
+      {/* Draggable distress YoY summary panel */}
+      {(isBaseView ? displayMetric === "distress" : activeBase === "distress") && showDistressYoY && (
+        <DraggableDistressYoY
+          distressData={distressData}
+          distressData2023={distressData2023}
+          houstonMedians={houstonMedians}
+          houstonMedians2023={houstonMedians2023}
+          onClose={() => setShowDistressYoY(false)}
         />
       )}
 
@@ -3510,9 +4204,11 @@ const MapboxMap = forwardRef(function MapboxMap({
       {(isBaseView ? displayMetric === "working_poor" : activeBase === "working_poor") && workingPoorTableZip && (
         <DraggableWorkingPoorTable
           data={workingPoorDataLookup[workingPoorTableZip]}
+          data2023={workingPoorData2023Lookup[workingPoorTableZip]}
           zipCode={workingPoorTableZip}
           neighborhood={zipCodes?.find(z => z.zip_code === workingPoorTableZip)?.neighborhood || ""}
           houstonMedians={workingPoorMedians}
+          rankedCount={workingPoorRankedCount}
           onClose={() => setWorkingPoorTableZip(null)}
         />
       )}
@@ -3524,6 +4220,7 @@ const MapboxMap = forwardRef(function MapboxMap({
           zipCode={evictionsTableZip}
           neighborhood={zipCodes?.find(z => z.zip_code === evictionsTableZip)?.neighborhood || ""}
           houstonMedians={evictionsMedians}
+          rankedCount={evictionsRankedCount}
           onClose={() => setEvictionsTableZip(null)}
         />
       )}

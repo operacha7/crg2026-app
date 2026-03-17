@@ -5,7 +5,7 @@
  * American Community Survey (ACS) 5-Year estimates at the ZCTA level,
  * then saves to a CSV file for import into Google Sheets.
  *
- * Data source: ACS 2019-2023 5-Year Estimates Data Profiles
+ * Data source: ACS 2020-2024 5-Year Estimates Data Profiles
  * API docs: https://www.census.gov/data/developers/data-sets/acs-5year.html
  *
  * Usage:
@@ -28,7 +28,7 @@ require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 // ═══════════════════════════════════════════════════════════════════
 
 const CENSUS_API_KEY = process.env.CENSUS_API_KEY || "";
-const ACS_YEAR = "2023"; // Most recent 5-year: 2019-2023
+const ACS_YEAR = "2024"; // Most recent 5-year: 2020-2024
 const ACS_DATASET = `${ACS_YEAR}/acs/acs5/profile`;
 
 // Census API base URL
@@ -36,14 +36,10 @@ const CENSUS_BASE = "https://api.census.gov/data";
 
 // Data source citation - referenced by MapboxMap distress data table
 // Keep this in sync with the CENSUS_SOURCE constant in MapboxMap.js
-const DATA_SOURCE = "U.S. Census Bureau, ACS 2019–2023 5-Year Estimates";
+const DATA_SOURCE = "U.S. Census Bureau, ACS 2020–2024 5-Year Estimates";
 
 // Output path
 const CSV_OUTPUT = path.resolve(__dirname, "../public/data/census-data.csv");
-
-// Texas median household income (ACS 2023 5-Year estimate)
-// Used to calculate income_ratio for each zip code
-const TEXAS_MEDIAN_HOUSEHOLD_INCOME = 73035;
 
 // ═══════════════════════════════════════════════════════════════════
 // Census ACS Data Profile Variables
@@ -304,15 +300,32 @@ function processResults(rawData) {
     delete record.no_hs_diploma_less_9th_pct;
     delete record.no_hs_diploma_9th_12th_pct;
 
-    // Calculate income ratio (zip median / Texas median)
-    if (record.median_household_income !== null) {
-      record.income_ratio = Math.round((record.median_household_income / TEXAS_MEDIAN_HOUSEHOLD_INCOME) * 100) / 100;
+    processed.push(record);
+  }
+
+  // Compute Houston metro median household income from the fetched data
+  const incomeValues = processed
+    .map((r) => r.median_household_income)
+    .filter((v) => v != null && !Number.isNaN(v))
+    .sort((a, b) => a - b);
+
+  let metroMedianIncome = null;
+  if (incomeValues.length > 0) {
+    const mid = Math.floor(incomeValues.length / 2);
+    metroMedianIncome = incomeValues.length % 2 === 0
+      ? Math.round((incomeValues[mid - 1] + incomeValues[mid]) / 2)
+      : incomeValues[mid];
+    console.log(`   Houston metro median household income: $${metroMedianIncome.toLocaleString()} (computed from ${incomeValues.length} zip codes)`);
+  }
+
+  // Calculate income ratio (zip median / Houston metro median)
+  processed.forEach((record) => {
+    if (record.median_household_income !== null && metroMedianIncome !== null) {
+      record.income_ratio = Math.round((record.median_household_income / metroMedianIncome) * 100) / 100;
     } else {
       record.income_ratio = null;
     }
-
-    processed.push(record);
-  }
+  });
 
   // Sort by zip code
   processed.sort((a, b) => a.zip_code.localeCompare(b.zip_code));
@@ -347,7 +360,7 @@ function saveToCSV(records) {
     "Population",
     "Poverty Rate (%)",
     "Median Household Income ($)",
-    "Income Ratio (vs TX)",
+    "Income Ratio (vs Metro)",
     "Unemployment Rate (%)",
     "No Health Insurance (%)",
     "SNAP Recipients (%)",
@@ -383,7 +396,7 @@ async function main() {
   console.log("═══════════════════════════════════════════════════════");
   console.log("  Census ACS Data Fetcher for CRG Houston");
   console.log(`  Dataset: ACS ${ACS_YEAR} 5-Year Estimates (Data Profiles)`);
-  console.log(`  Texas Median Household Income: $${TEXAS_MEDIAN_HOUSEHOLD_INCOME.toLocaleString()}`);
+  console.log(`  Income ratio: computed from Houston metro median`);
   console.log("═══════════════════════════════════════════════════════\n");
 
   // --discover mode: list available variables
