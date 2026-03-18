@@ -7,6 +7,7 @@ import React, { useState, useMemo, useCallback, forwardRef, useImperativeHandle 
 import { useAppData } from "../../Contexts/AppDataContext";
 import { getIconByName } from "../../icons/iconMap";
 import { formatIconName } from "../../utils/formatters";
+import VerticalLineIcon from "../../icons/VerticalLineIcon";
 
 // Column definitions: key, label, and format function
 const COLUMNS = [
@@ -61,6 +62,25 @@ function SortArrow({ active, direction }) {
     </span>
   );
 }
+
+// Score highlight colors (matching distress map bands, ~20% opacity as backgrounds)
+const SCORE_HIGHLIGHT_KEYS = new Set(["distress_score", "working_poor_score", "eviction_score", "normal_consol_score"]);
+function getScoreHighlight(value) {
+  if (value == null || value === "") return undefined;
+  const v = Number(value);
+  if (v >= 90) return "rgba(220, 40, 40, 0.40)";     // red - distinct from orange
+  if (v >= 60) return "rgba(240, 150, 30, 0.40)";    // orange - warmer, more distinct from red
+  if (v >= 30) return "rgba(230, 200, 50, 0.40)";    // yellow
+  if (v >= 0)  return "rgba(80, 170, 80, 0.40)";     // green
+  return undefined;
+}
+
+// Section headers for exclude groups
+const SECTION_HEADERS = {
+  2: "Core Houston Area",
+  1: "Small Population (under 10,000)",
+  0: "PO Box / No Data Available",
+};
 
 // Active icon color when clicked/filtered
 const ICON_ACTIVE_COLOR = "#B8001F";
@@ -211,7 +231,26 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
     return medianRow;
   }, [zipCodeData, NUMERIC_KEYS]);
 
-  // Filter and sort data, then insert Houston median at correct position
+  // Sort helper: sort an array by current sortBy/sortDir
+  const sortSection = useCallback((data, defaultSort) => {
+    return [...data].sort((a, b) => {
+      const col = defaultSort || sortBy;
+      const dir = defaultSort ? (col === "zip_code" ? "asc" : "desc") : sortDir;
+      const aVal = a[col];
+      const bVal = b[col];
+      if (aVal == null && bVal == null) return 0;
+      if (aVal == null) return 1;
+      if (bVal == null) return -1;
+      if (col === "zip_code" || col === "county") {
+        const cmp = String(aVal).localeCompare(String(bVal));
+        return dir === "asc" ? cmp : -cmp;
+      }
+      const cmp = Number(aVal) - Number(bVal);
+      return dir === "asc" ? cmp : -cmp;
+    });
+  }, [sortBy, sortDir]);
+
+  // Filter data, split into sections by exclude, sort within each, add section headers
   const sortedData = useMemo(() => {
     if (!zipCodeData || zipCodeData.length === 0) return [];
 
@@ -227,48 +266,57 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
       data = data.filter(r => servedZips.has(r.zip_code));
     }
 
-    const sorted = [...data].sort((a, b) => {
-      const aVal = a[sortBy];
-      const bVal = b[sortBy];
-      if (aVal == null && bVal == null) return 0;
-      if (aVal == null) return 1;
-      if (bVal == null) return -1;
-      if (sortBy === "zip_code" || sortBy === "county") {
-        const cmp = String(aVal).localeCompare(String(bVal));
-        return sortDir === "asc" ? cmp : -cmp;
-      }
-      const cmp = Number(aVal) - Number(bVal);
-      return sortDir === "asc" ? cmp : -cmp;
-    });
+    // Split into sections by exclude value
+    const section2 = data.filter(r => r.exclude === 2);
+    const section1 = data.filter(r => r.exclude === 1);
+    const section0 = data.filter(r => r.exclude !== 2 && r.exclude !== 1);
 
-    // Insert Houston median at correct sort position
-    if (houstonMedianRow) {
+    // Sort each section: 2 uses user sort, 1 uses user sort (default: population desc), 0 always zip order
+    const sorted2 = sortSection(section2);
+    const sorted1 = sortSection(section1);
+    const sorted0 = sortSection(section0, "zip_code");
+
+    // Insert Houston median into section 2 at correct sort position
+    if (houstonMedianRow && sorted2.length > 0) {
       if (sortBy === "zip_code" || sortBy === "county") {
-        // For text sorts, put median at the top
-        sorted.unshift(houstonMedianRow);
+        sorted2.unshift(houstonMedianRow);
       } else {
         const medianVal = houstonMedianRow[sortBy];
         if (medianVal == null) {
-          sorted.push(houstonMedianRow);
+          sorted2.push(houstonMedianRow);
         } else {
-          // Find insertion point based on sort direction
-          let insertIdx = sorted.findIndex(r => {
+          let insertIdx = sorted2.findIndex(r => {
             const v = r[sortBy];
             if (v == null) return true;
             return sortDir === "desc" ? Number(v) < medianVal : Number(v) > medianVal;
           });
-          if (insertIdx === -1) insertIdx = sorted.length;
-          sorted.splice(insertIdx, 0, houstonMedianRow);
+          if (insertIdx === -1) insertIdx = sorted2.length;
+          sorted2.splice(insertIdx, 0, houstonMedianRow);
         }
       }
     }
 
-    return sorted;
-  }, [zipCodeData, county, zipCode, servedZips, sortBy, sortDir, houstonMedianRow]);
+    // Build final array with section headers
+    const result = [];
+    if (sorted2.length > 0) {
+      result.push({ _sectionHeader: true, _sectionLabel: SECTION_HEADERS[2], _sectionExclude: 2 });
+      result.push(...sorted2);
+    }
+    if (sorted1.length > 0) {
+      result.push({ _sectionHeader: true, _sectionLabel: SECTION_HEADERS[1], _sectionExclude: 1 });
+      result.push(...sorted1);
+    }
+    if (sorted0.length > 0) {
+      result.push({ _sectionHeader: true, _sectionLabel: SECTION_HEADERS[0], _sectionExclude: 0 });
+      result.push(...sorted0);
+    }
+
+    return result;
+  }, [zipCodeData, county, zipCode, servedZips, sortBy, sortDir, houstonMedianRow, sortSection]);
 
   // For CSV download: build visible data including expansion state
   const getDownloadData = useCallback(() => {
-    const rows = sortedData.map(row => {
+    const rows = sortedData.filter(row => !row._sectionHeader).map(row => {
       const base = {};
       COLUMNS.forEach(col => { base[col.label.replace(/\n/g, " ")] = col.format(row[col.key]); });
 
@@ -369,6 +417,30 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
         </thead>
         <tbody>
           {sortedData.map((row, idx) => {
+            // Section header row
+            if (row._sectionHeader) {
+              const isFirst = row._sectionExclude === 2;
+              return (
+                <tr key={`section-${row._sectionExclude}`} className="bg-white">
+                  <td
+                    colSpan={COLUMNS.length + 1}
+                    className="font-opensans font-bold"
+                    style={{
+                      color: "#222831",
+                      paddingLeft: "10px",
+                      paddingTop: isFirst ? "8px" : "24px",
+                      fontSize: "15px",
+                    }}
+                  >
+                    <span className="inline-flex items-center">
+                      <VerticalLineIcon size={16} color="#222831" />
+                      {row._sectionLabel}
+                    </span>
+                  </td>
+                </tr>
+              );
+            }
+
             const zip = row.zip_code;
             const isMedian = !!row._isMedian;
             const assistTypes = isMedian ? [] : getAssistanceForZip(zip);
@@ -439,24 +511,38 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
                   onMouseEnter={(e) => { if (!isMedian && !expandedAssistId) e.currentTarget.style.backgroundColor = "#f2f3cc"; }}
                   onMouseLeave={(e) => { if (!isMedian && !expandedAssistId) e.currentTarget.style.backgroundColor = bgColor; }}
                 >
-                  {COLUMNS.map((col) => (
-                    <td
-                      key={col.key}
-                      className="font-opensans"
-                      style={{
-                        padding: "5px 8px",
-                        textAlign: col.key === "zip_code" || col.key === "county" ? "left" : "right",
-                        verticalAlign: "middle",
-                        borderRight: "1px solid #E5E5E5",
-                        whiteSpace: "nowrap",
-                        fontSize: "15px",
-                        color: isMedian ? "#1A56DB" : undefined,
-                        fontWeight: isMedian ? 600 : undefined,
-                      }}
-                    >
-                      {col.format(row[col.key])}
-                    </td>
-                  ))}
+                  {COLUMNS.map((col) => {
+                    const scoreHighlight = !isMedian && SCORE_HIGHLIGHT_KEYS.has(col.key)
+                      ? getScoreHighlight(row[col.key])
+                      : undefined;
+                    const formatted = col.format(row[col.key]);
+                    return (
+                      <td
+                        key={col.key}
+                        className="font-opensans"
+                        style={{
+                          padding: "5px 8px",
+                          textAlign: col.key === "zip_code" || col.key === "county" ? "left" : "right",
+                          verticalAlign: "middle",
+                          borderRight: "1px solid #E5E5E5",
+                          whiteSpace: "nowrap",
+                          fontSize: "15px",
+                          color: isMedian ? "#1A56DB" : undefined,
+                          fontWeight: isMedian ? 600 : 500,
+                        }}
+                      >
+                        {scoreHighlight ? (
+                          <span style={{
+                            backgroundColor: scoreHighlight,
+                            padding: "1px 4px",
+                            borderRadius: "3px",
+                          }}>
+                            {formatted}
+                          </span>
+                        ) : formatted}
+                      </td>
+                    );
+                  })}
                   {/* Assistance icons - groups 1-3 on top, groups 4-6 on bottom */}
                   <td style={{ padding: "4px 8px", verticalAlign: "middle", position: "relative", overflow: "visible" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
