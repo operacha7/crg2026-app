@@ -14,6 +14,7 @@ const REPORT_OPTIONS = [
   { id: 'usage-tables', label: 'Usage Data Tables' },
   { id: 'coverage', label: 'The Matt Report', color: '#f79184' },
   { id: 'map2', label: 'Zip Code Map', color: '#9df784' },
+  { id: 'consolidated', label: 'Zip Code Data', color: '#84d4f7' },
 ];
 
 const BASE_MAP_LABELS = {
@@ -176,7 +177,7 @@ export default function NavBar1Reports({ selectedReport, onReportChange, map2Vie
             }}
           >
             {REPORT_OPTIONS.map((option) => {
-              const fontColor = option.color || '#222831';
+              const fontColor = '#222831'; // Always dark in dropdown; color only used in NavBar1 button
               return (
                 <button
                   key={option.id}

@@ -15,6 +15,7 @@ import ReportsReport from "../components/reports/ReportsReport";
 import UsageDataTables from "../components/reports/UsageDataTables";
 import CoverageReport from "../components/reports/CoverageReport";
 import MapboxMap from "../components/reports/MapboxMap";
+import ZipCodeDataReport from "../components/reports/ZipCodeDataReport";
 
 export default function ReportsPage() {
   // State for report selection
@@ -113,6 +114,35 @@ export default function ReportsPage() {
     if (v) setMap2ViewMode("filter_view");
   }, []);
 
+  // Zip Code Data report filter state (same filter pattern as map2)
+  const [zcdCounty, setZcdCounty] = useState("All Counties");
+  const [zcdZipCode, setZcdZipCode] = useState("");
+  const [zcdParentOrg, setZcdParentOrg] = useState("");
+  const [zcdOrganization, setZcdOrganization] = useState("");
+  const [zcdAssistanceType, setZcdAssistanceType] = useState("");
+
+  const handleZcdReset = useCallback(() => {
+    setZcdCounty("All Counties");
+    setZcdZipCode("");
+    setZcdParentOrg("");
+    setZcdOrganization("");
+    setZcdAssistanceType("");
+  }, []);
+
+  // Reset Zip Code Data filters when navigating away
+  useEffect(() => {
+    if (selectedReport !== "consolidated") {
+      handleZcdReset();
+    }
+  }, [selectedReport, handleZcdReset]);
+
+  // Ref to ZipCodeDataReport for download trigger
+  const zcdReportRef = useRef(null);
+
+  const handleZcdDownload = useCallback(() => {
+    zcdReportRef.current?.download();
+  }, []);
+
   // Ref to MapboxMap for download trigger
   const mapboxMapRef = useRef(null);
 
@@ -184,6 +214,18 @@ export default function ReportsPage() {
             onViewModeChange={handleMap2ViewModeChange}
           />
         );
+      case "consolidated":
+        return (
+          <ZipCodeDataReport
+            ref={zcdReportRef}
+            county={zcdCounty}
+            zipCode={zcdZipCode}
+            parentOrg={zcdParentOrg}
+            organization={zcdOrganization}
+            assistanceType={zcdAssistanceType}
+            onAssistanceTypeChange={setZcdAssistanceType}
+          />
+        );
       default:
         return <ZipCodeReport {...commonProps} />;
     }
@@ -230,8 +272,20 @@ export default function ReportsPage() {
           onMap2AssistanceTypeChange={handleMap2AssistanceTypeChange}
           onMap2Reset={handleMap2Reset}
           onMap2Download={handleMap2Download}
+          zcdCounty={zcdCounty}
+          onZcdCountyChange={setZcdCounty}
+          zcdZipCode={zcdZipCode}
+          onZcdZipCodeChange={setZcdZipCode}
+          zcdParentOrg={zcdParentOrg}
+          onZcdParentOrgChange={setZcdParentOrg}
+          zcdOrganization={zcdOrganization}
+          onZcdOrganizationChange={setZcdOrganization}
+          zcdAssistanceType={zcdAssistanceType}
+          onZcdAssistanceTypeChange={setZcdAssistanceType}
+          onZcdReset={handleZcdReset}
+          onZcdDownload={handleZcdDownload}
         />
-        {selectedReport !== "map2" && <NavBar3Reports
+        {selectedReport !== "map2" && selectedReport !== "consolidated" && <NavBar3Reports
           selectedReport={selectedReport}
           coverageSummary={coverageSummary}
           coverageDisplayFilter={coverageDisplayFilter}
@@ -243,7 +297,7 @@ export default function ReportsPage() {
         />}
 
         {/* Report content - UsageDataTables handles its own scroll for sticky header */}
-        <main className={`flex-1 bg-gray-50 ${selectedReport === "usage-tables" || selectedReport === "map" || selectedReport === "map2" ? "overflow-hidden" : "overflow-auto"}`}>
+        <main className={`flex-1 bg-gray-50 ${selectedReport === "usage-tables" || selectedReport === "map" || selectedReport === "map2" || selectedReport === "consolidated" ? "overflow-hidden" : "overflow-auto"}`}>
           {renderReport()}
         </main>
 

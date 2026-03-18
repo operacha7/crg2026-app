@@ -12,10 +12,11 @@
  * Output columns:
  *   Case Number, JP Court ID, Case Type, Case File Date, Claim Amount,
  *   Plaintiff Name, Plaintiff City, Plaintiff State,
+ *   Defendant Name, Defendant Addr Line 1/2, City, State, Zip,
  *   Defendant Zip (extracted)
  *
  * Defendant zip extraction: tries dedicated zip column first, then scans
- * address fields. If no zip found, falls back to Addr Line 1.
+ * address fields. If no zip found, leaves blank.
  */
 
 const fs = require("fs");
@@ -125,9 +126,11 @@ const COL = {
   plaintiffName: findCol(header, /^Plaintiff Name/i),
   plaintiffCity: findCol(header, /^Plaintiff Addr City/i),
   plaintiffState: findCol(header, /^Plaintiff Addr State/i),
+  defName: findCol(header, /^Defendant Name/i),
   defAddr1: findCol(header, /^Defendant Addr Line 1/i),
   defAddr2: findCol(header, /^Defendant Addr Line 2/i),
   defCity: findCol(header, /^Defendant Addr City/i),
+  defState: findCol(header, /^Defendant Addr State/i),
   defZip: findCol(header, /^Defendant Addr Zip/i),
 };
 
@@ -157,13 +160,8 @@ function extractZipOrAddr(fields, zipIdx, addr1Idx, addr2Idx, cityIdx) {
   zip = extractZip(addrParts);
   if (zip) return zip;
 
-  // Fallback: try to extract zip from addr line 1 alone (e.g. "77041-5404")
-  const addr1 = fields[addr1Idx]?.trim() || "";
-  const addr1Zip = extractZip(addr1);
-  if (addr1Zip) return addr1Zip;
-
-  // Last resort: return addr line 1 so user can see the raw address
-  return addr1;
+  // No zip found
+  return "";
 }
 
 // Output header
@@ -176,6 +174,12 @@ const OUTPUT_HEADERS = [
   "Plaintiff Name",
   "Plaintiff City",
   "Plaintiff State",
+  "Defendant Name",
+  "Defendant Addr Line 1",
+  "Defendant Addr Line 2",
+  "Defendant Addr City",
+  "Defendant Addr State",
+  "Defendant Addr Zip",
   "Defendant Zip (extracted)",
 ];
 
@@ -194,7 +198,7 @@ for (let i = 1; i < lines.length && recordCount < MAX_RECORDS; i++) {
 
   // Track stats
   if (/^\d{5}$/.test(defResult)) defZipFound++;
-  else if (defResult) defAddrFallback++;
+  else defAddrFallback++;
 
   const row = [
     f[COL.caseNumber] || "",
@@ -205,6 +209,12 @@ for (let i = 1; i < lines.length && recordCount < MAX_RECORDS; i++) {
     f[COL.plaintiffName] || "",
     f[COL.plaintiffCity] || "",
     f[COL.plaintiffState] || "",
+    f[COL.defName] || "",
+    f[COL.defAddr1] || "",
+    f[COL.defAddr2] || "",
+    f[COL.defCity] || "",
+    f[COL.defState] || "",
+    f[COL.defZip] || "",
     defResult,
   ].map(escapeCsv);
 

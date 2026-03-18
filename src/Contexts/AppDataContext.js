@@ -98,6 +98,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
   const [workingPoorData, setWorkingPoorData] = useState([]); // Census working poor indicators by zip
   const [workingPoorData2023, setWorkingPoorData2023] = useState([]); // 2023 archive for YoY comparison
   const [evictionsData, setEvictionsData] = useState([]); // Eviction indicators by zip
+  const [zipCodeData, setZipCodeData] = useState([]); // Combined scores by zip
 
   // Loading state
   const [loading, setLoading] = useState(true);
@@ -174,6 +175,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
           workingPoorDataResult,
           workingPoorData2023Result,
           evictionsDataResult,
+          zipCodeDataResult,
         ] = await Promise.all([
           dataService.getDirectory(),
           dataService.getAssistance(),
@@ -183,6 +185,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
           dataService.getWorkingPoorData(),
           dataService.getWorkingPoorData2023(),
           dataService.getEvictionsData(),
+          dataService.getZipCodeData(),
         ]);
 
         if (!mounted) return;
@@ -206,11 +209,12 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
         setWorkingPoorData(workingPoorDataResult);
         setWorkingPoorData2023(workingPoorData2023Result);
         setEvictionsData(evictionsDataResult);
+        setZipCodeData(zipCodeDataResult);
         setLoading(false);
 
         const loadTime = Math.round(performance.now() - startTime);
         console.log(`✅ AppDataContext: Data loaded in ${loadTime}ms`);
-        console.log(`   directory: ${directoryData.length}, assistance: ${assistanceData.length}, zipCodes: ${zipCodesData.length}, organizations: ${orgsList.length}, orgAssistanceMap: ${Object.keys(assistanceMap).length} orgs, distressData: ${distressDataResult.length}, distressData2023: ${distressData2023Result.length}, workingPoorData: ${workingPoorDataResult.length}, workingPoorData2023: ${workingPoorData2023Result.length}, evictionsData: ${evictionsDataResult.length}`);
+        console.log(`   directory: ${directoryData.length}, assistance: ${assistanceData.length}, zipCodes: ${zipCodesData.length}, organizations: ${orgsList.length}, orgAssistanceMap: ${Object.keys(assistanceMap).length} orgs, distressData: ${distressDataResult.length}, distressData2023: ${distressData2023Result.length}, workingPoorData: ${workingPoorDataResult.length}, workingPoorData2023: ${workingPoorData2023Result.length}, evictionsData: ${evictionsDataResult.length}, zipCodeData: ${zipCodeDataResult.length}`);
 
         // Debug: Log sample data to verify field formats
         if (mappedDirectory.length > 0) {
@@ -274,6 +278,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
     workingPoorData, // Census working poor indicators by zip (from working_poor_data table)
     workingPoorData2023, // 2023 archive for year-over-year comparison
     evictionsData, // Eviction indicators by zip (from evictions_data table)
+    zipCodeData, // Combined scores by zip (from zip_code_data table)
 
     // Auth
     loggedInUser, // Passed from App level for logging

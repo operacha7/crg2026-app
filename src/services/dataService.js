@@ -220,6 +220,20 @@ export const dataService = {
     return data;
   },
 
+  // ======= ZIP CODE DATA (combined scores by zip) =======
+  async getZipCodeData() {
+    const { data, error } = await supabase
+      .from('zip_code_data')
+      .select('*')
+      .order('zip_code', { ascending: true });
+
+    if (error) {
+      console.error("Error fetching zip code data:", error);
+      return [];
+    }
+    return data;
+  },
+
   // ======= REGISTERED ORGANIZATIONS (auth - implement last) =======
   async getRegisteredOrganizations() {
     const { data, error } = await supabase
