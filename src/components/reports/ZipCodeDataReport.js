@@ -19,6 +19,7 @@ const COLUMNS = [
   { key: "median_household_income", label: "Median\nIncome", format: fmtDollar },
   { key: "income_ratio", label: "Income\nRatio", format: fmtTwo },
   { key: "poverty_rate", label: "Poverty\nRate", format: fmtOne },
+  { key: "unemployment_rate", label: "Unemploy\nRate", format: fmtOne },
   { key: "no_health_insurance", label: "No Health\nInsurance", format: fmtOne },
   { key: "snap", label: "SNAP", format: fmtOne },
   { key: "filings_count", label: "Eviction\nFilings", format: fmtOne },
@@ -191,7 +192,26 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
     return hasWildcard ? null : zips;
   }, [directory, parentOrg, organization]);
 
-  // Filter and sort data
+  // Numeric column keys for median calculation
+  const NUMERIC_KEYS = COLUMNS.filter(c => c.key !== "zip_code" && c.key !== "county").map(c => c.key);
+
+  // Compute Houston median row from exclude === 2 records (always from full dataset, not filtered)
+  const houstonMedianRow = useMemo(() => {
+    if (!zipCodeData || zipCodeData.length === 0) return null;
+    const eligible = zipCodeData.filter(r => r.exclude === 2);
+    if (eligible.length === 0) return null;
+
+    const medianRow = { zip_code: "Houston", county: "", _isMedian: true };
+    NUMERIC_KEYS.forEach(key => {
+      const values = eligible.map(r => r[key]).filter(v => v != null && v !== "").map(Number).sort((a, b) => a - b);
+      if (values.length === 0) { medianRow[key] = null; return; }
+      const mid = Math.floor(values.length / 2);
+      medianRow[key] = values.length % 2 === 0 ? (values[mid - 1] + values[mid]) / 2 : values[mid];
+    });
+    return medianRow;
+  }, [zipCodeData, NUMERIC_KEYS]);
+
+  // Filter and sort data, then insert Houston median at correct position
   const sortedData = useMemo(() => {
     if (!zipCodeData || zipCodeData.length === 0) return [];
 
@@ -207,7 +227,7 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
       data = data.filter(r => servedZips.has(r.zip_code));
     }
 
-    return [...data].sort((a, b) => {
+    const sorted = [...data].sort((a, b) => {
       const aVal = a[sortBy];
       const bVal = b[sortBy];
       if (aVal == null && bVal == null) return 0;
@@ -220,7 +240,31 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
       const cmp = Number(aVal) - Number(bVal);
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [zipCodeData, county, zipCode, servedZips, sortBy, sortDir]);
+
+    // Insert Houston median at correct sort position
+    if (houstonMedianRow) {
+      if (sortBy === "zip_code" || sortBy === "county") {
+        // For text sorts, put median at the top
+        sorted.unshift(houstonMedianRow);
+      } else {
+        const medianVal = houstonMedianRow[sortBy];
+        if (medianVal == null) {
+          sorted.push(houstonMedianRow);
+        } else {
+          // Find insertion point based on sort direction
+          let insertIdx = sorted.findIndex(r => {
+            const v = r[sortBy];
+            if (v == null) return true;
+            return sortDir === "desc" ? Number(v) < medianVal : Number(v) > medianVal;
+          });
+          if (insertIdx === -1) insertIdx = sorted.length;
+          sorted.splice(insertIdx, 0, houstonMedianRow);
+        }
+      }
+    }
+
+    return sorted;
+  }, [zipCodeData, county, zipCode, servedZips, sortBy, sortDir, houstonMedianRow]);
 
   // For CSV download: build visible data including expansion state
   const getDownloadData = useCallback(() => {
@@ -326,11 +370,12 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
         <tbody>
           {sortedData.map((row, idx) => {
             const zip = row.zip_code;
-            const assistTypes = getAssistanceForZip(zip);
-            const isFilterExpanded = !!filterAssistId;
-            const isClickExpanded = expandedRow && expandedRow.zip === zip;
+            const isMedian = !!row._isMedian;
+            const assistTypes = isMedian ? [] : getAssistanceForZip(zip);
+            const isFilterExpanded = !isMedian && !!filterAssistId;
+            const isClickExpanded = !isMedian && expandedRow && expandedRow.zip === zip;
             const expandedAssistId = isFilterExpanded ? filterAssistId : (isClickExpanded ? expandedRow.assist_id : null);
-            const bgColor = idx % 2 === 0 ? "#FFFFFF" : "#F5F5F5";
+            const bgColor = isMedian ? "#EEF4FF" : (idx % 2 === 0 ? "#FFFFFF" : "#F5F5F5");
 
             // Split icons into two rows: groups 1-3 (top) and groups 4-6 (bottom)
             const topRow = assistTypes.filter(at => at.group === "1" || at.group === "2" || at.group === "3");
@@ -391,8 +436,8 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
                 <tr
                   className="transition-colors duration-150"
                   style={{ backgroundColor: bgColor }}
-                  onMouseEnter={(e) => { if (!expandedAssistId) e.currentTarget.style.backgroundColor = "#f2f3cc"; }}
-                  onMouseLeave={(e) => { if (!expandedAssistId) e.currentTarget.style.backgroundColor = bgColor; }}
+                  onMouseEnter={(e) => { if (!isMedian && !expandedAssistId) e.currentTarget.style.backgroundColor = "#f2f3cc"; }}
+                  onMouseLeave={(e) => { if (!isMedian && !expandedAssistId) e.currentTarget.style.backgroundColor = bgColor; }}
                 >
                   {COLUMNS.map((col) => (
                     <td
@@ -405,6 +450,8 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
                         borderRight: "1px solid #E5E5E5",
                         whiteSpace: "nowrap",
                         fontSize: "15px",
+                        color: isMedian ? "#1A56DB" : undefined,
+                        fontWeight: isMedian ? 600 : undefined,
                       }}
                     >
                       {col.format(row[col.key])}
