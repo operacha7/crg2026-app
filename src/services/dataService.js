@@ -220,6 +220,20 @@ export const dataService = {
     return data;
   },
 
+  // ======= HEADER CONFIG (column display configuration) =======
+  async getHeaderConfig() {
+    const { data, error } = await supabase
+      .from('header_config')
+      .select('*')
+      .order('id_no', { ascending: true });
+
+    if (error) {
+      console.error("Error fetching header config:", error);
+      return [];
+    }
+    return data;
+  },
+
   // ======= ZIP CODE DATA (combined scores by zip) =======
   async getZipCodeData() {
     const { data, error } = await supabase

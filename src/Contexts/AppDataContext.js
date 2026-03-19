@@ -99,6 +99,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
   const [workingPoorData2023, setWorkingPoorData2023] = useState([]); // 2023 archive for YoY comparison
   const [evictionsData, setEvictionsData] = useState([]); // Eviction indicators by zip
   const [zipCodeData, setZipCodeData] = useState([]); // Combined scores by zip
+  const [headerConfig, setHeaderConfig] = useState([]); // Column display configuration
 
   // Loading state
   const [loading, setLoading] = useState(true);
@@ -176,6 +177,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
           workingPoorData2023Result,
           evictionsDataResult,
           zipCodeDataResult,
+          headerConfigResult,
         ] = await Promise.all([
           dataService.getDirectory(),
           dataService.getAssistance(),
@@ -186,6 +188,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
           dataService.getWorkingPoorData2023(),
           dataService.getEvictionsData(),
           dataService.getZipCodeData(),
+          dataService.getHeaderConfig(),
         ]);
 
         if (!mounted) return;
@@ -210,6 +213,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
         setWorkingPoorData2023(workingPoorData2023Result);
         setEvictionsData(evictionsDataResult);
         setZipCodeData(zipCodeDataResult);
+        setHeaderConfig(headerConfigResult);
         setLoading(false);
 
         const loadTime = Math.round(performance.now() - startTime);
@@ -279,6 +283,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
     workingPoorData2023, // 2023 archive for year-over-year comparison
     evictionsData, // Eviction indicators by zip (from evictions_data table)
     zipCodeData, // Combined scores by zip (from zip_code_data table)
+    headerConfig, // Column display configuration (from header_config table)
 
     // Auth
     loggedInUser, // Passed from App level for logging

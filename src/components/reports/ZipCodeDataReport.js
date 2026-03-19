@@ -9,49 +9,17 @@ import { getIconByName } from "../../icons/iconMap";
 import { formatIconName } from "../../utils/formatters";
 import VerticalLineIcon from "../../icons/VerticalLineIcon";
 
-// Column definitions: key, label, and format function
-const COLUMNS = [
-  { key: "zip_code", label: "Zip\nCode", format: (v) => v ?? "—" },
-  { key: "county", label: "County", format: (v) => v ?? "—" },
-  { key: "distress_score", label: "Distress\nScore", format: fmtOne },
-  { key: "working_poor_score", label: "Working\nPoor Score", format: fmtOne },
-  { key: "eviction_score", label: "Eviction\nScore", format: fmtOne },
-  { key: "population", label: "Population", format: fmtPopulation },
-  { key: "median_household_income", label: "Median\nIncome", format: fmtDollar },
-  { key: "income_ratio", label: "Income\nRatio", format: fmtTwo },
-  { key: "poverty_rate", label: "Poverty\nRate", format: fmtOne },
-  { key: "unemployment_rate", label: "Unemploy\nRate", format: fmtOne },
-  { key: "no_health_insurance", label: "No Health\nInsurance", format: fmtOne },
-  { key: "snap", label: "SNAP", format: fmtOne },
-  { key: "filings_count", label: "Eviction\nFilings", format: fmtOne },
-  { key: "amount_per_filing", label: "Claim Per\nFiling", format: fmtDollarOne },
-  { key: "normal_consol_score", label: "Consol\nScore", format: fmtOne },
-];
+// Format helpers mapped by config format string
+const FORMAT_MAP = {
+  text: (v) => v ?? "—",
+  one_decimal: (v) => (v == null || v === "") ? "—" : Number(v).toFixed(1),
+  two_decimal: (v) => (v == null || v === "") ? "—" : Number(v).toFixed(2),
+  whole_number: (v) => (v == null || v === "") ? "—" : Math.round(Number(v)).toLocaleString(),
+  whole_dollar: (v) => (v == null || v === "") ? "—" : "$" + Math.round(Number(v)).toLocaleString(),
+};
 
-// Format helpers
-function fmtOne(v) {
-  if (v == null || v === "") return "—";
-  return Number(v).toFixed(1);
-}
-
-function fmtTwo(v) {
-  if (v == null || v === "") return "—";
-  return Number(v).toFixed(2);
-}
-
-function fmtPopulation(v) {
-  if (v == null || v === "") return "—";
-  return Math.round(Number(v)).toLocaleString();
-}
-
-function fmtDollar(v) {
-  if (v == null || v === "") return "—";
-  return "$" + Math.round(Number(v)).toLocaleString();
-}
-
-function fmtDollarOne(v) {
-  if (v == null || v === "") return "—";
-  return "$" + Math.round(Number(v)).toLocaleString();
+function getFormatter(formatStr) {
+  return FORMAT_MAP[formatStr] || FORMAT_MAP.text;
 }
 
 // Sort arrow indicator
@@ -63,15 +31,30 @@ function SortArrow({ active, direction }) {
   );
 }
 
-// Score highlight colors (matching distress map bands, ~20% opacity as backgrounds)
-const SCORE_HIGHLIGHT_KEYS = new Set(["distress_score", "working_poor_score", "eviction_score", "normal_consol_score"]);
+// Score highlight: applies to fields containing "score" in the name (dynamic, config-driven)
+function isScoreField(fieldName) {
+  return fieldName && fieldName.includes("score");
+}
 function getScoreHighlight(value) {
   if (value == null || value === "") return undefined;
   const v = Number(value);
-  if (v >= 90) return "rgba(220, 40, 40, 0.40)";     // red - distinct from orange
-  if (v >= 60) return "rgba(240, 150, 30, 0.40)";    // orange - warmer, more distinct from red
+  if (v >= 90) return "rgba(220, 40, 40, 0.40)";     // red
+  if (v >= 60) return "rgba(240, 150, 30, 0.40)";    // orange
   if (v >= 30) return "rgba(230, 200, 50, 0.40)";    // yellow
   if (v >= 0)  return "rgba(80, 170, 80, 0.40)";     // green
+  return undefined;
+}
+
+// DCI highlight: based on dci_quin quintile (5=distressed/red, 1=prosperous/blue)
+const DCI_FIELDS = new Set(["dci_score", "dci_catg"]);
+function getDciHighlight(quinValue) {
+  if (quinValue == null || quinValue === "") return undefined;
+  const q = Number(quinValue);
+  if (q === 5) return "rgba(220, 40, 40, 0.40)";     // red - Distressed
+  if (q === 4) return "rgba(240, 150, 30, 0.40)";    // orange - At Risk
+  if (q === 3) return "rgba(230, 200, 50, 0.40)";    // yellow - Mid-Tier
+  if (q === 2) return "rgba(140, 180, 220, 0.50)";   // light blue - Comfortable
+  if (q === 1) return "rgba(80, 120, 180, 0.50)";    // darker blue - Prosperous
   return undefined;
 }
 
@@ -96,7 +79,20 @@ const GROUP_ICON_COLORS = {
 };
 
 const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCode, parentOrg, organization, assistanceType, onAssistanceTypeChange }, ref) {
-  const { zipCodeData, directory, assistance } = useAppData();
+  const { zipCodeData, directory, assistance, headerConfig } = useAppData();
+
+  // Build columns from header_config (filtered to zip_code_data, visible only, ordered by id_no)
+  const COLUMNS = useMemo(() => {
+    const configs = headerConfig
+      .filter(c => c.table === "zip_code_data" && c.visible)
+      .sort((a, b) => a.id_no - b.id_no);
+    return configs.map(c => ({
+      key: c.field_name,
+      label: (c.display_label || "").replaceAll("|", "\n"),
+      format: getFormatter(c.format),
+      isText: c.format === "text",
+    }));
+  }, [headerConfig]);
 
   // Sort state - default: normal_consol_score descending
   const [sortBy, setSortBy] = useState("normal_consol_score");
@@ -110,7 +106,8 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
       setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
       setSortBy(column);
-      setSortDir(column === "zip_code" || column === "county" ? "asc" : "desc");
+      const colConfig = COLUMNS.find(c => c.key === column);
+      setSortDir(colConfig?.isText ? "asc" : "desc");
     }
   };
 
@@ -212,8 +209,18 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
     return hasWildcard ? null : zips;
   }, [directory, parentOrg, organization]);
 
+  // Build set of org names to highlight in expanded rows (based on parent/org filter)
+  const highlightedOrgs = useMemo(() => {
+    if (!parentOrg && !organization) return null;
+    let filtered = directory.filter(r => r.status_id === 1);
+    if (parentOrg) filtered = filtered.filter(r => r.org_parent === parentOrg);
+    if (organization) filtered = filtered.filter(r => r.organization === organization);
+    return new Set(filtered.map(r => r.organization).filter(Boolean));
+  }, [directory, parentOrg, organization]);
+
   // Numeric column keys for median calculation
-  const NUMERIC_KEYS = COLUMNS.filter(c => c.key !== "zip_code" && c.key !== "county").map(c => c.key);
+  // Numeric keys for median calculation (all non-text visible columns)
+  const NUMERIC_KEYS = useMemo(() => COLUMNS.filter(c => !c.isText).map(c => c.key), [COLUMNS]);
 
   // Compute Houston median row from exclude === 2 records (always from full dataset, not filtered)
   const houstonMedianRow = useMemo(() => {
@@ -232,23 +239,29 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
   }, [zipCodeData, NUMERIC_KEYS]);
 
   // Sort helper: sort an array by current sortBy/sortDir
+  // Check if a column is text-type based on config
+  const isTextColumn = useCallback((fieldName) => {
+    const colConfig = COLUMNS.find(c => c.key === fieldName);
+    return colConfig ? colConfig.isText : false;
+  }, [COLUMNS]);
+
   const sortSection = useCallback((data, defaultSort) => {
     return [...data].sort((a, b) => {
       const col = defaultSort || sortBy;
-      const dir = defaultSort ? (col === "zip_code" ? "asc" : "desc") : sortDir;
+      const dir = defaultSort ? (isTextColumn(col) ? "asc" : "desc") : sortDir;
       const aVal = a[col];
       const bVal = b[col];
       if (aVal == null && bVal == null) return 0;
       if (aVal == null) return 1;
       if (bVal == null) return -1;
-      if (col === "zip_code" || col === "county") {
+      if (isTextColumn(col)) {
         const cmp = String(aVal).localeCompare(String(bVal));
         return dir === "asc" ? cmp : -cmp;
       }
       const cmp = Number(aVal) - Number(bVal);
       return dir === "asc" ? cmp : -cmp;
     });
-  }, [sortBy, sortDir]);
+  }, [sortBy, sortDir, isTextColumn]);
 
   // Filter data, split into sections by exclude, sort within each, add section headers
   const sortedData = useMemo(() => {
@@ -278,7 +291,7 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
 
     // Insert Houston median into section 2 at correct sort position
     if (houstonMedianRow && sorted2.length > 0) {
-      if (sortBy === "zip_code" || sortBy === "county") {
+      if (isTextColumn(sortBy)) {
         sorted2.unshift(houstonMedianRow);
       } else {
         const medianVal = houstonMedianRow[sortBy];
@@ -312,7 +325,7 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
     }
 
     return result;
-  }, [zipCodeData, county, zipCode, servedZips, sortBy, sortDir, houstonMedianRow, sortSection]);
+  }, [zipCodeData, county, zipCode, servedZips, sortBy, sortDir, houstonMedianRow, sortSection, isTextColumn]);
 
   // For CSV download: build visible data including expansion state
   const getDownloadData = useCallback(() => {
@@ -421,7 +434,26 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
             if (row._sectionHeader) {
               const isFirst = row._sectionExclude === 2;
               return (
-                <tr key={`section-${row._sectionExclude}`} className="bg-white">
+                <React.Fragment key={`section-${row._sectionExclude}`}>
+                {isFirst && (
+                  <tr className="bg-white">
+                    <td
+                      colSpan={COLUMNS.length + 1}
+                      className="font-opensans"
+                      style={{
+                        color: "#B8001F",
+                        fontStyle: "italic",
+                        fontSize: "13px",
+                        paddingLeft: "10px",
+                        paddingTop: "8px",
+                        paddingBottom: "2px",
+                      }}
+                    >
+                      All data from 2024 unless stated otherwise
+                    </td>
+                  </tr>
+                )}
+                <tr className="bg-white">
                   <td
                     colSpan={COLUMNS.length + 1}
                     className="font-opensans font-bold"
@@ -438,6 +470,7 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
                     </span>
                   </td>
                 </tr>
+                </React.Fragment>
               );
             }
 
@@ -512,21 +545,24 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
                   onMouseLeave={(e) => { if (!isMedian && !expandedAssistId) e.currentTarget.style.backgroundColor = bgColor; }}
                 >
                   {COLUMNS.map((col) => {
-                    const scoreHighlight = !isMedian && SCORE_HIGHLIGHT_KEYS.has(col.key)
-                      ? getScoreHighlight(row[col.key])
+                    const scoreHighlight = isMedian ? undefined
+                      : DCI_FIELDS.has(col.key) ? getDciHighlight(row.dci_quin)
+                      : isScoreField(col.key) ? getScoreHighlight(row[col.key])
                       : undefined;
                     const formatted = col.format(row[col.key]);
+                    const isWideText = col.key === "neighborhood";
                     return (
                       <td
                         key={col.key}
                         className="font-opensans"
                         style={{
                           padding: "5px 8px",
-                          textAlign: col.key === "zip_code" || col.key === "county" ? "left" : "right",
+                          textAlign: col.isText ? "left" : "right",
                           verticalAlign: "middle",
                           borderRight: "1px solid #E5E5E5",
-                          whiteSpace: "nowrap",
-                          fontSize: "15px",
+                          whiteSpace: isWideText ? "normal" : "nowrap",
+                          maxWidth: isWideText ? "200px" : undefined,
+                          fontSize: isWideText ? "13px" : "15px",
                           color: isMedian ? "#1A56DB" : undefined,
                           fontWeight: isMedian ? 600 : 500,
                         }}
@@ -582,7 +618,13 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
                         </span>{" "}
                         {getOrgsForZipAssist(zip, expandedAssistId).map((org, orgIdx, arr) => (
                           <span key={org}>
-                            <span className="font-opensans">{org}</span>
+                            <span
+                              className="font-opensans"
+                              style={{
+                                color: highlightedOrgs?.has(org) ? "#2323ff" : undefined,
+                                fontWeight: highlightedOrgs?.has(org) ? 600 : undefined,
+                              }}
+                            >{org}</span>
                             {orgIdx < arr.length - 1 && (
                               <span style={{ color: "#CCCCCC", margin: "0 4px" }}>|</span>
                             )}
