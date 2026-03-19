@@ -3,6 +3,7 @@
 // Uses Claude to interpret natural language queries and return filter criteria
 
 import { createClient } from "@supabase/supabase-js";
+import { LLM_MODEL } from "./config.js";
 
 /**
  * Log LLM search query to Supabase for improvement tracking
@@ -106,7 +107,7 @@ export async function onRequest(context) {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-3-5-haiku-20241022",
+        model: LLM_MODEL,
         max_tokens: 1024,
         system: systemPrompt,
         messages: [

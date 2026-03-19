@@ -3,6 +3,7 @@
 // LLM-powered help system using Claude to answer questions about the CRG app
 
 import { createClient } from "@supabase/supabase-js";
+import { LLM_MODEL } from "./config.js";
 
 // Generate a simple anonymous session ID (not tied to user identity)
 function generateSessionId() {
@@ -112,7 +113,7 @@ export async function onRequest(context) {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-3-5-haiku-20241022",
+        model: LLM_MODEL,
         max_tokens: 1024,
         system: HELP_SYSTEM_PROMPT,
         messages: messages,

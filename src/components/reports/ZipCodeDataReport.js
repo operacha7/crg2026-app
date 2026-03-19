@@ -465,7 +465,7 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
                     }}
                   >
                     <span className="inline-flex items-center">
-                      <VerticalLineIcon size={16} color="#222831" />
+                      <VerticalLineIcon size={18} color="#222831" />
                       {row._sectionLabel}
                     </span>
                   </td>
@@ -514,10 +514,10 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
                       handleIconClick(zip, at.assist_id);
                     }}
                   >
-                    <IconComp size={20} className="pointer-events-none" />
+                    <IconComp size={16} className="pointer-events-none" />
                     {tooltipText && (
                       <span
-                        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover/icon:opacity-100 transition-opacity duration-100 pointer-events-none"
+                        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-4 py-1 rounded whitespace-nowrap opacity-0 group-hover/icon:opacity-100 transition-opacity duration-100 pointer-events-none"
                         style={{
                           backgroundColor: "var(--color-tooltip-bg)",
                           color: "var(--color-tooltip-text)",
@@ -580,12 +580,12 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ county, zipCod
                     );
                   })}
                   {/* Assistance icons - groups 1-3 on top, groups 4-6 on bottom */}
-                  <td style={{ padding: "4px 8px", verticalAlign: "middle", position: "relative", overflow: "visible" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
+                  <td style={{ padding: "12px 12px", verticalAlign: "middle", position: "relative", overflow: "visible" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap" }}>
                       {renderIconRow(topRow)}
                     </div>
                     {bottomRow.length > 0 && (
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "2px", whiteSpace: "nowrap" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "10px", whiteSpace: "nowrap" }}>
                         {renderIconRow(bottomRow)}
                       </div>
                     )}
