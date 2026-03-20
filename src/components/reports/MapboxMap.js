@@ -1403,7 +1403,7 @@ function DraggableEvictionsTable({ data, zipCode, neighborhood, houstonMedians, 
       }}>
         <span style={{ flex: 1, fontSize: "9px", color: "#888", fontWeight: 500 }}></span>
         <span style={{ width: "72px", textAlign: "right", fontSize: "9px", color: "#FFFFFF", fontWeight: 600 }}>
-          Zip
+          2024
         </span>
         <span style={{ width: "72px", textAlign: "right", fontSize: "9px", color: "#8FB6FF", fontWeight: 600 }}>
           Houston*
@@ -3320,7 +3320,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.font = "600 9px Lexend, sans-serif";
     ctx.fillStyle = "#FFFFFF";
     ctx.textAlign = "right";
-    ctx.fillText("Zip", valCol1X + valColW, cy);
+    ctx.fillText("2024", valCol1X + valColW, cy);
     ctx.fillStyle = "#8FB6FF";
     ctx.fillText("Houston*", valCol2X + valColW, cy);
     ctx.textAlign = "left";
