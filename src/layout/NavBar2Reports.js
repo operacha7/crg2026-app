@@ -163,13 +163,18 @@ function HoverDropdown({ value, options, onChange, placeholder, inactiveValue = 
 }
 
 // Searchable dropdown - type to filter options
-function SearchableDropdown({ placeholder, options = [], value, onChange, maxChars = 74, format1 = false }) {
+function SearchableDropdown({ placeholder, options = [], value, onChange, maxChars = 74, format1 = false, multi = false, multiLabel = "Multiple Selected" }) {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredOption, setHoveredOption] = useState(null);
   const [searchText, setSearchText] = useState("");
   const containerRef = useRef(null);
   const inputRef = useRef(null);
-  const hasValue = value && value !== "";
+  const hasValue = multi ? (value instanceof Set && value.size > 0) : (value && value !== "");
+
+  // Display text for multi-select mode
+  const displayText = multi
+    ? (value instanceof Set && value.size === 1 ? [...value][0] : (value instanceof Set && value.size > 1 ? multiLabel : null))
+    : value;
 
   const truncateText = (text) => {
     if (!text || text.length <= maxChars) return text;
@@ -202,6 +207,20 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, maxCha
   const handleClick = () => setIsOpen(!isOpen);
 
   const handleSelect = (option) => {
+    if (multi) {
+      // Toggle: add or remove from set
+      if (option === "") {
+        // Reset / clear all
+        onChange?.(new Set());
+      } else {
+        const next = new Set(value instanceof Set ? value : []);
+        if (next.has(option)) next.delete(option);
+        else next.add(option);
+        onChange?.(next);
+      }
+      // Keep dropdown open for multi-select
+      return;
+    }
     onChange?.(option);
     setIsOpen(false);
     setSearchText("");
@@ -244,7 +263,7 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, maxCha
               whiteSpace: "nowrap",
             }}
           >
-            {hasValue ? truncateText(value) : placeholder}
+            {hasValue ? truncateText(displayText) : placeholder}
             <ChevronDownIcon size={16} color="currentColor" />
           </button>
         );
@@ -291,23 +310,34 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, maxCha
                 No matches found
               </div>
             ) : (
-              filteredOptions.map((opt, idx) => (
-                <button
-                  key={idx}
-                  onClick={(e) => { e.stopPropagation(); handleSelect(opt); }}
-                  onMouseEnter={() => setHoveredOption(opt)}
-                  onMouseLeave={() => setHoveredOption(null)}
-                  className="w-full text-left px-4 py-2 font-opensans"
-                  style={{
-                    fontSize: "14px",
-                    color: "var(--color-dropdown-text)",
-                    backgroundColor: hoveredOption === opt ? "var(--color-dropdown-hover-bg)" : (value === opt ? "var(--color-dropdown-active-bg)" : "transparent"),
-                  }}
-                  title={opt}
-                >
-                  {truncateText(opt)}
-                </button>
-              ))
+              filteredOptions.map((opt, idx) => {
+                const isChecked = multi ? (value instanceof Set && value.has(opt)) : (value === opt);
+                return (
+                  <button
+                    key={idx}
+                    onClick={(e) => { e.stopPropagation(); handleSelect(opt); }}
+                    onMouseEnter={() => setHoveredOption(opt)}
+                    onMouseLeave={() => setHoveredOption(null)}
+                    className="w-full text-left px-4 py-2 font-opensans flex items-center gap-2"
+                    style={{
+                      fontSize: "14px",
+                      color: "var(--color-dropdown-text)",
+                      backgroundColor: hoveredOption === opt ? "var(--color-dropdown-hover-bg)" : (isChecked && !multi ? "var(--color-dropdown-active-bg)" : "transparent"),
+                    }}
+                    title={opt}
+                  >
+                    {multi && (
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        readOnly
+                        style={{ width: "16px", height: "16px", accentColor: "#005C72", pointerEvents: "none" }}
+                      />
+                    )}
+                    {truncateText(opt)}
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
@@ -503,18 +533,15 @@ export default function NavBar2Reports({
   onMap2Reset,
   onMap2Download,
   // Zip Code Data filter props
-  zcdCounty,
-  onZcdCountyChange,
-  zcdZipCode,
-  onZcdZipCodeChange,
   zcdParentOrg,
   onZcdParentOrgChange,
   zcdOrganization,
   onZcdOrganizationChange,
-  zcdAssistanceType,
-  onZcdAssistanceTypeChange,
   onZcdReset,
   onZcdDownload,
+  onZcdPdfDownload,
+  onZcdToggleExpand,
+  zcdAllExpanded,
 }) {
   const [registeredOrgs, setRegisteredOrgs] = useState([]);
   const { organizations, assistance, zipCodes, directory } = useAppData();
@@ -967,135 +994,45 @@ export default function NavBar2Reports({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map2AvailableAssistance]);
 
-  // === Zip Code Data (zcd) cross-filtered options (same logic as map2) ===
-  const [zcdPanelOpen, setZcdPanelOpen] = useState(false);
-  const zcdPanelRef = useRef(null);
-  const zcdAssistBtnRef = useRef(null);
-
-  const zcdSelectedAssistInfo = useMemo(() => {
-    if (!zcdAssistanceType) return null;
-    const match = assistance.find(a => a.assistance === zcdAssistanceType);
-    if (!match) return null;
-    return { name: match.assistance, icon: match.icon, group: match.group, assist_id: match.assist_id };
-  }, [zcdAssistanceType, assistance]);
-
-  const zcdHasAnyFilter = Boolean(
-    (zcdCounty && zcdCounty !== "All Counties") || zcdZipCode || zcdParentOrg || zcdOrganization
-  );
-
-  const handleZcdAssistSelect = useCallback((assistanceName) => {
-    onZcdAssistanceTypeChange(assistanceName);
-    setZcdPanelOpen(false);
-  }, [onZcdAssistanceTypeChange]);
-
-  useEffect(() => {
-    function handleZcdClickOutside(event) {
-      if (!zcdPanelOpen) return;
-      const isOutsidePanel = zcdPanelRef.current && !zcdPanelRef.current.contains(event.target);
-      const isOutsideButton = zcdAssistBtnRef.current && !zcdAssistBtnRef.current.contains(event.target);
-      if (isOutsidePanel && isOutsideButton) setZcdPanelOpen(false);
-    }
-    document.addEventListener("mousedown", handleZcdClickOutside);
-    return () => document.removeEventListener("mousedown", handleZcdClickOutside);
-  }, [zcdPanelOpen]);
-
-  const zcdAssistId = useMemo(() => {
-    if (!zcdAssistanceType) return null;
-    const match = assistance.find(a => a.assistance === zcdAssistanceType);
-    return match ? match.assist_id : null;
-  }, [zcdAssistanceType, assistance]);
-
-  const zcdCountyOptions = useMemo(() => {
-    if (zcdZipCode) {
-      const zipRecord = zipCodes.find(z => z.zip_code === zcdZipCode);
-      if (zipRecord && zipRecord.county) return ["All Counties", zipRecord.county];
-    }
-    let filtered = directory.filter(r => r.status_id === 1);
-    if (zcdAssistId) filtered = filtered.filter(r => r.assist_id === zcdAssistId);
-    if (zcdParentOrg) filtered = filtered.filter(r => r.org_parent === zcdParentOrg);
-    if (zcdOrganization) filtered = filtered.filter(r => r.organization === zcdOrganization);
-    const counties = new Set();
-    let hasWildcard = false;
-    filtered.forEach(r => {
-      const served = getServedCounties(r);
-      if (served === null) { hasWildcard = true; } else { served.forEach(c => counties.add(c)); }
-    });
-    if (hasWildcard) {
-      const allCounties = [...new Set(zipCodes.filter(z => z.houston_area === "Y").map(z => z.county).filter(Boolean))];
-      return ["All Counties", ...allCounties.sort()];
-    }
-    return ["All Counties", ...[...counties].sort()];
-  }, [directory, zipCodes, zcdAssistId, zcdParentOrg, zcdOrganization, zcdZipCode, getServedCounties]);
-
-  const zcdZipCodeOptions = useMemo(() => {
-    let filtered = directory.filter(r => r.status_id === 1);
-    if (zcdAssistId) filtered = filtered.filter(r => r.assist_id === zcdAssistId);
-    filtered = filtered.filter(r => orgServesArea(r, zcdCounty, null));
-    if (zcdParentOrg) filtered = filtered.filter(r => r.org_parent === zcdParentOrg);
-    if (zcdOrganization) filtered = filtered.filter(r => r.organization === zcdOrganization);
-    const servedZips = new Set();
-    let hasWildcard = false;
-    filtered.forEach(r => {
-      const cz = Array.isArray(r.client_zip_codes) ? r.client_zip_codes : [];
-      if (cz.includes("99999")) hasWildcard = true;
-      else cz.forEach(z => servedZips.add(z));
-    });
-    let validZips;
-    if (zcdCounty && zcdCounty !== "All Counties") {
-      const countyZipSet = houstonZipsByCounty[zcdCounty] || new Set();
-      validZips = hasWildcard ? [...countyZipSet] : [...servedZips].filter(z => countyZipSet.has(z));
-    } else {
-      validZips = hasWildcard ? [...allHoustonZips] : [...servedZips].filter(z => allHoustonZips.has(z));
-    }
-    return validZips.sort();
-  }, [directory, zcdCounty, zcdAssistId, zcdParentOrg, zcdOrganization, orgServesArea, houstonZipsByCounty, allHoustonZips]);
+  // === Zip Code Data (zcd) cross-filtered options (financial assistance orgs only) ===
+  const finAssistIds = useMemo(() => {
+    return new Set(assistance.filter(a => a.is_fin_assist).map(a => a.assist_id));
+  }, [assistance]);
 
   const zcdParentOrgOptions = useMemo(() => {
-    let filtered = directory.filter(r => r.status_id === 1);
-    if (zcdAssistId) filtered = filtered.filter(r => r.assist_id === zcdAssistId);
-    filtered = filtered.filter(r => orgServesArea(r, zcdCounty, zcdZipCode));
-    if (zcdOrganization) filtered = filtered.filter(r => r.organization === zcdOrganization);
-    return [...new Set(filtered.map(r => r.org_parent).filter(Boolean))].sort();
-  }, [directory, zcdCounty, zcdZipCode, zcdAssistId, zcdOrganization, orgServesArea]);
+    let filtered = directory.filter(r => r.status_id === 1 && finAssistIds.has(r.assist_id));
+    if (zcdOrganization instanceof Set && zcdOrganization.size > 0) filtered = filtered.filter(r => zcdOrganization.has(r.organization));
+    // Only include parents that have multiple children (single-child parents are redundant with Organization dropdown)
+    const parentChildCount = {};
+    filtered.forEach(r => {
+      if (!r.org_parent) return;
+      const children = parentChildCount[r.org_parent] || (parentChildCount[r.org_parent] = new Set());
+      if (r.organization) children.add(r.organization);
+    });
+    return Object.entries(parentChildCount)
+      .filter(([, children]) => children.size > 1)
+      .map(([parent]) => parent)
+      .sort((a, b) => a.localeCompare(b));
+  }, [directory, zcdOrganization, finAssistIds]);
 
   const zcdOrgOptions = useMemo(() => {
-    let filtered = directory.filter(r => r.status_id === 1);
-    if (zcdAssistId) filtered = filtered.filter(r => r.assist_id === zcdAssistId);
-    filtered = filtered.filter(r => orgServesArea(r, zcdCounty, zcdZipCode));
+    let filtered = directory.filter(r => r.status_id === 1 && finAssistIds.has(r.assist_id));
     if (zcdParentOrg) filtered = filtered.filter(r => r.org_parent === zcdParentOrg);
     return [...new Set(filtered.map(r => r.organization).filter(Boolean))].sort();
-  }, [directory, zcdCounty, zcdZipCode, zcdAssistId, zcdParentOrg, orgServesArea]);
-
-  const zcdAvailableAssistance = useMemo(() => {
-    let filtered = directory.filter(r => r.status_id === 1);
-    filtered = filtered.filter(r => orgServesArea(r, zcdCounty, zcdZipCode));
-    if (zcdParentOrg) filtered = filtered.filter(r => r.org_parent === zcdParentOrg);
-    if (zcdOrganization) filtered = filtered.filter(r => r.organization === zcdOrganization);
-    const availableIds = new Set(filtered.map(r => r.assist_id));
-    return assistance.filter(a => availableIds.has(a.assist_id));
-  }, [directory, assistance, zcdCounty, zcdZipCode, zcdParentOrg, zcdOrganization, orgServesArea]);
+  }, [directory, zcdParentOrg, finAssistIds]);
 
   // Auto-clear zcd filters when options no longer include current value
-  useEffect(() => {
-    if (zcdCounty && zcdCounty !== "All Counties" && !zcdCountyOptions.includes(zcdCounty)) onZcdCountyChange?.("All Counties");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zcdCountyOptions]);
-  useEffect(() => {
-    if (zcdZipCode && !zcdZipCodeOptions.includes(zcdZipCode)) onZcdZipCodeChange?.("");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zcdZipCodeOptions]);
   useEffect(() => {
     if (zcdParentOrg && !zcdParentOrgOptions.includes(zcdParentOrg)) onZcdParentOrgChange?.("");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zcdParentOrgOptions]);
   useEffect(() => {
-    if (zcdOrganization && !zcdOrgOptions.includes(zcdOrganization)) onZcdOrganizationChange?.("");
+    if (zcdOrganization instanceof Set && zcdOrganization.size > 0) {
+      const valid = new Set([...zcdOrganization].filter(o => zcdOrgOptions.includes(o)));
+      if (valid.size < zcdOrganization.size) onZcdOrganizationChange?.(valid);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zcdOrgOptions]);
-  useEffect(() => {
-    if (zcdAssistanceType && !zcdAvailableAssistance.find(a => a.assistance === zcdAssistanceType)) onZcdAssistanceTypeChange?.("");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zcdAvailableAssistance]);
 
   return (
     <nav
@@ -1374,24 +1311,22 @@ export default function NavBar2Reports({
           </button>
         </div>
       ) : selectedReport === "consolidated" ? (
-        /* Zip Code Data filters: County, Zip, Parent Org, Organization, Assistance (single), Download */
+        /* Zip Code Data filters: Parent Org, Organization, Download */
         <div className="flex items-center justify-between w-full">
         <div className="flex items-center" style={{ gap: "var(--gap-navbar2-filters)" }}>
-          <HoverDropdown
-            value={zcdCounty}
-            options={zcdCountyOptions}
-            onChange={(val) => { onZcdCountyChange(val); onZcdZipCodeChange(""); }}
-            placeholder="All Counties"
-            inactiveValue="All Counties"
-            format1={true}
-          />
-          <SearchableDropdown
-            placeholder="-- Zip Code --"
-            options={zcdZipCodeOptions}
-            value={zcdZipCode}
-            onChange={onZcdZipCodeChange}
-            format1={true}
-          />
+          <span
+            className="font-opensans"
+            style={{
+              color: "#FFFFFF",
+              fontSize: "12px",
+              fontStyle: "italic",
+              fontWeight: 500,
+              maxWidth: "250px",
+              lineHeight: "1.3",
+            }}
+          >
+            Limited to Organizations who provide Financial Assistance
+          </span>
           <SearchableDropdown
             placeholder="-- Parent Org --"
             options={zcdParentOrgOptions}
@@ -1405,50 +1340,9 @@ export default function NavBar2Reports({
             value={zcdOrganization}
             onChange={onZcdOrganizationChange}
             format1={true}
+            multi={true}
+            multiLabel="Multiple Organizations"
           />
-          {/* Assistance single-select + chip */}
-          <div className="relative flex items-center gap-2">
-            <Map2AssistanceButton
-              hasSelection={Boolean(zcdAssistanceType)}
-              hasAnyFilter={zcdHasAnyFilter}
-              onClick={() => setZcdPanelOpen(!zcdPanelOpen)}
-              buttonRef={zcdAssistBtnRef}
-            />
-            {zcdSelectedAssistInfo && (() => {
-              const groupColor = GROUP_COLORS[zcdSelectedAssistInfo.group] || GROUP_COLORS[1];
-              const iconResult = zcdSelectedAssistInfo.icon ? getIconByName(zcdSelectedAssistInfo.icon) : null;
-              const IconComponents = iconResult ? (Array.isArray(iconResult) ? iconResult : [iconResult]) : [];
-              return (
-                <div
-                  className="font-opensans flex items-center gap-2"
-                  style={{
-                    height: "var(--height-navbar2-btn)",
-                    paddingLeft: "12px",
-                    paddingRight: "12px",
-                    borderRadius: "var(--radius-assistance-chip)",
-                    fontSize: "var(--font-size-assistance-chip)",
-                    letterSpacing: "var(--letter-spacing-assistance-chip)",
-                    backgroundColor: groupColor,
-                    color: "#000",
-                    border: "1px solid #000",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {IconComponents.map((IconComp, idx) => (
-                    <IconComp key={idx} size={20} />
-                  ))}
-                  {zcdSelectedAssistInfo.name}
-                </div>
-              );
-            })()}
-            <AssistanceChipDropdown
-              isOpen={zcdPanelOpen}
-              assistanceList={zcdAvailableAssistance}
-              selectedName={zcdAssistanceType}
-              onSelect={handleZcdAssistSelect}
-              panelRef={zcdPanelRef}
-            />
-          </div>
           <div
             className="flex items-center font-opensans"
             style={{
@@ -1473,7 +1367,7 @@ export default function NavBar2Reports({
             onClick={onZcdReset}
             className="font-opensans transition-all duration-200 hover:brightness-125"
             style={{
-              fontSize: "13px",
+              fontSize: "15px",
               color: "#FFFFFF",
               background: "none",
               border: "none",
@@ -1484,27 +1378,63 @@ export default function NavBar2Reports({
           >
             Reset Filters
           </button>
+          <button
+            onClick={onZcdToggleExpand}
+            className="font-opensans transition-all duration-200 hover:brightness-125"
+            style={{
+              fontSize: "15px",
+              color: "#FFFFFF",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              textDecoration: "underline",
+            }}
+          >
+            {zcdAllExpanded ? "Collapse Orgs" : "Expand Orgs"}
+          </button>
         </div>
-        {/* Download button - right-aligned, matches Map 2 style */}
-        <button
-          onClick={onZcdDownload}
-          className="flex items-center gap-2 transition-all duration-200 hover:brightness-125"
-          style={{
-            background: "#4285F4",
-            border: "none",
-            borderRadius: "6px",
-            padding: "6px 14px",
-            cursor: "pointer",
-            color: "#FFFFFF",
-            whiteSpace: "nowrap",
-          }}
-          title="Download as CSV"
-        >
-          <DownloadIcon size={20} color="#FFFFFF" />
-          <span className="font-opensans" style={{ fontSize: "18px", fontWeight: 400 }}>
-            Download
-          </span>
-        </button>
+        {/* Download + PDF buttons - right-aligned */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onZcdPdfDownload}
+            className="flex items-center gap-2 transition-all duration-200 hover:brightness-125"
+            style={{
+              background: "#228B22",
+              border: "none",
+              borderRadius: "6px",
+              padding: "6px 14px",
+              cursor: "pointer",
+              color: "#FFFFFF",
+              whiteSpace: "nowrap",
+            }}
+            title="Download as PDF"
+          >
+            <DownloadIcon size={20} color="#FFFFFF" />
+            <span className="font-opensans" style={{ fontSize: "18px", fontWeight: 400 }}>
+              PDF
+            </span>
+          </button>
+          <button
+            onClick={onZcdDownload}
+            className="flex items-center gap-2 transition-all duration-200 hover:brightness-125"
+            style={{
+              background: "#4285F4",
+              border: "none",
+              borderRadius: "6px",
+              padding: "6px 14px",
+              cursor: "pointer",
+              color: "#FFFFFF",
+              whiteSpace: "nowrap",
+            }}
+            title="Download as CSV"
+          >
+            <DownloadIcon size={20} color="#FFFFFF" />
+            <span className="font-opensans" style={{ fontSize: "18px", fontWeight: 400 }}>
+              CSV
+            </span>
+          </button>
+        </div>
         </div>
       ) : (
         /* Default reports: Organization dropdown + Daily/Monthly toggle */

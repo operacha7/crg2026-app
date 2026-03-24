@@ -75,7 +75,7 @@ export async function onRequest({ request, env }) {
   }
 
   try {
-    const { htmlBody, header, headerHtml, footer, filename, margin, organization } =
+    const { htmlBody, header, headerHtml, footer, filename, margin, landscape, organization } =
       await request.json();
 
     if (!htmlBody) {
@@ -119,6 +119,10 @@ export async function onRequest({ request, env }) {
 
     if (margin) {
       pdfShiftPayload.margin = margin;
+    }
+
+    if (landscape) {
+      pdfShiftPayload.landscape = true;
     }
 
     const resp = await fetch("https://api.pdfshift.io/v3/convert/pdf", {

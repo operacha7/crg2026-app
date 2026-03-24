@@ -114,19 +114,16 @@ export default function ReportsPage() {
     if (v) setMap2ViewMode("filter_view");
   }, []);
 
-  // Zip Code Data report filter state (same filter pattern as map2)
-  const [zcdCounty, setZcdCounty] = useState("All Counties");
-  const [zcdZipCode, setZcdZipCode] = useState("");
+  // Zip Code Data report filter state
   const [zcdParentOrg, setZcdParentOrg] = useState("");
-  const [zcdOrganization, setZcdOrganization] = useState("");
-  const [zcdAssistanceType, setZcdAssistanceType] = useState("");
+  const [zcdOrganization, setZcdOrganization] = useState(new Set());
+  const [zcdAllExpanded, setZcdAllExpanded] = useState(false);
 
   const handleZcdReset = useCallback(() => {
-    setZcdCounty("All Counties");
-    setZcdZipCode("");
     setZcdParentOrg("");
-    setZcdOrganization("");
-    setZcdAssistanceType("");
+    setZcdOrganization(new Set());
+    setZcdAllExpanded(false);
+    zcdReportRef.current?.resetFilters();
   }, []);
 
   // Reset Zip Code Data filters when navigating away
@@ -141,6 +138,10 @@ export default function ReportsPage() {
 
   const handleZcdDownload = useCallback(() => {
     zcdReportRef.current?.download();
+  }, []);
+
+  const handleZcdPdfDownload = useCallback(() => {
+    zcdReportRef.current?.downloadPdf();
   }, []);
 
   // Ref to MapboxMap for download trigger
@@ -218,12 +219,8 @@ export default function ReportsPage() {
         return (
           <ZipCodeDataReport
             ref={zcdReportRef}
-            county={zcdCounty}
-            zipCode={zcdZipCode}
             parentOrg={zcdParentOrg}
             organization={zcdOrganization}
-            assistanceType={zcdAssistanceType}
-            onAssistanceTypeChange={setZcdAssistanceType}
           />
         );
       default:
@@ -272,18 +269,15 @@ export default function ReportsPage() {
           onMap2AssistanceTypeChange={handleMap2AssistanceTypeChange}
           onMap2Reset={handleMap2Reset}
           onMap2Download={handleMap2Download}
-          zcdCounty={zcdCounty}
-          onZcdCountyChange={setZcdCounty}
-          zcdZipCode={zcdZipCode}
-          onZcdZipCodeChange={setZcdZipCode}
           zcdParentOrg={zcdParentOrg}
           onZcdParentOrgChange={setZcdParentOrg}
           zcdOrganization={zcdOrganization}
           onZcdOrganizationChange={setZcdOrganization}
-          zcdAssistanceType={zcdAssistanceType}
-          onZcdAssistanceTypeChange={setZcdAssistanceType}
           onZcdReset={handleZcdReset}
           onZcdDownload={handleZcdDownload}
+          onZcdPdfDownload={handleZcdPdfDownload}
+          onZcdToggleExpand={() => { zcdReportRef.current?.toggleAllExpanded(); setZcdAllExpanded(prev => !prev); }}
+          zcdAllExpanded={zcdAllExpanded}
         />
         {selectedReport !== "map2" && selectedReport !== "consolidated" && <NavBar3Reports
           selectedReport={selectedReport}
