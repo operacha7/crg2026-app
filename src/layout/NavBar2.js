@@ -1450,8 +1450,17 @@ export default function NavBar2() {
 
   // Memoize organization options for Organization mode
   const parentOrgOptions = useMemo(() => {
-    const parents = [...new Set(organizations.map(o => o.org_parent).filter(Boolean))];
-    return parents.sort();
+    // Only include parents that have multiple children (single-child parents are redundant with Organization dropdown)
+    const parentChildCount = {};
+    organizations.forEach(o => {
+      if (!o.org_parent) return;
+      const children = parentChildCount[o.org_parent] || (parentChildCount[o.org_parent] = new Set());
+      if (o.organization) children.add(o.organization);
+    });
+    return Object.entries(parentChildCount)
+      .filter(([, children]) => children.size > 1)
+      .map(([parent]) => parent)
+      .sort();
   }, [organizations]);
 
   // Distance button requires exactly 1 active assistance type to prevent large API calls

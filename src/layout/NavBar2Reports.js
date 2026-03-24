@@ -748,14 +748,22 @@ export default function NavBar2Reports({
     return validZips.sort();
   }, [directory, statusId, assistId, coverageCounty, coverageParentOrg, coverageChildOrg, orgServesArea, houstonZipsByCounty, allHoustonZips]);
 
-  // Parent org options: mutually filtered by all OTHER filters
+  // Parent org options: mutually filtered by all OTHER filters, multi-child only
   const parentOrgOptions = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === statusId);
     if (assistId) filtered = filtered.filter(r => r.assist_id === assistId);
     filtered = filtered.filter(r => orgServesArea(r, coverageCounty, coverageZipCode));
     if (coverageChildOrg) filtered = filtered.filter(r => r.organization === coverageChildOrg);
-    const parents = [...new Set(filtered.map(r => r.org_parent).filter(Boolean))];
-    return parents.sort();
+    const parentChildCount = {};
+    filtered.forEach(r => {
+      if (!r.org_parent) return;
+      const children = parentChildCount[r.org_parent] || (parentChildCount[r.org_parent] = new Set());
+      if (r.organization) children.add(r.organization);
+    });
+    return Object.entries(parentChildCount)
+      .filter(([, children]) => children.size > 1)
+      .map(([parent]) => parent)
+      .sort();
   }, [directory, statusId, assistId, coverageCounty, coverageZipCode, coverageChildOrg, orgServesArea]);
 
   // Child org options: mutually filtered by all OTHER filters
@@ -928,14 +936,22 @@ export default function NavBar2Reports({
     return validZips.sort();
   }, [directory, map2County, map2AssistId, map2ParentOrg, map2Organization, orgServesArea, houstonZipsByCounty, allHoustonZips]);
 
-  // Parent org options - filtered by all OTHER filters (county, zip, assistance, org)
+  // Parent org options - filtered by all OTHER filters (county, zip, assistance, org), multi-child only
   const map2ParentOrgOptions = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === 1);
     if (map2AssistId) filtered = filtered.filter(r => r.assist_id === map2AssistId);
     filtered = filtered.filter(r => orgServesArea(r, map2County, map2ZipCode));
     if (map2Organization) filtered = filtered.filter(r => r.organization === map2Organization);
-    const parents = [...new Set(filtered.map(r => r.org_parent).filter(Boolean))];
-    return parents.sort();
+    const parentChildCount = {};
+    filtered.forEach(r => {
+      if (!r.org_parent) return;
+      const children = parentChildCount[r.org_parent] || (parentChildCount[r.org_parent] = new Set());
+      if (r.organization) children.add(r.organization);
+    });
+    return Object.entries(parentChildCount)
+      .filter(([, children]) => children.size > 1)
+      .map(([parent]) => parent)
+      .sort();
   }, [directory, map2County, map2ZipCode, map2AssistId, map2Organization, orgServesArea]);
 
   // Organization options - filtered by all OTHER filters (county, zip, assistance, parent)
