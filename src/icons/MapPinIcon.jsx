@@ -4,9 +4,9 @@
 // Based on Icons8 map pin design
 
 export const MapPinIcon = ({ size = 32, active = false, className = "" }) => {
-  // Red (inactive) vs Green (active/selected)
-  const headColor = active ? "#00CC44" : "#ff0000";
-  const headColorEnd = active ? "#009930" : "#000000";
+  // Green (inactive) vs Cyan (active/selected)
+  const headColor = active ? "#00FDFD" : "#00CC44";
+  const headColorEnd = active ? "#00BFBF" : "#009930";
 
   return (
     <svg

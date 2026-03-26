@@ -157,9 +157,9 @@ export default function ReportsPage() {
     setMap2ParentOrg("");
     setMap2Organization("");
     setMap2AssistanceType("");
-    setMap2ViewMode("distress");
-    setMap2ActiveBase("distress");
-  }, []);
+    // Stay on current base map — only clear filters, don't reset the metric view
+    setMap2ViewMode(map2ActiveBase);
+  }, [map2ActiveBase]);
 
   // Reset Map 2 filters when navigating away
   useEffect(() => {

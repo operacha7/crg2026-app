@@ -696,7 +696,7 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
                 return (
                   <ColumnHeaderFilter
                     key={col.key}
-                    label={col.label}
+                label={col.label}                                               
                     values={allZipCodes}
                     selectedValues={selectedZipCodes}
                     onSelectionChange={setSelectedZipCodes}

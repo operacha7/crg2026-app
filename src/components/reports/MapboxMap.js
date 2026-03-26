@@ -37,10 +37,11 @@ const EV_BAND_2 = "rgba(245, 166, 35, 0.35)";    // p30-60 (warm amber)
 const EV_BAND_3 = "rgba(230, 100, 0, 0.42)";     // p60-90 (deep orange)
 const EV_BAND_4 = "rgba(150, 40, 0, 0.55)";      // p90-100 (dark burnt - top 10%)
 
-// Population colors - purple gradient (higher = darker purple)
-const POP_LIGHT = "rgba(200, 170, 230, 0.30)";   // below p25 (light lavender)
-const POP_MID = "rgba(128, 60, 170, 0.40)";      // between p25-p75 (medium purple)
-const POP_DARK = "rgba(75, 0, 130, 0.50)";       // above p75 (indigo)
+// Population colors - 4 bands based on population_score (0-100 scale, purple gradient)
+const POP_BAND_1 = "rgba(200, 170, 230, 0.30)";   // p0-30 (light lavender)
+const POP_BAND_2 = "rgba(160, 100, 200, 0.35)";   // p30-60 (medium lavender)
+const POP_BAND_3 = "rgba(128, 60, 170, 0.42)";    // p60-90 (medium purple)
+const POP_BAND_4 = "rgba(75, 0, 130, 0.55)";      // p90-100 (deep indigo - top 10%)
 
 // Unified fill layer - one color per zip at any given time
 // Priority: childHighlighted (teal) > base highlight > hover > [parent coverage in filter view] > metric colors
@@ -73,16 +74,16 @@ function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thr
       EV_BAND_1,
     ];
   } else if (metric === "population") {
-    const pop25 = thresholds.population?.p25 ?? 0;
-    const pop75 = thresholds.population?.p75 ?? 0;
-    // Higher = more population = darker blue
+    // 4 bands based on population_score (0-100 scale, -1 = no data)
     metricExpression = [
-      [">=", ["coalesce", ["get", "population"], 0], pop75],
-      POP_DARK,
-      [">=", ["coalesce", ["get", "population"], 0], pop25],
-      POP_MID,
-      [">", ["coalesce", ["get", "population"], 0], 0],
-      POP_LIGHT,
+      [">=", ["coalesce", ["get", "population_score"], -1], 90],
+      POP_BAND_4,
+      [">=", ["coalesce", ["get", "population_score"], -1], 60],
+      POP_BAND_3,
+      [">=", ["coalesce", ["get", "population_score"], -1], 30],
+      POP_BAND_2,
+      [">=", ["coalesce", ["get", "population_score"], -1], 0],
+      POP_BAND_1,
     ];
   } else {
     // distress (default) - 4 bands based on distress_score (0-100 scale, -1 = no data)
@@ -106,9 +107,8 @@ function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thr
   // Priority 1 & 2: Interactive highlights - only in filter view
   if (showInteractiveHighlights) {
     fillColorExpr.push(
-      // Priority 1: Child teal (pin click)
-      ["boolean", ["feature-state", "childHighlighted"], false],
-      "rgba(0, 253, 253, 0.40)",
+      // Priority 1: Child teal (pin click) - now handled by org-coverage-circles layer
+      // (removed polygon fill to preserve base metric gradient visibility)
       // Priority 2: Base zip highlight (zip code filter)
       ["boolean", ["feature-state", "highlighted"], false],
       "rgba(0, 253, 253, 0.50)",
@@ -121,13 +121,8 @@ function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thr
     "rgba(184, 0, 31, 0.15)",
   );
 
-  // Priority 4: Parent coverage blue - only in filter view
-  if (showParentCoverage) {
-    fillColorExpr.push(
-      [">=", ["coalesce", ["get", "density"], 0], 1],
-      PARENT_COVERAGE_COLOR
-    );
-  }
+  // Priority 4: Parent coverage - now handled by org-coverage-circles layer (centroid dots)
+  // (removed solid fill - circles preserve base metric gradient visibility)
 
   // Priority 5: YoY overlay (when active, replaces metric colors)
   if (yoyMode) {
@@ -1504,7 +1499,171 @@ function DraggableEvictionsTable({ data, zipCode, neighborhood, houstonMedians, 
   );
 }
 
+// Simple draggable population info box - shows just population for the clicked zip
+function DraggablePopulationTable({ population, zipCode, neighborhood, onClose }) {
+  const dragState = useRef({ isDragging: false, startX: 0, startY: 0 });
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    setPosition({ x: 0, y: 0 });
+  }, [zipCode]);
+
+  const handleMouseDown = (e) => {
+    if (!e.target.closest("[data-drag-handle]")) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragState.current = {
+      isDragging: true,
+      startX: e.clientX - position.x,
+      startY: e.clientY - position.y,
+    };
+
+    const handleMouseMove = (e) => {
+      if (!dragState.current.isDragging) return;
+      setPosition({
+        x: e.clientX - dragState.current.startX,
+        y: e.clientY - dragState.current.startY,
+      });
+    };
+
+    const handleMouseUp = () => {
+      dragState.current.isDragging = false;
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  if (population == null || !zipCode) return null;
+
+  return (
+    <div
+      onMouseDown={handleMouseDown}
+      className="absolute z-50 rounded-lg shadow-xl"
+      style={{
+        bottom: "60px",
+        right: "60px",
+        transform: `translate(${position.x}px, ${position.y}px)`,
+        width: "280px",
+        backgroundColor: "rgba(34, 40, 49, 0.95)",
+        fontFamily: "Lexend, sans-serif",
+        userSelect: "none",
+      }}
+    >
+      {/* Drag handle header */}
+      <div
+        data-drag-handle="true"
+        className="flex items-center justify-between rounded-t-lg"
+        style={{
+          padding: "10px 14px 8px",
+          cursor: "grab",
+          borderBottom: "1px solid rgba(255,255,255,0.1)",
+        }}
+      >
+        <div>
+          <h3 style={{ fontSize: "15px", color: "#FFC857", fontWeight: 600, margin: 0 }}>
+            Zip Code {zipCode}
+          </h3>
+          {neighborhood && (
+            <p style={{ fontSize: "10px", color: "#8FB6FF", margin: "2px 0 0", lineHeight: 1.3 }}>
+              {neighborhood}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          style={{
+            background: "none",
+            border: "none",
+            color: "#999",
+            cursor: "pointer",
+            fontSize: "18px",
+            lineHeight: 1,
+            padding: "0 4px",
+            alignSelf: "flex-start",
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Population value */}
+      <div style={{ padding: "12px 14px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "13px", color: "#CCC", fontWeight: 500 }}>Population</span>
+          <span style={{ fontSize: "16px", color: "#FFFFFF", fontWeight: 600 }}>
+            {population.toLocaleString()}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // (Fill layers consolidated into getUnifiedFillStyle() above)
+
+// Org coverage circles - rendered at zip centroids to show which zips are served
+// Uses small circles instead of polygon fill so base metric gradient stays visible
+const orgCoverageCircleStyle = {
+  id: "org-coverage-circles",
+  type: "circle",
+  // No filter — visibility controlled via paint opacity (feature-state can't be used in filters)
+  paint: {
+    "circle-color": [
+      "case",
+      ["boolean", ["feature-state", "childHighlighted"], false],
+      "rgba(0, 253, 253, 0.50)",   // bright cyan when pin clicked
+      "rgba(0, 28, 168, 0.50)",    // teal-blue for parent coverage
+    ],
+    "circle-radius": ["step", ["zoom"], 6, 10, 11],
+    "circle-stroke-width": 1.5,
+    "circle-stroke-color": "#FFFFFF",
+    // Show circle when childHighlighted (pin click) OR density >= 1 (parent coverage)
+    "circle-opacity": [
+      "case",
+      ["boolean", ["feature-state", "childHighlighted"], false], 1,
+      [">=", ["coalesce", ["get", "density"], 0], 1], 1,
+      0,
+    ],
+    "circle-stroke-opacity": [
+      "case",
+      ["boolean", ["feature-state", "childHighlighted"], false], 1,
+      [">=", ["coalesce", ["get", "density"], 0], 1], 1,
+      0,
+    ],
+  },
+};
+
+// Org coverage border - thick teal/cyan outline on zip polygons
+// Shows for parent coverage (density) and child pin clicks (childHighlighted)
+const orgCoverageBorderStyle = {
+  id: "org-coverage-border",
+  type: "line",
+  // No filter — visibility controlled via paint opacity
+  paint: {
+    "line-color": [
+      "case",
+      ["boolean", ["feature-state", "childHighlighted"], false],
+      "rgba(0, 253, 253, 0.80)",   // bright cyan when pin clicked
+      "rgba(0, 28, 168, 0.70)",    // teal-blue for parent coverage
+    ],
+    // Show border when childHighlighted OR density >= 1
+    "line-width": [
+      "case",
+      ["boolean", ["feature-state", "childHighlighted"], false], 3,
+      [">=", ["coalesce", ["get", "density"], 0], 1], 3,
+      0,
+    ],
+    "line-opacity": [
+      "case",
+      ["boolean", ["feature-state", "childHighlighted"], false], 0.8,
+      [">=", ["coalesce", ["get", "density"], 0], 1], 0.8,
+      0,
+    ],
+  },
+};
 
 const boundaryLineStyle = {
   id: "zip-boundaries-line",
@@ -1748,17 +1907,20 @@ function PopulationLegendBar({ standalone }) {
   return (
     <div style={standalone ? {} : { marginTop: "10px", borderTop: "1px solid #E0E0E0", paddingTop: "8px" }}>
       <div style={{ fontWeight: 500, fontSize: "11px", color: "#444", marginBottom: "4px" }}>
-        Population
+        Population Score
       </div>
-      <div style={{ display: "flex", gap: "2px", marginBottom: "2px" }}>
-        <div style={{ flex: 1, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(200, 170, 230, 0.45)" }} />
-        <div style={{ flex: 2, height: "10px", backgroundColor: "rgba(128, 60, 170, 0.50)" }} />
+      <div style={{ display: "flex", gap: "1px", marginBottom: "2px" }}>
+        <div style={{ flex: 3, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(200, 170, 230, 0.45)" }} />
+        <div style={{ flex: 3, height: "10px", backgroundColor: "rgba(160, 100, 200, 0.45)" }} />
+        <div style={{ flex: 3, height: "10px", backgroundColor: "rgba(128, 60, 170, 0.50)" }} />
         <div style={{ flex: 1, height: "10px", borderRadius: "0 3px 3px 0", backgroundColor: "rgba(75, 0, 130, 0.55)" }} />
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#666" }}>
-        <span>Low</span>
-        <span>Mid</span>
-        <span>High</span>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "#666" }}>
+        <span>0</span>
+        <span>30</span>
+        <span>60</span>
+        <span>90</span>
+        <span>100</span>
       </div>
     </div>
   );
@@ -1913,6 +2075,7 @@ const MapboxMap = forwardRef(function MapboxMap({
   // Evictions data table state (base view zip click)
   const [evictionsTableZip, setEvictionsTableZip] = useState(null);
   const evictionsSelectedRef = useRef(null); // feature id of currently highlighted zip
+  const [populationTableZip, setPopulationTableZip] = useState(null);
 
   // Zip search state
   const [searchZipValue, setSearchZipValue] = useState("");
@@ -1959,7 +2122,19 @@ const MapboxMap = forwardRef(function MapboxMap({
     return lookup;
   }, [workingPoorData]);
 
-  // Population lookup: zip_code -> population value (from distress data, includes all exclude levels)
+  // Population score lookup: zip_code -> population_score (0-100, from distress data)
+  const populationScoreLookup = useMemo(() => {
+    const lookup = {};
+    if (!distressData) return lookup;
+    distressData.forEach((d) => {
+      if (d.zip_code && d.population_score != null) {
+        lookup[d.zip_code] = Number(d.population_score) ?? -1;
+      }
+    });
+    return lookup;
+  }, [distressData]);
+
+  // Population raw value lookup: zip_code -> population (for info box display)
   const populationLookup = useMemo(() => {
     const lookup = {};
     if (!distressData) return lookup;
@@ -2096,35 +2271,17 @@ const MapboxMap = forwardRef(function MapboxMap({
     return evictionsData.filter(d => d.exclude === 2).length;
   }, [evictionsData]);
 
-  // Dynamic thresholds for population (25th/75th percentile)
-  const metricThresholds = useMemo(() => {
-    const popValues = Object.values(populationLookup).filter(v => v > 0).sort((a, b) => a - b);
-
-    const percentile = (arr, p) => {
-      if (arr.length === 0) return 0;
-      const idx = Math.floor(arr.length * p);
-      return arr[Math.min(idx, arr.length - 1)];
-    };
-
-    return {
-      population: {
-        p25: percentile(popValues, 0.25),
-        p75: percentile(popValues, 0.75),
-      },
-    };
-  }, [populationLookup]);
-
   // Is the map in base view (clean metric) vs filter view (overlay + metric)?
   const isBaseView = viewMode !== "filter_view";
 
   // Which metric to display: in base view use viewMode, in filter view use activeBase
   const displayMetric = isBaseView ? viewMode : activeBase;
 
-  // Memoized unified fill style - recomputed when viewMode, activeBase, thresholds, or YoY mode change
+  // Memoized unified fill style - recomputed when viewMode, activeBase, or YoY mode change
   const isDistressYoYActive = showDistressYoY && (isBaseView ? displayMetric === "distress" : activeBase === "distress");
   const unifiedFillStyle = useMemo(() => {
-    return getUnifiedFillStyle(displayMetric, !isBaseView, metricThresholds, !isBaseView, isDistressYoYActive);
-  }, [displayMetric, isBaseView, metricThresholds, isDistressYoYActive]);
+    return getUnifiedFillStyle(displayMetric, !isBaseView, {}, !isBaseView, isDistressYoYActive);
+  }, [displayMetric, isBaseView, isDistressYoYActive]);
 
   // Zip codes by county lookup
   const houstonZipsByCounty = useMemo(() => {
@@ -2278,6 +2435,7 @@ const MapboxMap = forwardRef(function MapboxMap({
             distress_score: distressLookup[f.properties.ZCTA5CE20] ?? -1,
             working_poor_score: workingPoorLookup[f.properties.ZCTA5CE20] ?? -1,
             population: populationLookup[f.properties.ZCTA5CE20] || 0,
+            population_score: populationScoreLookup[f.properties.ZCTA5CE20] ?? -1,
             evictions_score: evictionsLookup[f.properties.ZCTA5CE20] ?? -1,
             yoy_improved_rank: distressYoYZips?.improved[f.properties.ZCTA5CE20] || 0,
             yoy_declined_rank: distressYoYZips?.declined[f.properties.ZCTA5CE20] || 0,
@@ -2285,7 +2443,30 @@ const MapboxMap = forwardRef(function MapboxMap({
         })),
     };
     return filtered;
-  }, [allGeoJsonData, boundaryZips, parentCoverage, distressLookup, workingPoorLookup, populationLookup, evictionsLookup, distressYoYZips]);
+  }, [allGeoJsonData, boundaryZips, parentCoverage, distressLookup, workingPoorLookup, populationLookup, populationScoreLookup, evictionsLookup, distressYoYZips]);
+
+  // Derive centroid point GeoJSON from polygon data for org coverage circles
+  const centroidGeoJson = useMemo(() => {
+    if (!geoJsonData) return null;
+    return {
+      type: "FeatureCollection",
+      features: geoJsonData.features.map((f) => ({
+        type: "Feature",
+        id: f.id,
+        properties: {
+          ZCTA5CE20: f.properties.ZCTA5CE20,
+          density: f.properties.density || 0,
+        },
+        geometry: {
+          type: "Point",
+          coordinates: [
+            parseFloat(f.properties.INTPTLON20),
+            parseFloat(f.properties.INTPTLAT20),
+          ],
+        },
+      })),
+    };
+  }, [geoJsonData]);
 
   // Zip code -> feature id lookup
   const zipToFeatureId = useMemo(() => {
@@ -2297,7 +2478,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     return lookup;
   }, [geoJsonData]);
 
-  // Clear child teal highlights
+  // Clear child teal highlights (on both polygon and centroid sources)
   const clearChildHighlights = useCallback(() => {
     const map = mapRef.current?.getMap();
     if (!map || !map.getSource("zip-boundaries")) return;
@@ -2307,6 +2488,13 @@ const MapboxMap = forwardRef(function MapboxMap({
         { source: "zip-boundaries", id: featureId },
         { childHighlighted: false }
       );
+      // Also clear on centroid source for circle layer
+      if (map.getSource("zip-centroids")) {
+        map.setFeatureState(
+          { source: "zip-centroids", id: featureId },
+          { childHighlighted: false }
+        );
+      }
     });
     childHighlightedRef.current.clear();
   }, []);
@@ -2363,6 +2551,13 @@ const MapboxMap = forwardRef(function MapboxMap({
             { source: "zip-boundaries", id: featureId },
             { childHighlighted: true }
           );
+          // Also highlight on centroid source for circle layer
+          if (map.getSource("zip-centroids")) {
+            map.setFeatureState(
+              { source: "zip-centroids", id: featureId },
+              { childHighlighted: true }
+            );
+          }
           childHighlightedRef.current.add(featureId);
         }
       });
@@ -2465,6 +2660,25 @@ const MapboxMap = forwardRef(function MapboxMap({
       return;
     }
 
+    // In population base view, clicking a zip boundary opens/toggles the population info box
+    if (isBaseView && displayMetric === "population") {
+      const map = mapRef.current?.getMap();
+      if (map && map.getLayer("unified-fill")) {
+        const features = map.queryRenderedFeatures(e.point, {
+          layers: ["unified-fill"],
+        });
+        if (features.length > 0) {
+          const clickedZip = features[0].properties.ZCTA5CE20;
+          if (clickedZip && populationLookup[clickedZip] != null) {
+            setPopulationTableZip(prev => prev === clickedZip ? null : clickedZip);
+            return;
+          }
+        }
+      }
+      setPopulationTableZip(null);
+      return;
+    }
+
     // In evictions base view, clicking a zip boundary opens/toggles the evictions data table
     if (isBaseView && displayMetric === "evictions") {
       const map = mapRef.current?.getMap();
@@ -2494,20 +2708,29 @@ const MapboxMap = forwardRef(function MapboxMap({
       if (features.length > 0) {
         const clickedZip = features[0].properties.ZCTA5CE20;
 
-        if (activeBase === "evictions" && clickedZip && evictionsDataLookup[clickedZip]) {
+        if (activeBase === "population" && clickedZip && populationLookup[clickedZip] != null) {
+          setPopulationTableZip(prev => prev === clickedZip ? null : clickedZip);
+          setDistressTableZip(null);
+          setWorkingPoorTableZip(null);
+          setEvictionsTableZip(null);
+          return;
+        } else if (activeBase === "evictions" && clickedZip && evictionsDataLookup[clickedZip]) {
           setEvictionsTableZip(prev => prev === clickedZip ? null : clickedZip);
           setDistressTableZip(null);
           setWorkingPoorTableZip(null);
+          setPopulationTableZip(null);
           return;
         } else if (activeBase === "working_poor" && clickedZip && workingPoorDataLookup[clickedZip]) {
           setWorkingPoorTableZip(prev => prev === clickedZip ? null : clickedZip);
           setDistressTableZip(null);
           setEvictionsTableZip(null);
+          setPopulationTableZip(null);
           return;
         } else if (clickedZip && distressDataLookup[clickedZip]) {
           setDistressTableZip(prev => prev === clickedZip ? null : clickedZip);
           setWorkingPoorTableZip(null);
           setEvictionsTableZip(null);
+          setPopulationTableZip(null);
           return;
         }
       }
@@ -2520,10 +2743,11 @@ const MapboxMap = forwardRef(function MapboxMap({
     setDistressTableZip(null);
     setWorkingPoorTableZip(null);
     setEvictionsTableZip(null);
+    setPopulationTableZip(null);
     if (zipCode) {
       setBaseHighlight(zipCode);
     }
-  }, [clearChildHighlights, zipCode, setBaseHighlight, isBaseView, displayMetric, distressDataLookup, workingPoorDataLookup, evictionsDataLookup, activeBase]);
+  }, [clearChildHighlights, zipCode, setBaseHighlight, isBaseView, displayMetric, distressDataLookup, workingPoorDataLookup, evictionsDataLookup, populationLookup, activeBase]);
 
   // Handle zip search — fly to zip and open its info box
   const handleZipSearch = useCallback((zipStr) => {
@@ -2546,6 +2770,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     setDistressTableZip(null);
     setWorkingPoorTableZip(null);
     setEvictionsTableZip(null);
+    setPopulationTableZip(null);
 
     if (isBaseView) {
       if (displayMetric === "distress" && distressDataLookup[zip]) {
@@ -2554,10 +2779,14 @@ const MapboxMap = forwardRef(function MapboxMap({
         setWorkingPoorTableZip(zip);
       } else if (displayMetric === "evictions" && evictionsDataLookup[zip]) {
         setEvictionsTableZip(zip);
+      } else if (displayMetric === "population" && populationLookup[zip] != null) {
+        setPopulationTableZip(zip);
       }
     } else {
       // Filter view — use activeBase
-      if (activeBase === "evictions" && evictionsDataLookup[zip]) {
+      if (activeBase === "population" && populationLookup[zip] != null) {
+        setPopulationTableZip(zip);
+      } else if (activeBase === "evictions" && evictionsDataLookup[zip]) {
         setEvictionsTableZip(zip);
       } else if (activeBase === "working_poor" && workingPoorDataLookup[zip]) {
         setWorkingPoorTableZip(zip);
@@ -2565,7 +2794,7 @@ const MapboxMap = forwardRef(function MapboxMap({
         setDistressTableZip(zip);
       }
     }
-  }, [zipCodes, isBaseView, displayMetric, activeBase, distressDataLookup, workingPoorDataLookup, evictionsDataLookup]);
+  }, [zipCodes, isBaseView, displayMetric, activeBase, distressDataLookup, workingPoorDataLookup, evictionsDataLookup, populationLookup]);
 
   // Handle boundary hover
   const handleMouseMove = useCallback((e) => {
@@ -2624,9 +2853,12 @@ const MapboxMap = forwardRef(function MapboxMap({
     clearBaseHighlight();
   }, [assistanceType, county, zipCode, parentOrg, organization, clearChildHighlights, clearBaseHighlight]);
 
-  // Close distress data table on any view mode change
+  // Close all data tables on any view mode change
   useEffect(() => {
     setDistressTableZip(null);
+    setWorkingPoorTableZip(null);
+    setEvictionsTableZip(null);
+    setPopulationTableZip(null);
   }, [viewMode]);
 
   // Sync distress-selected visual highlight with distressTableZip
@@ -3578,7 +3810,7 @@ const MapboxMap = forwardRef(function MapboxMap({
       distress: "Distress Score",
       working_poor: "Working Poor Score",
       evictions: "Evictions Score",
-      population: "Population",
+      population: "Population Score",
     };
     ctx.fillText(labels[mode] || "Distress Score", x + pad, cy);
     cy += 16;
@@ -3590,7 +3822,7 @@ const MapboxMap = forwardRef(function MapboxMap({
       distress: { colors: ["rgba(76, 175, 80, 0.40)", "rgba(255, 213, 0, 0.40)", "rgba(245, 124, 0, 0.45)", "rgba(220, 50, 50, 0.55)"], weights: [3, 3, 3, 1] },
       working_poor: { colors: ["rgba(255, 205, 210, 0.45)", "rgba(239, 130, 130, 0.45)", "rgba(198, 40, 40, 0.50)", "rgba(100, 0, 0, 0.55)"], weights: [3, 3, 3, 1] },
       evictions: { colors: ["rgba(255, 224, 178, 0.45)", "rgba(245, 166, 35, 0.45)", "rgba(230, 100, 0, 0.50)", "rgba(150, 40, 0, 0.55)"], weights: [3, 3, 3, 1] },
-      population: ["rgba(200, 170, 230, 0.45)", "rgba(128, 60, 170, 0.50)", "rgba(75, 0, 130, 0.55)"],
+      population: { colors: ["rgba(200, 170, 230, 0.45)", "rgba(160, 100, 200, 0.45)", "rgba(128, 60, 170, 0.50)", "rgba(75, 0, 130, 0.55)"], weights: [3, 3, 3, 1] },
     };
     const colorDef = colors[mode] || colors.distress;
     const isWeighted = colorDef.colors != null;
@@ -3610,7 +3842,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     // Scale labels
     ctx.font = "400 9px Lexend, sans-serif";
     ctx.fillStyle = "#666666";
-    if (mode === "distress" || mode === "working_poor" || mode === "evictions") {
+    if (mode === "distress" || mode === "working_poor" || mode === "evictions" || mode === "population") {
       const scaleValues = ["0", "30", "60", "90", "100"];
       const positions = [0, 0.3, 0.6, 0.9, 1.0];
       scaleValues.forEach((val, i) => {
@@ -3663,7 +3895,7 @@ const MapboxMap = forwardRef(function MapboxMap({
       distress: { colors: ["rgba(76, 175, 80, 0.40)", "rgba(255, 213, 0, 0.40)", "rgba(245, 124, 0, 0.45)", "rgba(220, 50, 50, 0.55)"], weights: [3, 3, 3, 1] },
       working_poor: { colors: ["rgba(255, 205, 210, 0.45)", "rgba(239, 130, 130, 0.45)", "rgba(198, 40, 40, 0.50)", "rgba(100, 0, 0, 0.55)"], weights: [3, 3, 3, 1] },
       evictions: { colors: ["rgba(255, 224, 178, 0.45)", "rgba(245, 166, 35, 0.45)", "rgba(230, 100, 0, 0.50)", "rgba(150, 40, 0, 0.55)"], weights: [3, 3, 3, 1] },
-      population: ["rgba(200, 170, 230, 0.45)", "rgba(128, 60, 170, 0.50)", "rgba(75, 0, 130, 0.55)"],
+      population: { colors: ["rgba(200, 170, 230, 0.45)", "rgba(160, 100, 200, 0.45)", "rgba(128, 60, 170, 0.50)", "rgba(75, 0, 130, 0.55)"], weights: [3, 3, 3, 1] },
     };
     const colorDef = colors[mode] || colors.distress;
     const isWeighted = colorDef.colors != null;
@@ -3682,7 +3914,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     // Scale labels
     ctx.font = "400 9px Lexend, sans-serif";
     ctx.fillStyle = "#666666";
-    if (mode === "distress" || mode === "working_poor" || mode === "evictions") {
+    if (mode === "distress" || mode === "working_poor" || mode === "evictions" || mode === "population") {
       const scaleValues = ["0", "30", "60", "90", "100"];
       const positions = [0, 0.3, 0.6, 0.9, 1.0];
       scaleValues.forEach((val, i) => {
@@ -3917,10 +4149,24 @@ const MapboxMap = forwardRef(function MapboxMap({
             data={geoJsonData}
             generateId={false}
           >
-            {/* Unified fill: child teal > [parent coverage in filter view] > metric colors */}
+            {/* Unified fill: base zip highlight > hover > metric colors */}
             <Layer {...unifiedFillStyle} />
             <Layer {...boundaryLineStyle} />
+            {/* Teal/cyan border on org-covered or child-highlighted zip polygons */}
+            {!isBaseView && hasAssistance && <Layer {...orgCoverageBorderStyle} />}
             <Layer {...zipLabelStyle} />
+          </Source>
+        )}
+
+        {/* Org coverage circles at zip centroids - shows which zips are served without hiding base metric */}
+        {centroidGeoJson && !isBaseView && hasAssistance && (
+          <Source
+            id="zip-centroids"
+            type="geojson"
+            data={centroidGeoJson}
+            generateId={false}
+          >
+            <Layer {...orgCoverageCircleStyle} />
           </Source>
         )}
 
@@ -4222,6 +4468,16 @@ const MapboxMap = forwardRef(function MapboxMap({
           houstonMedians={evictionsMedians}
           rankedCount={evictionsRankedCount}
           onClose={() => setEvictionsTableZip(null)}
+        />
+      )}
+
+      {/* Draggable population info box - in population base view or when activeBase is population in filter view */}
+      {(isBaseView ? displayMetric === "population" : activeBase === "population") && populationTableZip && (
+        <DraggablePopulationTable
+          population={populationLookup[populationTableZip]}
+          zipCode={populationTableZip}
+          neighborhood={zipCodes?.find(z => z.zip_code === populationTableZip)?.neighborhood || ""}
+          onClose={() => setPopulationTableZip(null)}
         />
       )}
 
