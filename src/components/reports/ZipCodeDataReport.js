@@ -38,10 +38,11 @@ function isScoreField(fieldName) {
 function getScoreHighlight(value) {
   if (value == null || value === "") return undefined;
   const v = Number(value);
-  if (v >= 90) return "rgba(220, 40, 40, 0.40)";     // red
-  if (v >= 60) return "rgba(240, 150, 30, 0.40)";    // orange
-  if (v >= 30) return "rgba(230, 200, 50, 0.40)";    // yellow
-  if (v >= 0)  return "rgba(80, 170, 80, 0.40)";     // green
+  if (v >= 80) return "rgba(220, 40, 40, 0.40)";     // red (80-100)
+  if (v >= 60) return "rgba(240, 150, 30, 0.40)";    // orange (60-80)
+  if (v >= 40) return "rgba(230, 200, 50, 0.40)";    // yellow (40-60)
+  if (v >= 20) return "rgba(80, 170, 80, 0.40)";     // green (20-40)
+  if (v >= 0)  return "rgba(66, 133, 244, 0.40)";    // blue (0-20)
   return undefined;
 }
 
@@ -696,7 +697,7 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
                 return (
                   <ColumnHeaderFilter
                     key={col.key}
-                label={col.label}                                               
+              label={col.label}
                     values={allZipCodes}
                     selectedValues={selectedZipCodes}
                     onSelectionChange={setSelectedZipCodes}

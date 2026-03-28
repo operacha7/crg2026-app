@@ -19,29 +19,33 @@ const DEFAULT_ZOOM = 9.5;
 // Parent coverage color - blue for served zips (related to child teal, distinct from distress)
 const PARENT_COVERAGE_COLOR = "rgba(0, 28, 168, 0.5)"; // medium blue at 35%
 
-// Distress colors - 4 bands: top 10% highlighted, rest in thirds
-const DISTRESS_GREEN = "rgba(76, 175, 80, 0.30)";    // p0-30 (light green)
-const DISTRESS_YELLOW = "rgba(255, 213, 0, 0.30)";   // p30-60 (yellow)
-const DISTRESS_ORANGE = "rgba(245, 124, 0, 0.40)";   // p60-90 (orange)
-const DISTRESS_RED = "rgba(220, 50, 50, 0.50)";      // p90-100 (red - top 10%)
+// Distress colors - 5 quintile bands: blue → green → yellow → orange → red
+const DISTRESS_BLUE = "rgba(66, 133, 244, 0.30)";    // q1: 0-20 (calm blue - most prosperous)
+const DISTRESS_GREEN = "rgba(76, 175, 80, 0.30)";    // q2: 20-40 (green)
+const DISTRESS_YELLOW = "rgba(255, 213, 0, 0.35)";   // q3: 40-60 (yellow)
+const DISTRESS_ORANGE = "rgba(245, 124, 0, 0.42)";   // q4: 60-80 (orange)
+const DISTRESS_RED = "rgba(220, 50, 50, 0.50)";      // q5: 80-100 (red - most distressed)
 
-// Working poor colors - 4 bands: top 10% highlighted, rest in thirds (red gradient)
-const WP_BAND_1 = "rgba(255, 205, 210, 0.30)";   // p0-30 (lightest rose)
-const WP_BAND_2 = "rgba(239, 130, 130, 0.35)";   // p30-60 (salmon)
-const WP_BAND_3 = "rgba(198, 40, 40, 0.42)";     // p60-90 (dark red)
-const WP_BAND_4 = "rgba(100, 0, 0, 0.55)";       // p90-100 (deep maroon - top 10%)
+// Working poor colors - same 5 quintile bands as distress (blue → green → yellow → orange → red)
+const WP_BAND_1 = DISTRESS_BLUE;
+const WP_BAND_2 = DISTRESS_GREEN;
+const WP_BAND_3 = DISTRESS_YELLOW;
+const WP_BAND_4 = DISTRESS_ORANGE;
+const WP_BAND_5 = DISTRESS_RED;
 
-// Evictions colors - 4 bands: top 10% highlighted, rest in thirds (orange gradient)
-const EV_BAND_1 = "rgba(255, 224, 178, 0.30)";   // p0-30 (light peach)
-const EV_BAND_2 = "rgba(245, 166, 35, 0.35)";    // p30-60 (warm amber)
-const EV_BAND_3 = "rgba(230, 100, 0, 0.42)";     // p60-90 (deep orange)
-const EV_BAND_4 = "rgba(150, 40, 0, 0.55)";      // p90-100 (dark burnt - top 10%)
+// Evictions colors - same 5 quintile bands as distress (blue → green → yellow → orange → red)
+const EV_BAND_1 = DISTRESS_BLUE;
+const EV_BAND_2 = DISTRESS_GREEN;
+const EV_BAND_3 = DISTRESS_YELLOW;
+const EV_BAND_4 = DISTRESS_ORANGE;
+const EV_BAND_5 = DISTRESS_RED;
 
-// Population colors - 4 bands based on population_score (0-100 scale, purple gradient)
-const POP_BAND_1 = "rgba(200, 170, 230, 0.30)";   // p0-30 (light lavender)
-const POP_BAND_2 = "rgba(160, 100, 200, 0.35)";   // p30-60 (medium lavender)
-const POP_BAND_3 = "rgba(128, 60, 170, 0.42)";    // p60-90 (medium purple)
-const POP_BAND_4 = "rgba(75, 0, 130, 0.55)";      // p90-100 (deep indigo - top 10%)
+// Population colors - 5 quintile bands (purple gradient, light to dark)
+const POP_BAND_1 = "rgba(200, 170, 230, 0.30)";   // q1: 0-20 (light lavender)
+const POP_BAND_2 = "rgba(175, 130, 215, 0.33)";   // q2: 20-40 (medium lavender)
+const POP_BAND_3 = "rgba(150, 85, 195, 0.38)";    // q3: 40-60 (medium purple)
+const POP_BAND_4 = "rgba(110, 40, 160, 0.45)";    // q4: 60-80 (dark purple)
+const POP_BAND_5 = "rgba(75, 0, 130, 0.55)";      // q5: 80-100 (deep indigo)
 
 // Unified fill layer - one color per zip at any given time
 // Priority: childHighlighted (teal) > base highlight > hover > [parent coverage in filter view] > metric colors
@@ -50,52 +54,40 @@ function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thr
   // Build metric color expression based on active metric
   let metricExpression;
   if (metric === "working_poor") {
-    // 4 bands based on working_poor_score (0-100 scale, -1 = no data)
+    // 5 quintile bands based on working_poor_score (0-100 scale, -1 = no data)
     metricExpression = [
-      [">=", ["coalesce", ["get", "working_poor_score"], -1], 90],
-      WP_BAND_4,
-      [">=", ["coalesce", ["get", "working_poor_score"], -1], 60],
-      WP_BAND_3,
-      [">=", ["coalesce", ["get", "working_poor_score"], -1], 30],
-      WP_BAND_2,
-      [">=", ["coalesce", ["get", "working_poor_score"], -1], 0],
-      WP_BAND_1,
+      [">=", ["coalesce", ["get", "working_poor_score"], -1], 80], WP_BAND_5,
+      [">=", ["coalesce", ["get", "working_poor_score"], -1], 60], WP_BAND_4,
+      [">=", ["coalesce", ["get", "working_poor_score"], -1], 40], WP_BAND_3,
+      [">=", ["coalesce", ["get", "working_poor_score"], -1], 20], WP_BAND_2,
+      [">=", ["coalesce", ["get", "working_poor_score"], -1], 0],  WP_BAND_1,
     ];
   } else if (metric === "evictions") {
-    // 4 bands based on evictions_score (0-100 scale, -1 = no data)
+    // 5 quintile bands based on evictions_score (0-100 scale, -1 = no data)
     metricExpression = [
-      [">=", ["coalesce", ["get", "evictions_score"], -1], 90],
-      EV_BAND_4,
-      [">=", ["coalesce", ["get", "evictions_score"], -1], 60],
-      EV_BAND_3,
-      [">=", ["coalesce", ["get", "evictions_score"], -1], 30],
-      EV_BAND_2,
-      [">=", ["coalesce", ["get", "evictions_score"], -1], 0],
-      EV_BAND_1,
+      [">=", ["coalesce", ["get", "evictions_score"], -1], 80], EV_BAND_5,
+      [">=", ["coalesce", ["get", "evictions_score"], -1], 60], EV_BAND_4,
+      [">=", ["coalesce", ["get", "evictions_score"], -1], 40], EV_BAND_3,
+      [">=", ["coalesce", ["get", "evictions_score"], -1], 20], EV_BAND_2,
+      [">=", ["coalesce", ["get", "evictions_score"], -1], 0],  EV_BAND_1,
     ];
   } else if (metric === "population") {
-    // 4 bands based on population_score (0-100 scale, -1 = no data)
+    // 5 quintile bands based on population_score (0-100 scale, -1 = no data)
     metricExpression = [
-      [">=", ["coalesce", ["get", "population_score"], -1], 90],
-      POP_BAND_4,
-      [">=", ["coalesce", ["get", "population_score"], -1], 60],
-      POP_BAND_3,
-      [">=", ["coalesce", ["get", "population_score"], -1], 30],
-      POP_BAND_2,
-      [">=", ["coalesce", ["get", "population_score"], -1], 0],
-      POP_BAND_1,
+      [">=", ["coalesce", ["get", "population_score"], -1], 80], POP_BAND_5,
+      [">=", ["coalesce", ["get", "population_score"], -1], 60], POP_BAND_4,
+      [">=", ["coalesce", ["get", "population_score"], -1], 40], POP_BAND_3,
+      [">=", ["coalesce", ["get", "population_score"], -1], 20], POP_BAND_2,
+      [">=", ["coalesce", ["get", "population_score"], -1], 0],  POP_BAND_1,
     ];
   } else {
-    // distress (default) - 4 bands based on distress_score (0-100 scale, -1 = no data)
+    // distress (default) - 5 quintile bands: blue → green → yellow → orange → red
     metricExpression = [
-      [">=", ["coalesce", ["get", "distress_score"], -1], 90],
-      DISTRESS_RED,
-      [">=", ["coalesce", ["get", "distress_score"], -1], 60],
-      DISTRESS_ORANGE,
-      [">=", ["coalesce", ["get", "distress_score"], -1], 30],
-      DISTRESS_YELLOW,
-      [">=", ["coalesce", ["get", "distress_score"], -1], 0],
-      DISTRESS_GREEN,
+      [">=", ["coalesce", ["get", "distress_score"], -1], 80], DISTRESS_RED,
+      [">=", ["coalesce", ["get", "distress_score"], -1], 60], DISTRESS_ORANGE,
+      [">=", ["coalesce", ["get", "distress_score"], -1], 40], DISTRESS_YELLOW,
+      [">=", ["coalesce", ["get", "distress_score"], -1], 20], DISTRESS_GREEN,
+      [">=", ["coalesce", ["get", "distress_score"], -1], 0],  DISTRESS_BLUE,
     ];
   }
 
@@ -292,10 +284,11 @@ const CENSUS_SOURCE = "U.S. Census Bureau, ACS 5-Year Estimates (ZCTA)";
 // Get the distress band color for a given score value (solid colors for the circle indicator)
 function getDistressBandColor(score) {
   if (score == null) return "#888";
-  if (score >= 90) return "rgba(220, 50, 50, 0.85)";     // Red
+  if (score >= 80) return "rgba(220, 50, 50, 0.85)";     // Red
   if (score >= 60) return "rgba(245, 124, 0, 0.85)";     // Orange
-  if (score >= 30) return "rgba(255, 213, 0, 0.85)";     // Yellow
-  return "rgba(76, 175, 80, 0.85)";                       // Light green
+  if (score >= 40) return "rgba(255, 213, 0, 0.85)";     // Yellow
+  if (score >= 20) return "rgba(76, 175, 80, 0.85)";     // Green
+  return "rgba(66, 133, 244, 0.85)";                      // Blue
 }
 
 // Fields where higher values are GOOD (up arrow green, down arrow red)
@@ -396,11 +389,7 @@ function computeWorkingPoorMedians(workingPoorData) {
 
 // Get the working poor band color for a given score value (solid colors for the circle indicator)
 function getWorkingPoorBandColor(score) {
-  if (score == null) return "#888";
-  if (score >= 90) return "rgba(100, 0, 0, 0.85)";       // Deep maroon
-  if (score >= 60) return "rgba(198, 40, 40, 0.85)";     // Dark red
-  if (score >= 30) return "rgba(239, 130, 130, 0.85)";   // Salmon
-  return "rgba(255, 205, 210, 0.85)";                     // Lightest rose
+  return getDistressBandColor(score);
 }
 
 // Evictions data field labels for display in the table
@@ -436,11 +425,7 @@ function computeEvictionsMedians(evictionsData) {
 
 // Get the evictions band color for a given score value (solid colors for the circle indicator)
 function getEvictionsBandColor(score) {
-  if (score == null) return "#888";
-  if (score >= 90) return "rgba(150, 40, 0, 0.85)";        // Dark burnt - top 10%
-  if (score >= 60) return "rgba(230, 100, 0, 0.85)";       // Deep orange
-  if (score >= 30) return "rgba(245, 166, 35, 0.85)";      // Warm amber
-  return "rgba(255, 224, 178, 0.85)";                       // Light peach
+  return getDistressBandColor(score);
 }
 
 // Ranked counts are computed dynamically from data (count of exclude===2 records)
@@ -1614,7 +1599,7 @@ const orgCoverageCircleStyle = {
     "circle-color": [
       "case",
       ["boolean", ["feature-state", "childHighlighted"], false],
-      "rgba(0, 253, 253, 0.50)",   // bright cyan when pin clicked
+      "rgba(255, 0, 255, 0.50)",   // magenta when pin clicked
       "rgba(0, 28, 168, 0.50)",    // teal-blue for parent coverage
     ],
     "circle-radius": ["step", ["zoom"], 6, 10, 11],
@@ -1636,30 +1621,41 @@ const orgCoverageCircleStyle = {
   },
 };
 
-// Org coverage border - thick teal/cyan outline on zip polygons
-// Shows for parent coverage (density) and child pin clicks (childHighlighted)
-const orgCoverageBorderStyle = {
-  id: "org-coverage-border",
+// Org coverage border (teal) - parent coverage areas
+// Rendered BELOW the magenta child layer so magenta fully covers shared edges
+const orgCoverageBorderTealStyle = {
+  id: "org-coverage-border-teal",
   type: "line",
-  // No filter — visibility controlled via paint opacity
   paint: {
-    "line-color": [
-      "case",
-      ["boolean", ["feature-state", "childHighlighted"], false],
-      "rgba(0, 253, 253, 0.80)",   // bright cyan when pin clicked
-      "rgba(0, 28, 168, 0.70)",    // teal-blue for parent coverage
-    ],
-    // Show border when childHighlighted OR density >= 1
+    "line-color": "rgba(0, 28, 168, 0.70)",
     "line-width": [
       "case",
-      ["boolean", ["feature-state", "childHighlighted"], false], 3,
-      [">=", ["coalesce", ["get", "density"], 0], 1], 3,
+      [">=", ["coalesce", ["get", "density"], 0], 1], 4,
       0,
     ],
     "line-opacity": [
       "case",
-      ["boolean", ["feature-state", "childHighlighted"], false], 0.8,
       [">=", ["coalesce", ["get", "density"], 0], 1], 0.8,
+      0,
+    ],
+  },
+};
+
+// Org coverage border (magenta) - selected child org's served zips
+// Rendered ABOVE teal layer so it fully covers teal on shared polygon edges
+const orgCoverageBorderMagentaStyle = {
+  id: "org-coverage-border-magenta",
+  type: "line",
+  paint: {
+    "line-color": "rgba(255, 0, 255, 1.0)",
+    "line-width": [
+      "case",
+      ["boolean", ["feature-state", "childHighlighted"], false], 4,
+      0,
+    ],
+    "line-opacity": [
+      "case",
+      ["boolean", ["feature-state", "childHighlighted"], false], 1.0,
       0,
     ],
   },
@@ -1833,7 +1829,7 @@ function ParentCoverageLegend({ parentOrgName, assistanceLabel, orgCount, county
               width: "14px",
               height: "14px",
               borderRadius: "4px",
-              backgroundColor: "rgba(0, 253, 253, 0.50)",
+              backgroundColor: "rgba(255, 0, 255, 0.50)",
               marginLeft: "2px",
             }}
           />
@@ -1854,7 +1850,7 @@ function ParentCoverageLegend({ parentOrgName, assistanceLabel, orgCount, county
   );
 }
 
-// Distress score legend bar - smooth gradient matching the map overlay
+// Distress score legend bar - 5 quintile bands: blue → green → yellow → orange → red
 function DistressLegendBar({ standalone }) {
   return (
     <div style={standalone ? {} : { marginTop: "10px", borderTop: "1px solid #E0E0E0", paddingTop: "8px" }}>
@@ -1862,23 +1858,25 @@ function DistressLegendBar({ standalone }) {
         Distress Score
       </div>
       <div style={{ display: "flex", gap: "1px", marginBottom: "2px" }}>
-        <div style={{ flex: 3, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(76, 175, 80, 0.40)" }} />
-        <div style={{ flex: 3, height: "10px", backgroundColor: "rgba(255, 213, 0, 0.40)" }} />
-        <div style={{ flex: 3, height: "10px", backgroundColor: "rgba(245, 124, 0, 0.45)" }} />
+        <div style={{ flex: 1, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(66, 133, 244, 0.40)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(76, 175, 80, 0.40)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(255, 213, 0, 0.45)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(245, 124, 0, 0.50)" }} />
         <div style={{ flex: 1, height: "10px", borderRadius: "0 3px 3px 0", backgroundColor: "rgba(220, 50, 50, 0.55)" }} />
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "#666" }}>
         <span>0</span>
-        <span>30</span>
+        <span>20</span>
+        <span>40</span>
         <span>60</span>
-        <span>90</span>
+        <span>80</span>
         <span>100</span>
       </div>
     </div>
   );
 }
 
-// Working poor legend bar - 4-band red gradient matching score bands
+// Working poor legend bar - same quintile colors as distress
 function WorkingPoorLegendBar({ standalone }) {
   return (
     <div style={standalone ? {} : { marginTop: "10px", borderTop: "1px solid #E0E0E0", paddingTop: "8px" }}>
@@ -1886,23 +1884,25 @@ function WorkingPoorLegendBar({ standalone }) {
         Working Poor Score
       </div>
       <div style={{ display: "flex", gap: "1px", marginBottom: "2px" }}>
-        <div style={{ flex: 3, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(255, 205, 210, 0.45)" }} />
-        <div style={{ flex: 3, height: "10px", backgroundColor: "rgba(239, 130, 130, 0.45)" }} />
-        <div style={{ flex: 3, height: "10px", backgroundColor: "rgba(198, 40, 40, 0.50)" }} />
-        <div style={{ flex: 1, height: "10px", borderRadius: "0 3px 3px 0", backgroundColor: "rgba(100, 0, 0, 0.55)" }} />
+        <div style={{ flex: 1, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(66, 133, 244, 0.40)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(76, 175, 80, 0.40)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(255, 213, 0, 0.45)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(245, 124, 0, 0.50)" }} />
+        <div style={{ flex: 1, height: "10px", borderRadius: "0 3px 3px 0", backgroundColor: "rgba(220, 50, 50, 0.55)" }} />
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "#666" }}>
         <span>0</span>
-        <span>30</span>
+        <span>20</span>
+        <span>40</span>
         <span>60</span>
-        <span>90</span>
+        <span>80</span>
         <span>100</span>
       </div>
     </div>
   );
 }
 
-// Population legend bar - blue gradient (higher = more = darker)
+// Population legend bar - 5 quintile bands (purple gradient)
 function PopulationLegendBar({ standalone }) {
   return (
     <div style={standalone ? {} : { marginTop: "10px", borderTop: "1px solid #E0E0E0", paddingTop: "8px" }}>
@@ -1910,23 +1910,25 @@ function PopulationLegendBar({ standalone }) {
         Population Score
       </div>
       <div style={{ display: "flex", gap: "1px", marginBottom: "2px" }}>
-        <div style={{ flex: 3, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(200, 170, 230, 0.45)" }} />
-        <div style={{ flex: 3, height: "10px", backgroundColor: "rgba(160, 100, 200, 0.45)" }} />
-        <div style={{ flex: 3, height: "10px", backgroundColor: "rgba(128, 60, 170, 0.50)" }} />
+        <div style={{ flex: 1, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(200, 170, 230, 0.45)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(175, 130, 215, 0.45)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(150, 85, 195, 0.48)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(110, 40, 160, 0.52)" }} />
         <div style={{ flex: 1, height: "10px", borderRadius: "0 3px 3px 0", backgroundColor: "rgba(75, 0, 130, 0.55)" }} />
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "#666" }}>
         <span>0</span>
-        <span>30</span>
+        <span>20</span>
+        <span>40</span>
         <span>60</span>
-        <span>90</span>
+        <span>80</span>
         <span>100</span>
       </div>
     </div>
   );
 }
 
-// Evictions legend bar - 5-band blue gradient matching percentile bands
+// Evictions legend bar - same quintile colors as distress
 function EvictionsLegendBar({ standalone }) {
   return (
     <div style={standalone ? {} : { marginTop: "10px", borderTop: "1px solid #E0E0E0", paddingTop: "8px" }}>
@@ -1934,16 +1936,18 @@ function EvictionsLegendBar({ standalone }) {
         Evictions Score
       </div>
       <div style={{ display: "flex", gap: "1px", marginBottom: "2px" }}>
-        <div style={{ flex: 3, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(255, 224, 178, 0.45)" }} />
-        <div style={{ flex: 3, height: "10px", backgroundColor: "rgba(245, 166, 35, 0.45)" }} />
-        <div style={{ flex: 3, height: "10px", backgroundColor: "rgba(230, 100, 0, 0.50)" }} />
-        <div style={{ flex: 1, height: "10px", borderRadius: "0 3px 3px 0", backgroundColor: "rgba(150, 40, 0, 0.55)" }} />
+        <div style={{ flex: 1, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(66, 133, 244, 0.40)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(76, 175, 80, 0.40)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(255, 213, 0, 0.45)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(245, 124, 0, 0.50)" }} />
+        <div style={{ flex: 1, height: "10px", borderRadius: "0 3px 3px 0", backgroundColor: "rgba(220, 50, 50, 0.55)" }} />
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "#666" }}>
         <span>0</span>
-        <span>30</span>
+        <span>20</span>
+        <span>40</span>
         <span>60</span>
-        <span>90</span>
+        <span>80</span>
         <span>100</span>
       </div>
     </div>
@@ -3819,10 +3823,10 @@ const MapboxMap = forwardRef(function MapboxMap({
     const barW = w - pad * 2;
     const barH = 10;
     const colors = {
-      distress: { colors: ["rgba(76, 175, 80, 0.40)", "rgba(255, 213, 0, 0.40)", "rgba(245, 124, 0, 0.45)", "rgba(220, 50, 50, 0.55)"], weights: [3, 3, 3, 1] },
-      working_poor: { colors: ["rgba(255, 205, 210, 0.45)", "rgba(239, 130, 130, 0.45)", "rgba(198, 40, 40, 0.50)", "rgba(100, 0, 0, 0.55)"], weights: [3, 3, 3, 1] },
-      evictions: { colors: ["rgba(255, 224, 178, 0.45)", "rgba(245, 166, 35, 0.45)", "rgba(230, 100, 0, 0.50)", "rgba(150, 40, 0, 0.55)"], weights: [3, 3, 3, 1] },
-      population: { colors: ["rgba(200, 170, 230, 0.45)", "rgba(160, 100, 200, 0.45)", "rgba(128, 60, 170, 0.50)", "rgba(75, 0, 130, 0.55)"], weights: [3, 3, 3, 1] },
+      distress: { colors: ["rgba(66, 133, 244, 0.40)", "rgba(76, 175, 80, 0.40)", "rgba(255, 213, 0, 0.45)", "rgba(245, 124, 0, 0.50)", "rgba(220, 50, 50, 0.55)"], weights: [1, 1, 1, 1, 1] },
+      working_poor: { colors: ["rgba(66, 133, 244, 0.40)", "rgba(76, 175, 80, 0.40)", "rgba(255, 213, 0, 0.45)", "rgba(245, 124, 0, 0.50)", "rgba(220, 50, 50, 0.55)"], weights: [1, 1, 1, 1, 1] },
+      evictions: { colors: ["rgba(66, 133, 244, 0.40)", "rgba(76, 175, 80, 0.40)", "rgba(255, 213, 0, 0.45)", "rgba(245, 124, 0, 0.50)", "rgba(220, 50, 50, 0.55)"], weights: [1, 1, 1, 1, 1] },
+      population: { colors: ["rgba(200, 170, 230, 0.45)", "rgba(175, 130, 215, 0.45)", "rgba(150, 85, 195, 0.48)", "rgba(110, 40, 160, 0.52)", "rgba(75, 0, 130, 0.55)"], weights: [1, 1, 1, 1, 1] },
     };
     const colorDef = colors[mode] || colors.distress;
     const isWeighted = colorDef.colors != null;
@@ -3843,8 +3847,8 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.font = "400 9px Lexend, sans-serif";
     ctx.fillStyle = "#666666";
     if (mode === "distress" || mode === "working_poor" || mode === "evictions" || mode === "population") {
-      const scaleValues = ["0", "30", "60", "90", "100"];
-      const positions = [0, 0.3, 0.6, 0.9, 1.0];
+      const scaleValues = ["0", "20", "40", "60", "80", "100"];
+      const positions = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
       scaleValues.forEach((val, i) => {
         const lx = x + pad + (barW * positions[i]);
         ctx.textAlign = i === 0 ? "left" : i === scaleValues.length - 1 ? "right" : "center";
@@ -3892,10 +3896,10 @@ const MapboxMap = forwardRef(function MapboxMap({
     const barW = w - pad * 2;
     const barH = 10;
     const colors = {
-      distress: { colors: ["rgba(76, 175, 80, 0.40)", "rgba(255, 213, 0, 0.40)", "rgba(245, 124, 0, 0.45)", "rgba(220, 50, 50, 0.55)"], weights: [3, 3, 3, 1] },
-      working_poor: { colors: ["rgba(255, 205, 210, 0.45)", "rgba(239, 130, 130, 0.45)", "rgba(198, 40, 40, 0.50)", "rgba(100, 0, 0, 0.55)"], weights: [3, 3, 3, 1] },
-      evictions: { colors: ["rgba(255, 224, 178, 0.45)", "rgba(245, 166, 35, 0.45)", "rgba(230, 100, 0, 0.50)", "rgba(150, 40, 0, 0.55)"], weights: [3, 3, 3, 1] },
-      population: { colors: ["rgba(200, 170, 230, 0.45)", "rgba(160, 100, 200, 0.45)", "rgba(128, 60, 170, 0.50)", "rgba(75, 0, 130, 0.55)"], weights: [3, 3, 3, 1] },
+      distress: { colors: ["rgba(66, 133, 244, 0.40)", "rgba(76, 175, 80, 0.40)", "rgba(255, 213, 0, 0.45)", "rgba(245, 124, 0, 0.50)", "rgba(220, 50, 50, 0.55)"], weights: [1, 1, 1, 1, 1] },
+      working_poor: { colors: ["rgba(66, 133, 244, 0.40)", "rgba(76, 175, 80, 0.40)", "rgba(255, 213, 0, 0.45)", "rgba(245, 124, 0, 0.50)", "rgba(220, 50, 50, 0.55)"], weights: [1, 1, 1, 1, 1] },
+      evictions: { colors: ["rgba(66, 133, 244, 0.40)", "rgba(76, 175, 80, 0.40)", "rgba(255, 213, 0, 0.45)", "rgba(245, 124, 0, 0.50)", "rgba(220, 50, 50, 0.55)"], weights: [1, 1, 1, 1, 1] },
+      population: { colors: ["rgba(200, 170, 230, 0.45)", "rgba(175, 130, 215, 0.45)", "rgba(150, 85, 195, 0.48)", "rgba(110, 40, 160, 0.52)", "rgba(75, 0, 130, 0.55)"], weights: [1, 1, 1, 1, 1] },
     };
     const colorDef = colors[mode] || colors.distress;
     const isWeighted = colorDef.colors != null;
@@ -3915,8 +3919,8 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.font = "400 9px Lexend, sans-serif";
     ctx.fillStyle = "#666666";
     if (mode === "distress" || mode === "working_poor" || mode === "evictions" || mode === "population") {
-      const scaleValues = ["0", "30", "60", "90", "100"];
-      const positions = [0, 0.3, 0.6, 0.9, 1.0];
+      const scaleValues = ["0", "20", "40", "60", "80", "100"];
+      const positions = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
       scaleValues.forEach((val, i) => {
         const lx = x + pad + (barW * positions[i]);
         ctx.textAlign = i === 0 ? "left" : i === scaleValues.length - 1 ? "right" : "center";
@@ -4152,14 +4156,15 @@ const MapboxMap = forwardRef(function MapboxMap({
             {/* Unified fill: base zip highlight > hover > metric colors */}
             <Layer {...unifiedFillStyle} />
             <Layer {...boundaryLineStyle} />
-            {/* Teal/cyan border on org-covered or child-highlighted zip polygons */}
-            {!isBaseView && hasAssistance && <Layer {...orgCoverageBorderStyle} />}
+            {/* Teal border on parent-covered zips, magenta on selected child's zips */}
+            {!isBaseView && hasAssistance && <Layer {...orgCoverageBorderTealStyle} />}
+            {!isBaseView && hasAssistance && <Layer {...orgCoverageBorderMagentaStyle} />}
             <Layer {...zipLabelStyle} />
           </Source>
         )}
 
-        {/* Org coverage circles at zip centroids - shows which zips are served without hiding base metric */}
-        {centroidGeoJson && !isBaseView && hasAssistance && (
+        {/* Org coverage circles at zip centroids - temporarily disabled to test borders-only look */}
+        {/* {centroidGeoJson && !isBaseView && hasAssistance && (
           <Source
             id="zip-centroids"
             type="geojson"
@@ -4168,7 +4173,7 @@ const MapboxMap = forwardRef(function MapboxMap({
           >
             <Layer {...orgCoverageCircleStyle} />
           </Source>
-        )}
+        )} */}
 
         {/* Organization pin markers - only in filter view when assistance is selected */}
         {!isBaseView && hasAssistance &&
@@ -4270,15 +4275,20 @@ const MapboxMap = forwardRef(function MapboxMap({
           gap: "9px",
         }}
       >
-        {/* Base map title - plain text, no background */}
+        {/* Base map title - prominent with background pill */}
         <div
           style={{
             fontFamily: "'Open Sans', sans-serif",
-            fontSize: "clamp(13px, 1.3vw, 20px)",
+            fontSize: "clamp(14px, 1.4vw, 22px)",
             fontWeight: 700,
-            color: "#2E5A88",
+            color: "#FFFFFF",
             letterSpacing: "0.5px",
             userSelect: "none",
+            backgroundColor: "rgba(34, 40, 49, 0.85)",
+            padding: "6px 14px",
+            borderRadius: "6px",
+            textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+            display: "inline-block",
           }}
         >
           Base Map: {{ distress: "Distress Levels", working_poor: "Working Poor", evictions: "Evictions", population: "Population" }[displayMetric] || "Distress Levels"}
