@@ -13,7 +13,7 @@ const REPORT_OPTIONS = [
   { id: 'reports-chart', label: 'Reports Chart' },
   { id: 'usage-tables', label: 'Usage Data Tables' },
   { id: 'coverage', label: 'The Matt Report', color: '#f79184' },
-  { id: 'map2', label: 'Zip Code Map', color: '#9df784' },
+  { id: 'map2', label: 'Zip Code Maps', color: '#9df784' },
   { id: 'consolidated', label: 'Zip Code Data', color: '#84d4f7' },
 ];
 
@@ -21,7 +21,8 @@ const BASE_MAP_LABELS = {
   distress: "Distress Levels",
   working_poor: "Working Poor",
   population: "Population",
-  filter_view: "Filter View",
+  filter_view: "Filter Overlay",
+  efficiency_ratio: "Distress vs. Funding",
 };
 
 export default function NavBar1Reports({ selectedReport, onReportChange, map2ViewMode }) {

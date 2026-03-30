@@ -530,6 +530,7 @@ export default function NavBar2Reports({
   onMap2OrganizationChange,
   map2AssistanceType,
   onMap2AssistanceTypeChange,
+  map2ActiveBase,
   onMap2Reset,
   onMap2Download,
   // Zip Code Data filter props
@@ -965,14 +966,18 @@ export default function NavBar2Reports({
   }, [directory, map2County, map2ZipCode, map2AssistId, map2ParentOrg, orgServesArea]);
 
   // Assistance options - filtered by all OTHER filters (county, zip, parent, org)
+  // When base map is funding_level or efficiency_ratio, restrict to financial assistance only (Rent & Utilities)
+  const isFundingBase = map2ActiveBase === "funding_level" || map2ActiveBase === "efficiency_ratio";
   const map2AvailableAssistance = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === 1);
     filtered = filtered.filter(r => orgServesArea(r, map2County, map2ZipCode));
     if (map2ParentOrg) filtered = filtered.filter(r => r.org_parent === map2ParentOrg);
     if (map2Organization) filtered = filtered.filter(r => r.organization === map2Organization);
     const availableIds = new Set(filtered.map(r => r.assist_id));
-    return assistance.filter(a => availableIds.has(a.assist_id));
-  }, [directory, assistance, map2County, map2ZipCode, map2ParentOrg, map2Organization, orgServesArea]);
+    let result = assistance.filter(a => availableIds.has(a.assist_id));
+    if (isFundingBase) result = result.filter(a => a.is_fin_assist);
+    return result;
+  }, [directory, assistance, map2County, map2ZipCode, map2ParentOrg, map2Organization, orgServesArea, isFundingBase]);
 
   // Auto-clear map2 filters when their options no longer include the current value
   useEffect(() => {

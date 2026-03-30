@@ -80,6 +80,38 @@ function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thr
       [">=", ["coalesce", ["get", "population_score"], -1], 20], POP_BAND_2,
       [">=", ["coalesce", ["get", "population_score"], -1], 0],  POP_BAND_1,
     ];
+  } else if (metric === "funding_level") {
+    // 5 quintile bands based on zip_fin_fund_score (0-100 scale, same colors as distress)
+    // Score of 0 = no funding → stays white/transparent (not colored)
+    metricExpression = [
+      [">=", ["coalesce", ["get", "funding_score"], -1], 80], DISTRESS_RED,
+      [">=", ["coalesce", ["get", "funding_score"], -1], 60], DISTRESS_ORANGE,
+      [">=", ["coalesce", ["get", "funding_score"], -1], 40], DISTRESS_YELLOW,
+      [">=", ["coalesce", ["get", "funding_score"], -1], 20], DISTRESS_GREEN,
+      [">",  ["coalesce", ["get", "funding_score"], -1], 0],  DISTRESS_BLUE,
+    ];
+  } else if (metric === "efficiency_ratio") {
+    // 5 quintile bands based on efficiency_ratio score (0-100 scale, same colors as distress)
+    metricExpression = [
+      [">=", ["coalesce", ["get", "efficiency_score"], -1], 80], DISTRESS_RED,
+      [">=", ["coalesce", ["get", "efficiency_score"], -1], 60], DISTRESS_ORANGE,
+      [">=", ["coalesce", ["get", "efficiency_score"], -1], 40], DISTRESS_YELLOW,
+      [">=", ["coalesce", ["get", "efficiency_score"], -1], 20], DISTRESS_GREEN,
+      [">",  ["coalesce", ["get", "efficiency_score"], -1], 0],  DISTRESS_BLUE,
+    ];
+  } else if (metric === "bivariate") {
+    // 3x3 bivariate choropleth using bivariate_map_code (text: "11"-"33")
+    metricExpression = [
+      ["==", ["get", "bivariate_code"], "31"], "rgba(200, 90, 90, 0.65)",    // high distress, low funding
+      ["==", ["get", "bivariate_code"], "32"], "rgba(176, 123, 158, 0.65)", // high distress, mid funding
+      ["==", ["get", "bivariate_code"], "33"], "rgba(122, 158, 191, 0.65)", // high distress, high funding
+      ["==", ["get", "bivariate_code"], "21"], "rgba(228, 172, 172, 0.65)", // mid distress, low funding
+      ["==", ["get", "bivariate_code"], "22"], "rgba(204, 204, 204, 0.55)", // mid distress, mid funding
+      ["==", ["get", "bivariate_code"], "23"], "rgba(141, 192, 202, 0.65)", // mid distress, high funding
+      ["==", ["get", "bivariate_code"], "11"], "rgba(232, 232, 232, 0.45)", // low distress, low funding
+      ["==", ["get", "bivariate_code"], "12"], "rgba(176, 213, 223, 0.55)", // low distress, mid funding
+      ["==", ["get", "bivariate_code"], "13"], "rgba(100, 172, 190, 0.65)", // low distress, high funding
+    ];
   } else {
     // distress (default) - 5 quintile bands: blue → green → yellow → orange → red
     metricExpression = [
@@ -1587,6 +1619,397 @@ function DraggablePopulationTable({ population, zipCode, neighborhood, onClose }
   );
 }
 
+// Simple draggable funding info box - shows funding amount for the clicked zip
+function DraggableFundingTable({ data, zipCode, neighborhood, onClose }) {
+  const dragState = useRef({ isDragging: false, startX: 0, startY: 0 });
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    setPosition({ x: 0, y: 0 });
+  }, [zipCode]);
+
+  const handleMouseDown = (e) => {
+    if (!e.target.closest("[data-drag-handle]")) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragState.current = {
+      isDragging: true,
+      startX: e.clientX - position.x,
+      startY: e.clientY - position.y,
+    };
+
+    const handleMouseMove = (e) => {
+      if (!dragState.current.isDragging) return;
+      setPosition({
+        x: e.clientX - dragState.current.startX,
+        y: e.clientY - dragState.current.startY,
+      });
+    };
+
+    const handleMouseUp = () => {
+      dragState.current.isDragging = false;
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  if (!data || !zipCode) return null;
+
+  const fundingAmount = data.zip_fin_funding != null ? `$${Math.round(Number(data.zip_fin_funding)).toLocaleString()}` : "—";
+
+  return (
+    <div
+      onMouseDown={handleMouseDown}
+      className="absolute z-50 rounded-lg shadow-xl"
+      style={{
+        bottom: "60px",
+        right: "60px",
+        transform: `translate(${position.x}px, ${position.y}px)`,
+        width: "280px",
+        backgroundColor: "rgba(34, 40, 49, 0.95)",
+        fontFamily: "Lexend, sans-serif",
+        userSelect: "none",
+      }}
+    >
+      {/* Drag handle header */}
+      <div
+        data-drag-handle="true"
+        className="flex items-center justify-between rounded-t-lg"
+        style={{
+          padding: "10px 14px 8px",
+          cursor: "grab",
+          borderBottom: "1px solid rgba(255,255,255,0.1)",
+        }}
+      >
+        <div>
+          <h3 style={{ fontSize: "15px", color: "#FFC857", fontWeight: 600, margin: 0 }}>
+            Zip Code {zipCode}
+          </h3>
+          {neighborhood && (
+            <p style={{ fontSize: "10px", color: "#8FB6FF", margin: "2px 0 0", lineHeight: 1.3 }}>
+              {neighborhood}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          style={{
+            background: "none",
+            border: "none",
+            color: "#999",
+            cursor: "pointer",
+            fontSize: "18px",
+            lineHeight: 1,
+            padding: "0 4px",
+            alignSelf: "flex-start",
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Funding value + population */}
+      <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "13px", color: "#CCC", fontWeight: 500 }}>Funding Level</span>
+          <span style={{ fontSize: "16px", color: "#FFFFFF", fontWeight: 600 }}>
+            {fundingAmount}
+          </span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "13px", color: "#CCC", fontWeight: 500 }}>Population</span>
+          <span style={{ fontSize: "14px", color: "#FFFFFF", fontWeight: 500 }}>
+            {data.population != null ? Number(data.population).toLocaleString() : "—"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DraggableEfficiencyTable({ data, zipCode, neighborhood, onClose }) {
+  const dragState = useRef({ isDragging: false, startX: 0, startY: 0 });
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    setPosition({ x: 0, y: 0 });
+  }, [zipCode]);
+
+  const handleMouseDown = (e) => {
+    if (!e.target.closest("[data-drag-handle]")) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragState.current = {
+      isDragging: true,
+      startX: e.clientX - position.x,
+      startY: e.clientY - position.y,
+    };
+
+    const handleMouseMove = (e) => {
+      if (!dragState.current.isDragging) return;
+      setPosition({
+        x: e.clientX - dragState.current.startX,
+        y: e.clientY - dragState.current.startY,
+      });
+    };
+
+    const handleMouseUp = () => {
+      dragState.current.isDragging = false;
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  if (!data || !zipCode) return null;
+
+  const rawRatio = data.raw_efficiency_ratio != null ? Number(data.raw_efficiency_ratio).toFixed(2) : "—";
+  const distressScore = data.distress_score != null ? Number(data.distress_score).toFixed(1) : "—";
+  const fundingAmount = data.zip_fin_funding != null ? `$${Math.round(Number(data.zip_fin_funding)).toLocaleString()}` : "—";
+
+  return (
+    <div
+      onMouseDown={handleMouseDown}
+      className="absolute z-50 rounded-lg shadow-xl"
+      style={{
+        bottom: "60px",
+        right: "60px",
+        transform: `translate(${position.x}px, ${position.y}px)`,
+        width: "300px",
+        backgroundColor: "rgba(34, 40, 49, 0.95)",
+        fontFamily: "Lexend, sans-serif",
+        userSelect: "none",
+      }}
+    >
+      {/* Drag handle header */}
+      <div
+        data-drag-handle="true"
+        className="flex items-center justify-between rounded-t-lg"
+        style={{
+          padding: "10px 14px 8px",
+          cursor: "grab",
+          borderBottom: "1px solid rgba(255,255,255,0.1)",
+        }}
+      >
+        <div>
+          <h3 style={{ fontSize: "15px", color: "#FFC857", fontWeight: 600, margin: 0 }}>
+            Zip Code {zipCode}
+          </h3>
+          {neighborhood && (
+            <p style={{ fontSize: "10px", color: "#8FB6FF", margin: "2px 0 0", lineHeight: 1.3 }}>
+              {neighborhood}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          style={{
+            background: "none",
+            border: "none",
+            color: "#999",
+            cursor: "pointer",
+            fontSize: "18px",
+            lineHeight: 1,
+            padding: "0 4px",
+            alignSelf: "flex-start",
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Efficiency ratio + explanation + distress + funding */}
+      <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "13px", color: "#CCC", fontWeight: 500 }}>Efficiency Ratio</span>
+          <span style={{ fontSize: "16px", color: "#FFFFFF", fontWeight: 600 }}>
+            {rawRatio}
+          </span>
+        </div>
+        <p style={{ fontSize: "10px", color: "#999", margin: "-4px 0 2px", lineHeight: 1.4, fontStyle: "italic" }}>
+          This is the amount of distress per available $1 of funding in this zip code.
+        </p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "13px", color: "#CCC", fontWeight: 500 }}>Distress Score</span>
+          <span style={{ fontSize: "14px", color: "#FFFFFF", fontWeight: 500 }}>
+            {distressScore}
+          </span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "13px", color: "#CCC", fontWeight: 500 }}>Funding Level</span>
+          <span style={{ fontSize: "14px", color: "#FFFFFF", fontWeight: 500 }}>
+            {fundingAmount}
+          </span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "13px", color: "#CCC", fontWeight: 500 }}>Population</span>
+          <span style={{ fontSize: "14px", color: "#FFFFFF", fontWeight: 500 }}>
+            {data.population != null ? Number(data.population).toLocaleString() : "—"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const BIVARIATE_LABELS = {
+  "31": "Critical Priority - High Need / Low Funds",
+  "32": "High Priority",
+  "33": "High Need / High Funds",
+  "21": "Moderate Gap",
+  "22": "Balanced Need & Funds",
+  "23": "Moderate Surplus",
+  "11": "Low Priority (Baseline)",
+  "12": "Low Need / Medium Funds",
+  "13": "High Surplus - Low Need / High Funds",
+};
+
+const BIVARIATE_COLORS = {
+  "31": "#C85A5A", "32": "#B07B9E", "33": "#7A9EBF",
+  "21": "#E4ACAC", "22": "#CCCCCC", "23": "#8DC0CA",
+  "11": "#E8E8E8", "12": "#B0D5DF", "13": "#64ACBE",
+};
+
+function DraggableBivariateTable({ data, zipCode, neighborhood, onClose }) {
+  const dragState = useRef({ isDragging: false, startX: 0, startY: 0 });
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    setPosition({ x: 0, y: 0 });
+  }, [zipCode]);
+
+  const handleMouseDown = (e) => {
+    if (!e.target.closest("[data-drag-handle]")) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragState.current = {
+      isDragging: true,
+      startX: e.clientX - position.x,
+      startY: e.clientY - position.y,
+    };
+
+    const handleMouseMove = (e) => {
+      if (!dragState.current.isDragging) return;
+      setPosition({
+        x: e.clientX - dragState.current.startX,
+        y: e.clientY - dragState.current.startY,
+      });
+    };
+
+    const handleMouseUp = () => {
+      dragState.current.isDragging = false;
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  if (!data || !zipCode) return null;
+
+  const mapCode = data.bivariate_map_code != null ? String(data.bivariate_map_code) : "";
+  const codeLabel = BIVARIATE_LABELS[mapCode] || "—";
+  const codeColor = BIVARIATE_COLORS[mapCode] || "#666";
+  const distressScore = data.distress_score != null ? Number(data.distress_score).toFixed(1) : "—";
+  const fundingAmount = data.zip_fin_funding != null ? `$${Math.round(Number(data.zip_fin_funding)).toLocaleString()}` : "—";
+
+  return (
+    <div
+      onMouseDown={handleMouseDown}
+      className="absolute z-50 rounded-lg shadow-xl"
+      style={{
+        bottom: "60px",
+        right: "60px",
+        transform: `translate(${position.x}px, ${position.y}px)`,
+        width: "300px",
+        backgroundColor: "rgba(34, 40, 49, 0.95)",
+        fontFamily: "Lexend, sans-serif",
+        userSelect: "none",
+      }}
+    >
+      {/* Drag handle header */}
+      <div
+        data-drag-handle="true"
+        className="flex items-center justify-between rounded-t-lg"
+        style={{
+          padding: "10px 14px 8px",
+          cursor: "grab",
+          borderBottom: "1px solid rgba(255,255,255,0.1)",
+        }}
+      >
+        <div>
+          <h3 style={{ fontSize: "15px", color: "#FFC857", fontWeight: 600, margin: 0 }}>
+            Zip Code {zipCode}
+          </h3>
+          {neighborhood && (
+            <p style={{ fontSize: "10px", color: "#8FB6FF", margin: "2px 0 0", lineHeight: 1.3 }}>
+              {neighborhood}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          style={{
+            background: "none",
+            border: "none",
+            color: "#999",
+            cursor: "pointer",
+            fontSize: "18px",
+            lineHeight: 1,
+            padding: "0 4px",
+            alignSelf: "flex-start",
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Map code + label + data */}
+      <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: "8px" }}>
+        {/* Bivariate classification */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{
+            width: "24px",
+            height: "24px",
+            borderRadius: "4px",
+            backgroundColor: codeColor,
+            flexShrink: 0,
+          }} />
+          <div>
+            <div style={{ fontSize: "14px", color: "#FFFFFF", fontWeight: 600 }}>{codeLabel}</div>
+            <div style={{ fontSize: "10px", color: "#999" }}>Code: {mapCode || "—"}</div>
+          </div>
+        </div>
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", margin: "2px 0" }} />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "13px", color: "#CCC", fontWeight: 500 }}>Distress Score</span>
+          <span style={{ fontSize: "14px", color: "#FFFFFF", fontWeight: 500 }}>
+            {distressScore}
+          </span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "13px", color: "#CCC", fontWeight: 500 }}>Funding Level</span>
+          <span style={{ fontSize: "14px", color: "#FFFFFF", fontWeight: 500 }}>
+            {fundingAmount}
+          </span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "13px", color: "#CCC", fontWeight: 500 }}>Population</span>
+          <span style={{ fontSize: "14px", color: "#FFFFFF", fontWeight: 500 }}>
+            {data.population != null ? Number(data.population).toLocaleString() : "—"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // (Fill layers consolidated into getUnifiedFillStyle() above)
 
 // Org coverage circles - rendered at zip centroids to show which zips are served
@@ -1954,11 +2377,103 @@ function EvictionsLegendBar({ standalone }) {
   );
 }
 
+// Funding level legend bar - same quintile colors as distress
+function FundingLegendBar({ standalone }) {
+  return (
+    <div style={standalone ? {} : { marginTop: "10px", borderTop: "1px solid #E0E0E0", paddingTop: "8px" }}>
+      <div style={{ fontWeight: 500, fontSize: "11px", color: "#444", marginBottom: "4px" }}>
+        Funding Level Score
+      </div>
+      <div style={{ display: "flex", gap: "1px", marginBottom: "2px" }}>
+        <div style={{ flex: 1, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(66, 133, 244, 0.40)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(76, 175, 80, 0.40)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(255, 213, 0, 0.45)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(245, 124, 0, 0.50)" }} />
+        <div style={{ flex: 1, height: "10px", borderRadius: "0 3px 3px 0", backgroundColor: "rgba(220, 50, 50, 0.55)" }} />
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "#666" }}>
+        <span>0</span>
+        <span>20</span>
+        <span>40</span>
+        <span>60</span>
+        <span>80</span>
+        <span>100</span>
+      </div>
+    </div>
+  );
+}
+
+function EfficiencyLegendBar({ standalone }) {
+  return (
+    <div style={standalone ? {} : { marginTop: "10px", borderTop: "1px solid #E0E0E0", paddingTop: "8px" }}>
+      <div style={{ fontWeight: 500, fontSize: "11px", color: "#444", marginBottom: "4px" }}>
+        Efficiency Ratio Score
+      </div>
+      <div style={{ display: "flex", gap: "1px", marginBottom: "2px" }}>
+        <div style={{ flex: 1, height: "10px", borderRadius: "3px 0 0 3px", backgroundColor: "rgba(66, 133, 244, 0.40)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(76, 175, 80, 0.40)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(255, 213, 0, 0.45)" }} />
+        <div style={{ flex: 1, height: "10px", backgroundColor: "rgba(245, 124, 0, 0.50)" }} />
+        <div style={{ flex: 1, height: "10px", borderRadius: "0 3px 3px 0", backgroundColor: "rgba(220, 50, 50, 0.55)" }} />
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "#666" }}>
+        <span>0</span>
+        <span>20</span>
+        <span>40</span>
+        <span>60</span>
+        <span>80</span>
+        <span>100</span>
+      </div>
+    </div>
+  );
+}
+
+function BivariateLegend({ standalone }) {
+  const size = 28;
+  const colors = [
+    ["#E8E8E8", "#B0D5DF", "#64ACBE"], // row 1 (low distress): low→high funding
+    ["#E4ACAC", "#CCCCCC", "#8DC0CA"], // row 2 (mid distress)
+    ["#C85A5A", "#B07B9E", "#7A9EBF"], // row 3 (high distress)
+  ];
+  return (
+    <div style={standalone ? {} : { marginTop: "10px", borderTop: "1px solid #E0E0E0", paddingTop: "8px" }}>
+      <div style={{ fontWeight: 500, fontSize: "11px", color: "#444", marginBottom: "6px" }}>
+        Distress vs. Funding
+      </div>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: "4px" }}>
+        {/* Y-axis label */}
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: `${size * 3}px`, marginRight: "2px" }}>
+          <span style={{ fontSize: "8px", color: "#666", lineHeight: 1, writingMode: "vertical-rl", transform: "rotate(180deg)", textAlign: "center", height: "100%" }}>
+            Distress →
+          </span>
+        </div>
+        {/* 3x3 grid */}
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {[...colors].reverse().map((row, ri) => (
+            <div key={ri} style={{ display: "flex" }}>
+              {row.map((color, ci) => (
+                <div key={ci} style={{ width: `${size}px`, height: `${size}px`, backgroundColor: color }} />
+              ))}
+            </div>
+          ))}
+          {/* X-axis label */}
+          <div style={{ fontSize: "8px", color: "#666", textAlign: "center", marginTop: "2px" }}>
+            Funding →
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Metric legend bar switcher - renders the correct legend bar based on viewMode
 function MetricLegendBar({ viewMode, standalone }) {
   if (viewMode === "working_poor") return <WorkingPoorLegendBar standalone={standalone} />;
   if (viewMode === "evictions") return <EvictionsLegendBar standalone={standalone} />;
   if (viewMode === "population") return <PopulationLegendBar standalone={standalone} />;
+  if (viewMode === "funding_level") return <FundingLegendBar standalone={standalone} />;
+  if (viewMode === "efficiency_ratio") return <EfficiencyLegendBar standalone={standalone} />;
+  if (viewMode === "bivariate") return <BivariateLegend standalone={standalone} />;
   return <DistressLegendBar standalone={standalone} />;
 }
 
@@ -2033,6 +2548,117 @@ function SimpleLegend({ assistanceLabel, orgCount, county, outOfAreaOrgs, onOutO
   );
 }
 
+const VIEW_MODE_OPTIONS = [
+  { value: "distress", label: "Distress" },
+  { value: "working_poor", label: "Working Poor" },
+  { value: "evictions", label: "Evictions" },
+  { value: "population", label: "Population" },
+  { value: "funding_level", label: "Funding Level" },
+  { value: "efficiency_ratio", label: "Distress vs. Funding" },
+  { value: "filter_view", label: "Filter Overlay" },
+];
+
+function ViewModeDropdown({ viewMode, onViewModeChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const currentLabel = VIEW_MODE_OPTIONS.find((o) => o.value === viewMode)?.label || "Distress";
+
+  return (
+    <div ref={containerRef} style={{ position: "relative", width: "100%" }}>
+      <button
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="transition-all duration-200 hover:brightness-125"
+        style={{
+          height: "36px",
+          width: "100%",
+          padding: "0 14px",
+          borderRadius: "10px",
+          fontFamily: "'Open Sans', sans-serif",
+          fontSize: "14px",
+          fontWeight: 500,
+          backgroundColor: "#CFD11A",
+          color: "#000000",
+          border: "none",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          userSelect: "none",
+        }}
+      >
+        <span>{currentLabel}</span>
+        <svg
+          width="12"
+          height="8"
+          viewBox="0 0 12 8"
+          fill="none"
+          style={{
+            transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 200ms ease",
+          }}
+        >
+          <path d="M1 1.5L6 6.5L11 1.5" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 4px)",
+            left: 0,
+            minWidth: "100%",
+            backgroundColor: "rgba(34, 40, 49, 0.95)",
+            borderRadius: "8px",
+            border: "1px solid rgba(255,255,255,0.15)",
+            overflow: "hidden",
+            zIndex: 50,
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          {VIEW_MODE_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => {
+                onViewModeChange(option.value);
+                setIsOpen(false);
+              }}
+              className="transition-all duration-150 hover:brightness-150"
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                padding: "8px 14px",
+                fontFamily: "'Open Sans', sans-serif",
+                fontSize: "13px",
+                fontWeight: viewMode === option.value ? 600 : 400,
+                color: option.value === "filter_view" ? "#EB6E1F" : "#FFFFFF",
+                backgroundColor: viewMode === option.value ? "rgba(255,255,255,0.1)" : "transparent",
+                border: "none",
+                borderBottom: option.value !== "filter_view" ? "1px solid rgba(255,255,255,0.08)" : "none",
+                cursor: "pointer",
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const MapboxMap = forwardRef(function MapboxMap({
   county,
   zipCode,
@@ -2043,7 +2669,7 @@ const MapboxMap = forwardRef(function MapboxMap({
   activeBase = "distress",
   onViewModeChange,
 }, ref) {
-  const { directory, assistance, zipCodes, distressData, distressData2023, workingPoorData, workingPoorData2023, evictionsData } = useAppData();
+  const { directory, assistance, zipCodes, distressData, distressData2023, workingPoorData, workingPoorData2023, evictionsData, zipCodeData } = useAppData();
   const mapRef = useRef(null);
   const mapContainerRef = useRef(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -2080,9 +2706,18 @@ const MapboxMap = forwardRef(function MapboxMap({
   const [evictionsTableZip, setEvictionsTableZip] = useState(null);
   const evictionsSelectedRef = useRef(null); // feature id of currently highlighted zip
   const [populationTableZip, setPopulationTableZip] = useState(null);
+  const populationSelectedRef = useRef(null);
+  const [fundingTableZip, setFundingTableZip] = useState(null);
+  const fundingSelectedRef = useRef(null);
+  const [efficiencyTableZip, setEfficiencyTableZip] = useState(null);
+  const efficiencySelectedRef = useRef(null);
+  const [bivariateTableZip, setBivariateTableZip] = useState(null);
+  const bivariateSelectedRef = useRef(null);
+  const [efficiencySubMode, setEfficiencySubMode] = useState("efficiency"); // "efficiency" or "bivariate"
 
   // Zip search state
   const [searchZipValue, setSearchZipValue] = useState("");
+
 
   // Track highlighted zip codes (teal - individual child click)
   const childHighlightedRef = useRef(new Set());
@@ -2244,6 +2879,54 @@ const MapboxMap = forwardRef(function MapboxMap({
     return lookup;
   }, [evictionsData]);
 
+  // Funding score lookup: zip_code -> zip_fin_fund_score (from zip_code_data table)
+  const fundingScoreLookup = useMemo(() => {
+    const lookup = {};
+    if (!zipCodeData) return lookup;
+    zipCodeData.forEach((d) => {
+      if (d.zip_code && d.zip_fin_fund_score != null) {
+        lookup[d.zip_code] = Number(d.zip_fin_fund_score);
+      }
+    });
+    return lookup;
+  }, [zipCodeData]);
+
+  // Funding data lookup: zip_code -> full zip_code_data record (for popup info box)
+  const fundingDataLookup = useMemo(() => {
+    const lookup = {};
+    if (!zipCodeData) return lookup;
+    zipCodeData.forEach((d) => {
+      if (d.zip_code) {
+        lookup[d.zip_code] = d;
+      }
+    });
+    return lookup;
+  }, [zipCodeData]);
+
+  // Efficiency ratio score lookup: zip_code -> normal_efficiency_ratio (normalized 0-100, for map coloring)
+  const efficiencyScoreLookup = useMemo(() => {
+    const lookup = {};
+    if (!zipCodeData) return lookup;
+    zipCodeData.forEach((d) => {
+      if (d.zip_code && d.normal_efficiency_ratio != null) {
+        lookup[d.zip_code] = Number(d.normal_efficiency_ratio);
+      }
+    });
+    return lookup;
+  }, [zipCodeData]);
+
+  // Bivariate map code lookup: zip_code -> bivariate_map_code (text, e.g. "31", from zip_code_data table)
+  const bivariateCodeLookup = useMemo(() => {
+    const lookup = {};
+    if (!zipCodeData) return lookup;
+    zipCodeData.forEach((d) => {
+      if (d.zip_code && d.bivariate_map_code != null) {
+        lookup[d.zip_code] = String(d.bivariate_map_code);
+      }
+    });
+    return lookup;
+  }, [zipCodeData]);
+
   // Evictions data lookup: zip_code -> full evictions record (for popup table)
   const evictionsDataLookup = useMemo(() => {
     const lookup = {};
@@ -2279,7 +2962,9 @@ const MapboxMap = forwardRef(function MapboxMap({
   const isBaseView = viewMode !== "filter_view";
 
   // Which metric to display: in base view use viewMode, in filter view use activeBase
-  const displayMetric = isBaseView ? viewMode : activeBase;
+  // When efficiency_ratio is active and toggle is set to bivariate, use "bivariate" metric
+  const rawDisplayMetric = isBaseView ? viewMode : activeBase;
+  const displayMetric = (rawDisplayMetric === "efficiency_ratio" && efficiencySubMode === "bivariate") ? "bivariate" : rawDisplayMetric;
 
   // Memoized unified fill style - recomputed when viewMode, activeBase, or YoY mode change
   const isDistressYoYActive = showDistressYoY && (isBaseView ? displayMetric === "distress" : activeBase === "distress");
@@ -2441,13 +3126,16 @@ const MapboxMap = forwardRef(function MapboxMap({
             population: populationLookup[f.properties.ZCTA5CE20] || 0,
             population_score: populationScoreLookup[f.properties.ZCTA5CE20] ?? -1,
             evictions_score: evictionsLookup[f.properties.ZCTA5CE20] ?? -1,
+            funding_score: fundingScoreLookup[f.properties.ZCTA5CE20] ?? -1,
+            efficiency_score: efficiencyScoreLookup[f.properties.ZCTA5CE20] ?? -1,
+            bivariate_code: bivariateCodeLookup[f.properties.ZCTA5CE20] || "",
             yoy_improved_rank: distressYoYZips?.improved[f.properties.ZCTA5CE20] || 0,
             yoy_declined_rank: distressYoYZips?.declined[f.properties.ZCTA5CE20] || 0,
           },
         })),
     };
     return filtered;
-  }, [allGeoJsonData, boundaryZips, parentCoverage, distressLookup, workingPoorLookup, populationLookup, populationScoreLookup, evictionsLookup, distressYoYZips]);
+  }, [allGeoJsonData, boundaryZips, parentCoverage, distressLookup, workingPoorLookup, populationLookup, populationScoreLookup, evictionsLookup, fundingScoreLookup, efficiencyScoreLookup, bivariateCodeLookup, distressYoYZips]);
 
   // Derive centroid point GeoJSON from polygon data for org coverage circles
   const centroidGeoJson = useMemo(() => {
@@ -2664,6 +3352,62 @@ const MapboxMap = forwardRef(function MapboxMap({
       return;
     }
 
+    // In funding level base view, clicking a zip boundary opens/toggles the funding info box
+    if (isBaseView && displayMetric === "funding_level") {
+      const map = mapRef.current?.getMap();
+      if (map && map.getLayer("unified-fill")) {
+        const features = map.queryRenderedFeatures(e.point, {
+          layers: ["unified-fill"],
+        });
+        if (features.length > 0) {
+          const clickedZip = features[0].properties.ZCTA5CE20;
+          if (clickedZip && fundingDataLookup[clickedZip]) {
+            setFundingTableZip(prev => prev === clickedZip ? null : clickedZip);
+            return;
+          }
+        }
+      }
+      setFundingTableZip(null);
+      return;
+    }
+
+    // In efficiency_ratio base view, clicking a zip boundary opens/toggles the efficiency info box
+    if (isBaseView && displayMetric === "efficiency_ratio") {
+      const map = mapRef.current?.getMap();
+      if (map && map.getLayer("unified-fill")) {
+        const features = map.queryRenderedFeatures(e.point, {
+          layers: ["unified-fill"],
+        });
+        if (features.length > 0) {
+          const clickedZip = features[0].properties.ZCTA5CE20;
+          if (clickedZip && fundingDataLookup[clickedZip]) {
+            setEfficiencyTableZip(prev => prev === clickedZip ? null : clickedZip);
+            return;
+          }
+        }
+      }
+      setEfficiencyTableZip(null);
+      return;
+    }
+
+    if (isBaseView && displayMetric === "bivariate") {
+      const map = mapRef.current?.getMap();
+      if (map && map.getLayer("unified-fill")) {
+        const features = map.queryRenderedFeatures(e.point, {
+          layers: ["unified-fill"],
+        });
+        if (features.length > 0) {
+          const clickedZip = features[0].properties.ZCTA5CE20;
+          if (clickedZip && fundingDataLookup[clickedZip]) {
+            setBivariateTableZip(prev => prev === clickedZip ? null : clickedZip);
+            return;
+          }
+        }
+      }
+      setBivariateTableZip(null);
+      return;
+    }
+
     // In population base view, clicking a zip boundary opens/toggles the population info box
     if (isBaseView && displayMetric === "population") {
       const map = mapRef.current?.getMap();
@@ -2712,29 +3456,25 @@ const MapboxMap = forwardRef(function MapboxMap({
       if (features.length > 0) {
         const clickedZip = features[0].properties.ZCTA5CE20;
 
-        if (activeBase === "population" && clickedZip && populationLookup[clickedZip] != null) {
+        if (activeBase === "funding_level" && clickedZip && fundingDataLookup[clickedZip]) {
+          setFundingTableZip(prev => prev === clickedZip ? null : clickedZip);
+          setDistressTableZip(null); setWorkingPoorTableZip(null); setEvictionsTableZip(null); setPopulationTableZip(null);
+          return;
+        } else if (activeBase === "population" && clickedZip && populationLookup[clickedZip] != null) {
           setPopulationTableZip(prev => prev === clickedZip ? null : clickedZip);
-          setDistressTableZip(null);
-          setWorkingPoorTableZip(null);
-          setEvictionsTableZip(null);
+          setDistressTableZip(null); setWorkingPoorTableZip(null); setEvictionsTableZip(null); setFundingTableZip(null);
           return;
         } else if (activeBase === "evictions" && clickedZip && evictionsDataLookup[clickedZip]) {
           setEvictionsTableZip(prev => prev === clickedZip ? null : clickedZip);
-          setDistressTableZip(null);
-          setWorkingPoorTableZip(null);
-          setPopulationTableZip(null);
+          setDistressTableZip(null); setWorkingPoorTableZip(null); setPopulationTableZip(null); setFundingTableZip(null);
           return;
         } else if (activeBase === "working_poor" && clickedZip && workingPoorDataLookup[clickedZip]) {
           setWorkingPoorTableZip(prev => prev === clickedZip ? null : clickedZip);
-          setDistressTableZip(null);
-          setEvictionsTableZip(null);
-          setPopulationTableZip(null);
+          setDistressTableZip(null); setEvictionsTableZip(null); setPopulationTableZip(null); setFundingTableZip(null);
           return;
         } else if (clickedZip && distressDataLookup[clickedZip]) {
           setDistressTableZip(prev => prev === clickedZip ? null : clickedZip);
-          setWorkingPoorTableZip(null);
-          setEvictionsTableZip(null);
-          setPopulationTableZip(null);
+          setWorkingPoorTableZip(null); setEvictionsTableZip(null); setPopulationTableZip(null); setFundingTableZip(null);
           return;
         }
       }
@@ -2748,10 +3488,11 @@ const MapboxMap = forwardRef(function MapboxMap({
     setWorkingPoorTableZip(null);
     setEvictionsTableZip(null);
     setPopulationTableZip(null);
+    setFundingTableZip(null);
     if (zipCode) {
       setBaseHighlight(zipCode);
     }
-  }, [clearChildHighlights, zipCode, setBaseHighlight, isBaseView, displayMetric, distressDataLookup, workingPoorDataLookup, evictionsDataLookup, populationLookup, activeBase]);
+  }, [clearChildHighlights, zipCode, setBaseHighlight, isBaseView, displayMetric, distressDataLookup, workingPoorDataLookup, evictionsDataLookup, populationLookup, fundingDataLookup, activeBase]);
 
   // Handle zip search — fly to zip and open its info box
   const handleZipSearch = useCallback((zipStr) => {
@@ -2775,6 +3516,9 @@ const MapboxMap = forwardRef(function MapboxMap({
     setWorkingPoorTableZip(null);
     setEvictionsTableZip(null);
     setPopulationTableZip(null);
+    setFundingTableZip(null);
+    setEfficiencyTableZip(null);
+    setBivariateTableZip(null);
 
     if (isBaseView) {
       if (displayMetric === "distress" && distressDataLookup[zip]) {
@@ -2785,10 +3529,20 @@ const MapboxMap = forwardRef(function MapboxMap({
         setEvictionsTableZip(zip);
       } else if (displayMetric === "population" && populationLookup[zip] != null) {
         setPopulationTableZip(zip);
+      } else if (displayMetric === "funding_level" && fundingDataLookup[zip]) {
+        setFundingTableZip(zip);
+      } else if (displayMetric === "efficiency_ratio" && fundingDataLookup[zip]) {
+        setEfficiencyTableZip(zip);
+      } else if (displayMetric === "bivariate" && fundingDataLookup[zip]) {
+        setBivariateTableZip(zip);
       }
     } else {
       // Filter view — use activeBase
-      if (activeBase === "population" && populationLookup[zip] != null) {
+      if (activeBase === "efficiency_ratio" && fundingDataLookup[zip]) {
+        setEfficiencyTableZip(zip);
+      } else if (activeBase === "funding_level" && fundingDataLookup[zip]) {
+        setFundingTableZip(zip);
+      } else if (activeBase === "population" && populationLookup[zip] != null) {
         setPopulationTableZip(zip);
       } else if (activeBase === "evictions" && evictionsDataLookup[zip]) {
         setEvictionsTableZip(zip);
@@ -2798,7 +3552,7 @@ const MapboxMap = forwardRef(function MapboxMap({
         setDistressTableZip(zip);
       }
     }
-  }, [zipCodes, isBaseView, displayMetric, activeBase, distressDataLookup, workingPoorDataLookup, evictionsDataLookup, populationLookup]);
+  }, [zipCodes, isBaseView, displayMetric, activeBase, distressDataLookup, workingPoorDataLookup, evictionsDataLookup, populationLookup, fundingDataLookup]);
 
   // Handle boundary hover
   const handleMouseMove = useCallback((e) => {
@@ -2863,7 +3617,16 @@ const MapboxMap = forwardRef(function MapboxMap({
     setWorkingPoorTableZip(null);
     setEvictionsTableZip(null);
     setPopulationTableZip(null);
+    setFundingTableZip(null);
+    setEfficiencyTableZip(null);
+    setBivariateTableZip(null);
   }, [viewMode]);
+
+  // Close efficiency/bivariate tables when toggling sub-mode
+  useEffect(() => {
+    setEfficiencyTableZip(null);
+    setBivariateTableZip(null);
+  }, [efficiencySubMode]);
 
   // Sync distress-selected visual highlight with distressTableZip
   useEffect(() => {
@@ -2955,6 +3718,106 @@ const MapboxMap = forwardRef(function MapboxMap({
       }
     }
   }, [evictionsTableZip, zipToFeatureId]);
+
+  // Sync population-selected visual highlight with populationTableZip
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !map.getSource("zip-boundaries")) return;
+
+    if (populationSelectedRef.current !== null) {
+      map.setFeatureState(
+        { source: "zip-boundaries", id: populationSelectedRef.current },
+        { distressSelected: false }
+      );
+      populationSelectedRef.current = null;
+    }
+
+    if (populationTableZip) {
+      const featureId = zipToFeatureId[populationTableZip];
+      if (featureId !== undefined) {
+        map.setFeatureState(
+          { source: "zip-boundaries", id: featureId },
+          { distressSelected: true }
+        );
+        populationSelectedRef.current = featureId;
+      }
+    }
+  }, [populationTableZip, zipToFeatureId]);
+
+  // Sync funding-selected visual highlight with fundingTableZip
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !map.getSource("zip-boundaries")) return;
+
+    if (fundingSelectedRef.current !== null) {
+      map.setFeatureState(
+        { source: "zip-boundaries", id: fundingSelectedRef.current },
+        { distressSelected: false }
+      );
+      fundingSelectedRef.current = null;
+    }
+
+    if (fundingTableZip) {
+      const featureId = zipToFeatureId[fundingTableZip];
+      if (featureId !== undefined) {
+        map.setFeatureState(
+          { source: "zip-boundaries", id: featureId },
+          { distressSelected: true }
+        );
+        fundingSelectedRef.current = featureId;
+      }
+    }
+  }, [fundingTableZip, zipToFeatureId]);
+
+  // Sync efficiency-selected visual highlight with efficiencyTableZip
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !map.getSource("zip-boundaries")) return;
+
+    if (efficiencySelectedRef.current !== null) {
+      map.setFeatureState(
+        { source: "zip-boundaries", id: efficiencySelectedRef.current },
+        { distressSelected: false }
+      );
+      efficiencySelectedRef.current = null;
+    }
+
+    if (efficiencyTableZip) {
+      const featureId = zipToFeatureId[efficiencyTableZip];
+      if (featureId !== undefined) {
+        map.setFeatureState(
+          { source: "zip-boundaries", id: featureId },
+          { distressSelected: true }
+        );
+        efficiencySelectedRef.current = featureId;
+      }
+    }
+  }, [efficiencyTableZip, zipToFeatureId]);
+
+  // Sync bivariate-selected visual highlight with bivariateTableZip
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !map.getSource("zip-boundaries")) return;
+
+    if (bivariateSelectedRef.current !== null) {
+      map.setFeatureState(
+        { source: "zip-boundaries", id: bivariateSelectedRef.current },
+        { distressSelected: false }
+      );
+      bivariateSelectedRef.current = null;
+    }
+
+    if (bivariateTableZip) {
+      const featureId = zipToFeatureId[bivariateTableZip];
+      if (featureId !== undefined) {
+        map.setFeatureState(
+          { source: "zip-boundaries", id: featureId },
+          { distressSelected: true }
+        );
+        bivariateSelectedRef.current = featureId;
+      }
+    }
+  }, [bivariateTableZip, zipToFeatureId]);
 
   // Hide info box when entering base view, restore when returning to filter view
   useEffect(() => {
@@ -3807,6 +4670,12 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.stroke();
     cy += 10;
 
+    // Bivariate: draw 3x3 grid instead of bar
+    if (mode === "bivariate") {
+      drawBivariateGridOnCanvas(ctx, x, cy);
+      return cy + 110;
+    }
+
     // Label
     ctx.font = "500 11px Lexend, sans-serif";
     ctx.fillStyle = "#444444";
@@ -3815,6 +4684,8 @@ const MapboxMap = forwardRef(function MapboxMap({
       working_poor: "Working Poor Score",
       evictions: "Evictions Score",
       population: "Population Score",
+      funding_level: "Funding Level Score",
+      efficiency_ratio: "Efficiency Ratio Score",
     };
     ctx.fillText(labels[mode] || "Distress Score", x + pad, cy);
     cy += 16;
@@ -3827,6 +4698,8 @@ const MapboxMap = forwardRef(function MapboxMap({
       working_poor: { colors: ["rgba(66, 133, 244, 0.40)", "rgba(76, 175, 80, 0.40)", "rgba(255, 213, 0, 0.45)", "rgba(245, 124, 0, 0.50)", "rgba(220, 50, 50, 0.55)"], weights: [1, 1, 1, 1, 1] },
       evictions: { colors: ["rgba(66, 133, 244, 0.40)", "rgba(76, 175, 80, 0.40)", "rgba(255, 213, 0, 0.45)", "rgba(245, 124, 0, 0.50)", "rgba(220, 50, 50, 0.55)"], weights: [1, 1, 1, 1, 1] },
       population: { colors: ["rgba(200, 170, 230, 0.45)", "rgba(175, 130, 215, 0.45)", "rgba(150, 85, 195, 0.48)", "rgba(110, 40, 160, 0.52)", "rgba(75, 0, 130, 0.55)"], weights: [1, 1, 1, 1, 1] },
+      funding_level: { colors: ["rgba(66, 133, 244, 0.40)", "rgba(76, 175, 80, 0.40)", "rgba(255, 213, 0, 0.45)", "rgba(245, 124, 0, 0.50)", "rgba(220, 50, 50, 0.55)"], weights: [1, 1, 1, 1, 1] },
+      efficiency_ratio: { colors: ["rgba(66, 133, 244, 0.40)", "rgba(76, 175, 80, 0.40)", "rgba(255, 213, 0, 0.45)", "rgba(245, 124, 0, 0.50)", "rgba(220, 50, 50, 0.55)"], weights: [1, 1, 1, 1, 1] },
     };
     const colorDef = colors[mode] || colors.distress;
     const isWeighted = colorDef.colors != null;
@@ -3846,7 +4719,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     // Scale labels
     ctx.font = "400 9px Lexend, sans-serif";
     ctx.fillStyle = "#666666";
-    if (mode === "distress" || mode === "working_poor" || mode === "evictions" || mode === "population") {
+    if (mode === "distress" || mode === "working_poor" || mode === "evictions" || mode === "population" || mode === "efficiency_ratio") {
       const scaleValues = ["0", "20", "40", "60", "80", "100"];
       const positions = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
       scaleValues.forEach((val, i) => {
@@ -3869,8 +4742,61 @@ const MapboxMap = forwardRef(function MapboxMap({
   };
 
   // Draw base legend on canvas (standalone metric bar in bottom-left, no filters applied)
+  const drawBivariateGridOnCanvas = (ctx, x, y) => {
+    const cellSize = 28;
+    const gridColors = [
+      ["#C85A5A", "#B07B9E", "#7A9EBF"], // row 3 (high distress)
+      ["#E4ACAC", "#CCCCCC", "#8DC0CA"], // row 2 (mid distress)
+      ["#E8E8E8", "#B0D5DF", "#64ACBE"], // row 1 (low distress)
+    ];
+
+    // Title
+    ctx.font = "500 11px Lexend, sans-serif";
+    ctx.fillStyle = "#444444";
+    ctx.textBaseline = "top";
+    ctx.textAlign = "left";
+    ctx.fillText("Distress vs. Funding", x + 20, y);
+
+    // 3x3 grid (drawn top-down: high distress at top)
+    const gridX = x + 20;
+    const gridY = y + 16;
+    gridColors.forEach((row, ri) => {
+      row.forEach((color, ci) => {
+        ctx.fillStyle = color;
+        ctx.fillRect(gridX + ci * cellSize, gridY + ri * cellSize, cellSize, cellSize);
+      });
+    });
+
+    // Axis labels
+    ctx.font = "400 8px Lexend, sans-serif";
+    ctx.fillStyle = "#666666";
+    ctx.textAlign = "center";
+    ctx.fillText("Funding →", gridX + cellSize * 1.5, gridY + cellSize * 3 + 4);
+
+    ctx.save();
+    ctx.translate(gridX - 4, gridY + cellSize * 1.5);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText("Distress →", 0, 0);
+    ctx.restore();
+    ctx.textAlign = "left";
+  };
+
   const drawBaseLegendOnCanvas = (ctx, containerEl, mode) => {
     const { height } = containerEl.getBoundingClientRect();
+
+    if (mode === "bivariate") {
+      // Draw 3x3 bivariate grid legend
+      const w = 140;
+      const boxH = 120;
+      const x = 16;
+      const y = height - boxH - 24;
+      drawRoundedRect(ctx, x, y, w, boxH, 8);
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.fill();
+      drawBivariateGridOnCanvas(ctx, x, y + 8);
+      return;
+    }
+
     const w = 220;
     const pad = 12;
     const boxH = 75;
@@ -3883,7 +4809,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.fill();
 
     // Draw the metric bar inside the box (skip the divider by starting below top padding)
-    const labels = { distress: "Distress Score", working_poor: "Working Poor Score", evictions: "Evictions Score", population: "Population" };
+    const labels = { distress: "Distress Score", working_poor: "Working Poor Score", evictions: "Evictions Score", population: "Population", funding_level: "Funding Level Score", efficiency_ratio: "Efficiency Ratio Score" };
     let cy = y + 10;
     ctx.font = "500 11px Lexend, sans-serif";
     ctx.fillStyle = "#444444";
@@ -3900,6 +4826,8 @@ const MapboxMap = forwardRef(function MapboxMap({
       working_poor: { colors: ["rgba(66, 133, 244, 0.40)", "rgba(76, 175, 80, 0.40)", "rgba(255, 213, 0, 0.45)", "rgba(245, 124, 0, 0.50)", "rgba(220, 50, 50, 0.55)"], weights: [1, 1, 1, 1, 1] },
       evictions: { colors: ["rgba(66, 133, 244, 0.40)", "rgba(76, 175, 80, 0.40)", "rgba(255, 213, 0, 0.45)", "rgba(245, 124, 0, 0.50)", "rgba(220, 50, 50, 0.55)"], weights: [1, 1, 1, 1, 1] },
       population: { colors: ["rgba(200, 170, 230, 0.45)", "rgba(175, 130, 215, 0.45)", "rgba(150, 85, 195, 0.48)", "rgba(110, 40, 160, 0.52)", "rgba(75, 0, 130, 0.55)"], weights: [1, 1, 1, 1, 1] },
+      funding_level: { colors: ["rgba(66, 133, 244, 0.40)", "rgba(76, 175, 80, 0.40)", "rgba(255, 213, 0, 0.45)", "rgba(245, 124, 0, 0.50)", "rgba(220, 50, 50, 0.55)"], weights: [1, 1, 1, 1, 1] },
+      efficiency_ratio: { colors: ["rgba(66, 133, 244, 0.40)", "rgba(76, 175, 80, 0.40)", "rgba(255, 213, 0, 0.45)", "rgba(245, 124, 0, 0.50)", "rgba(220, 50, 50, 0.55)"], weights: [1, 1, 1, 1, 1] },
     };
     const colorDef = colors[mode] || colors.distress;
     const isWeighted = colorDef.colors != null;
@@ -3918,7 +4846,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     // Scale labels
     ctx.font = "400 9px Lexend, sans-serif";
     ctx.fillStyle = "#666666";
-    if (mode === "distress" || mode === "working_poor" || mode === "evictions" || mode === "population") {
+    if (mode === "distress" || mode === "working_poor" || mode === "evictions" || mode === "population" || mode === "efficiency_ratio") {
       const scaleValues = ["0", "20", "40", "60", "80", "100"];
       const positions = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
       scaleValues.forEach((val, i) => {
@@ -4059,12 +4987,19 @@ const MapboxMap = forwardRef(function MapboxMap({
       }
 
       // Step 3: Draw base map title on canvas (top left)
-      const baseMapLabels = { distress: "Distress Levels", working_poor: "Working Poor", evictions: "Evictions", population: "Population" };
+      const baseMapLabels = { distress: "Distress Levels", working_poor: "Working Poor", evictions: "Evictions", population: "Population", funding_level: "Funding Level", efficiency_ratio: "Distress vs. Funding", bivariate: "Distress vs. Funding" };
       const baseMapTitle = `Base Map: ${baseMapLabels[displayMetric] || "Distress Levels"}`;
       ctx.font = "700 16px 'Open Sans', sans-serif";
       ctx.fillStyle = "#2E5A88";
       ctx.textBaseline = "top";
       ctx.fillText(baseMapTitle, 20, 14);
+
+      // Sub-heading for Distress vs. Funding maps
+      if (displayMetric === "efficiency_ratio" || displayMetric === "bivariate") {
+        ctx.font = "500 13px 'Open Sans', sans-serif";
+        ctx.fillStyle = "#555555";
+        ctx.fillText(displayMetric === "bivariate" ? "Bivariate Map" : "Efficiency Ratio Map", 20, 34);
+      }
 
       // Step 4: Draw info box / distress table and legend directly on canvas (avoids dom-to-image border artifacts)
       drawInfoBoxOnCanvas(ctx, infoBoxData, container);
@@ -4273,13 +5208,14 @@ const MapboxMap = forwardRef(function MapboxMap({
           display: "flex",
           flexDirection: "column",
           gap: "9px",
+          width: "320px",
         }}
       >
         {/* Base map title - prominent with background pill */}
         <div
           style={{
             fontFamily: "'Open Sans', sans-serif",
-            fontSize: "clamp(14px, 1.4vw, 22px)",
+            fontSize: "clamp(13px, 1.3vw, 17px)",
             fontWeight: 700,
             color: "#FFFFFF",
             letterSpacing: "0.5px",
@@ -4288,38 +5224,18 @@ const MapboxMap = forwardRef(function MapboxMap({
             padding: "6px 14px",
             borderRadius: "6px",
             textShadow: "0 1px 2px rgba(0,0,0,0.3)",
-            display: "inline-block",
+            textAlign: "center",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
           }}
         >
-          Base Map: {{ distress: "Distress Levels", working_poor: "Working Poor", evictions: "Evictions", population: "Population" }[displayMetric] || "Distress Levels"}
+          Base Map: {{ distress: "Distress Levels", working_poor: "Working Poor", evictions: "Evictions", population: "Population", funding_level: "Funding Level", efficiency_ratio: "Distress vs. Funding", bivariate: "Distress vs. Funding" }[displayMetric] || "Distress Levels"}
         </div>
 
-        {/* View Mode dropdown */}
+        {/* View Mode dropdown (custom) */}
         {onViewModeChange && (
-          <select
-            value={viewMode}
-            onChange={(e) => onViewModeChange(e.target.value)}
-            className="transition-all duration-200 hover:brightness-125"
-            style={{
-              height: "36px",
-              padding: "0 12px",
-              borderRadius: "6px",
-              fontFamily: "'Open Sans', sans-serif",
-              fontSize: "14px",
-              fontWeight: 500,
-              backgroundColor: "rgba(34, 40, 49, 0.85)",
-              color: "#FFFFFF",
-              border: "1px solid rgba(255,255,255,0.2)",
-              cursor: "pointer",
-              backdropFilter: "blur(4px)",
-            }}
-          >
-            <option value="filter_view">Filter View</option>
-            <option value="distress">Distress</option>
-            <option value="working_poor">Working Poor</option>
-            <option value="evictions">Evictions</option>
-            <option value="population">Population</option>
-          </select>
+          <ViewModeDropdown viewMode={viewMode} onViewModeChange={onViewModeChange} />
         )}
 
         {/* YoY Change button - only when distress map is active */}
@@ -4329,6 +5245,7 @@ const MapboxMap = forwardRef(function MapboxMap({
             className="transition-all duration-200 hover:brightness-125"
             style={{
               height: "36px",
+              width: "100%",
               padding: "0 14px",
               borderRadius: "6px",
               fontFamily: "'Open Sans', sans-serif",
@@ -4342,8 +5259,48 @@ const MapboxMap = forwardRef(function MapboxMap({
               userSelect: "none",
             }}
           >
-            Year over Year Change
+            Year Over Year Change
           </button>
+        )}
+
+        {/* Efficiency / Bivariate toggle - only when Distress vs. Funding is active */}
+        {(isBaseView ? (displayMetric === "efficiency_ratio" || displayMetric === "bivariate") : activeBase === "efficiency_ratio") && (
+          <div
+            className="relative flex items-center rounded-full cursor-pointer"
+            style={{
+              backgroundColor: "#222831",
+              padding: "4px",
+              width: "180px",
+              height: "38px",
+            }}
+            onClick={() => setEfficiencySubMode(prev => prev === "efficiency" ? "bivariate" : "efficiency")}
+          >
+            <div
+              className="absolute rounded-full transition-all duration-300 ease-in-out"
+              style={{
+                backgroundColor: "#2E5A88",
+                width: "calc(50% - 4px)",
+                height: "30px",
+                left: efficiencySubMode === "bivariate" ? "calc(50% + 2px)" : "4px",
+              }}
+            />
+            <span
+              className={`relative z-10 flex-1 text-center font-opensans text-sm transition-colors duration-300 ${
+                efficiencySubMode === "efficiency" ? "text-white" : "text-white/70"
+              }`}
+              style={{ fontWeight: 500 }}
+            >
+              Efficiency
+            </span>
+            <span
+              className={`relative z-10 flex-1 text-center font-opensans text-sm transition-colors duration-300 ${
+                efficiencySubMode === "bivariate" ? "text-white" : "text-white/70"
+              }`}
+              style={{ fontWeight: 500 }}
+            >
+              Bivariate
+            </span>
+          </div>
         )}
       </div>
 
@@ -4488,6 +5445,37 @@ const MapboxMap = forwardRef(function MapboxMap({
           zipCode={populationTableZip}
           neighborhood={zipCodes?.find(z => z.zip_code === populationTableZip)?.neighborhood || ""}
           onClose={() => setPopulationTableZip(null)}
+        />
+      )}
+
+      {/* Draggable funding info box - in funding_level base view or when activeBase is funding_level in filter view */}
+      {(isBaseView ? displayMetric === "funding_level" : activeBase === "funding_level") && fundingTableZip && (
+        <DraggableFundingTable
+          data={fundingDataLookup[fundingTableZip]}
+          zipCode={fundingTableZip}
+          neighborhood={zipCodes?.find(z => z.zip_code === fundingTableZip)?.neighborhood || ""}
+          onClose={() => setFundingTableZip(null)}
+        />
+      )}
+
+      {/* Draggable efficiency info box - in efficiency_ratio base view or when activeBase is efficiency_ratio in filter view */}
+      {/* Draggable efficiency info box */}
+      {(isBaseView ? displayMetric === "efficiency_ratio" : activeBase === "efficiency_ratio") && efficiencyTableZip && (
+        <DraggableEfficiencyTable
+          data={fundingDataLookup[efficiencyTableZip]}
+          zipCode={efficiencyTableZip}
+          neighborhood={zipCodes?.find(z => z.zip_code === efficiencyTableZip)?.neighborhood || ""}
+          onClose={() => setEfficiencyTableZip(null)}
+        />
+      )}
+
+      {/* Draggable bivariate info box */}
+      {(isBaseView ? displayMetric === "bivariate" : false) && bivariateTableZip && (
+        <DraggableBivariateTable
+          data={fundingDataLookup[bivariateTableZip]}
+          zipCode={bivariateTableZip}
+          neighborhood={zipCodes?.find(z => z.zip_code === bivariateTableZip)?.neighborhood || ""}
+          onClose={() => setBivariateTableZip(null)}
         />
       )}
 

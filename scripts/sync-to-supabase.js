@@ -18,6 +18,7 @@ const TABLES = [
   { sheetName: 'evictions_data', supabaseTable: 'evictions_data', transform: transformEvictionsData },
   { sheetName: 'zip_code_data', supabaseTable: 'zip_code_data', transform: transformZipCodeData, primaryKey: 'id' },
   { sheetName: 'header_config', supabaseTable: 'header_config', transform: transformHeaderConfig },
+  { sheetName: 'fin_funding_data', supabaseTable: 'fin_funding_data', transform: transformFinFundingData, primaryKey: 'id' },
 ];
 
 // Columns that contain JSON data and should be parsed before inserting
@@ -39,6 +40,8 @@ function transformWorkingPoorData(row) { return passthroughTransform(row); }
 function transformEvictionsData(row) { return passthroughTransform(row, ['id']); }
 
 function transformZipCodeData(row) { return passthroughTransform(row, ['id']); }
+
+function transformFinFundingData(row) { return passthroughTransform(row, ['id']); }
 
 function transformHeaderConfig(row) {
   const result = passthroughTransform(row);
@@ -332,6 +335,7 @@ async function logSyncResults(syncCounts) {
     working_poor_data_count: syncCounts.working_poor_data,
     zip_code_data_count: syncCounts.zip_code_data,
     header_config_count: syncCounts.header_config,
+    fin_funding_data_count: syncCounts.fin_funding_data,
   };
 
   const { error } = await supabase

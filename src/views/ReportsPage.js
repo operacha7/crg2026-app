@@ -267,6 +267,7 @@ export default function ReportsPage() {
           onMap2OrganizationChange={handleMap2OrganizationChange}
           map2AssistanceType={map2AssistanceType}
           onMap2AssistanceTypeChange={handleMap2AssistanceTypeChange}
+          map2ActiveBase={map2ActiveBase}
           onMap2Reset={handleMap2Reset}
           onMap2Download={handleMap2Download}
           zcdParentOrg={zcdParentOrg}
