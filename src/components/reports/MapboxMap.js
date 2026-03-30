@@ -102,15 +102,15 @@ function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thr
   } else if (metric === "bivariate") {
     // 3x3 bivariate choropleth using bivariate_map_code (text: "11"-"33")
     metricExpression = [
-      ["==", ["get", "bivariate_code"], "31"], "rgba(200, 90, 90, 0.65)",    // high distress, low funding
-      ["==", ["get", "bivariate_code"], "32"], "rgba(176, 123, 158, 0.65)", // high distress, mid funding
-      ["==", ["get", "bivariate_code"], "33"], "rgba(122, 158, 191, 0.65)", // high distress, high funding
-      ["==", ["get", "bivariate_code"], "21"], "rgba(228, 172, 172, 0.65)", // mid distress, low funding
-      ["==", ["get", "bivariate_code"], "22"], "rgba(204, 204, 204, 0.55)", // mid distress, mid funding
-      ["==", ["get", "bivariate_code"], "23"], "rgba(141, 192, 202, 0.65)", // mid distress, high funding
-      ["==", ["get", "bivariate_code"], "11"], "rgba(232, 232, 232, 0.45)", // low distress, low funding
-      ["==", ["get", "bivariate_code"], "12"], "rgba(176, 213, 223, 0.55)", // low distress, mid funding
-      ["==", ["get", "bivariate_code"], "13"], "rgba(100, 172, 190, 0.65)", // low distress, high funding
+      ["==", ["get", "bivariate_code"], "31"], "rgba(200, 90, 90, 0.65)",    // high distress, low funding (dark red)
+      ["==", ["get", "bivariate_code"], "32"], "rgba(184, 112, 112, 0.65)", // high distress, mid funding (mid red)
+      ["==", ["get", "bivariate_code"], "33"], "rgba(153, 153, 153, 0.60)", // high distress, high funding (dark gray)
+      ["==", ["get", "bivariate_code"], "21"], "rgba(221, 170, 170, 0.65)", // mid distress, low funding (light red)
+      ["==", ["get", "bivariate_code"], "22"], "rgba(187, 187, 187, 0.55)", // mid distress, mid funding (mid gray)
+      ["==", ["get", "bivariate_code"], "23"], "rgba(123, 174, 191, 0.65)", // mid distress, high funding (light blue)
+      ["==", ["get", "bivariate_code"], "11"], "rgba(232, 232, 232, 0.45)", // low distress, low funding (lightest gray)
+      ["==", ["get", "bivariate_code"], "12"], "rgba(168, 204, 216, 0.55)", // low distress, mid funding (light blue)
+      ["==", ["get", "bivariate_code"], "13"], "rgba(100, 172, 190, 0.65)", // low distress, high funding (dark blue)
     ];
   } else {
     // distress (default) - 5 quintile bands: blue → green → yellow → orange → red
@@ -1870,9 +1870,9 @@ const BIVARIATE_LABELS = {
 };
 
 const BIVARIATE_COLORS = {
-  "31": "#C85A5A", "32": "#B07B9E", "33": "#7A9EBF",
-  "21": "#E4ACAC", "22": "#CCCCCC", "23": "#8DC0CA",
-  "11": "#E8E8E8", "12": "#B0D5DF", "13": "#64ACBE",
+  "31": "#C85A5A", "32": "#B87070", "33": "#999999",
+  "21": "#DDAAAA", "22": "#BBBBBB", "23": "#7BAEBF",
+  "11": "#E8E8E8", "12": "#A8CCD8", "13": "#64ACBE",
 };
 
 function DraggableBivariateTable({ data, zipCode, neighborhood, onClose }) {
@@ -2431,10 +2431,18 @@ function EfficiencyLegendBar({ standalone }) {
 function BivariateLegend({ standalone }) {
   const size = 28;
   const colors = [
-    ["#E8E8E8", "#B0D5DF", "#64ACBE"], // row 1 (low distress): low→high funding
-    ["#E4ACAC", "#CCCCCC", "#8DC0CA"], // row 2 (mid distress)
-    ["#C85A5A", "#B07B9E", "#7A9EBF"], // row 3 (high distress)
+    ["#E8E8E8", "#A8CCD8", "#64ACBE"], // row 1 (low distress): low→high funding
+    ["#DDAAAA", "#BBBBBB", "#7BAEBF"], // row 2 (mid distress)
+    ["#C85A5A", "#B87070", "#999999"], // row 3 (high distress)
   ];
+  // Codes grid matching display order (reversed: high distress at top)
+  const codes = [
+    ["31", "32", "33"], // high distress
+    ["21", "22", "23"], // mid distress
+    ["11", "12", "13"], // low distress
+  ];
+  // Use white text on dark cells, dark text on light cells
+  const darkCells = new Set(["31", "32", "33", "13", "23"]);
   return (
     <div style={standalone ? {} : { marginTop: "10px", borderTop: "1px solid #E0E0E0", paddingTop: "8px" }}>
       <div style={{ fontWeight: 500, fontSize: "11px", color: "#444", marginBottom: "6px" }}>
@@ -2451,9 +2459,27 @@ function BivariateLegend({ standalone }) {
         <div style={{ display: "flex", flexDirection: "column" }}>
           {[...colors].reverse().map((row, ri) => (
             <div key={ri} style={{ display: "flex" }}>
-              {row.map((color, ci) => (
-                <div key={ci} style={{ width: `${size}px`, height: `${size}px`, backgroundColor: color }} />
-              ))}
+              {row.map((color, ci) => {
+                const code = codes[ri][ci];
+                return (
+                  <div
+                    key={ci}
+                    style={{
+                      width: `${size}px`,
+                      height: `${size}px`,
+                      backgroundColor: color,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "8px",
+                      fontWeight: 500,
+                      color: darkCells.has(code) ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.4)",
+                    }}
+                  >
+                    {code}
+                  </div>
+                );
+              })}
             </div>
           ))}
           {/* X-axis label */}
@@ -3456,7 +3482,15 @@ const MapboxMap = forwardRef(function MapboxMap({
       if (features.length > 0) {
         const clickedZip = features[0].properties.ZCTA5CE20;
 
-        if (activeBase === "funding_level" && clickedZip && fundingDataLookup[clickedZip]) {
+        if (activeBase === "efficiency_ratio" && efficiencySubMode === "bivariate" && clickedZip && fundingDataLookup[clickedZip]) {
+          setBivariateTableZip(prev => prev === clickedZip ? null : clickedZip);
+          setDistressTableZip(null); setWorkingPoorTableZip(null); setEvictionsTableZip(null); setPopulationTableZip(null); setFundingTableZip(null); setEfficiencyTableZip(null);
+          return;
+        } else if (activeBase === "efficiency_ratio" && clickedZip && fundingDataLookup[clickedZip]) {
+          setEfficiencyTableZip(prev => prev === clickedZip ? null : clickedZip);
+          setDistressTableZip(null); setWorkingPoorTableZip(null); setEvictionsTableZip(null); setPopulationTableZip(null); setFundingTableZip(null); setBivariateTableZip(null);
+          return;
+        } else if (activeBase === "funding_level" && clickedZip && fundingDataLookup[clickedZip]) {
           setFundingTableZip(prev => prev === clickedZip ? null : clickedZip);
           setDistressTableZip(null); setWorkingPoorTableZip(null); setEvictionsTableZip(null); setPopulationTableZip(null);
           return;
@@ -3489,10 +3523,12 @@ const MapboxMap = forwardRef(function MapboxMap({
     setEvictionsTableZip(null);
     setPopulationTableZip(null);
     setFundingTableZip(null);
+    setEfficiencyTableZip(null);
+    setBivariateTableZip(null);
     if (zipCode) {
       setBaseHighlight(zipCode);
     }
-  }, [clearChildHighlights, zipCode, setBaseHighlight, isBaseView, displayMetric, distressDataLookup, workingPoorDataLookup, evictionsDataLookup, populationLookup, fundingDataLookup, activeBase]);
+  }, [clearChildHighlights, zipCode, setBaseHighlight, isBaseView, displayMetric, distressDataLookup, workingPoorDataLookup, evictionsDataLookup, populationLookup, fundingDataLookup, activeBase, efficiencySubMode]);
 
   // Handle zip search — fly to zip and open its info box
   const handleZipSearch = useCallback((zipStr) => {
@@ -4745,9 +4781,9 @@ const MapboxMap = forwardRef(function MapboxMap({
   const drawBivariateGridOnCanvas = (ctx, x, y) => {
     const cellSize = 28;
     const gridColors = [
-      ["#C85A5A", "#B07B9E", "#7A9EBF"], // row 3 (high distress)
-      ["#E4ACAC", "#CCCCCC", "#8DC0CA"], // row 2 (mid distress)
-      ["#E8E8E8", "#B0D5DF", "#64ACBE"], // row 1 (low distress)
+      ["#C85A5A", "#B87070", "#999999"], // row 3 (high distress)
+      ["#DDAAAA", "#BBBBBB", "#7BAEBF"], // row 2 (mid distress)
+      ["#E8E8E8", "#A8CCD8", "#64ACBE"], // row 1 (low distress)
     ];
 
     // Title
@@ -4760,12 +4796,28 @@ const MapboxMap = forwardRef(function MapboxMap({
     // 3x3 grid (drawn top-down: high distress at top)
     const gridX = x + 20;
     const gridY = y + 16;
+    const gridCodes = [
+      ["31", "32", "33"],
+      ["21", "22", "23"],
+      ["11", "12", "13"],
+    ];
+    const darkCells = new Set(["31", "32", "33", "13", "23"]);
     gridColors.forEach((row, ri) => {
       row.forEach((color, ci) => {
+        const cx = gridX + ci * cellSize;
+        const cy2 = gridY + ri * cellSize;
         ctx.fillStyle = color;
-        ctx.fillRect(gridX + ci * cellSize, gridY + ri * cellSize, cellSize, cellSize);
+        ctx.fillRect(cx, cy2, cellSize, cellSize);
+        // Draw code label centered in cell
+        const code = gridCodes[ri][ci];
+        ctx.font = "500 8px Lexend, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = darkCells.has(code) ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.4)";
+        ctx.fillText(code, cx + cellSize / 2, cy2 + cellSize / 2);
       });
     });
+    ctx.textBaseline = "top"; // reset
 
     // Axis labels
     ctx.font = "400 8px Lexend, sans-serif";
@@ -5470,7 +5522,7 @@ const MapboxMap = forwardRef(function MapboxMap({
       )}
 
       {/* Draggable bivariate info box */}
-      {(isBaseView ? displayMetric === "bivariate" : false) && bivariateTableZip && (
+      {(isBaseView ? displayMetric === "bivariate" : (activeBase === "efficiency_ratio" && efficiencySubMode === "bivariate")) && bivariateTableZip && (
         <DraggableBivariateTable
           data={fundingDataLookup[bivariateTableZip]}
           zipCode={bivariateTableZip}

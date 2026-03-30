@@ -169,11 +169,13 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
   // Internal multi-select filter state (null = all selected / no filter)
   const [selectedCounties, setSelectedCounties] = useState(null);
   const [selectedZipCodes, setSelectedZipCodes] = useState(null);
+  const [selectedMapCodes, setSelectedMapCodes] = useState(null);
 
   // Clear county/zip filters when parent or child org selection changes
   useEffect(() => {
     setSelectedCounties(null);
     setSelectedZipCodes(null);
+    setSelectedMapCodes(null);
   }, [parentOrg, organization]);
 
   // Build columns from header_config (filtered to zip_code_data, visible only, ordered by id_no)
@@ -406,6 +408,9 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
     if (selectedZipCodes) {
       baseData = baseData.filter(r => selectedZipCodes.has(r.zip_code));
     }
+    if (selectedMapCodes) {
+      baseData = baseData.filter(r => selectedMapCodes.has(String(r.bivariate_map_code)));
+    }
 
     // === ORG GROUPING MODE ===
     if (orgGroupList && orgZipLookup) {
@@ -436,7 +441,7 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
       baseData = baseData.filter(r => servedZips.has(r.zip_code));
     }
     return buildSections(baseData, { prependRows: [houstonMedianRow] });
-  }, [zipCodeData, selectedCounties, selectedZipCodes, servedZips, sortBy, sortDir, houstonMedianRow, sortSection, isTextColumn, orgGroupList, orgZipLookup, buildSections, NUMERIC_KEYS]);
+  }, [zipCodeData, selectedCounties, selectedZipCodes, selectedMapCodes, servedZips, sortBy, sortDir, houstonMedianRow, sortSection, isTextColumn, orgGroupList, orgZipLookup, buildSections, NUMERIC_KEYS]);
 
   // Toggle all expand/collapse
   const toggleAllExpanded = useCallback(() => {
@@ -639,6 +644,10 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
     [...new Set(zipCodeData.map(r => r.zip_code).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
     [zipCodeData]
   );
+  const allMapCodes = useMemo(() =>
+    [...new Set(zipCodeData.map(r => r.bivariate_map_code != null ? String(r.bivariate_map_code) : null).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    [zipCodeData]
+  );
 
   // Sort handler that accepts explicit direction (for ColumnHeaderFilter)
   const handleSortWithDirection = useCallback((column, direction) => {
@@ -701,6 +710,26 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
                     values={allZipCodes}
                     selectedValues={selectedZipCodes}
                     onSelectionChange={setSelectedZipCodes}
+                    sortActive={sortBy === col.key}
+                    sortDirection={sortBy === col.key ? sortDir : "asc"}
+                    onSort={(dir) => handleSortWithDirection(col.key, dir)}
+                    thStyle={{
+                      ...baseThStyle,
+                      fontFamily: "Open Sans, sans-serif",
+                      fontWeight: 600,
+                      color: "white",
+                    }}
+                  />
+                );
+              }
+              if (col.key === "bivariate_map_code") {
+                return (
+                  <ColumnHeaderFilter
+                    key={col.key}
+                    label={col.label}
+                    values={allMapCodes}
+                    selectedValues={selectedMapCodes}
+                    onSelectionChange={setSelectedMapCodes}
                     sortActive={sortBy === col.key}
                     sortDirection={sortBy === col.key ? sortDir : "asc"}
                     onSort={(dir) => handleSortWithDirection(col.key, dir)}
