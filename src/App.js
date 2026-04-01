@@ -17,9 +17,19 @@ const DEV_USER = {
 };
 
 export default function App() {
-  // In dev mode with bypass enabled, start with mock user
-  const [user, setUser] = useState(DEV_BYPASS_LOGIN ? DEV_USER : null);
   const location = useLocation();
+
+  // Check for ?guest=1 deep link (SMS share links auto-login as guest)
+  const searchParams = new URLSearchParams(location.search);
+  const isDeepLink = searchParams.get("guest") === "1";
+
+  // In dev mode with bypass enabled, start with mock user
+  // Deep links with ?guest=1 also auto-login as guest
+  const [user, setUser] = useState(() => {
+    if (DEV_BYPASS_LOGIN) return DEV_USER;
+    if (isDeepLink) return { id: 'guest', organization: 'Guest', isGuest: true, canEmail: false, canPdf: false };
+    return null;
+  });
 
   // Preserve UTM parameters during redirect
   const getLoginPath = () => {

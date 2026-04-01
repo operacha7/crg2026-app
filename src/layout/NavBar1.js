@@ -7,6 +7,7 @@ import { useState, useRef, useEffect } from "react";
 import { Menu } from "lucide-react";
 import Tooltip from "../components/Tooltip";
 import EmailPanel from "../components/EmailPanel";
+import SmsPanel from "../components/SmsPanel";
 import AnimatedCounter from "../components/AnimatedCounter";
 
 export default function NavBar1({
@@ -15,12 +16,14 @@ export default function NavBar1({
   selectedCount = 0,
   onSendEmail,
   onCreatePdf,
+  onSendSms,
   // Props for email/PDF panels
   selectedData = [],
   loggedInUser,
   headerText = "Resources",
   onEmailSuccess,
   onPdfSuccess,
+  onSmsSuccess,
   // Mobile menu handler
   onOpenMobileMenu,
 }) {
@@ -30,14 +33,17 @@ export default function NavBar1({
   // Panel state
   const [showEmailPanel, setShowEmailPanel] = useState(false);
   const [showPdfPanel, setShowPdfPanel] = useState(false);
+  const [showSmsPanel, setShowSmsPanel] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
   // Refs for panels and buttons
   const emailPanelRef = useRef(null);
   const pdfPanelRef = useRef(null);
+  const smsPanelRef = useRef(null);
   const emailButtonRef = useRef(null);
   const pdfButtonRef = useRef(null);
+  const smsButtonRef = useRef(null);
 
   // Check if any selected records are inactive or closed
   const hasInactiveResources = selectedData.some((item) => {
@@ -48,6 +54,7 @@ export default function NavBar1({
   // Track when panels were opened to prevent immediate close on mobile
   const emailOpenTimeRef = useRef(0);
   const pdfOpenTimeRef = useRef(0);
+  const smsOpenTimeRef = useRef(0);
 
   // Handle click outside to close panels
   useEffect(() => {
@@ -78,6 +85,18 @@ export default function NavBar1({
         setShowPdfPanel(false);
         setStatusMessage("");
       }
+      // SMS panel - ignore clicks within 300ms of opening (prevents mobile touch issues)
+      if (
+        showSmsPanel &&
+        now - smsOpenTimeRef.current > 300 &&
+        smsPanelRef.current &&
+        !smsPanelRef.current.contains(event.target) &&
+        smsButtonRef.current &&
+        !smsButtonRef.current.contains(event.target)
+      ) {
+        setShowSmsPanel(false);
+        setStatusMessage("");
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -86,7 +105,7 @@ export default function NavBar1({
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("touchstart", handleClickOutside);
     };
-  }, [showEmailPanel, showPdfPanel]);
+  }, [showEmailPanel, showPdfPanel, showSmsPanel]);
 
   // Check if user is a guest (browsing without account)
   const isGuest = loggedInUser?.isGuest === true;
@@ -104,6 +123,7 @@ export default function NavBar1({
         emailOpenTimeRef.current = Date.now();
         setShowEmailPanel(true);
         setShowPdfPanel(false);
+        setShowSmsPanel(false);
         setStatusMessage("");
       }
     }
@@ -122,9 +142,20 @@ export default function NavBar1({
         pdfOpenTimeRef.current = Date.now();
         setShowPdfPanel(true);
         setShowEmailPanel(false);
+        setShowSmsPanel(false);
         setStatusMessage("");
       }
     }
+  };
+
+  // Handle Send SMS button click
+  // TEMPORARY: Show "coming soon" message until A2P 10DLC registration is approved
+  const handleSmsButtonClick = () => {
+    if (isGuest) {
+      alert("You need an account. Contact Support.");
+      return;
+    }
+    alert("Send SMS is coming soon!");
   };
 
   // Handle email send (language passed from EmailPanel)
@@ -175,6 +206,38 @@ export default function NavBar1({
 
   const handlePdfCancel = () => {
     setShowPdfPanel(false);
+    setStatusMessage("");
+  };
+
+  // Handle SMS send
+  const handleSmsSend = async (phoneNumber) => {
+    if (!phoneNumber || phoneNumber.replace(/\D/g, "").length !== 10) {
+      setStatusMessage("Please enter a valid 10-digit phone number");
+      return;
+    }
+
+    setIsSending(true);
+    setStatusMessage("");
+
+    try {
+      // Format to E.164 (+1XXXXXXXXXX)
+      const digits = phoneNumber.replace(/\D/g, "");
+      const e164 = `+1${digits}`;
+
+      if (onSmsSuccess) {
+        await onSmsSuccess(e164);
+      }
+      setShowSmsPanel(false);
+    } catch (err) {
+      setStatusMessage(`Error: ${err.message}`);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  // Handle SMS cancel
+  const handleSmsCancel = () => {
+    setShowSmsPanel(false);
     setStatusMessage("");
   };
   return (
@@ -339,6 +402,41 @@ export default function NavBar1({
                 statusMessage={statusMessage}
               />
             </div>
+
+            {/* Send SMS button with dropdown panel */}
+            <div className="relative">
+              <Tooltip text={isGuest ? "You need an account. Contact Support." : ""} position="bottom">
+                <button
+                  ref={smsButtonRef}
+                  onClick={handleSmsButtonClick}
+                  className={`rounded font-opensans transition-all ${
+                    isGuest
+                      ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                      : "bg-navbar1-btn-sms-bg text-navbar1-btn-sms-text hover:brightness-125"
+                  }`}
+                  style={{
+                    width: 'var(--width-navbar1-btn)',
+                    height: 'var(--height-navbar1-btn)',
+                    fontSize: 'var(--font-size-navbar1-btn)',
+                    fontWeight: 'var(--font-weight-navbar1-btn)',
+                    letterSpacing: 'var(--letter-spacing-navbar1-btn)',
+                    opacity: isGuest ? 0.6 : 1,
+                  }}
+                >
+                  Send SMS
+                </button>
+              </Tooltip>
+
+              {/* SMS Panel */}
+              <SmsPanel
+                isOpen={showSmsPanel}
+                onCancel={handleSmsCancel}
+                onSend={handleSmsSend}
+                panelRef={smsPanelRef}
+                isSending={isSending}
+                statusMessage={statusMessage}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -420,6 +518,28 @@ export default function NavBar1({
                 panelRef={pdfPanelRef}
                 isPdfMode={true}
                 hasInactiveResources={hasInactiveResources}
+                isSending={isSending}
+                statusMessage={statusMessage}
+              />
+            </div>
+            <div className="relative">
+              <button
+                ref={smsButtonRef}
+                onClick={handleSmsButtonClick}
+                className={`rounded font-opensans text-sm px-4 py-2 transition-all ${
+                  isGuest
+                    ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                    : "bg-navbar1-btn-sms-bg text-navbar1-btn-sms-text hover:brightness-125"
+                }`}
+                style={{ opacity: isGuest ? 0.6 : 1, minHeight: '40px' }}
+              >
+                SMS
+              </button>
+              <SmsPanel
+                isOpen={showSmsPanel}
+                onCancel={handleSmsCancel}
+                onSend={handleSmsSend}
+                panelRef={smsPanelRef}
                 isSending={isSending}
                 statusMessage={statusMessage}
               />

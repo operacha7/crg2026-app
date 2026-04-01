@@ -22,6 +22,8 @@ module.exports = {
         'navbar1-btn-email-text': 'var(--color-navbar1-btn-email-text)',
         'navbar1-btn-pdf-bg': 'var(--color-navbar1-btn-pdf-bg)',
         'navbar1-btn-pdf-text': 'var(--color-navbar1-btn-pdf-text)',
+        'navbar1-btn-sms-bg': 'var(--color-navbar1-btn-sms-bg)',
+        'navbar1-btn-sms-text': 'var(--color-navbar1-btn-sms-text)',
         // NavBar 2
         'navbar2-bg': 'var(--color-navbar2-bg)',
         'navbar2-btn-inactive-bg': 'var(--color-navbar2-btn-inactive-bg)',

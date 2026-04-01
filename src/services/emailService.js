@@ -481,3 +481,90 @@ ${htmlContent}
 
   return { success: true, filename, count: selectedData.length };
 }
+
+/**
+ * Build a shareable deep link URL that opens CRG in guest mode with filters pre-applied
+ * Used for SMS texting — the recipient clicks the link and sees filtered results immediately
+ *
+ * @param {object} searchContext - Contains searchMode and relevant filter values
+ * @param {Set} activeAssistanceChips - Set of active assist_id strings
+ * @returns {string} Full URL with query parameters
+ */
+export function buildShareUrl(searchContext, activeAssistanceChips) {
+  const baseUrl = window.location.hostname === "localhost"
+    ? "http://localhost:3000"
+    : "https://crghouston.operacha.org";
+
+  const params = new URLSearchParams();
+  params.set("guest", "1");
+
+  const { searchMode, selectedZip, selectedParentOrg, selectedChildOrg,
+          selectedLocationZip, selectedLocationCity, selectedLocationCounty } = searchContext || {};
+
+  if (searchMode) params.set("mode", searchMode);
+
+  switch (searchMode) {
+    case "zipcode":
+      if (selectedZip) params.set("zip", selectedZip);
+      break;
+    case "organization":
+      if (selectedParentOrg) params.set("parent", selectedParentOrg);
+      if (selectedChildOrg) params.set("child", selectedChildOrg);
+      break;
+    case "location":
+      if (selectedLocationCounty) params.set("county", selectedLocationCounty);
+      if (selectedLocationCity) params.set("city", selectedLocationCity);
+      if (selectedLocationZip) params.set("loczip", selectedLocationZip);
+      break;
+    default:
+      break;
+  }
+
+  // Add active assistance chips
+  if (activeAssistanceChips && activeAssistanceChips.size > 0) {
+    params.set("assist", [...activeAssistanceChips].join(","));
+  }
+
+  return `${baseUrl}/?${params.toString()}`;
+}
+
+/**
+ * Send SMS with a deep link to filtered resources
+ *
+ * @param {object} options
+ * @param {string} options.recipient - Phone number (E.164 format preferred)
+ * @param {object} options.searchContext - Current search mode and filter values
+ * @param {Set} options.activeAssistanceChips - Active assistance chip IDs
+ * @param {object} options.loggedInUser - Logged in user object
+ * @returns {Promise<{success: boolean}>}
+ */
+export async function sendSms({ recipient, searchContext, activeAssistanceChips, loggedInUser }) {
+  const shareUrl = buildShareUrl(searchContext, activeAssistanceChips);
+  const headerText = generateSearchHeader(searchContext);
+
+  // Build the SMS message body
+  const orgName = loggedInUser?.reg_organization || "CRG Houston";
+  const body = `${orgName} - ${headerText}: ${shareUrl}`;
+
+  const smsServiceUrl =
+    window.location.hostname === "localhost"
+      ? "http://localhost:8788/sendSms"
+      : "/sendSms";
+
+  const res = await fetch(smsServiceUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      to: recipient,
+      body,
+      organization: loggedInUser?.reg_organization,
+    }),
+  });
+
+  const result = await res.json();
+  if (!result.success) {
+    throw new Error(result.message || "SMS failed to send.");
+  }
+
+  return { success: true, recipient };
+}

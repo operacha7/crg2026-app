@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { calculateDistance, parseCoordinates } from "../services/dataService";
 import { useAppData } from "../Contexts/AppDataContext";
-import { sendEmail, createPdf, fetchOrgPhone, generateSearchHeader } from "../services/emailService";
+import { sendEmail, createPdf, sendSms, fetchOrgPhone, generateSearchHeader } from "../services/emailService";
 import { getDrivingDistances } from "../services/geocodeService";
 import { logUsage } from "../services/usageService";
 import { applyLLMFilters } from "../services/llmSearchService";
@@ -419,6 +419,40 @@ export default function ZipCodePage({
     return true;
   };
 
+  // SMS validation - requires a zip code filter and at least one assistance chip
+  const validateSmsSelection = () => {
+    if (!selectedZipCode) {
+      showAnimatedToast(
+        "⚠️ Please select a zip code before sending SMS.",
+        "error"
+      );
+      return false;
+    }
+    if (activeAssistanceChips.size === 0) {
+      showAnimatedToast(
+        "⚠️ Please select at least one assistance type before sending SMS.",
+        "error"
+      );
+      return false;
+    }
+    return true;
+  };
+
+  // SMS success handler - called from NavBar1 panel
+  const handleSmsSuccess = async (recipient) => {
+    await sendSms({
+      recipient,
+      searchContext: buildSearchContext(),
+      activeAssistanceChips,
+      loggedInUser,
+    });
+
+    showAnimatedToast("✅ SMS sent successfully.", "success");
+
+    // Log to database
+    await logDeliveryAction('sms');
+  };
+
   // Calculate selected data for email/PDF panels
   const selectedData = selectedRows?.map((i) => displayDirectory[i]).filter(Boolean);
 
@@ -434,11 +468,13 @@ export default function ZipCodePage({
       selectedCount={selectedRows.length}
       onSendEmail={validateEmailSelection}
       onCreatePdf={validatePdfSelection}
+      onSendSms={validateSmsSelection}
       selectedData={selectedData}
       loggedInUser={loggedInUser}
       headerText={headerText}
       onEmailSuccess={handleEmailSuccess}
       onPdfSuccess={handlePdfSuccess}
+      onSmsSuccess={handleSmsSuccess}
     >
 
    <Helmet>

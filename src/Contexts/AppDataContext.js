@@ -216,6 +216,39 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
         setHeaderConfig(headerConfigResult);
         setLoading(false);
 
+        // Apply deep link URL params (from SMS share links)
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('guest') === '1') {
+          const mode = urlParams.get('mode');
+          if (mode) setActiveSearchMode(mode);
+
+          // Apply mode-specific filters
+          switch (mode) {
+            case 'zipcode':
+              if (urlParams.get('zip')) setSelectedZipCode(urlParams.get('zip'));
+              break;
+            case 'organization':
+              if (urlParams.get('parent')) setSelectedParentOrg(urlParams.get('parent'));
+              if (urlParams.get('child')) setSelectedChildOrg(urlParams.get('child'));
+              break;
+            case 'location':
+              if (urlParams.get('county')) setSelectedLocationCounty(urlParams.get('county'));
+              if (urlParams.get('city')) setSelectedLocationCity(urlParams.get('city'));
+              if (urlParams.get('loczip')) setSelectedLocationZip(urlParams.get('loczip'));
+              break;
+            default:
+              break;
+          }
+
+          // Apply assistance chip filters
+          const assistParam = urlParams.get('assist');
+          if (assistParam) {
+            setActiveAssistanceChips(new Set(assistParam.split(',')));
+          }
+
+          console.log('🔗 Deep link params applied:', { mode, zip: urlParams.get('zip'), assist: assistParam });
+        }
+
         const loadTime = Math.round(performance.now() - startTime);
         console.log(`✅ AppDataContext: Data loaded in ${loadTime}ms`);
         console.log(`   directory: ${directoryData.length}, assistance: ${assistanceData.length}, zipCodes: ${zipCodesData.length}, organizations: ${orgsList.length}, orgAssistanceMap: ${Object.keys(assistanceMap).length} orgs, distressData: ${distressDataResult.length}, distressData2023: ${distressData2023Result.length}, workingPoorData: ${workingPoorDataResult.length}, workingPoorData2023: ${workingPoorData2023Result.length}, evictionsData: ${evictionsDataResult.length}, zipCodeData: ${zipCodeDataResult.length}`);

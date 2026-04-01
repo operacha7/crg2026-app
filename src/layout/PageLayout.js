@@ -12,15 +12,17 @@ export default function PageLayout({
   showNav = true,
   onSendEmail,
   onCreatePdf,
+  onSendSms,
   totalCount = 0,
   filteredCount = 0,
   selectedCount = 0,
-  // Props for email/PDF panels
+  // Props for email/PDF/SMS panels
   selectedData = [],
   loggedInUser,
   headerText,
   onEmailSuccess,
   onPdfSuccess,
+  onSmsSuccess,
 }) {
   // Mobile menu state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -43,11 +45,13 @@ export default function PageLayout({
             selectedCount={selectedCount}
             onSendEmail={onSendEmail}
             onCreatePdf={onCreatePdf}
+            onSendSms={onSendSms}
             selectedData={selectedData}
             loggedInUser={loggedInUser}
             headerText={headerText}
             onEmailSuccess={onEmailSuccess}
             onPdfSuccess={onPdfSuccess}
+            onSmsSuccess={onSmsSuccess}
             onOpenMobileMenu={handleOpenMobileMenu}
           />
         )}
