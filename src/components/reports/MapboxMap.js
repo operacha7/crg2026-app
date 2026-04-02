@@ -4566,8 +4566,8 @@ const MapboxMap = forwardRef(function MapboxMap({
       cy += 22;
     }
 
-    // Red pin circle + "Organization location"
-    ctx.fillStyle = "#ff0000";
+    // Green pin circle + "Organization location"
+    ctx.fillStyle = "#00CC44";
     ctx.beginPath();
     ctx.arc(x + pad + 5, cy + 6, 4, 0, Math.PI * 2);
     ctx.fill();
@@ -4576,8 +4576,8 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.fillText("Organization location", x + pad + 18, cy);
     cy += 20;
 
-    // Green pin circle + "Selected organization"
-    ctx.fillStyle = "#00CC44";
+    // Cyan pin circle + "Selected organization"
+    ctx.fillStyle = "#00FDFD";
     ctx.beginPath();
     ctx.arc(x + pad + 5, cy + 6, 4, 0, Math.PI * 2);
     ctx.fill();
@@ -4656,8 +4656,8 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.stroke();
     cy += 10;
 
-    // Red pin + "Organization location"
-    ctx.fillStyle = "#ff0000";
+    // Green pin + "Organization location"
+    ctx.fillStyle = "#00CC44";
     ctx.beginPath();
     ctx.arc(x + pad + 5, cy + 6, 4, 0, Math.PI * 2);
     ctx.fill();
@@ -4666,8 +4666,8 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.fillText("Organization location", x + pad + 18, cy);
     cy += 20;
 
-    // Green pin + "Selected organization"
-    ctx.fillStyle = "#00CC44";
+    // Cyan pin + "Selected organization"
+    ctx.fillStyle = "#00FDFD";
     ctx.beginPath();
     ctx.arc(x + pad + 5, cy + 6, 4, 0, Math.PI * 2);
     ctx.fill();
@@ -4939,7 +4939,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.fill();
 
     // Head (circle)
-    const headColor = isActive ? "#00CC44" : "#ff0000";
+    const headColor = isActive ? "#00FDFD" : "#00CC44";
     ctx.fillStyle = headColor;
     ctx.beginPath();
     ctx.arc(24, 13, 9, 0, Math.PI * 2);
