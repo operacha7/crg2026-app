@@ -404,6 +404,8 @@ export default function NavBar1({
             </div>
 
             {/* Send SMS button with dropdown panel */}
+            {/* TEMPORARILY HIDDEN: Awaiting Twilio A2P 10DLC approval. Re-enable when registration is approved. */}
+            {/*
             <div className="relative">
               <Tooltip text={isGuest ? "You need an account. Contact Support." : ""} position="bottom">
                 <button
@@ -427,7 +429,6 @@ export default function NavBar1({
                 </button>
               </Tooltip>
 
-              {/* SMS Panel */}
               <SmsPanel
                 isOpen={showSmsPanel}
                 onCancel={handleSmsCancel}
@@ -437,6 +438,7 @@ export default function NavBar1({
                 statusMessage={statusMessage}
               />
             </div>
+            */}
           </div>
         </div>
       </div>
