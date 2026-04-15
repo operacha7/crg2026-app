@@ -152,9 +152,42 @@ function formatHoursPdfHtml(record) {
  * - Full-width bottom: Requirements
  */
 export function formatPdfResourcesHtml(selectedData, includeAssistanceHeaders = true) {
-  const sortedData = getSortedData(selectedData);
+  const hasNonActive = selectedData.some((r) => (r.status_id ?? 1) !== 1);
 
-  // Group by assist_id
+  if (hasNonActive) {
+    // Group by status_id then assistance
+    const byStatus = selectedData.reduce((acc, item) => {
+      const sid = item.status_id ?? 999;
+      if (!acc[sid]) {
+        acc[sid] = { statusId: sid, statusLabel: item.status || "Unknown", items: [] };
+      }
+      acc[sid].items.push(item);
+      return acc;
+    }, {});
+
+    let runningIndex = 0;
+    return Object.values(byStatus)
+      .sort((a, b) => a.statusId - b.statusId)
+      .map((statusGroup) => {
+        const inner = renderAssistanceGroupsHtml(
+          statusGroup.items,
+          includeAssistanceHeaders,
+          () => ++runningIndex
+        );
+        return `
+<h2 style="font-family: Arial, sans-serif; font-size: 16px; color: #B8001F; margin-top: 24px; margin-bottom: 10px; border-bottom: 1px solid #B8001F; padding-bottom: 4px;">Status:&nbsp;&nbsp;${statusGroup.statusLabel}</h2>
+${inner}`;
+      })
+      .join("\n");
+  }
+
+  let runningIndex = 0;
+  return renderAssistanceGroupsHtml(selectedData, includeAssistanceHeaders, () => ++runningIndex);
+}
+
+function renderAssistanceGroupsHtml(items, includeAssistanceHeaders, nextIndex) {
+  const sortedData = getSortedData(items);
+
   const grouped = sortedData.reduce((acc, item) => {
     const assistId = item.assist_id || "999";
     if (!acc[assistId]) {
@@ -167,14 +200,11 @@ export function formatPdfResourcesHtml(selectedData, includeAssistanceHeaders = 
     return acc;
   }, {});
 
-  // Track running index across all groups
-  let runningIndex = 0;
-
   return Object.values(grouped)
     .map((group) => {
       const sectionRows = group.items
         .map((e) => {
-          runningIndex++;
+          const runningIndex = nextIndex();
           const addressLines = formatAddress(e);
           const addressHtml = addressLines.join("<br/>");
 

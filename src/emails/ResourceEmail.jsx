@@ -58,6 +58,29 @@ function groupByAssistance(data) {
 }
 
 /**
+ * Group by status_id then by assistance. Returns array of
+ * { statusId, statusLabel, assistanceGroups: [...] } sorted by status_id.
+ */
+function groupByStatusThenAssistance(data) {
+  const byStatus = data.reduce((acc, item) => {
+    const sid = item.status_id ?? 999;
+    if (!acc[sid]) {
+      acc[sid] = { statusId: sid, statusLabel: item.status || 'Unknown', items: [] };
+    }
+    acc[sid].items.push(item);
+    return acc;
+  }, {});
+
+  return Object.values(byStatus)
+    .sort((a, b) => a.statusId - b.statusId)
+    .map((s) => ({
+      statusId: s.statusId,
+      statusLabel: s.statusLabel,
+      assistanceGroups: Object.values(groupByAssistance(s.items)),
+    }));
+}
+
+/**
  * Main email template component
  *
  * @param {Object} props
@@ -72,7 +95,9 @@ export function ResourceEmail({
   orgPhone = '713-664-5350',
   previewText = 'Your requested community resources',
 }) {
-  const grouped = groupByAssistance(resources);
+  const hasNonActive = resources.some((r) => (r.status_id ?? 1) !== 1);
+  const grouped = hasNonActive ? null : groupByAssistance(resources);
+  const statusGrouped = hasNonActive ? groupByStatusThenAssistance(resources) : null;
 
   return (
     <Html>
@@ -107,8 +132,8 @@ export function ResourceEmail({
             .
           </Text>
 
-          {/* Resource sections grouped by assistance type */}
-          {Object.values(grouped).map((group, groupIdx) => (
+          {/* Resource sections grouped by assistance type (all Active) */}
+          {!hasNonActive && Object.values(grouped).map((group, groupIdx) => (
             <Section key={groupIdx}>
               {/* Assistance type header */}
               <Text style={styles.assistanceHeader}>
@@ -126,6 +151,33 @@ export function ResourceEmail({
                   requirements={parseRequirements(resource.requirements)}
                   distanceText={formatDistance(resource.distance)}
                 />
+              ))}
+            </Section>
+          ))}
+
+          {/* Resource sections grouped by status then assistance (mixed statuses) */}
+          {hasNonActive && statusGrouped.map((statusGroup) => (
+            <Section key={`s-${statusGroup.statusId}`}>
+              <Text style={styles.statusHeader}>
+                Status:&nbsp;&nbsp;{statusGroup.statusLabel}
+              </Text>
+              {statusGroup.assistanceGroups.map((group, groupIdx) => (
+                <Section key={`${statusGroup.statusId}-${groupIdx}`}>
+                  <Text style={styles.assistanceHeader}>
+                    Assistance:&nbsp;&nbsp;{group.label}
+                  </Text>
+                  {group.items.map((resource, idx) => (
+                    <ResourceCard
+                      key={resource.id_no || idx}
+                      resource={resource}
+                      index={idx}
+                      formattedHours={formatHoursFromJson(resource.org_hours)}
+                      addressLines={formatAddress(resource)}
+                      requirements={parseRequirements(resource.requirements)}
+                      distanceText={formatDistance(resource.distance)}
+                    />
+                  ))}
+                </Section>
               ))}
             </Section>
           ))}
@@ -189,6 +241,14 @@ const styles = {
   link: {
     color: '#0066cc',
     textDecoration: 'underline',
+  },
+  statusHeader: {
+    fontFamily: 'Arial, sans-serif',
+    marginTop: '30px',
+    marginBottom: '8px',
+    fontSize: '18px',
+    fontWeight: 'bold',
+    color: '#B8001F',
   },
   assistanceHeader: {
     fontFamily: 'Arial, sans-serif',
