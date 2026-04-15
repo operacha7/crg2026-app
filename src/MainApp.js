@@ -1,7 +1,6 @@
 // src/MainApp.js
 import { createClient } from "@supabase/supabase-js";
-import React from "react";
-import { useEffect } from "react";
+import React, { lazy, Suspense, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { Navigate, Route, Routes } from "react-router-dom";
@@ -10,11 +9,15 @@ import AnnouncementManager from './components/AnnouncementManager';
 import ScheduledReload from './components/ScheduledReload';
 
 import { AppDataProvider, useAppData } from "./Contexts/AppDataContext";
+// ZipCodePage is the landing route — keep it eagerly imported so mobile users see content immediately.
 import ZipCodePage from "./views/ZipCodePage";
-import ReportsPage from "./views/ReportsPage";
-import LegalPage from "./views/LegalPage";
-import SupportPage from "./views/SupportPage";
-import AnnouncementsPage from "./views/AnnouncementsPage";
+// Secondary routes are desktop-only and unreachable from mobile (no hamburger/vertical nav).
+// Lazy-loading pulls mapbox-gl (Reports) and other heavy deps out of the initial bundle,
+// which measurably reduces mobile cold-start parse/compile time.
+const ReportsPage = lazy(() => import("./views/ReportsPage"));
+const LegalPage = lazy(() => import("./views/LegalPage"));
+const SupportPage = lazy(() => import("./views/SupportPage"));
+const AnnouncementsPage = lazy(() => import("./views/AnnouncementsPage"));
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -115,27 +118,29 @@ function AppContent({ loggedInUser }) {
   return (
     <>
       <Toaster position="top-center" />
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <ZipCodePage
-              loggedInUser={loggedInUser}
-            />
-          }
-        />
-        <Route
-          path="/announcements"
-          element={<AnnouncementsPage loggedInUser={loggedInUser} />}
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-        <Route
-          path="/reports"
-          element={<ReportsPage />}
-        />
-        <Route path="/privacy" element={<LegalPage loggedInUser={loggedInUser} />} />
-        <Route path="/support" element={<SupportPage loggedInUser={loggedInUser} />} />
-      </Routes>
+      <Suspense fallback={null}>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <ZipCodePage
+                loggedInUser={loggedInUser}
+              />
+            }
+          />
+          <Route
+            path="/announcements"
+            element={<AnnouncementsPage loggedInUser={loggedInUser} />}
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route
+            path="/reports"
+            element={<ReportsPage />}
+          />
+          <Route path="/privacy" element={<LegalPage loggedInUser={loggedInUser} />} />
+          <Route path="/support" element={<SupportPage loggedInUser={loggedInUser} />} />
+        </Routes>
+      </Suspense>
     </>
   );
 }
