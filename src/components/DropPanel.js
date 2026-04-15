@@ -18,6 +18,7 @@
  * @param {string} clearButtonText - Text for Clear button (default: "Clear")
  * @param {string} clearButtonBgColor - Background color for Clear button (default: "#007ab8")
  * @param {string} clearButtonTextColor - Text color for Clear button (default: "#FFFFFF")
+ * @param {boolean} hideOkButton - When true, suppress the default OK button (default: false)
  */
 export default function DropPanel({
   title,
@@ -33,6 +34,7 @@ export default function DropPanel({
   clearButtonText = "Clear",
   clearButtonBgColor = "#007ab8",
   clearButtonTextColor = "#FFFFFF",
+  hideOkButton = false,
 }) {
   if (!isOpen) return null;
 
@@ -139,22 +141,24 @@ export default function DropPanel({
             </button>
           )}
 
-          <button
-            onClick={onSave}
-            disabled={okDisabled}
-            className="font-opensans transition-all duration-200 hover:brightness-110"
-            style={{
-              backgroundColor: "var(--color-panel-btn-ok-bg)",
-              color: "var(--color-panel-btn-text)",
-              width: "var(--width-panel-btn)",
-              height: "var(--height-panel-btn)",
-              borderRadius: "var(--radius-panel-btn)",
-              fontSize: "var(--font-size-panel-btn)",
-              letterSpacing: "var(--letter-spacing-panel-btn)",
-            }}
-          >
-            {okButtonText}
-          </button>
+          {!hideOkButton && (
+            <button
+              onClick={onSave}
+              disabled={okDisabled}
+              className="font-opensans transition-all duration-200 hover:brightness-110"
+              style={{
+                backgroundColor: "var(--color-panel-btn-ok-bg)",
+                color: "var(--color-panel-btn-text)",
+                width: "var(--width-panel-btn)",
+                height: "var(--height-panel-btn)",
+                borderRadius: "var(--radius-panel-btn)",
+                fontSize: "var(--font-size-panel-btn)",
+                letterSpacing: "var(--letter-spacing-panel-btn)",
+              }}
+            >
+              {okButtonText}
+            </button>
+          )}
         </div>
       </div>
     </div>

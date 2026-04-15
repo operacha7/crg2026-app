@@ -1,10 +1,10 @@
 // src/layout/NavBar1.js
 // Top navigation bar with logo, title, counters, and action buttons
 // Frame 494 from Figma design
-// Responsive: Shows hamburger menu on mobile, full layout on desktop
+// Responsive: Simplified action row on mobile (no hamburger), full layout on desktop
 
 import { useState, useRef, useEffect } from "react";
-import { Menu } from "lucide-react";
+import { Mail } from "lucide-react";
 import Tooltip from "../components/Tooltip";
 import EmailPanel from "../components/EmailPanel";
 import SmsPanel from "../components/SmsPanel";
@@ -23,9 +23,8 @@ export default function NavBar1({
   headerText = "Resources",
   onEmailSuccess,
   onPdfSuccess,
-  onSmsSuccess,
-  // Mobile menu handler
-  onOpenMobileMenu,
+  smsBody = "",
+  onSmsInitiated,
 }) {
   // Orange counter shows totalCount initially (before any filter applied),
   // then shows filteredCount once user starts filtering
@@ -148,14 +147,21 @@ export default function NavBar1({
     }
   };
 
-  // Handle Send SMS button click
-  // TEMPORARY: Show "coming soon" message until A2P 10DLC registration is approved
+  // Handle Send Text button click
   const handleSmsButtonClick = () => {
     if (isGuest) {
       alert("You need an account. Contact Support.");
       return;
     }
-    alert("Send SMS is coming soon!");
+    if (onSendSms) {
+      const canProceed = onSendSms();
+      if (canProceed === false) return;
+    }
+    smsOpenTimeRef.current = Date.now();
+    setShowSmsPanel(true);
+    setShowEmailPanel(false);
+    setShowPdfPanel(false);
+    setStatusMessage("");
   };
 
   // Handle email send (language passed from EmailPanel)
@@ -209,36 +215,9 @@ export default function NavBar1({
     setStatusMessage("");
   };
 
-  // Handle SMS send
-  const handleSmsSend = async (phoneNumber) => {
-    if (!phoneNumber || phoneNumber.replace(/\D/g, "").length !== 10) {
-      setStatusMessage("Please enter a valid 10-digit phone number");
-      return;
-    }
-
-    setIsSending(true);
-    setStatusMessage("");
-
-    try {
-      // Format to E.164 (+1XXXXXXXXXX)
-      const digits = phoneNumber.replace(/\D/g, "");
-      const e164 = `+1${digits}`;
-
-      if (onSmsSuccess) {
-        await onSmsSuccess(e164);
-      }
-      setShowSmsPanel(false);
-    } catch (err) {
-      setStatusMessage(`Error: ${err.message}`);
-    } finally {
-      setIsSending(false);
-    }
-  };
-
   // Handle SMS cancel
   const handleSmsCancel = () => {
     setShowSmsPanel(false);
-    setStatusMessage("");
   };
   return (
     <nav
@@ -403,9 +382,7 @@ export default function NavBar1({
               />
             </div>
 
-            {/* Send SMS button with dropdown panel */}
-            {/* TEMPORARILY HIDDEN: Awaiting Twilio A2P 10DLC approval. Re-enable when registration is approved. */}
-            {/*
+            {/* Send Text button with dropdown panel */}
             <div className="relative">
               <Tooltip text={isGuest ? "You need an account. Contact Support." : ""} position="bottom">
                 <button
@@ -425,20 +402,18 @@ export default function NavBar1({
                     opacity: isGuest ? 0.6 : 1,
                   }}
                 >
-                  Send SMS
+                  Send Text
                 </button>
               </Tooltip>
 
               <SmsPanel
                 isOpen={showSmsPanel}
                 onCancel={handleSmsCancel}
-                onSend={handleSmsSend}
                 panelRef={smsPanelRef}
-                isSending={isSending}
-                statusMessage={statusMessage}
+                composedBody={smsBody}
+                onInitiated={onSmsInitiated}
               />
             </div>
-            */}
           </div>
         </div>
       </div>
@@ -535,27 +510,27 @@ export default function NavBar1({
                 }`}
                 style={{ opacity: isGuest ? 0.6 : 1, minHeight: '40px' }}
               >
-                SMS
+                Text
               </button>
               <SmsPanel
                 isOpen={showSmsPanel}
                 onCancel={handleSmsCancel}
-                onSend={handleSmsSend}
                 panelRef={smsPanelRef}
-                isSending={isSending}
-                statusMessage={statusMessage}
+                composedBody={smsBody}
+                onInitiated={onSmsInitiated}
               />
             </div>
           </div>
 
-          {/* Hamburger menu button */}
-          <button
-            onClick={onOpenMobileMenu}
-            className="text-white p-2 hover:brightness-125 transition-all"
-            aria-label="Open menu"
+          {/* Contact Support — opens user's mail app */}
+          <a
+            href="mailto:developer@operacha.org"
+            className="p-2 hover:brightness-125 transition-all"
+            style={{ color: "var(--color-footer-bg)" }}
+            aria-label="Contact Support"
           >
-            <Menu size={24} />
-          </button>
+            <Mail size={26} />
+          </a>
         </div>
       </div>
     </nav>

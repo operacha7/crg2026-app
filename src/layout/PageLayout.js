@@ -5,7 +5,6 @@ import NavBar2 from "./NavBar2";
 import NavBar3 from "./NavBar3";
 import Footer from "./Footer";
 import VerticalNavBar from "./VerticalNavBar";
-import MobileMenu from "./MobileMenu";
 
 export default function PageLayout({
   children,
@@ -22,19 +21,13 @@ export default function PageLayout({
   headerText,
   onEmailSuccess,
   onPdfSuccess,
-  onSmsSuccess,
+  smsBody = "",
+  onSmsInitiated,
 }) {
-  // Mobile menu state
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [helpPanelOpen, setHelpPanelOpen] = useState(false);
 
-  const handleOpenMobileMenu = () => setMobileMenuOpen(true);
-  const handleCloseMobileMenu = () => setMobileMenuOpen(false);
-  const handleOpenHelp = () => setHelpPanelOpen(true);
-
-
   return (
-    <div className="lg:h-screen lg:flex lg:flex-row lg:overflow-hidden overflow-auto min-h-screen bg-gray-50 text-gray-900 font-opensans">
+    <div className="lg:h-dvh lg:flex lg:flex-row lg:overflow-hidden overflow-auto min-h-dvh bg-gray-50 text-gray-900 font-opensans">
       {/* Main content area */}
       <div className="flex-1 flex flex-col lg:overflow-hidden">
         {/* NavBar 1 - Top header with logo, title, counters, buttons */}
@@ -51,8 +44,8 @@ export default function PageLayout({
             headerText={headerText}
             onEmailSuccess={onEmailSuccess}
             onPdfSuccess={onPdfSuccess}
-            onSmsSuccess={onSmsSuccess}
-            onOpenMobileMenu={handleOpenMobileMenu}
+            smsBody={smsBody}
+            onSmsInitiated={onSmsInitiated}
           />
         )}
 
@@ -77,15 +70,6 @@ export default function PageLayout({
             onHelpOpenChange={setHelpPanelOpen}
           />
         </div>
-      )}
-
-      {/* Mobile Menu (only visible on mobile) */}
-      {showNav && (
-        <MobileMenu
-          isOpen={mobileMenuOpen}
-          onClose={handleCloseMobileMenu}
-          onOpenHelp={handleOpenHelp}
-        />
       )}
     </div>
   );

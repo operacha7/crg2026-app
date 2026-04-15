@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { calculateDistance, parseCoordinates } from "../services/dataService";
 import { useAppData } from "../Contexts/AppDataContext";
-import { sendEmail, createPdf, sendSms, fetchOrgPhone, generateSearchHeader } from "../services/emailService";
+import { sendEmail, createPdf, buildSmsBody, fetchOrgPhone, generateSearchHeader } from "../services/emailService";
 import { getDrivingDistances } from "../services/geocodeService";
 import { logUsage } from "../services/usageService";
 import { applyLLMFilters } from "../services/llmSearchService";
@@ -438,20 +438,18 @@ export default function ZipCodePage({
     return true;
   };
 
-  // SMS success handler - called from NavBar1 panel
-  const handleSmsSuccess = async (recipient) => {
-    await sendSms({
-      recipient,
-      searchContext: buildSearchContext(),
-      activeAssistanceChips,
-      loggedInUser,
-    });
-
-    showAnimatedToast("✅ SMS sent successfully.", "success");
-
-    // Log to database
-    await logDeliveryAction('sms');
+  // SMS is handed off to the user's own SMS tool (native Messages, Google Voice, or clipboard).
+  // We only log that the user initiated a text; we can't confirm delivery.
+  const handleSmsInitiated = () => {
+    logDeliveryAction('sms');
   };
+
+  // Pre-compose the SMS body so the panel can preview it and hand it off verbatim.
+  const smsBody = buildSmsBody({
+    searchContext: buildSearchContext(),
+    activeAssistanceChips,
+    loggedInUser,
+  });
 
   // Calculate selected data for email/PDF panels
   const selectedData = selectedRows?.map((i) => displayDirectory[i]).filter(Boolean);
@@ -474,7 +472,8 @@ export default function ZipCodePage({
       headerText={headerText}
       onEmailSuccess={handleEmailSuccess}
       onPdfSuccess={handlePdfSuccess}
-      onSmsSuccess={handleSmsSuccess}
+      smsBody={smsBody}
+      onSmsInitiated={handleSmsInitiated}
     >
 
    <Helmet>

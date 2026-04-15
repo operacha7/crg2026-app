@@ -25,6 +25,13 @@ const AnnouncementManager = ({ loggedInUser }) => {
     const fetchAnnouncements = async () => {
       if (!loggedInUser) return;
 
+      // Suppress announcement popups on mobile (< lg breakpoint).
+      // Desktop users still see them; announcements remain accessible via the Announcements page.
+      if (window.matchMedia("(max-width: 1023px)").matches) {
+        setInitialized(true);
+        return;
+      }
+
       try {
         // Get active announcements for this user
         // Service handles filtering based on user type (guest vs registered)

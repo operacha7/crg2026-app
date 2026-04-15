@@ -287,7 +287,7 @@ function AssistancePanel({
       style={{
         borderRadius: "var(--radius-panel)",
         width: "min(1300px, calc(100vw - 32px))", // Responsive: max 1300px or screen width - 32px
-        maxHeight: "calc(100vh - 230px)", // Leave room for navbars
+        maxHeight: "calc(100dvh - 230px)", // Leave room for navbars (dvh handles mobile URL bar)
         left: "16px",
         right: "16px",
         top: "210px", // Below NavBar1 (80px) + NavBar2 (70px) + NavBar3 (60px)
@@ -814,20 +814,19 @@ export default function NavBar3() {
             />
           </div>
 
-          <span
-            className="font-Montserrat text-sm truncate max-w-[150px]"
-            style={{ color: "var(--color-navbar3-user-text, #000000)" }}
-          >
-            {displayName}
-          </span>
+          {/* Logged-in org label — desktop only; mobile is streamlined */}
         </div>
 
-        {/* Chips row - wrap on mobile */}
+        {/* Chips row - wrap on mobile, with icon + label */}
         {savedSelections.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {savedSelections.map((typeId) => {
               const typeInfo = getTypeInfo(typeId);
               if (!typeInfo) return null;
+              const iconResult = typeInfo.icon ? getIconByName(typeInfo.icon) : null;
+              const IconComponents = iconResult
+                ? (Array.isArray(iconResult) ? iconResult : [iconResult])
+                : [];
               return (
                 <button
                   key={typeId}
@@ -838,6 +837,9 @@ export default function NavBar3() {
                       : "bg-navbar3-chip-inactive-bg text-navbar3-chip-inactive-text border border-black"
                   }`}
                 >
+                  {IconComponents.map((IconComp, idx) => (
+                    <IconComp key={idx} size={14} />
+                  ))}
                   {typeInfo.name}
                 </button>
               );

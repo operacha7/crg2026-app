@@ -317,7 +317,7 @@ export default function ResultRow({
           </div>
         </div>
 
-        {/* Assistance icons + phone */}
+        {/* Primary assistance icon + phone — secondary org-wide icons omitted on mobile */}
         <div className="flex items-center justify-between text-sm mb-2">
           <div className="flex items-center gap-1">
             {AssistanceIconComponents.map((IconComp, idx) => (
@@ -325,19 +325,6 @@ export default function ResultRow({
                 <IconComp size={18} />
               </span>
             ))}
-            {orgAssistanceTypes.slice(0, 3).map((at) => {
-              const IconComp = getIconByName(at.icon);
-              // Handle array result for comma-separated icons
-              const IconComponents = Array.isArray(IconComp) ? IconComp : (IconComp ? [IconComp] : []);
-              return IconComponents.map((IC, idx) => (
-                <span key={`${at.id_no}-${idx}`} style={{ color: "var(--color-results-assistance-icon-secondary)" }}>
-                  <IC size={16} />
-                </span>
-              ));
-            })}
-            {orgAssistanceTypes.length > 3 && (
-              <span className="text-xs text-gray-500">+{orgAssistanceTypes.length - 3}</span>
-            )}
           </div>
           {record.telephone && (
             <a href={`tel:${record.telephone.replace(/\D/g, "")}`} className="text-blue-600">

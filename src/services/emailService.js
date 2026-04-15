@@ -559,42 +559,13 @@ export function buildShareUrl(searchContext, activeAssistanceChips) {
 }
 
 /**
- * Send SMS with a deep link to filtered resources
- *
- * @param {object} options
- * @param {string} options.recipient - Phone number (E.164 format preferred)
- * @param {object} options.searchContext - Current search mode and filter values
- * @param {Set} options.activeAssistanceChips - Active assistance chip IDs
- * @param {object} options.loggedInUser - Logged in user object
- * @returns {Promise<{success: boolean}>}
+ * Build the SMS message body that will be sent to a client.
+ * The sender copies or forwards this into their SMS tool of choice
+ * (native Messages, Google Voice, etc.) — CRG does not transmit it.
  */
-export async function sendSms({ recipient, searchContext, activeAssistanceChips, loggedInUser }) {
+export function buildSmsBody({ searchContext, activeAssistanceChips, loggedInUser }) {
   const shareUrl = buildShareUrl(searchContext, activeAssistanceChips);
   const headerText = generateSearchHeader(searchContext);
-
-  // Build the SMS message body
   const orgName = loggedInUser?.reg_organization || "CRG Houston";
-  const body = `${orgName} - ${headerText}: ${shareUrl}`;
-
-  const smsServiceUrl =
-    window.location.hostname === "localhost"
-      ? "http://localhost:8788/sendSms"
-      : "/sendSms";
-
-  const res = await fetch(smsServiceUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      to: recipient,
-      body,
-      organization: loggedInUser?.reg_organization,
-    }),
-  });
-
-  const result = await res.json();
-  if (!result.success) {
-    throw new Error(result.message || "SMS failed to send.");
-  }
-
-  return { success: true, recipient };
+  return `${orgName} - ${headerText}: ${shareUrl}`;
 }

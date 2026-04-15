@@ -1248,6 +1248,19 @@ export default function NavBar2() {
   // Get organization name for logging
   const regOrgName = loggedInUser?.reg_organization || 'Guest';
 
+  // Mobile is locked to Zip Code mode — force it whenever we're under the lg breakpoint.
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const enforceZip = () => {
+      if (mq.matches && activeSearchMode !== SEARCH_MODES.ZIPCODE) {
+        setActiveSearchMode(SEARCH_MODES.ZIPCODE);
+      }
+    };
+    enforceZip();
+    mq.addEventListener("change", enforceZip);
+    return () => mq.removeEventListener("change", enforceZip);
+  }, [activeSearchMode, setActiveSearchMode]);
+
   // Handler for coordinates change from Distance panel
   const handleCoordinatesChange = (address, coordinates) => {
     setClientAddress(address);
@@ -1602,41 +1615,17 @@ export default function NavBar2() {
         </div>
       </div>
 
-      {/* ========== MOBILE LAYOUT (<md) ========== */}
-      <div className="lg:hidden flex flex-col py-2 px-3 gap-2">
-        {/* Top row - Mode selector tabs */}
-        <div className="flex gap-1 overflow-x-auto">
-          {[
-            { mode: SEARCH_MODES.ZIPCODE, label: "Zip" },
-            { mode: SEARCH_MODES.ORGANIZATION, label: "Org" },
-            { mode: SEARCH_MODES.LOCATION, label: "Location" },
-            { mode: SEARCH_MODES.LLM, label: "Ask" },
-          ].map(({ mode, label }) => (
-            <button
-              key={mode}
-              onClick={() => handleModeChange(mode)}
-              className="px-3 py-1.5 rounded text-sm font-medium whitespace-nowrap transition-all hover:brightness-125"
-              style={{
-                backgroundColor: activeSearchMode === mode
-                  ? "var(--color-navbar2-btn-active-bg)"
-                  : "var(--color-navbar2-btn-inactive-bg)",
-                color: activeSearchMode === mode
-                  ? "var(--color-navbar2-btn-active-text)"
-                  : "var(--color-navbar2-btn-inactive-text)",
-                border: activeSearchMode === mode
-                  ? "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)"
-                  : "var(--border-width-btn) solid var(--color-navbar2-btn-inactive-border)",
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Bottom row - Mode-specific filters (simplified for mobile) */}
-        <div className="flex flex-wrap items-center gap-2">
-          {renderFilters()}
-        </div>
+      {/* ========== MOBILE LAYOUT (<lg) ========== */}
+      {/* Mobile is locked to Zip Code mode — no mode selector, no neighborhood, no distance */}
+      <div className="lg:hidden flex items-center py-2 px-3">
+        <ZipCodeDropdown
+          value={selectedZipCode}
+          onChange={handleZipCodeChange}
+          options={zipCodeOptions}
+          placeholder="Choose Zip Code"
+          useDropdownStyle={true}
+          usePromptingStyle={true}
+        />
       </div>
     </nav>
   );
