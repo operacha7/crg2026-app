@@ -419,37 +419,76 @@ export default function ZipCodePage({
     return true;
   };
 
-  // SMS validation - requires a zip code filter and at least one assistance chip
+  // Send Text validation. Unlike Email/PDF, Text doesn't use row selection — the recipient
+  // receives a deep link to the same filtered view. So we gate on filter state + results only.
   const validateSmsSelection = () => {
-    if (!selectedZipCode) {
+    const missingZip = !selectedZipCode;
+    const missingAssistance = activeAssistanceChips.size === 0;
+
+    if (missingZip && missingAssistance) {
       showAnimatedToast(
-        "⚠️ Please select a zip code before sending SMS.",
+        "⚠️ Please select a zip code and at least one assistance type.",
         "error"
       );
       return false;
     }
-    if (activeAssistanceChips.size === 0) {
+    if (missingZip) {
+      showAnimatedToast("⚠️ Please select a zip code.", "error");
+      return false;
+    }
+    if (missingAssistance) {
+      showAnimatedToast("⚠️ Please select at least one assistance type.", "error");
+      return false;
+    }
+    if (!displayDirectory || displayDirectory.length === 0) {
       showAnimatedToast(
-        "⚠️ Please select at least one assistance type before sending SMS.",
+        "⚠️ No resources match these filters — nothing to send.",
         "error"
       );
       return false;
     }
+
+    // Row selection is meaningless for Send Text — clear it so the blue counter updates
+    // in sync with the panel opening.
+    setSelectedRows([]);
     return true;
   };
 
-  // SMS is handed off to the user's own SMS tool (native Messages, Google Voice, or clipboard).
-  // We only log that the user initiated a text; we can't confirm delivery.
+  // Fires on any Send Text handoff action (Messages, copy, QR). Logs usage; the
+  // "Opened in Messages..." toast is triggered from the Messages-specific handler.
   const handleSmsInitiated = () => {
     logDeliveryAction('sms');
   };
 
+  // Fires only when the user clicks "Open in Messages App" (the handoff that actually
+  // triggers an OS-level action). Reassures the user the handoff happened, especially
+  // on desktops where sms: can silently fail if Messages isn't configured.
+  const handleMessagesHandoff = () => {
+    showAnimatedToast(
+      "✅ Opened in Messages — just hit send from there.",
+      "success"
+    );
+  };
+
   // Pre-compose the SMS body so the panel can preview it and hand it off verbatim.
-  const smsBody = buildSmsBody({
+  // Memoized so NavBar1 doesn't re-render on unrelated state changes just because
+  // this string got a new reference.
+  const smsBody = useMemo(() => buildSmsBody({
     searchContext: buildSearchContext(),
     activeAssistanceChips,
     loggedInUser,
-  });
+  }), [
+    activeSearchMode,
+    selectedZipCode,
+    selectedParentOrg,
+    selectedChildOrg,
+    selectedLocationCounty,
+    selectedLocationCity,
+    selectedLocationZip,
+    llmSearchQuery,
+    activeAssistanceChips,
+    loggedInUser,
+  ]);
 
   // Calculate selected data for email/PDF panels
   const selectedData = selectedRows?.map((i) => displayDirectory[i]).filter(Boolean);
@@ -474,6 +513,7 @@ export default function ZipCodePage({
       onPdfSuccess={handlePdfSuccess}
       smsBody={smsBody}
       onSmsInitiated={handleSmsInitiated}
+      onMessagesHandoff={handleMessagesHandoff}
     >
 
    <Helmet>

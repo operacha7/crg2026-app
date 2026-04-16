@@ -25,6 +25,7 @@ export default function NavBar1({
   onPdfSuccess,
   smsBody = "",
   onSmsInitiated,
+  onMessagesHandoff,
 }) {
   // Orange counter shows totalCount initially (before any filter applied),
   // then shows filteredCount once user starts filtering
@@ -412,6 +413,7 @@ export default function NavBar1({
                 panelRef={smsPanelRef}
                 composedBody={smsBody}
                 onInitiated={onSmsInitiated}
+                onMessagesHandoff={onMessagesHandoff}
               />
             </div>
           </div>
@@ -518,6 +520,7 @@ export default function NavBar1({
                 panelRef={smsPanelRef}
                 composedBody={smsBody}
                 onInitiated={onSmsInitiated}
+                onMessagesHandoff={onMessagesHandoff}
               />
             </div>
           </div>

@@ -144,16 +144,19 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
   const [quickTipsShownThisSession, setQuickTipsShownThisSession] = useState(false); // Track if auto-shown already
   const [quickTipsHighlightChipToggle, setQuickTipsHighlightChipToggle] = useState(false); // Highlight chip toggle section on auto-open
 
-  // Clear client coordinates and driving distances when zip code changes
+  // Clear client coordinates and driving distances when zip code changes.
+  // Guard the Map reset: only replace if non-empty. `new Map()` always creates a new
+  // reference, which would otherwise force every consumer of `drivingDistances` to
+  // re-render on every zip change even though nothing changed.
   useEffect(() => {
     setClientAddress("");
     setClientCoordinates("");
-    setDrivingDistances(new Map());
+    setDrivingDistances(prev => (prev.size === 0 ? prev : new Map()));
   }, [selectedZipCode, selectedLocationZip]);
 
   // Clear driving distances when client coordinates change (new lookup needed)
   useEffect(() => {
-    setDrivingDistances(new Map());
+    setDrivingDistances(prev => (prev.size === 0 ? prev : new Map()));
   }, [clientCoordinates]);
 
   // Load data in two phases:

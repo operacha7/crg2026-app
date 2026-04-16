@@ -19,6 +19,7 @@
  * @param {string} clearButtonBgColor - Background color for Clear button (default: "#007ab8")
  * @param {string} clearButtonTextColor - Text color for Clear button (default: "#FFFFFF")
  * @param {boolean} hideOkButton - When true, suppress the default OK button (default: false)
+ * @param {string} cancelButtonText - Text for Cancel button (default: "Cancel")
  */
 export default function DropPanel({
   title,
@@ -35,6 +36,7 @@ export default function DropPanel({
   clearButtonBgColor = "#007ab8",
   clearButtonTextColor = "#FFFFFF",
   hideOkButton = false,
+  cancelButtonText = "Cancel",
 }) {
   if (!isOpen) return null;
 
@@ -112,14 +114,15 @@ export default function DropPanel({
             style={{
               backgroundColor: "var(--color-panel-btn-cancel-bg)",
               color: "var(--color-panel-btn-text)",
-              width: "var(--width-panel-btn)",
+              minWidth: "var(--width-panel-btn)",
               height: "var(--height-panel-btn)",
+              padding: "0 12px",
               borderRadius: "var(--radius-panel-btn)",
               fontSize: "var(--font-size-panel-btn)",
               letterSpacing: "var(--letter-spacing-panel-btn)",
             }}
           >
-            Cancel
+            {cancelButtonText}
           </button>
 
           {/* Optional Clear button in the middle */}
@@ -149,11 +152,13 @@ export default function DropPanel({
               style={{
                 backgroundColor: "var(--color-panel-btn-ok-bg)",
                 color: "var(--color-panel-btn-text)",
-                width: "var(--width-panel-btn)",
+                minWidth: "var(--width-panel-btn)",
                 height: "var(--height-panel-btn)",
+                padding: "0 12px",
                 borderRadius: "var(--radius-panel-btn)",
                 fontSize: "var(--font-size-panel-btn)",
                 letterSpacing: "var(--letter-spacing-panel-btn)",
+                whiteSpace: "nowrap",
               }}
             >
               {okButtonText}

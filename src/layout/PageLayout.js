@@ -23,6 +23,7 @@ export default function PageLayout({
   onPdfSuccess,
   smsBody = "",
   onSmsInitiated,
+  onMessagesHandoff,
 }) {
   const [helpPanelOpen, setHelpPanelOpen] = useState(false);
 
@@ -46,6 +47,7 @@ export default function PageLayout({
             onPdfSuccess={onPdfSuccess}
             smsBody={smsBody}
             onSmsInitiated={onSmsInitiated}
+            onMessagesHandoff={onMessagesHandoff}
           />
         )}
 
