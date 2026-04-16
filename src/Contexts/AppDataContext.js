@@ -2,7 +2,7 @@
 // Central data context for CRG 2026
 // Loads all data once on app start for client-side filtering
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { dataService } from '../services/dataService';
 
 const AppDataContext = createContext();
@@ -303,43 +303,46 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
     llmSearchFilters
   );
 
-  const value = {
+  // Memoize the context value so consumers don't re-render on every parent render.
+  // Without this, every state change in AppDataProvider re-renders all consumers
+  // (NavBars, ResultsList, every ResultRow), which is the root cause of the cold-start stall
+  // when the user clicks the zip dropdown or selects an assistance type.
+  const value = useMemo(() => ({
     // Data
     directory,
     assistance,
     zipCodes,
-    organizations, // Derived from directory for NavBar2 dropdowns
-    orgAssistanceMap, // org name → array of assist_ids (for Assistance column icons)
-    distressData, // Census socioeconomic indicators by zip (from distress_data table)
-    distressData2023, // 2023 archive for year-over-year comparison
-    workingPoorData, // Census working poor indicators by zip (from working_poor_data table)
-    workingPoorData2023, // 2023 archive for year-over-year comparison
-    evictionsData, // Eviction indicators by zip (from evictions_data table)
-    zipCodeData, // Combined scores by zip (from zip_code_data table)
-    headerConfig, // Column display configuration (from header_config table)
+    organizations,
+    orgAssistanceMap,
+    distressData,
+    distressData2023,
+    workingPoorData,
+    workingPoorData2023,
+    evictionsData,
+    zipCodeData,
+    headerConfig,
 
     // Auth
-    loggedInUser, // Passed from App level for logging
+    loggedInUser,
 
     // Status
     loading,
     error,
 
-    // Search mode (shared between NavBar2 and results pages)
+    // Search mode
     activeSearchMode,
     setActiveSearchMode,
 
     // Derived filter state
-    hasActiveSearchFilter, // true when any search filter is active (for NavBar3 button state)
+    hasActiveSearchFilter,
 
-    // Filter state (shared between NavBar2/NavBar3 and results pages)
+    // Filter state
     selectedZipCode,
     setSelectedZipCode,
     selectedParentOrg,
     setSelectedParentOrg,
     selectedChildOrg,
     setSelectedChildOrg,
-    // Location mode filters (county/city/zip/neighborhood hierarchy)
     selectedLocationCounty,
     setSelectedLocationCounty,
     selectedLocationCity,
@@ -351,13 +354,13 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
     activeAssistanceChips,
     setActiveAssistanceChips,
 
-    // Client location override (for distance calculations)
+    // Client location override
     clientAddress,
     setClientAddress,
     clientCoordinates,
     setClientCoordinates,
 
-    // Driving distances (Map of record id → miles)
+    // Driving distances
     drivingDistances,
     setDrivingDistances,
     drivingDistancesLoading,
@@ -386,7 +389,21 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
     setQuickTipsShownThisSession,
     quickTipsHighlightChipToggle,
     setQuickTipsHighlightChipToggle,
-  };
+  }), [
+    directory, assistance, zipCodes, organizations, orgAssistanceMap,
+    distressData, distressData2023, workingPoorData, workingPoorData2023,
+    evictionsData, zipCodeData, headerConfig,
+    loggedInUser, loading, error,
+    activeSearchMode, hasActiveSearchFilter,
+    selectedZipCode, selectedParentOrg, selectedChildOrg,
+    selectedLocationCounty, selectedLocationCity, selectedLocationZip, selectedLocationNeighborhood,
+    activeAssistanceChips,
+    clientAddress, clientCoordinates,
+    drivingDistances, drivingDistancesLoading,
+    llmSearchQuery, llmSearchFilters, llmSearchInterpretation,
+    llmSearchLoading, llmSearchError, llmRelatedSearches,
+    quickTipsOpen, quickTipsExpandedSection, quickTipsShownThisSession, quickTipsHighlightChipToggle,
+  ]);
 
   return (
     <AppDataContext.Provider value={value}>

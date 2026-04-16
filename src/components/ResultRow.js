@@ -2,7 +2,7 @@
 // Individual result row component for displaying resource data
 // Handles expand/collapse for Requirements and Zip columns
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { getIconByName, getIconNames } from "../icons/iconMap";
 import { Car11Icon } from "../icons";
 import {
@@ -128,7 +128,7 @@ function IconWithTooltip({ IconComponent, size, iconName, color, className, posi
   );
 }
 
-export default function ResultRow({
+function ResultRow({
   record,
   isSelected,
   onSelect,
@@ -169,29 +169,35 @@ export default function ResultRow({
     : [];
 
   // Parse requirements into array (newline separated from Google Sheets Alt+Enter)
-  const requirements = record.requirements
-    ? record.requirements.split(/[\n]/).map((r) => r.trim()).filter(Boolean)
-    : [];
+  const requirements = useMemo(() => (
+    record.requirements
+      ? record.requirements.split(/[\n]/).map((r) => r.trim()).filter(Boolean)
+      : []
+  ), [record.requirements]);
 
   // Parse zip codes into array
-  const zipCodes = record.client_zip_codes
-    ? (Array.isArray(record.client_zip_codes)
-        ? record.client_zip_codes
-        : record.client_zip_codes.split(/[,\n]/).map((z) => z.trim()).filter(Boolean))
-    : [];
+  const zipCodes = useMemo(() => (
+    record.client_zip_codes
+      ? (Array.isArray(record.client_zip_codes)
+          ? record.client_zip_codes
+          : record.client_zip_codes.split(/[,\n]/).map((z) => z.trim()).filter(Boolean))
+      : []
+  ), [record.client_zip_codes]);
 
   // Get all assistance types this org provides (from lookup map, for Assistance column icons)
   // orgAssistanceMap[orgName] = array of assist_ids (e.g., ["11", "12", "65"])
-  const orgAssistIds = orgAssistanceMap[record.organization] || [];
-  const orgAssistanceTypes = allAssistanceTypes.filter((at) =>
-    orgAssistIds.includes(at.assist_id)
-  );
+  const orgAssistanceTypes = useMemo(() => {
+    const orgAssistIds = orgAssistanceMap[record.organization] || [];
+    return allAssistanceTypes.filter((at) => orgAssistIds.includes(at.assist_id));
+  }, [allAssistanceTypes, orgAssistanceMap, record.organization]);
 
   // Format address
-  const addressLines = formatAddress(record);
+  const addressLines = useMemo(() => formatAddress(record), [record]);
 
-  // Format hours from JSON - use org_hours field
-  const formattedHours = formatHoursFromJson(record.org_hours);
+  // Format hours from JSON - use org_hours field.
+  // formatHoursFromJson does a JSON.parse on the raw string; with ~1000 rows this
+  // dominates render cost on cold start, so memoize it on the raw input.
+  const formattedHours = useMemo(() => formatHoursFromJson(record.org_hours), [record.org_hours]);
 
   // Determine background based on selection state or alternating row colors
   const getBgStyle = () => {
@@ -844,6 +850,10 @@ export default function ResultRow({
     </>
   );
 }
+
+// Memoized export — prevents every row from re-rendering when only a few props change
+// (e.g., when one row's selection toggles, or when filters change but most rows persist).
+export default React.memo(ResultRow);
 
 // Export grid columns for use in ResultsHeader
 export { GRID_COLUMNS };
