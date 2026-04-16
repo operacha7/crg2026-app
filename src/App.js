@@ -1,9 +1,12 @@
 // src/App.js
-import React, { useState } from "react";
+import React, { useState, lazy, Suspense } from "react";
 import { HelmetProvider } from "react-helmet-async";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import LoginPage from "./auth/Login";
-import MainApp from "./MainApp";
+// MainApp (and everything it transitively imports — NavBars, ZipCodePage, email service,
+// Supabase client) is lazy-loaded so the login screen ships with a much smaller initial
+// bundle. Critical on mobile networks.
+const MainApp = lazy(() => import("./MainApp"));
 
 // DEV BYPASS: Skip login in development OR when running with wrangler (production build locally)
 // Set to false to test login flow, true to skip login during development
@@ -61,7 +64,9 @@ export default function App() {
             path="/*"
             element={
               user ? (
-                <MainApp loggedInUser={user} />
+                <Suspense fallback={null}>
+                  <MainApp loggedInUser={user} />
+                </Suspense>
               ) : (
                 <Navigate to={getLoginPath()} replace />
               )

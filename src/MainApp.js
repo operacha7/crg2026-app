@@ -1,14 +1,13 @@
 // src/MainApp.js
-import { createClient } from "@supabase/supabase-js";
 import React, { lazy, Suspense, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import { Navigate, Route, Routes } from "react-router-dom";
 // Import Announcement components
 import AnnouncementManager from './components/AnnouncementManager';
 import ScheduledReload from './components/ScheduledReload';
 
 import { AppDataProvider, useAppData } from "./Contexts/AppDataContext";
+import { supabase } from "./supabaseClient";
 // ZipCodePage is the landing route — keep it eagerly imported so mobile users see content immediately.
 import ZipCodePage from "./views/ZipCodePage";
 // Secondary routes are desktop-only and unreachable from mobile (no hamburger/vertical nav).
@@ -18,32 +17,6 @@ const ReportsPage = lazy(() => import("./views/ReportsPage"));
 const LegalPage = lazy(() => import("./views/LegalPage"));
 const SupportPage = lazy(() => import("./views/SupportPage"));
 const AnnouncementsPage = lazy(() => import("./views/AnnouncementsPage"));
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-
-export const supabase = createClient(supabaseUrl, supabaseKey);
-
-// Prewarm Supabase on app start
-supabase
-  .from('zip_codes')
-  .select('zip_code')
-  .limit(1)
-  .then(() => console.log('Supabase prewarm complete'))
-  .catch(err => console.error('Prewarm error:', err));
-
-// Test the connection when the file loads
-console.log("Testing Supabase connection on load...");
-supabase
-  .from("app_usage_logs")
-  .select("count", { count: "exact", head: true })
-  .then((response) => {
-    console.log("Connection test response:", response);
-  })
-  .catch((error) => {
-    console.error("Connection test error:", error);
-  });
 
 export default function MainApp({ loggedInUser }) {
   const location = useLocation();
@@ -91,17 +64,19 @@ useEffect(() => {
 function AppContent({ loggedInUser }) {
   const { directory, assistance, zipCodes, loading, error } = useAppData();
 
-  // Show loading state
-  // TEMPORARILY COMMENT OUT THE LOADING STATE
-  // if (loading) {
-  //   return (
-  //     <div className="flex items-center justify-center h-screen bg-gray-50">
-  //       <div className="text-center">
-  //         <div className="text-xl font-semibold text-gray-600">Loading data...</div>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  // While Phase 1 data (directory, assistance, zipCodes) is still in flight, show a loading
+  // screen instead of rendering the app shell with empty data. Without this, users see the
+  // Zip Code dropdown and try to click it before the data has arrived — their click appears
+  // to stall for several seconds on a slow connection.
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-dvh bg-gray-50">
+        <div className="text-center">
+          <div className="text-xl font-semibold text-gray-600">Loading data...</div>
+        </div>
+      </div>
+    );
+  }
 
   // Show error state
   if (error) {

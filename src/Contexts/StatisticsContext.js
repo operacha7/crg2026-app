@@ -1,6 +1,6 @@
 // src/contexts/StatisticsContext.js
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { supabase } from '../MainApp';
+import { supabase } from '../supabaseClient';
 
 const StatisticsContext = createContext();
 

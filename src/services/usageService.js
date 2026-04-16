@@ -1,7 +1,7 @@
 // src/services/usageService.js
 // Usage logging utility for reports
 
-import { supabase } from '../MainApp';
+import { supabase } from '../supabaseClient';
 
 /**
  * Get current date in Central Time as YYYY-MM-DD string

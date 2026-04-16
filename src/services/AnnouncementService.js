@@ -1,7 +1,7 @@
 // src/services/AnnouncementService.js
 // Updated for 2026 redesign - new table structure with audience_code and message_html
 
-import { supabase } from '../MainApp';
+import { supabase } from '../supabaseClient';
 
 const AnnouncementService = {
   /**

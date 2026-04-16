@@ -4,7 +4,7 @@
 
 import { render } from "@react-email/components";
 import { LOGO_URL_Email } from "../data/constants";
-import { supabase } from "../MainApp";
+import { supabase } from "../supabaseClient";
 import {
   formatAddress,
   formatHoursFromJson,

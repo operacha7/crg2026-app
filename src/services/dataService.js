@@ -2,7 +2,7 @@
 // Data service for CRG 2026 - connects to Supabase tables
 // Tables: directory, assistance, organizations, zip_codes, registered_organizations
 
-import { supabase } from "../MainApp";
+import { supabase } from "../supabaseClient";
 
 // ============================================================
 // HELPER FUNCTIONS
