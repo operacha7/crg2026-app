@@ -117,6 +117,14 @@
       href="/images/CRG%20Logo%20462.png"
     >
 
+    <!-- Warm the TLS/HTTP connection to Supabase before the first data request fires.
+         This helps Chrome iOS specifically, where Chrome's private network stack (Cronet)
+         otherwise performs a cold DNS+TLS+HTTP handshake on the first Supabase query,
+         causing a multi-second stall on the first zip click. Safari iOS is unaffected
+         because it reuses system-level connection state. -->
+    <link rel="preconnect" href="https://oxlhrpjmudyklffbbdva.supabase.co" crossorigin>
+    <link rel="dns-prefetch" href="https://oxlhrpjmudyklffbbdva.supabase.co">
+
     <!-- ✅ Google Fonts -->
     <link
       href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap"
