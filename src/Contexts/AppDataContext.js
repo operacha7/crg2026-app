@@ -156,50 +156,33 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
     setDrivingDistances(new Map());
   }, [clientCoordinates]);
 
-  // Load all data on mount
+  // Load data in two phases:
+  //   Phase 1 (blocking):  directory, assistance, zipCodes — required for the main search UI.
+  //                        As soon as these land, setLoading(false) so the user can interact.
+  //   Phase 2 (background): distress, working poor, evictions, zip code data, header config —
+  //                        only consumed by the Reports page. Mobile never reaches Reports,
+  //                        and desktop Reports only pays a cost if opened before Phase 2 finishes.
+  // This split fixes the multi-second cold-start stall where a zip click would block on the
+  // slowest Reports-only Supabase query (~6s on mobile networks).
   useEffect(() => {
     let mounted = true;
 
     const loadAllData = async () => {
-      console.log('📦 AppDataContext: Loading all data...');
+      console.log('📦 AppDataContext: Phase 1 (core)...');
       const startTime = performance.now();
 
       try {
-        // Fetch all tables in parallel for speed
-        // Note: organizations table no longer needed - we compute org assistance from directory
-        const [
-          directoryData,
-          assistanceData,
-          zipCodesData,
-          distressDataResult,
-          distressData2023Result,
-          workingPoorDataResult,
-          workingPoorData2023Result,
-          evictionsDataResult,
-          zipCodeDataResult,
-          headerConfigResult,
-        ] = await Promise.all([
+        // Phase 1 — fetch the tables the main search UI needs.
+        const [directoryData, assistanceData, zipCodesData] = await Promise.all([
           dataService.getDirectory(),
           dataService.getAssistance(),
           dataService.getZipCodes(),
-          dataService.getDistressData(),
-          dataService.getDistressData2023(),
-          dataService.getWorkingPoorData(),
-          dataService.getWorkingPoorData2023(),
-          dataService.getEvictionsData(),
-          dataService.getZipCodeData(),
-          dataService.getHeaderConfig(),
         ]);
 
         if (!mounted) return;
 
-        // Map directory records to format expected by ResultRow
         const mappedDirectory = directoryData.map(mapDirectoryRecord);
-
-        // Build org → assist_ids lookup map (computed from directory)
         const assistanceMap = buildOrgAssistanceMap(directoryData);
-
-        // Build organizations list from directory for NavBar2 dropdowns
         const orgsList = buildOrganizationsList(directoryData);
 
         setDirectory(mappedDirectory);
@@ -207,14 +190,50 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
         setZipCodes(zipCodesData);
         setOrganizations(orgsList);
         setOrgAssistanceMap(assistanceMap);
-        setDistressData(distressDataResult);
-        setDistressData2023(distressData2023Result);
-        setWorkingPoorData(workingPoorDataResult);
-        setWorkingPoorData2023(workingPoorData2023Result);
-        setEvictionsData(evictionsDataResult);
-        setZipCodeData(zipCodeDataResult);
-        setHeaderConfig(headerConfigResult);
         setLoading(false);
+
+        const phase1Time = Math.round(performance.now() - startTime);
+        console.log(`✅ AppDataContext: Phase 1 done in ${phase1Time}ms (${directoryData.length} directory, ${assistanceData.length} assistance, ${zipCodesData.length} zipCodes)`);
+
+        // Phase 2 — fetch Reports-only data in the background. No await in the main path.
+        (async () => {
+          const phase2Start = performance.now();
+          try {
+            const [
+              distressDataResult,
+              distressData2023Result,
+              workingPoorDataResult,
+              workingPoorData2023Result,
+              evictionsDataResult,
+              zipCodeDataResult,
+              headerConfigResult,
+            ] = await Promise.all([
+              dataService.getDistressData(),
+              dataService.getDistressData2023(),
+              dataService.getWorkingPoorData(),
+              dataService.getWorkingPoorData2023(),
+              dataService.getEvictionsData(),
+              dataService.getZipCodeData(),
+              dataService.getHeaderConfig(),
+            ]);
+
+            if (!mounted) return;
+
+            setDistressData(distressDataResult);
+            setDistressData2023(distressData2023Result);
+            setWorkingPoorData(workingPoorDataResult);
+            setWorkingPoorData2023(workingPoorData2023Result);
+            setEvictionsData(evictionsDataResult);
+            setZipCodeData(zipCodeDataResult);
+            setHeaderConfig(headerConfigResult);
+
+            const phase2Time = Math.round(performance.now() - phase2Start);
+            console.log(`✅ AppDataContext: Phase 2 done in ${phase2Time}ms (Reports data loaded in background)`);
+          } catch (err) {
+            // Reports-only data failing shouldn't break the main app.
+            console.error('⚠️ AppDataContext: Phase 2 load failed (Reports will be unavailable):', err);
+          }
+        })();
 
         // Apply deep link URL params (from SMS share links)
         const urlParams = new URLSearchParams(window.location.search);
@@ -248,10 +267,6 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
 
           console.log('🔗 Deep link params applied:', { mode, zip: urlParams.get('zip'), assist: assistParam });
         }
-
-        const loadTime = Math.round(performance.now() - startTime);
-        console.log(`✅ AppDataContext: Data loaded in ${loadTime}ms`);
-        console.log(`   directory: ${directoryData.length}, assistance: ${assistanceData.length}, zipCodes: ${zipCodesData.length}, organizations: ${orgsList.length}, orgAssistanceMap: ${Object.keys(assistanceMap).length} orgs, distressData: ${distressDataResult.length}, distressData2023: ${distressData2023Result.length}, workingPoorData: ${workingPoorDataResult.length}, workingPoorData2023: ${workingPoorData2023Result.length}, evictionsData: ${evictionsDataResult.length}, zipCodeData: ${zipCodeDataResult.length}`);
 
         // Debug: Log sample data to verify field formats
         if (mappedDirectory.length > 0) {
