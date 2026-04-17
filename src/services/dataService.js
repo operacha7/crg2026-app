@@ -36,18 +36,33 @@ const parseCoordinates = (coordString) => {
 
 export const dataService = {
   // ======= DIRECTORY (main resources table) =======
-  // ~836 records, expect ~1000
+  // Supabase caps responses at its server-side max_rows (default 1000).
+  // Paginate to guarantee we fetch every record.
   async getDirectory() {
-    const { data, error } = await supabase
-      .from('directory')
-      .select('*')
-      .order('organization', { ascending: true });
+    const PAGE_SIZE = 1000;
+    let allData = [];
+    let from = 0;
 
-    if (error) {
-      console.error("Error fetching directory:", error);
-      return [];
+    while (true) {
+      const { data, error } = await supabase
+        .from('directory')
+        .select('*')
+        .order('organization', { ascending: true })
+        .range(from, from + PAGE_SIZE - 1);
+
+      if (error) {
+        console.error("Error fetching directory:", error);
+        return allData; // return whatever we got so far
+      }
+
+      allData = allData.concat(data);
+
+      // If we got fewer rows than requested, we've reached the end
+      if (data.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
     }
-    return data;
+
+    return allData;
   },
 
   // Get directory with calculated distance from a reference point
