@@ -67,8 +67,12 @@ export default function DropPanel({
       ref={panelRef}
       // Mobile: fixed positioning centered horizontally
       // Desktop: absolute positioning relative to trigger button
-      className="fixed md:absolute shadow-xl z-50 overflow-hidden left-2 right-2 md:left-auto md:right-auto"
-      style={computedStyle}
+      // overflow-auto + maxHeight allow scrolling when panel exceeds viewport (e.g. QR code on small laptops)
+      className="fixed md:absolute shadow-xl z-50 overflow-auto left-2 right-2 md:left-auto md:right-auto"
+      style={{
+        ...computedStyle,
+        maxHeight: `calc(100dvh - ${isMobile ? "130px" : "200px"})`,
+      }}
       onMouseDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
     >
