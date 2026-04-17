@@ -1617,15 +1617,42 @@ export default function NavBar2() {
 
       {/* ========== MOBILE LAYOUT (<lg) ========== */}
       {/* Mobile is locked to Zip Code mode — no mode selector, no neighborhood, no distance */}
+      {/* Uses native <select> for reliable iOS scrolling and instant selection */}
       <div className="lg:hidden flex items-center py-2 px-3">
-        <ZipCodeDropdown
-          value={selectedZipCode}
-          onChange={handleZipCodeChange}
-          options={zipCodeOptions}
-          placeholder="Choose Zip Code"
-          useDropdownStyle={true}
-          usePromptingStyle={true}
-        />
+        <select
+          value={selectedZipCode || ""}
+          onChange={(e) => handleZipCodeChange(e.target.value)}
+          className="font-opensans"
+          style={{
+            height: "var(--height-navbar2-btn)",
+            paddingLeft: "var(--padding-navbar2-btn-x)",
+            borderRadius: "var(--radius-navbar2-btn)",
+            fontSize: "var(--font-size-navbar2-dropdown)",
+            fontWeight: "var(--font-weight-navbar2-dropdown)",
+            letterSpacing: "var(--letter-spacing-navbar2-dropdown)",
+            backgroundColor: selectedZipCode
+              ? "var(--color-navbar2-dropdown-bg)"
+              : "var(--color-navbar2-dropdown-prompting-bg)",
+            color: selectedZipCode
+              ? "var(--color-navbar2-dropdown-text)"
+              : "var(--color-navbar2-dropdown-prompting-text)",
+            border: selectedZipCode
+              ? "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)"
+              : "var(--border-width-btn) solid var(--color-navbar2-dropdown-prompting-border)",
+            WebkitAppearance: "none",
+            appearance: "none",
+            backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 24 24' fill='white' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E\")",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "right 8px center",
+            backgroundSize: "24px",
+            paddingRight: "36px",
+          }}
+        >
+          <option value="">Choose Zip Code</option>
+          {zipCodeOptions.map((zip) => (
+            <option key={zip} value={zip}>{zip}</option>
+          ))}
+        </select>
       </div>
     </nav>
   );
