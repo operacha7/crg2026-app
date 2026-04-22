@@ -285,7 +285,14 @@ export default function SmsPanel({
           >
             <p style={{ fontSize: "14px", color: "#222831", margin: "0 0 12px 0", lineHeight: "1.5" }}>
               This feature requires the <strong>CRG Google Voice Helper</strong> Chrome extension.
-              Click OK to open the Chrome Web Store and install it.
+              Click OK to open the Chrome Web Store, then install it by clicking
+              <strong> "Add to Chrome"</strong>, then <strong>"Continue to install"</strong>, and finally
+              <strong> "Add extension"</strong>.
+            </p>
+            <p style={{ fontSize: "13px", color: "#4A4F56", margin: "0 0 12px 0", lineHeight: "1.5" }}>
+              During install, Chrome will warn the extension "can read and change your data on
+              voice.google.com." This is boilerplate Google shows for any site-specific extension.
+              It does not change settings, access your contacts, or send data outside Google Voice.
             </p>
             <div className="flex gap-3 justify-end">
               <button

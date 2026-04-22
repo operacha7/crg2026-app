@@ -40,7 +40,7 @@ const QUICK_TIPS_TOPICS = [
   },
   {
     id: "email-pdf",
-    title: "Email / PDF",
+    title: "Email / PDF / Text",
     content: EmailPdfTip,
   },
   {
@@ -414,35 +414,71 @@ function EmailPdfTip() {
   return (
     <div className="space-y-4">
       <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
-        Send selected resources to clients via email or PDF.
+        Share resources with clients three ways.
       </p>
 
       <div className="flex items-center gap-3">
         <span
-          className="inline-block px-3 py-1 rounded text-sm font-medium"
-          style={{ backgroundColor: "var(--color-navbar1-btn-email-bg)", color: "var(--color-navbar1-btn-email-text)" }}
+          className="inline-flex items-center justify-center rounded text-sm font-medium flex-shrink-0"
+          style={{
+            backgroundColor: "var(--color-navbar1-btn-email-bg)",
+            color: "var(--color-navbar1-btn-email-text)",
+            width: "110px",
+            height: "32px",
+            whiteSpace: "nowrap",
+          }}
         >
           Send Email
         </span>
         <span style={{ color: "var(--color-quicktips-section-body-text)", fontSize: "var(--font-size-quicktips-body)" }}>
-          Email resources directly
+          Email selected resources
         </span>
       </div>
 
       <div className="flex items-center gap-3">
         <span
-          className="inline-block px-3 py-1 rounded text-sm font-medium"
-          style={{ backgroundColor: "var(--color-navbar1-btn-pdf-bg)", color: "var(--color-navbar1-btn-pdf-text)" }}
+          className="inline-flex items-center justify-center rounded text-sm font-medium flex-shrink-0"
+          style={{
+            backgroundColor: "var(--color-navbar1-btn-pdf-bg)",
+            color: "var(--color-navbar1-btn-pdf-text)",
+            width: "110px",
+            height: "32px",
+            whiteSpace: "nowrap",
+          }}
         >
           Create PDF
         </span>
         <span style={{ color: "var(--color-quicktips-section-body-text)", fontSize: "var(--font-size-quicktips-body)" }}>
-          Generate a printable document
+          PDF of selected resources
+        </span>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <span
+          className="inline-flex items-center justify-center rounded text-sm font-medium flex-shrink-0"
+          style={{
+            backgroundColor: "var(--color-navbar1-btn-sms-bg)",
+            color: "var(--color-navbar1-btn-sms-text)",
+            width: "110px",
+            height: "32px",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Send Text
+        </span>
+        <span style={{ color: "var(--color-quicktips-section-body-text)", fontSize: "var(--font-size-quicktips-body)" }}>
+          Text a link to the filtered list
         </span>
       </div>
 
       <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
-        First select resources using the checkboxes, then click a button.
+        For <strong>Email</strong> and <strong>PDF</strong>, first select resources using the checkboxes.
+      </p>
+
+      <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
+        <strong>Send Text</strong> works differently — it shares a link to the filtered list
+        (by zip code and assistance), not individual selected rows. The panel walks you through
+        the send options.
       </p>
     </div>
   );

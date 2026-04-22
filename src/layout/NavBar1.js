@@ -8,7 +8,11 @@ import { Mail } from "lucide-react";
 import Tooltip from "../components/Tooltip";
 import EmailPanel from "../components/EmailPanel";
 import SmsPanel from "../components/SmsPanel";
+import SmsWarningModal from "../components/SmsWarningModal";
 import AnimatedCounter from "../components/AnimatedCounter";
+
+// sessionStorage key to track whether the SMS warning has been acknowledged this session
+const SMS_WARNING_ACK_KEY = "crg_sms_warning_acknowledged";
 
 export default function NavBar1({
   totalCount = 0,
@@ -34,6 +38,7 @@ export default function NavBar1({
   const [showEmailPanel, setShowEmailPanel] = useState(false);
   const [showPdfPanel, setShowPdfPanel] = useState(false);
   const [showSmsPanel, setShowSmsPanel] = useState(false);
+  const [showSmsWarning, setShowSmsWarning] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
@@ -148,6 +153,15 @@ export default function NavBar1({
     }
   };
 
+  // Open the SmsPanel (runs after warning is acknowledged or skipped)
+  const openSmsPanel = () => {
+    smsOpenTimeRef.current = Date.now();
+    setShowSmsPanel(true);
+    setShowEmailPanel(false);
+    setShowPdfPanel(false);
+    setStatusMessage("");
+  };
+
   // Handle Send Text button click
   const handleSmsButtonClick = () => {
     if (isGuest) {
@@ -158,11 +172,25 @@ export default function NavBar1({
       const canProceed = onSendSms();
       if (canProceed === false) return;
     }
-    smsOpenTimeRef.current = Date.now();
-    setShowSmsPanel(true);
-    setShowEmailPanel(false);
-    setShowPdfPanel(false);
-    setStatusMessage("");
+
+    // Show warning modal once per session before opening the SmsPanel
+    const acknowledged = sessionStorage.getItem(SMS_WARNING_ACK_KEY) === "true";
+    if (!acknowledged) {
+      setShowSmsWarning(true);
+      return;
+    }
+
+    openSmsPanel();
+  };
+
+  const handleSmsWarningProceed = () => {
+    sessionStorage.setItem(SMS_WARNING_ACK_KEY, "true");
+    setShowSmsWarning(false);
+    openSmsPanel();
+  };
+
+  const handleSmsWarningCancel = () => {
+    setShowSmsWarning(false);
   };
 
   // Handle email send (language passed from EmailPanel)
@@ -536,6 +564,13 @@ export default function NavBar1({
           </a>
         </div>
       </div>
+
+      {/* SMS warning modal — shown once per session before SmsPanel opens */}
+      <SmsWarningModal
+        isOpen={showSmsWarning}
+        onProceed={handleSmsWarningProceed}
+        onCancel={handleSmsWarningCancel}
+      />
     </nav>
   );
 }
