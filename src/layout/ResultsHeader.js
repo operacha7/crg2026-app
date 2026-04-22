@@ -12,7 +12,7 @@ const GRID_COLUMNS = "4% 3% 25% 6% 17% 6% 6.5% 29% 3%";
 // Columns with sort capability
 const SORTABLE = new Set(["miles", "organization"]);
 // Columns with filter capability (get a funnel icon)
-const FILTERABLE = new Set(["organization", "hours", "requirements"]);
+const FILTERABLE = new Set(["organization", "hours", "status", "requirements"]);
 
 const columns = [
   { id: "select", label: "Select" },

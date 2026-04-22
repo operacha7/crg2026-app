@@ -17,6 +17,16 @@ const DAY_OPTIONS = [
   { label: "Sunday", value: "Su" },
 ];
 
+// Status filter options — default hides Inactive and Closed
+const STATUS_OPTIONS = [
+  { label: "Active + Limited", value: "active-limited" },
+  { label: "All", value: "all" },
+  { label: "Active only", value: "active" },
+  { label: "Limited only", value: "limited" },
+  { label: "Inactive only", value: "inactive" },
+  { label: "Closed only", value: "closed" },
+];
+
 // Shared input style
 const inputStyle = {
   backgroundColor: "var(--color-filter-input-bg)",
@@ -58,9 +68,11 @@ function ClearButton({ onClick }) {
 export default function FilterRow({
   filterOrganization,
   filterDay,
+  filterStatus,
   filterRequirements,
   onFilterOrganizationChange,
   onFilterDayChange,
+  onFilterStatusChange,
   onFilterRequirementsChange,
   onClearFilter,
 }) {
@@ -119,8 +131,25 @@ export default function FilterRow({
         </select>
       </div>
 
-      {/* Status column - empty */}
-      <div />
+      {/* Status filter */}
+      <div style={{ paddingLeft: "40px", paddingRight: "8px" }}>
+        <select
+          value={filterStatus}
+          onChange={(e) => onFilterStatusChange(e.target.value)}
+          style={{
+            ...inputStyle,
+            padding: "0 4px",
+            cursor: "pointer",
+            appearance: "auto",
+          }}
+        >
+          {STATUS_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
 
       {/* Telephone column - empty */}
       <div />

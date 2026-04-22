@@ -12,12 +12,15 @@ import { parseHoursJson } from "../utils/formatters";
 
 // ============ SORT/FILTER REDUCER ============
 
+const STATUS_FILTER_DEFAULT = "active-limited";
+
 const initialState = {
   sortColumn: null,        // null = default, "organization", "miles"
   sortDirection: "asc",
   filterRowVisible: false,
   filterOrganization: "",
   filterDay: "",           // "" | "Mo" | "Tu" | "We" | "Th" | "Fr" | "Sa" | "Su"
+  filterStatus: STATUS_FILTER_DEFAULT, // see STATUS_FILTER_OPTIONS in FilterRow
   filterRequirements: "",
 };
 
@@ -42,9 +45,15 @@ function reducer(state, action) {
       return { ...state, filterOrganization: action.value };
     case "SET_FILTER_DAY":
       return { ...state, filterDay: action.value };
+    case "SET_FILTER_STATUS":
+      return { ...state, filterStatus: action.value };
     case "SET_FILTER_REQUIREMENTS":
       return { ...state, filterRequirements: action.value };
     case "CLEAR_FILTER":
+      // Status clears back to default, others clear to ""
+      if (action.field === "filterStatus") {
+        return { ...state, filterStatus: STATUS_FILTER_DEFAULT };
+      }
       return { ...state, [action.field]: "" };
     case "RESET_ALL":
       return { ...initialState };
@@ -95,7 +104,21 @@ function sortRecords(records, sortColumn, sortDirection) {
 
 // ============ FILTER FUNCTIONS ============
 
-function filterRecords(records, filterOrganization, filterDay, filterRequirements) {
+// Map status filter value to allowed status_id Set
+// Status IDs: 1=Active, 2=Limited, 3=Inactive, 4=Closed
+function getAllowedStatusIds(filterStatus) {
+  switch (filterStatus) {
+    case "active-limited": return new Set([1, 2]);
+    case "all":            return new Set([1, 2, 3, 4]);
+    case "active":         return new Set([1]);
+    case "limited":        return new Set([2]);
+    case "inactive":       return new Set([3]);
+    case "closed":         return new Set([4]);
+    default:               return new Set([1, 2]);
+  }
+}
+
+function filterRecords(records, filterOrganization, filterDay, filterStatus, filterRequirements) {
   let filtered = records;
 
   if (filterOrganization) {
@@ -114,6 +137,10 @@ function filterRecords(records, filterOrganization, filterDay, filterRequirement
       return inRegular || inLabeled;
     });
   }
+
+  // Status filter is always applied (default hides Inactive)
+  const allowedStatuses = getAllowedStatusIds(filterStatus);
+  filtered = filtered.filter(r => allowedStatuses.has(r.status_id));
 
   if (filterRequirements) {
     const term = filterRequirements.toLowerCase();
@@ -197,19 +224,24 @@ export default function ResultsList({
   }, [searchKey]);
 
   // Determine if any filter or sort is active (for Reset button and funnel color)
+  // Status filter only counts as "active" when it differs from the default (active-limited)
+  const isStatusFilterChanged = state.filterStatus !== STATUS_FILTER_DEFAULT;
+
   const hasActiveState = state.sortColumn !== null ||
     state.filterOrganization !== "" ||
     state.filterDay !== "" ||
+    isStatusFilterChanged ||
     state.filterRequirements !== "";
 
   const hasActiveFilters = state.filterOrganization !== "" ||
     state.filterDay !== "" ||
+    isStatusFilterChanged ||
     state.filterRequirements !== "";
 
   // Pipeline: filter → sort
   const filteredRecords = useMemo(
-    () => filterRecords(records, state.filterOrganization, state.filterDay, state.filterRequirements),
-    [records, state.filterOrganization, state.filterDay, state.filterRequirements]
+    () => filterRecords(records, state.filterOrganization, state.filterDay, state.filterStatus, state.filterRequirements),
+    [records, state.filterOrganization, state.filterDay, state.filterStatus, state.filterRequirements]
   );
 
   const sortedRecords = useMemo(
@@ -217,15 +249,12 @@ export default function ResultsList({
     [filteredRecords, state.sortColumn, state.sortDirection]
   );
 
-  // Report filtered count back to parent (exclude inactive to match NavBar1 convention)
-  const activeFilteredCount = useMemo(
-    () => filteredRecords.filter(r => r.status_id !== 3).length,
-    [filteredRecords]
-  );
+  // Report filtered count back to parent.
+  // Status filter is part of filteredRecords now, so count reflects what user sees.
   useEffect(() => {
     // Only override count when inline filters are active; null = use parent's default
-    onFilteredCountChange?.(hasActiveFilters ? activeFilteredCount : null);
-  }, [activeFilteredCount, hasActiveFilters, onFilteredCountChange]);
+    onFilteredCountChange?.(hasActiveFilters ? filteredRecords.length : null);
+  }, [filteredRecords, hasActiveFilters, onFilteredCountChange]);
 
   // Handlers
   const handleSort = useCallback((column) => {
@@ -284,9 +313,11 @@ export default function ResultsList({
           <FilterRow
             filterOrganization={state.filterOrganization}
             filterDay={state.filterDay}
+            filterStatus={state.filterStatus}
             filterRequirements={state.filterRequirements}
             onFilterOrganizationChange={(v) => dispatch({ type: "SET_FILTER_ORGANIZATION", value: v })}
             onFilterDayChange={(v) => dispatch({ type: "SET_FILTER_DAY", value: v })}
+            onFilterStatusChange={(v) => dispatch({ type: "SET_FILTER_STATUS", value: v })}
             onFilterRequirementsChange={(v) => dispatch({ type: "SET_FILTER_REQUIREMENTS", value: v })}
             onClearFilter={(field) => dispatch({ type: "CLEAR_FILTER", field })}
           />
@@ -362,9 +393,11 @@ export default function ResultsList({
         <FilterRow
           filterOrganization={state.filterOrganization}
           filterDay={state.filterDay}
+          filterStatus={state.filterStatus}
           filterRequirements={state.filterRequirements}
           onFilterOrganizationChange={(v) => dispatch({ type: "SET_FILTER_ORGANIZATION", value: v })}
           onFilterDayChange={(v) => dispatch({ type: "SET_FILTER_DAY", value: v })}
+          onFilterStatusChange={(v) => dispatch({ type: "SET_FILTER_STATUS", value: v })}
           onFilterRequirementsChange={(v) => dispatch({ type: "SET_FILTER_REQUIREMENTS", value: v })}
           onClearFilter={(field) => dispatch({ type: "CLEAR_FILTER", field })}
           onResetAll={() => dispatch({ type: "RESET_ALL" })}
