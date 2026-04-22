@@ -1,10 +1,11 @@
 // src/layout/NavBar1.js
 // Top navigation bar with logo, title, counters, and action buttons
 // Frame 494 from Figma design
-// Responsive: Simplified action row on mobile (no hamburger), full layout on desktop
+// Responsive: Simplified action row on mobile (hamburger → Contact Support + Legal), full layout on desktop
 
 import { useState, useRef, useEffect } from "react";
-import { Mail } from "lucide-react";
+import { Menu } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import Tooltip from "../components/Tooltip";
 import EmailPanel from "../components/EmailPanel";
 import SmsPanel from "../components/SmsPanel";
@@ -34,11 +35,14 @@ export default function NavBar1({
   // Orange counter shows totalCount initially (before any filter applied),
   // then shows filteredCount once user starts filtering
   const displayFilteredCount = filteredCount > 0 ? filteredCount : totalCount;
+  const navigate = useNavigate();
+
   // Panel state
   const [showEmailPanel, setShowEmailPanel] = useState(false);
   const [showPdfPanel, setShowPdfPanel] = useState(false);
   const [showSmsPanel, setShowSmsPanel] = useState(false);
   const [showSmsWarning, setShowSmsWarning] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
@@ -49,6 +53,8 @@ export default function NavBar1({
   const emailButtonRef = useRef(null);
   const pdfButtonRef = useRef(null);
   const smsButtonRef = useRef(null);
+  const mobileMenuRef = useRef(null);
+  const mobileMenuButtonRef = useRef(null);
 
   // Check if any selected records are inactive or closed
   const hasInactiveResources = selectedData.some((item) => {
@@ -102,6 +108,16 @@ export default function NavBar1({
         setShowSmsPanel(false);
         setStatusMessage("");
       }
+      // Mobile menu - close on outside click
+      if (
+        showMobileMenu &&
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(event.target) &&
+        mobileMenuButtonRef.current &&
+        !mobileMenuButtonRef.current.contains(event.target)
+      ) {
+        setShowMobileMenu(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -110,7 +126,7 @@ export default function NavBar1({
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("touchstart", handleClickOutside);
     };
-  }, [showEmailPanel, showPdfPanel, showSmsPanel]);
+  }, [showEmailPanel, showPdfPanel, showSmsPanel, showMobileMenu]);
 
   // Check if user is a guest (browsing without account)
   const isGuest = loggedInUser?.isGuest === true;
@@ -553,15 +569,69 @@ export default function NavBar1({
             </div>
           </div>
 
-          {/* Contact Support — opens user's mail app */}
-          <a
-            href="mailto:developer@operacha.org"
-            className="p-2 hover:brightness-125 transition-all"
-            style={{ color: "var(--color-footer-bg)" }}
-            aria-label="Contact Support"
-          >
-            <Mail size={26} />
-          </a>
+          {/* Hamburger menu — Contact Support + Legal */}
+          <div className="relative">
+            <button
+              ref={mobileMenuButtonRef}
+              onClick={() => setShowMobileMenu((v) => !v)}
+              className="p-2 hover:brightness-125 transition-all"
+              style={{ color: "var(--color-footer-bg)" }}
+              aria-label="Menu"
+            >
+              <Menu size={26} />
+            </button>
+
+            {showMobileMenu && (
+              <div
+                ref={mobileMenuRef}
+                className="absolute font-opensans"
+                style={{
+                  top: "100%",
+                  right: 0,
+                  marginTop: "6px",
+                  minWidth: "180px",
+                  backgroundColor: "#FFFFFF",
+                  borderRadius: "6px",
+                  boxShadow: "0 6px 18px rgba(0, 0, 0, 0.25)",
+                  border: "1px solid #E0E0E0",
+                  zIndex: 50,
+                  overflow: "hidden",
+                }}
+              >
+                <button
+                  onClick={() => {
+                    setShowMobileMenu(false);
+                    navigate("/support");
+                  }}
+                  className="w-full text-left hover:brightness-95 transition-all"
+                  style={{
+                    padding: "12px 16px",
+                    fontSize: "14px",
+                    color: "#222831",
+                    backgroundColor: "#FFFFFF",
+                    borderBottom: "1px solid #F0F0F0",
+                  }}
+                >
+                  Contact Support
+                </button>
+                <button
+                  onClick={() => {
+                    setShowMobileMenu(false);
+                    navigate("/privacy");
+                  }}
+                  className="w-full text-left hover:brightness-95 transition-all"
+                  style={{
+                    padding: "12px 16px",
+                    fontSize: "14px",
+                    color: "#222831",
+                    backgroundColor: "#FFFFFF",
+                  }}
+                >
+                  Legal
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
