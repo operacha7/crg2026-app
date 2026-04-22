@@ -11,8 +11,12 @@ import { useAppData } from "../../Contexts/AppDataContext";
 // Search modes
 const SEARCH_MODES = ["Zip Code", "Organization", "Location", "Ask a Question"];
 
-// Communication actions
-const COMMUNICATION_ACTIONS = ["Send Email", "Create PDF"];
+// Communication actions — label maps to action_type in app_usage_logs
+const COMMUNICATION_ACTIONS = [
+  { label: "Send Email", actionType: "email" },
+  { label: "Create PDF", actionType: "pdf" },
+  { label: "Send Text", actionType: "sms" },
+];
 
 export default function UsageDataTables({ selectedOrg, viewMode }) {
   const { assistance } = useAppData();
@@ -43,8 +47,11 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
         result = await fetchMonthlyUsage({ ...params, months: 12 });
       }
 
-      console.log('UsageDataTables loaded data:', result);
-      setData(result);
+      // Exclude Administrator rows (used for testing) so they don't skew counts
+      const filteredResult = result.filter(row => row.reg_organization !== "Administrator");
+
+      console.log('UsageDataTables loaded data:', filteredResult);
+      setData(filteredResult);
       setLoading(false);
     }
     loadData();
@@ -84,9 +91,8 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
   const communicationsData = useMemo(() => {
     const dateKey = viewMode === "daily" ? "log_date" : "month";
 
-    const rows = COMMUNICATION_ACTIONS.map(action => {
-      const actionType = action === "Send Email" ? "email" : "pdf";
-      const rowData = { metric: action };
+    const rows = COMMUNICATION_ACTIONS.map(({ label, actionType }) => {
+      const rowData = { metric: label };
       let total = 0;
 
       dateColumns.forEach(date => {
