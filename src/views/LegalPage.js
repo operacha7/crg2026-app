@@ -2,28 +2,131 @@
 // 2026 Redesign - Combined Privacy Policy and Terms of Service page
 //
 // TO UPDATE CONTENT:
-// 1. Open your Google Doc - CRG 2026 - Legal Page
-// 2. File > Download > Web Page (.html, zipped)
-// 3. Extract the ZIP and open the .html file in a text editor
-// 4. Copy the content inside the <> tag (not the whole file)
-// 5. Paste it into PRIVACY_POLICY_HTML or TERMS_OF_SERVICE_HTML below
+// Edit the PRIVACY_POLICY_HTML or TERMS_OF_SERVICE_HTML strings below.
+// Also update public/privacy-policy.html to keep the standalone version in sync.
 
 import React, { useState } from 'react';
 import VerticalNavBar from '../layout/VerticalNavBar';
 import Footer from '../layout/Footer';
 
 // =============================================================================
-// PRIVACY POLICY CONTENT - Paste your HTML here
+// PRIVACY POLICY CONTENT
 // =============================================================================
 const PRIVACY_POLICY_HTML = `
-<p class="c3"><span class="c6 c10">Privacy Policy</span></p><p class="c3"><span class="c6">Effective Date:</span><span class="c1">&nbsp;April 18, 2026</span></p><hr><p class="c5"><span class="c1"></span></p><h3 class="c12" id="h.d9bmvnnguo8j"><span class="c7">1. Introduction</span></h3><p class="c3"><span class="c1">Welcome to the Community Resources Guide (&ldquo;CRG,&rdquo; &ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;). We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard information when you use the Community Resources Guide application and website (the &ldquo;Application&rdquo;).</span></p><p class="c3"><span class="c1">CRG is an online, interactive tool designed to help charitable organizations assist clients in accessing financial and other resources in the Greater Houston area.</span></p><hr><p class="c5"><span class="c1"></span></p><h3 class="c12" id="h.drpnfk2hjpkj"><span class="c7">2. Information We Collect and Store</span></h3><p class="c3"><span class="c1">We handle the following categories of information:</span></p><h4 class="c9" id="h.hshrwapoe4t5"><span class="c13 c10">Organization Resources</span></h4><p class="c3"><span class="c1">We collect publicly available information about organizations that provide assistance in the Greater Houston area. This may include organization name, address, phone number, hours of operation, supported zip codes, types of assistance offered, and primary requirements.</span></p><p class="c3"><span class="c8">Organizations may request removal of their information by contacting us at </span><span class="c6">developer@operacha.org</span><span class="c1">.</span></p><h4 class="c9" id="h.msuaeil4qhva"><span class="c13 c10">Registered Users</span></h4><p class="c3"><span class="c1">For registered organizations, we collect usage information associated with an assigned user ID. This includes which features are used, search criteria selected, and resources recommended to clients.</span></p><p class="c3"><span class="c8">We do </span><span class="c6">not</span><span class="c1">&nbsp;collect or track IP addresses, cookies, device identifiers, or other personal data.</span></p><h4 class="c9" id="h.fzt2dflxubmc"><span class="c13 c10">Non-Registered Users</span></h4><p class="c3"><span class="c1">Registration is not required to use CRG. For non-registered users, we collect only aggregated usage data (e.g., which features are used and general search patterns). This data is not associated with individual users.</span></p><p class="c3"><span class="c1">Certain features, such as sending emails, &nbsp;or generating PDFs, are available only to registered organizations.</span></p><h4 class="c9" id="h.1r42ay88ino5"><span class="c13 c10">Client Data</span></h4><p class="c3"><span class="c8">Staff and volunteers from registered organizations may enter client email addresses or phone numbers in order to send resource lists. Although these communications are initiated by registered organizations, emails are sent from CRG&#39;s domain and text messages are composed on the user&#39;s device using their own messaging application (such as Messages or Google Voice).</span></p><p class="c3"><span class="c1">CRG does not store client email addresses, phone numbers, or other personally identifiable client information. When using the text feature, phone numbers and message content are held temporarily in the user&#39;s browser for the duration of the session and are not transmitted to CRG&#39;s servers.</span></p><p class="c3"><span class="c8">Email delivery is handled by a third-party provider, </span><span class="c6">Resend</span><span class="c1">, which temporarily retains email metadata (recipient address, delivery status, and bounce information) for operational purposes such as delivery monitoring and troubleshooting. Access to this data is restricted and used solely to ensure reliable communication and protect CRG&rsquo;s email reputation.</span></p><p class="c3"><span class="c1">Users who install the optional CRG Google Voice Helper browser extension may have phone numbers and message content stored momentarily in the browser&#39;s local extension storage to facilitate auto-filling Google Voice. This data is automatically deleted within seconds and is never transmitted to CRG or any third party.</span></p><p class="c3"><span class="c1">Registered organizations are responsible for obtaining any necessary consent from their clients before sending emails through CRG.</span></p><h4 class="c9" id="h.flnfv6ue0uiu"><span class="c10 c13">Usage Data</span></h4><p class="c3"><span class="c1">We collect and store:</span></p><ul class="c11 lst-kix_v6vc7sicl0dm-0 start"><li class="c0 li-bullet-0"><span class="c1">The name of the organization performing a search<br></span></li><li class="c0 li-bullet-0"><span class="c1">Zip codes, assistance types, organizations, and days of operation searched<br></span></li><li class="c0 li-bullet-0"><span class="c1">The number of emails sent<br></span></li></ul><p class="c3"><span class="c8">We do </span><span class="c6">not</span><span class="c1">&nbsp;store client email addresses or phone numbers.</span></p><p class="c3"><span class="c1">This information is used to maintain and improve the application, monitor capacity and performance, manage costs, and identify potential bottlenecks.</span></p><p class="c3"><span class="c1">We also log queries submitted through the LLM Search &amp; Help features. These logs are used solely to improve the Help experience and underlying language model behavior. Logs are reviewed on a regular basis to train internal models and removed when no longer needed or in 90 days, whichever comes first . These logs are not used to identify individuals and are not shared or used to train external models.</span></p><hr><p class="c5"><span class="c1"></span></p><h3 class="c12" id="h.d6j5lpsibuxc"><span class="c7">3. How We Use Information</span></h3><p class="c3"><span class="c1">We use collected information to:</span></p><ul class="c11 lst-kix_t0d8kjc05zxy-0 start"><li class="c0 li-bullet-0"><span class="c1">Provide, maintain, and improve the Application<br></span></li><li class="c0 li-bullet-0"><span class="c1">Understand how features are used<br></span></li><li class="c0 li-bullet-0"><span class="c1">Generate usage statistics for registered organizations<br></span></li><li class="c0 li-bullet-0"><span class="c1">Identify popular resources and search patterns<br></span></li></ul><p class="c3"><span class="c1">We may share non-proprietary best practices observed across organizations, but only with prior approval.</span></p><hr><p class="c5"><span class="c1"></span></p><h3 class="c12" id="h.myuug0ph7c4g"><span class="c7">4. What We Do Not Do</span></h3><ul class="c11 lst-kix_eigbl784fmm2-0 start"><li class="c0 li-bullet-0"><span class="c1">We sell nothing.<br></span></li><li class="c0 li-bullet-0"><span class="c1">We do not sell data, advertising, or access to the Application.<br></span></li><li class="c0 li-bullet-0"><span class="c1">We only share a client&rsquo;s email address or phone number when explicitly requested by the client and it is for the sole purpose of providing additional resources that the client is seeking.<br></span></li><li class="c0 li-bullet-0"><span class="c1">We do not disclose proprietary organizational data to anyone without prior approval.<br></span></li></ul><hr><p class="c5"><span class="c1"></span></p><h3 class="c12" id="h.sb6j54kdc3x7"><span class="c7">5. Data Security</span></h3><p class="c3"><span class="c1">Our Application and databases are hosted by third-party providers. While we provide oversight and conduct periodic reviews, we rely on these providers to implement appropriate technical and organizational security measures.</span></p><p class="c3"><span class="c1">No method of transmission or electronic storage is completely secure, and we cannot guarantee absolute security.</span></p><hr><p class="c5"><span class="c1"></span></p><h3 class="c12" id="h.gr5sarm31b1n"><span class="c7">6. Changes to This Privacy Policy</span></h3><p class="c3"><span class="c1">We may update this Privacy Policy from time to time. Any changes will be posted on this page with an updated effective date.</span></p><hr><p class="c5"><span class="c1"></span></p><h3 class="c12" id="h.umooe8d94oh8"><span class="c7">7. Contact Us</span></h3><p class="c3"><span class="c8">If you have questions or concerns about this Privacy Policy, you may contact us by clicking </span><span class="c6">&ldquo;Contact Support&rdquo;</span><span class="c8">&nbsp;within the Application or by emailing </span><span class="c6">developer@operacha.org</span><span class="c1">.</span></p><p class="c3"><span class="c6 c10">Omar Peracha</span></p><p class="c3"><span class="c8">April</span><span class="c8">&nbsp;18, 2026</span></p>
+<h1>Privacy Policy</h1>
+<p style="color:#666; font-size:14px;">Effective Date: April 18, 2026</p>
+<hr>
+
+<h3>1. Introduction</h3>
+<p>Welcome to the Community Resources Guide ("CRG," "we," "our," or "us"). We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard information when you use the Community Resources Guide application and website (the "Application").</p>
+<p>CRG is an online, interactive tool designed to help charitable organizations assist clients in accessing financial and other resources in the Greater Houston area.</p>
+<hr>
+
+<h3>2. Information We Collect and Store</h3>
+<p>We handle the following categories of information:</p>
+
+<h4>Organization Resources</h4>
+<p>We collect publicly available information about organizations that provide assistance in the Greater Houston area. This may include organization name, address, phone number, hours of operation, supported zip codes, types of assistance offered, and primary requirements.</p>
+<p>Organizations may request removal of their information by contacting us at <strong>developer@operacha.org</strong>.</p>
+
+<h4>Registered Users</h4>
+<p>For registered organizations, we collect usage information associated with an assigned user ID. This includes which features are used, search criteria selected, and resources recommended to clients.</p>
+<p>We do <strong>not</strong> collect or track IP addresses, cookies, device identifiers, or other personal data.</p>
+
+<h4>Non-Registered Users</h4>
+<p>Registration is not required to use CRG. For non-registered users, we collect only aggregated usage data (e.g., which features are used and general search patterns). This data is not associated with individual users.</p>
+<p>Certain features, such as sending emails or generating PDFs, are available only to registered organizations.</p>
+
+<h4>Client Data</h4>
+<p>Staff and volunteers from registered organizations may enter client email addresses or phone numbers in order to send resource lists. Although these communications are initiated by registered organizations, emails are sent from CRG's domain and text messages are composed on the user's device using their own messaging application (such as Messages or Google Voice).</p>
+<p>CRG does not store client email addresses, phone numbers, or other personally identifiable client information. When using the text feature, phone numbers and message content are held temporarily in the user's browser for the duration of the session and are not transmitted to CRG's servers.</p>
+<p>Email delivery is handled by a third-party provider, <strong>Resend</strong>, which temporarily retains email metadata (recipient address, delivery status, and bounce information) for operational purposes such as delivery monitoring and troubleshooting. Access to this data is restricted and used solely to ensure reliable communication and protect CRG's email reputation.</p>
+<p>Users who install the optional CRG Google Voice Helper browser extension may have phone numbers and message content stored momentarily in the browser's local extension storage to facilitate auto-filling Google Voice. This data is automatically deleted within seconds and is never transmitted to CRG or any third party.</p>
+<p>Registered organizations are responsible for obtaining any necessary consent from their clients before sending emails or text messages through CRG.</p>
+
+<h4>Usage Data</h4>
+<p>We collect and store:</p>
+<ul>
+  <li>The name of the organization performing a search</li>
+  <li>Zip codes, assistance types, organizations, and days of operation searched</li>
+  <li>The number of emails sent</li>
+</ul>
+<p>We do <strong>not</strong> store client email addresses or phone numbers.</p>
+<p>This information is used to maintain and improve the application, monitor capacity and performance, manage costs, and identify potential bottlenecks.</p>
+<p>We also log queries submitted through the LLM Search &amp; Help features. These logs are used solely to improve the Help experience and underlying language model behavior. Logs are reviewed on a regular basis to train internal models and removed when no longer needed or in 90 days, whichever comes first. These logs are not used to identify individuals and are not shared or used to train external models.</p>
+<hr>
+
+<h3>3. How We Use Information</h3>
+<p>We use collected information to:</p>
+<ul>
+  <li>Provide, maintain, and improve the Application</li>
+  <li>Understand how features are used</li>
+  <li>Generate usage statistics for registered organizations</li>
+  <li>Identify popular resources and search patterns</li>
+</ul>
+<p>We may share non-proprietary best practices observed across organizations, but only with prior approval.</p>
+<hr>
+
+<h3>4. What We Do Not Do</h3>
+<ul>
+  <li>We sell nothing.</li>
+  <li>We do not sell data, advertising, or access to the Application.</li>
+  <li>We only share a client's email address or phone number when explicitly requested by the client and it is for the sole purpose of providing additional resources that the client is seeking.</li>
+  <li>We do not disclose proprietary organizational data to anyone without prior approval.</li>
+</ul>
+<hr>
+
+<h3>5. Data Security</h3>
+<p>Our Application and databases are hosted by third-party providers. While we provide oversight and conduct periodic reviews, we rely on these providers to implement appropriate technical and organizational security measures.</p>
+<p>No method of transmission or electronic storage is completely secure, and we cannot guarantee absolute security.</p>
+<hr>
+
+<h3>6. Changes to This Privacy Policy</h3>
+<p>We may update this Privacy Policy from time to time. Any changes will be posted on this page with an updated effective date.</p>
+<hr>
+
+<h3>7. Contact Us</h3>
+<p>If you have questions or concerns about this Privacy Policy, you may contact us by clicking <strong>"Contact Support"</strong> within the Application or by emailing <strong>developer@operacha.org</strong>.</p>
+<p><strong>Omar Peracha</strong></p>
+<p>April 18, 2026</p>
 `;
 
 // =============================================================================
-// TERMS OF SERVICE CONTENT - Paste your HTML here
+// TERMS OF SERVICE CONTENT
 // =============================================================================
 const TERMS_OF_SERVICE_HTML = `
-<p class="c5"><span class="c2">Terms of Service</span></p><p class="c5"><span class="c3">Effective Date:</span><span class="c6">&nbsp;January 23, 2026</span></p><hr><p class="c0"><span class="c6"></span></p><h3 class="c1" id="h.vo7jwcdn52m8"><span class="c7 c3">1. Data Accuracy</span></h3><p class="c5"><span class="c6">Referral information is subject to change. Funding availability, eligibility criteria, and services offered by organizations may vary at any time. For the most current information regarding eligibility, requirements, and available services, users should contact the organization directly.</span></p><hr><p class="c0"><span class="c6"></span></p><h3 class="c1" id="h.4m3bkl32n04f"><span class="c7 c3">2. Non-Commercial Use</span></h3><p class="c5"><span class="c6">The Community Resources Guide (&ldquo;CRG&rdquo;) is a free tool designed to connect individuals and organizations with essential support services. Users are encouraged to use the Application freely and share it widely for charitable and informational purposes.</span></p><p class="c5"><span class="c6">The information provided may not be used for commercial gain or reproduced for profit-driven activities without prior written permission.</span></p><hr><p class="c0"><span class="c6"></span></p><h3 class="c1" id="h.2uwi5knfabaf"><span class="c3 c7">3. No Liability</span></h3><p class="c5"><span class="c6">While reasonable efforts are made to keep information accurate and up to date, CRG does not guarantee the completeness, accuracy, or reliability of any information provided.</span></p><p class="c5"><span class="c6">CRG assumes no liability for errors, omissions, or discrepancies in the information presented. Users are responsible for verifying all details directly with the referenced organizations before relying on the information.</span></p><hr><p class="c0"><span class="c6"></span></p><h3 class="c1" id="h.m7mh9iwv9041"><span class="c7 c3">4. Data Privacy</span></h3><p class="c5"><span class="c6">CRG does not store client contact information or other personally identifiable client data. Any client information shared between a registered organization and its clients is managed by that organization and governed by its own privacy practices.</span></p><p class="c5"><span class="c9">CRG may collect limited, non-personal usage information as described in the Privacy Policy. For additional details on how information is handled, please review the </span><span class="c3">Privacy Policy</span><span class="c6">.</span></p><hr><p class="c0"><span class="c6"></span></p><h3 class="c1" id="h.d26nc8644wi"><span class="c7 c3">5. Intellectual Property</span></h3><p class="c5"><span class="c6">The content, design, and structure of the Community Resources Guide are protected by copyright and other applicable intellectual property laws.</span></p><p class="c5"><span class="c6">This resource is provided for personal and non-commercial use only. Reproduction, distribution, modification, or reuse of the content for commercial purposes without prior written permission is prohibited.</span></p><hr><p class="c0"><span class="c6"></span></p><h3 class="c1" id="h.7vsvgkgki3t0"><span class="c7 c3">6. Contact</span></h3><p class="c5"><span class="c9">Questions or concerns regarding these Terms may be directed to the developer by clicking </span><span class="c3">&ldquo;Contact Support&rdquo;</span><span class="c9">&nbsp;within the Application or by emailing </span><span class="c3">developer@operacha.org</span><span class="c6">.</span></p><p class="c5"><span class="c2">Omar Peracha</span></p><p class="c5"><span class="c6">January 23, 2026</span></p><p class="c0"><span class="c6"></span></p><p class="c5 c8"><span class="c9 c10"></span></p>
+<h1>Terms of Service</h1>
+<p style="color:#666; font-size:14px;">Effective Date: April 18, 2026</p>
+<hr>
+
+<h3>1. Data Accuracy</h3>
+<p>Referral information is subject to change. Funding availability, eligibility criteria, and services offered by organizations may vary at any time. For the most current information regarding eligibility, requirements, and available services, users should contact the organization directly.</p>
+<hr>
+
+<h3>2. Non-Commercial Use</h3>
+<p>The Community Resources Guide ("CRG") is a free tool designed to connect individuals and organizations with essential support services. Users are encouraged to use the Application freely and share it widely for charitable and informational purposes.</p>
+<p>The information provided may not be used for commercial gain or reproduced for profit-driven activities without prior written permission.</p>
+<hr>
+
+<h3>3. No Liability</h3>
+<p>While reasonable efforts are made to keep information accurate and up to date, CRG does not guarantee the completeness, accuracy, or reliability of any information provided.</p>
+<p>CRG assumes no liability for errors, omissions, or discrepancies in the information presented. Users are responsible for verifying all details directly with the referenced organizations before relying on the information.</p>
+<hr>
+
+<h3>4. Data Privacy</h3>
+<p>CRG does not store client contact information or other personally identifiable client data. Any client information shared between a registered organization and its clients is managed by that organization and governed by its own privacy practices.</p>
+<p>CRG may collect limited, non-personal usage information as described in the Privacy Policy. For additional details on how information is handled, please review the <strong>Privacy Policy</strong>.</p>
+<hr>
+
+<h3>5. Intellectual Property</h3>
+<p>The content, design, and structure of the Community Resources Guide are protected by copyright and other applicable intellectual property laws.</p>
+<p>This resource is provided for personal and non-commercial use only. Reproduction, distribution, modification, or reuse of the content for commercial purposes without prior written permission is prohibited.</p>
+<hr>
+
+<h3>6. Contact</h3>
+<p>Questions or concerns regarding these Terms may be directed to the developer by clicking <strong>"Contact Support"</strong> within the Application or by emailing <strong>developer@operacha.org</strong>.</p>
+<p><strong>Omar Peracha</strong></p>
+<p>April 18, 2026</p>
 `;
 
 // =============================================================================

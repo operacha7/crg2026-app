@@ -1,11 +1,11 @@
 // src/components/SmsPanel.js
-// Panel for composing a text with a deep link to filtered resources.
-// Three send methods:
-//   1. Google Voice + Extension (seamless auto-fill of phone + message)
-//   2. Google Voice manual (clipboard fallback — copies message, user types phone)
-//   3. Messages App (native sms: URI)
-// The panel detects whether the CRG Google Voice Helper extension is installed
-// and adapts the UI accordingly.
+// Panel for sending resource links via text message.
+// Four send methods presented as cards:
+//   1. Google Voice (auto) — Chrome extension auto-fills phone + message + sends
+//   2. Google Voice (manual) — Copies message to clipboard, opens GV compose
+//   3. Messaging App (auto) — Native sms: URI, auto-fills phone + message
+//   4. Text From Phone (auto) — QR code for scanning from phone
+// Extension detection adapts the GV auto card (installed vs required vs Chrome required).
 
 import { useState, useEffect } from "react";
 import { Copy } from "lucide-react";
@@ -17,15 +17,16 @@ import {
   GV_EXTENSION_STORE_URL,
 } from "../utils/gvExtension";
 
+// Detect Chrome or Edge (both support Chrome extensions)
+function isChromeBrowser() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  // Edge also runs Chrome extensions, so include it
+  return /Chrome\//.test(ua) || /Edg\//.test(ua);
+}
+
 /**
- * SmsPanel - Panel for composing an SMS handoff
- *
- * @param {boolean} isOpen
- * @param {function} onCancel
- * @param {React.Ref} panelRef
- * @param {string} composedBody - Pre-rendered message body (org + header + share URL)
- * @param {function} onInitiated - Fires on any handoff action (used for usage logging)
- * @param {function} onMessagesHandoff - Fires only when the Messages button is clicked
+ * SmsPanel - Card-based panel for sending resource links via text
  */
 export default function SmsPanel({
   isOpen,
@@ -39,6 +40,10 @@ export default function SmsPanel({
   const [feedback, setFeedback] = useState("");
   const [extensionInstalled, setExtensionInstalled] = useState(false);
   const [sendingViaExtension, setSendingViaExtension] = useState(false);
+  const [showQrCode, setShowQrCode] = useState(false);
+  const [showExtensionPrompt, setShowExtensionPrompt] = useState(false);
+
+  const isChrome = isChromeBrowser();
 
   // Reset state when panel opens; check for extension
   useEffect(() => {
@@ -46,9 +51,13 @@ export default function SmsPanel({
       setPhoneNumber("");
       setFeedback("");
       setSendingViaExtension(false);
-      isGvExtensionInstalled().then(setExtensionInstalled);
+      setShowQrCode(false);
+      setShowExtensionPrompt(false);
+      if (isChrome) {
+        isGvExtensionInstalled().then(setExtensionInstalled);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, isChrome]);
 
   const digits = phoneNumber.replace(/\D/g, "");
   const isValidPhone = digits.length === 10;
@@ -57,17 +66,9 @@ export default function SmsPanel({
     ? `sms:${e164}?body=${encodeURIComponent(composedBody)}`
     : "";
 
-  // Check if we're on desktop (extension UI is desktop-only)
-  const isDesktop =
-    typeof window !== "undefined" && window.innerWidth >= 1024;
-
   const fireInitiated = () => {
     if (typeof onInitiated === "function") {
-      try {
-        onInitiated();
-      } catch {
-        /* logging is best-effort */
-      }
+      try { onInitiated(); } catch { /* logging is best-effort */ }
     }
   };
 
@@ -102,25 +103,26 @@ export default function SmsPanel({
     if (!isValidPhone) return;
     fireInitiated();
     const ok = await copyToClipboard(e164);
-    showFeedback(ok ? "Copied!" : "Unable to copy");
+    showFeedback(ok ? "Phone number copied!" : "Unable to copy");
   };
 
-  const handleCopyMessage = async () => {
-    fireInitiated();
-    const ok = await copyToClipboard(composedBody);
-    showFeedback(ok ? "Copied!" : "Unable to copy");
-  };
-
-  // --- Send method 1: Google Voice + Extension (auto-fill) ---
-  const handleSendViaExtension = async () => {
+  // --- Card 1: Google Voice (auto) via extension ---
+  const handleGvAuto = async () => {
     if (!isValidPhone) return;
+
+    // If extension not installed, show install prompt
+    if (!extensionInstalled) {
+      setShowExtensionPrompt(true);
+      return;
+    }
+
     fireInitiated();
     setSendingViaExtension(true);
     try {
       await sendToGvExtension(phoneNumber, composedBody);
       showFeedback("Sent to Google Voice — phone and message will auto-fill.");
     } catch {
-      // Extension failed — fall back to clipboard method
+      // Extension failed — fall back to manual method
       const ok = await copyToClipboard(composedBody);
       showFeedback(
         ok
@@ -136,8 +138,8 @@ export default function SmsPanel({
     }
   };
 
-  // --- Send method 2: Google Voice manual (clipboard fallback) ---
-  const handleOpenGoogleVoice = async () => {
+  // --- Card 2: Google Voice (manual) — copy message + open GV ---
+  const handleGvManual = async () => {
     if (!isValidPhone) return;
     fireInitiated();
     const ok = await copyToClipboard(composedBody);
@@ -152,55 +154,77 @@ export default function SmsPanel({
     );
   };
 
-  // --- Send method 3: Messages App (native sms: URI) ---
-  const handleOpenMessages = () => {
+  // --- Card 3: Messaging App (auto) via sms: URI ---
+  const handleMessagingApp = () => {
     if (!isValidPhone) return;
     fireInitiated();
     if (typeof onMessagesHandoff === "function") {
-      try {
-        onMessagesHandoff();
-      } catch {
-        /* toast is best-effort */
-      }
+      try { onMessagesHandoff(); } catch { /* best-effort */ }
     }
     window.location.href = smsHref;
   };
 
+  // --- Card 4: Text From Phone — show QR code ---
+  const handleTextFromPhone = () => {
+    if (!isValidPhone) return;
+    fireInitiated();
+    setShowQrCode(!showQrCode);
+  };
+
+  // Extension install prompt: continue to store
+  const handleExtensionInstallContinue = () => {
+    setShowExtensionPrompt(false);
+    window.open(GV_EXTENSION_STORE_URL, "_blank");
+  };
+
   if (!isOpen) return null;
+
+  // Card style constants
+  const CARD_BLUE = "#4285F4";
+  const CARD_GREEN = "#60935D";
+  const CARD_RADIUS = "8px";
+
+  // Determine GV auto badge state
+  let gvAutoBadge;
+  if (!isChrome) {
+    gvAutoBadge = { text: "CHROME REQUIRED", bg: "#FFFFFF", color: "#DC3545" };
+  } else if (extensionInstalled) {
+    gvAutoBadge = { text: "EXTENSION READY", bg: "#FFFFFF", color: "#28A745" };
+  } else {
+    gvAutoBadge = { text: "EXTENSION REQUIRED", bg: "#FFFFFF", color: "#DC3545" };
+  }
 
   return (
     <DropPanel
       title="Text Resources Link"
       isOpen={true}
       onCancel={onCancel}
-      onSave={handleOpenMessages}
       panelRef={panelRef}
       style={{
         top: "100%",
         right: "0",
         minWidth: "440px",
       }}
-      okButtonText="Open in Messages App"
-      okDisabled={!isValidPhone}
+      hideOkButton={true}
       cancelButtonText="Close"
     >
       <div className="flex flex-col gap-4">
+        {/* Subtitle */}
         <p
-          className="font-opensans"
-          style={{ color: "#FFFFFF", fontSize: "14px", lineHeight: "1.5" }}
+          className="font-opensans text-center"
+          style={{ color: "#FFFFFF", fontSize: "13px", margin: 0, lineHeight: "1.3" }}
         >
-          Enter the client's phone number, then choose how to send.
-          The message is composed on your device — CRG doesn't send it for you.
+          Sent from your phone number. CRG does not send.
         </p>
 
-        {/* Phone input with inline copy icon */}
-        <div className="flex flex-col gap-2">
+        {/* Phone input */}
+        <div className="flex flex-col gap-1">
           <label
             htmlFor="sms-phone-input"
             className="font-opensans"
-            style={{ color: "#FFFFFF", fontSize: "13px", fontWeight: 600 }}
+            style={{ color: "#FFFFFF", fontSize: "12px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}
           >
-            Send Text To
+            To
           </label>
           <div className="relative">
             <input
@@ -238,221 +262,208 @@ export default function SmsPanel({
           </div>
         </div>
 
-        {/* Message preview with inline copy icon */}
-        <div className="flex flex-col gap-2">
-          <label
-            htmlFor="sms-message-preview"
+        {/* Section label — negative margin to tighten gap with first card */}
+        {isValidPhone && (
+          <p
             className="font-opensans"
-            style={{ color: "#FFFFFF", fontSize: "13px", fontWeight: 600 }}
+            style={{ color: "#FFFFFF", fontSize: "12px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", margin: 0, marginBottom: "-12px" }}
           >
-            Message preview
-          </label>
-          <div className="relative">
-            <div
-              id="sms-message-preview"
-              className="font-opensans"
-              style={{
-                backgroundColor: "#FFFFFF",
-                color: "#222831",
-                padding: "10px 44px 10px 12px",
-                borderRadius: "var(--radius-panel-btn)",
-                fontSize: "13px",
-                lineHeight: "1.45",
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-                userSelect: "text",
-                maxHeight: "120px",
-                overflowY: "auto",
-              }}
-            >
-              {composedBody || "No message available — apply filters first."}
-            </div>
-            <button
-              type="button"
-              onClick={handleCopyMessage}
-              aria-label="Copy message"
-              className="absolute transition-opacity hover:opacity-70"
-              style={{
-                top: "8px",
-                right: "10px",
-                color: "#4A4F56",
-              }}
-            >
-              <Copy size={18} />
-            </button>
-          </div>
-        </div>
+            How do you want to send the text?
+          </p>
+        )}
 
-        {/* ---- Google Voice send options (desktop only) ---- */}
-        {isValidPhone && isDesktop && (
-          <div className="flex flex-col gap-3">
-            {/* Option 1: Extension auto-fill (only when extension detected) */}
-            {extensionInstalled && (
-              <div className="flex flex-col gap-1">
-                <button
-                  onClick={handleSendViaExtension}
-                  disabled={sendingViaExtension}
-                  className="font-opensans transition-all duration-200 hover:brightness-110 w-full"
-                  style={{
-                    backgroundColor: "#1a73e8",
-                    color: "#FFFFFF",
-                    height: "var(--height-panel-btn)",
-                    borderRadius: "var(--radius-panel-btn)",
-                    fontSize: "var(--font-size-panel-btn)",
-                    letterSpacing: "var(--letter-spacing-panel-btn)",
-                    fontWeight: 600,
-                    opacity: sendingViaExtension ? 0.7 : 1,
-                  }}
-                >
-                  {sendingViaExtension
-                    ? "Opening Google Voice..."
-                    : "Send via Google Voice"}
-                </button>
+        {/* Extension install prompt overlay */}
+        {showExtensionPrompt && (
+          <div
+            className="font-opensans"
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: CARD_RADIUS,
+              padding: "16px",
+              border: "2px solid #DC3545",
+            }}
+          >
+            <p style={{ fontSize: "14px", color: "#222831", margin: "0 0 12px 0", lineHeight: "1.5" }}>
+              This feature requires the <strong>CRG Google Voice Helper</strong> Chrome extension.
+              Click OK to open the Chrome Web Store and install it.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowExtensionPrompt(false)}
+                className="font-opensans transition-all duration-200 hover:brightness-110"
+                style={{
+                  backgroundColor: "var(--color-panel-btn-cancel-bg)",
+                  color: "#FFFFFF",
+                  padding: "8px 20px",
+                  borderRadius: "var(--radius-panel-btn)",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExtensionInstallContinue}
+                className="font-opensans transition-all duration-200 hover:brightness-110"
+                style={{
+                  backgroundColor: "var(--color-panel-btn-ok-bg)",
+                  color: "#FFFFFF",
+                  padding: "8px 20px",
+                  borderRadius: "var(--radius-panel-btn)",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                }}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ---- CARD 1: Google Voice (auto) ---- */}
+        {isValidPhone && !showExtensionPrompt && (
+          <button
+            onClick={handleGvAuto}
+            disabled={sendingViaExtension || (!isChrome && !extensionInstalled)}
+            className="font-opensans text-left transition-all duration-200 hover:brightness-110 w-full"
+            style={{
+              backgroundColor: CARD_BLUE,
+              borderRadius: CARD_RADIUS,
+              padding: "14px 16px",
+              border: "none",
+              cursor: !isChrome ? "not-allowed" : "pointer",
+              opacity: !isChrome ? 0.6 : 1,
+            }}
+          >
+            <div className="flex items-center justify-between" style={{ marginBottom: "6px" }}>
+              <span style={{ color: "#FFFFFF", fontSize: "18px", fontWeight: 600 }}>
+                {sendingViaExtension ? "Opening Google Voice..." : "Google Voice (auto)"}
+              </span>
+              <span
+                style={{
+                  backgroundColor: gvAutoBadge.bg,
+                  color: gvAutoBadge.color,
+                  fontSize: "10px",
+                  fontWeight: 400,
+                  padding: "3px 8px",
+                  borderRadius: "10px",
+                  letterSpacing: "0.03em",
+                }}
+              >
+                {gvAutoBadge.text}
+              </span>
+            </div>
+            <p style={{ color: "#FFFFFF", fontSize: "12px", margin: 0, lineHeight: "1.4" }}>
+              Requires a Google Voice Account and a Chrome Extension. Phone number and message
+              filled-in and message sent automatically.
+            </p>
+          </button>
+        )}
+
+        {/* ---- CARD 2: Google Voice (manual) ---- */}
+        {isValidPhone && !showExtensionPrompt && (
+          <button
+            onClick={handleGvManual}
+            className="font-opensans text-left transition-all duration-200 hover:brightness-110 w-full"
+            style={{
+              backgroundColor: CARD_GREEN,
+              borderRadius: CARD_RADIUS,
+              padding: "14px 16px",
+              border: "none",
+            }}
+          >
+            <div className="flex items-center justify-between" style={{ marginBottom: "6px" }}>
+              <span style={{ color: "#FFFFFF", fontSize: "18px", fontWeight: 600 }}>
+                Google Voice (manual)
+              </span>
+              <span
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  color: CARD_BLUE,
+                  fontSize: "10px",
+                  fontWeight: 400,
+                  padding: "3px 8px",
+                  borderRadius: "10px",
+                  letterSpacing: "0.03em",
+                }}
+              >
+                COPY MESSAGE
+              </span>
+            </div>
+            <p style={{ color: "#FFFFFF", fontSize: "12px", margin: 0, lineHeight: "1.4" }}>
+              Requires a Google Voice Account. No Chrome extension required but phone number
+              has to be entered manually. Copy message and paste into the message field.
+            </p>
+          </button>
+        )}
+
+        {/* ---- CARD 3: Messaging App (auto) ---- */}
+        {isValidPhone && !showExtensionPrompt && (
+          <button
+            onClick={handleMessagingApp}
+            className="font-opensans text-left transition-all duration-200 hover:brightness-110 w-full"
+            style={{
+              backgroundColor: CARD_GREEN,
+              borderRadius: CARD_RADIUS,
+              padding: "14px 16px",
+              border: "none",
+            }}
+          >
+            <span style={{ color: "#FFFFFF", fontSize: "18px", fontWeight: 600, display: "block", marginBottom: "6px" }}>
+              Messaging App (auto)
+            </span>
+            <p style={{ color: "#FFFFFF", fontSize: "12px", margin: 0, lineHeight: "1.4" }}>
+              Sent from your device's default texting application. If using your personal computer, it
+              will more than likely be sent from your personal number. Info auto-filled.
+            </p>
+          </button>
+        )}
+
+        {/* ---- CARD 4: Text From Phone (auto) ---- */}
+        {isValidPhone && !showExtensionPrompt && (
+          <div>
+            <button
+              onClick={handleTextFromPhone}
+              className="font-opensans text-left transition-all duration-200 hover:brightness-110 w-full"
+              style={{
+                backgroundColor: CARD_GREEN,
+                borderRadius: showQrCode ? `${CARD_RADIUS} ${CARD_RADIUS} 0 0` : CARD_RADIUS,
+                padding: "14px 16px",
+                border: "none",
+              }}
+            >
+              <span style={{ color: "#FFFFFF", fontSize: "18px", fontWeight: 600, display: "block", marginBottom: "6px" }}>
+                Text From Phone (auto)
+              </span>
+              <p style={{ color: "#FFFFFF", fontSize: "12px", margin: 0, lineHeight: "1.4" }}>
+                If you are accessing CRG on your computer but want to text from your phone, use the
+                following QR code to transfer the message to your phone. Info auto-filled.
+              </p>
+            </button>
+
+            {/* QR code - revealed when card is clicked */}
+            {showQrCode && (
+              <div
+                className="flex flex-col items-center gap-2"
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  padding: "16px",
+                  borderRadius: `0 0 ${CARD_RADIUS} ${CARD_RADIUS}`,
+                }}
+              >
+                <QRCodeSVG value={smsHref} size={160} level="M" />
                 <p
                   className="font-opensans text-center"
-                  style={{
-                    color: "#D7D5D1",
-                    fontSize: "11px",
-                    margin: 0,
-                    lineHeight: "1.3",
-                  }}
+                  style={{ color: "#222831", fontSize: "12px", margin: 0, lineHeight: "1.4" }}
                 >
-                  Auto-fills phone number and message
+                  Scan with your phone's camera to text from there.
                 </p>
               </div>
             )}
-
-            {/* Option 2: Clipboard fallback (always visible) */}
-            <div className="flex flex-col gap-1">
-              <button
-                onClick={handleOpenGoogleVoice}
-                className="font-opensans transition-all duration-200 hover:brightness-110 w-full"
-                style={{
-                  height: "var(--height-panel-btn)",
-                  borderRadius: "var(--radius-panel-btn)",
-                  fontSize: "var(--font-size-panel-btn)",
-                  letterSpacing: "var(--letter-spacing-panel-btn)",
-                  fontWeight: 600,
-                  // Primary style when no extension, secondary when extension is present
-                  ...(extensionInstalled
-                    ? {
-                        backgroundColor: "transparent",
-                        color: "#FFFFFF",
-                        border: "1px solid #FFFFFF",
-                      }
-                    : {
-                        backgroundColor: "#1a73e8",
-                        color: "#FFFFFF",
-                      }),
-                }}
-              >
-                {extensionInstalled
-                  ? "Open Google Voice (manual paste)"
-                  : "Open in Google Voice"}
-              </button>
-              <p
-                className="font-opensans text-center"
-                style={{
-                  color: "#D7D5D1",
-                  fontSize: "11px",
-                  margin: 0,
-                  lineHeight: "1.3",
-                }}
-              >
-                {extensionInstalled
-                  ? "Use if auto-fill didn't work"
-                  : "Message copied to clipboard — type the phone number, then paste"}
-              </p>
-            </div>
-
-            {/* Install extension link (only when extension NOT detected) */}
-            {!extensionInstalled && (
-              <p
-                className="font-opensans text-center"
-                style={{
-                  fontSize: "12px",
-                  margin: 0,
-                  lineHeight: "1.4",
-                }}
-              >
-                <span style={{ color: "#D7D5D1" }}>
-                  Want auto-fill?{" "}
-                </span>
-                <a
-                  href={GV_EXTENSION_STORE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    color: "#8FB6FF",
-                    textDecoration: "underline",
-                  }}
-                >
-                  Install the CRG Google Voice Helper
-                </a>
-              </p>
-            )}
           </div>
         )}
 
-        {/* Google Voice clipboard option for mobile (no extension support) */}
-        {isValidPhone && !isDesktop && (
-          <div className="flex flex-col gap-1">
-            <button
-              onClick={handleOpenGoogleVoice}
-              className="font-opensans transition-all duration-200 hover:brightness-110 w-full"
-              style={{
-                backgroundColor: "#1a73e8",
-                color: "#FFFFFF",
-                height: "var(--height-panel-btn)",
-                borderRadius: "var(--radius-panel-btn)",
-                fontSize: "var(--font-size-panel-btn)",
-                letterSpacing: "var(--letter-spacing-panel-btn)",
-                fontWeight: 600,
-              }}
-            >
-              Open in Google Voice
-            </button>
-            <p
-              className="font-opensans text-center"
-              style={{
-                color: "#D7D5D1",
-                fontSize: "11px",
-                margin: 0,
-                lineHeight: "1.3",
-              }}
-            >
-              Message copied to clipboard — type the phone number, then paste
-            </p>
-          </div>
-        )}
-
-        {/* Desktop-only QR code — scan with phone camera to text from there */}
-        {isValidPhone && (
-          <div
-            className="hidden lg:flex flex-col items-center gap-2"
-            style={{
-              backgroundColor: "#FFFFFF",
-              padding: "12px",
-              borderRadius: "var(--radius-panel-btn)",
-            }}
-          >
-            <QRCodeSVG value={smsHref} size={160} level="M" />
-            <p
-              className="font-opensans text-center"
-              style={{
-                color: "#222831",
-                fontSize: "12px",
-                margin: 0,
-                lineHeight: "1.4",
-              }}
-            >
-              If you don't have Messages app on your desktop,
-              <br />
-              scan with your phone's camera to text from there.
-            </p>
-          </div>
-        )}
-
+        {/* Feedback message */}
         {feedback && (
           <p
             className="font-opensans text-center"

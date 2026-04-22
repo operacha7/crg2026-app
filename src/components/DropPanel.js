@@ -111,7 +111,7 @@ export default function DropPanel({
         </div>
 
         {/* Footer with buttons */}
-        <div className="flex items-center justify-between">
+        <div className={`flex items-center ${hideOkButton && !onClear ? "justify-end" : "justify-between"}`}>
           <button
             onClick={onCancel}
             className="font-opensans transition-all duration-200 hover:brightness-110"

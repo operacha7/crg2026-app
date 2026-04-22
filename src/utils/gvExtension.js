@@ -4,7 +4,7 @@
 
 // Chrome Web Store extension ID — placeholder until first publish.
 // After publishing, replace with the real ID from the Chrome Web Store dashboard.
-const GV_EXTENSION_ID = "milnjphgbccjimlkfdbhlkmbbamjlkbp";
+const GV_EXTENSION_ID = "clmhlgfcooanmndehiahccibpbbnmjlg";
 
 /**
  * Check whether the CRG Google Voice Helper extension is installed.
