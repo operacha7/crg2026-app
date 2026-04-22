@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import VerticalNavBar from '../layout/VerticalNavBar';
 import Footer from '../layout/Footer';
+import MobileMenu from '../components/MobileMenu';
 
 const SupportPage = ({ loggedInUser }) => {
   const [formData, setFormData] = useState({
@@ -152,9 +153,9 @@ const SupportPage = ({ loggedInUser }) => {
             </h1>
           </div>
 
-          {/* Right side - Page label */}
+          {/* Right side - Page label (desktop) / hamburger (mobile) */}
           <span
-            className="font-opensans"
+            className="hidden lg:inline font-opensans"
             style={{
               color: 'var(--color-navbar1-title)',
               fontSize: 'var(--font-size-navbar1-btn)',
@@ -164,6 +165,9 @@ const SupportPage = ({ loggedInUser }) => {
           >
             Contact Support
           </span>
+          <div className="lg:hidden">
+            <MobileMenu />
+          </div>
         </nav>
 
         {/* NavBar2 - Empty but maintains visual consistency */}
@@ -352,8 +356,10 @@ const SupportPage = ({ loggedInUser }) => {
         <Footer />
       </div>
 
-      {/* Vertical nav bar */}
-      <VerticalNavBar />
+      {/* Vertical nav bar — desktop only; mobile uses the hamburger in NavBar1 */}
+      <div className="hidden lg:block">
+        <VerticalNavBar />
+      </div>
     </div>
   );
 };
