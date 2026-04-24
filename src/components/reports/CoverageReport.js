@@ -1,17 +1,13 @@
 // src/components/reports/CoverageReport.js
-// Coverage Report - shows which zip codes are served by organizations
-// for a specific assistance type and status, highlighting "assistance deserts"
-// Zip code 99999 = no zip restrictions (org appears in ALL zip codes, shown as "unrestricted")
-// Restricted orgs = have specific zip codes listed
-// Unrestricted orgs (99999) = shown in italic + lighter color in the table
-// Orgs separated by " | " for readability
+// Coverage Report (aka "The Matt Report") - shows which zip codes are served by
+// organizations for a specific assistance type and status, highlighting
+// "assistance deserts". All orgs now list real zip codes (the legacy 99999
+// wildcard convention is gone), so there's no restricted/unrestricted split.
+// Orgs are separated by " | " for readability.
 
 import { useState, useEffect, useMemo } from "react";
 import { useAppData } from "../../Contexts/AppDataContext";
 import { fetchOrganizations } from "../../services/usageService";
-
-// Muted color for unrestricted orgs (italic + lighter)
-const UNRESTRICTED_COLOR = "#888888";
 
 // Sort arrow indicator
 function SortArrow({ active, direction }) {
@@ -30,7 +26,6 @@ export default function CoverageReport({
   assistanceType,
   status,
   displayFilter,
-  restrictionFilter,
   onSummaryChange,
   onDisplayDataChange,
 }) {
@@ -120,62 +115,30 @@ export default function CoverageReport({
     return filtered.sort((a, b) => a.zip_code.localeCompare(b.zip_code));
   }, [zipCodes, county, zipCode]);
 
-  // Build set of unrestricted org names (those with 99999)
-  const unrestrictedOrgNames = useMemo(() => {
-    const names = new Set();
-    filteredDirectory.forEach(record => {
-      const zips = record.client_zip_codes || [];
-      if (zips.includes("99999")) {
-        names.add(record.organization);
-      }
-    });
-    return names;
-  }, [filteredDirectory]);
-
   // Build zip -> Set of org names map in one pass for efficiency
-  // Handle 99999 wildcard: orgs with 99999 in client_zip_codes serve ALL zip codes
   const zipToOrgsMap = useMemo(() => {
     const map = new Map();
-
     filteredDirectory.forEach(record => {
       const zips = record.client_zip_codes || [];
       zips.forEach(zip => {
-        if (zip === "99999") return; // Skip 99999 itself, handled below
         if (!map.has(zip)) map.set(zip, new Set());
         map.get(zip).add(record.organization);
       });
     });
-
-    // Add unrestricted orgs to every Houston-area zip code
-    if (unrestrictedOrgNames.size > 0) {
-      houstonZipCodes.forEach(zipRecord => {
-        if (!map.has(zipRecord.zip_code)) map.set(zipRecord.zip_code, new Set());
-        const orgSet = map.get(zipRecord.zip_code);
-        unrestrictedOrgNames.forEach(org => orgSet.add(org));
-      });
-    }
-
     return map;
-  }, [filteredDirectory, houstonZipCodes, unrestrictedOrgNames]);
+  }, [filteredDirectory]);
 
   // Build coverage data for each Houston-area zip code
-  // Each row includes county, restricted and unrestricted org lists for filtering
   const coverageData = useMemo(() => {
     const data = houstonZipCodes.map(zipRecord => {
       const orgSet = zipToOrgsMap.get(zipRecord.zip_code) || new Set();
-      const allOrgs = [...orgSet].sort();
-      const restricted = allOrgs.filter(org => !unrestrictedOrgNames.has(org));
-      const unrestricted = allOrgs.filter(org => unrestrictedOrgNames.has(org));
+      const allOrgs = [...orgSet].sort((a, b) => a.localeCompare(b));
 
       return {
         zipCode: zipRecord.zip_code,
         county: zipRecord.county || "",
         count: allOrgs.length,
         organizations: allOrgs,
-        restrictedOrgs: restricted,
-        unrestrictedOrgs: unrestricted,
-        restrictedCount: restricted.length,
-        unrestrictedCount: unrestricted.length,
       };
     });
 
@@ -188,10 +151,10 @@ export default function CoverageReport({
     }
 
     return data;
-  }, [houstonZipCodes, zipToOrgsMap, unrestrictedOrgNames, sortBy, sortDir]);
+  }, [houstonZipCodes, zipToOrgsMap, sortBy, sortDir]);
 
   // Apply display filter (covered / no-coverage / all)
-  const afterDisplayFilter = useMemo(() => {
+  const displayData = useMemo(() => {
     if (displayFilter === "covered") {
       return coverageData.filter(row => row.count > 0);
     }
@@ -201,38 +164,16 @@ export default function CoverageReport({
     return coverageData;
   }, [coverageData, displayFilter]);
 
-  // Apply restriction filter (restricted / unrestricted / all)
-  // When filtering, adjust the displayed orgs and count accordingly
-  const displayData = useMemo(() => {
-    if (!restrictionFilter || restrictionFilter === "all") {
-      return afterDisplayFilter;
-    }
-
-    return afterDisplayFilter.map(row => {
-      if (restrictionFilter === "restricted") {
-        return {
-          ...row,
-          organizations: row.restrictedOrgs,
-          count: row.restrictedCount,
-        };
-      }
-      if (restrictionFilter === "unrestricted") {
-        return {
-          ...row,
-          organizations: row.unrestrictedOrgs,
-          count: row.unrestrictedCount,
-        };
-      }
-      return row;
-    });
-  }, [afterDisplayFilter, restrictionFilter]);
-
   // Summary stats - pass up to NavBar3
   const totalZips = coverageData.length;
   const zipsWithCoverage = coverageData.filter(z => z.count > 0).length;
   const zipsWithoutCoverage = totalZips - zipsWithCoverage;
-  const totalRestricted = new Set(coverageData.flatMap(z => z.restrictedOrgs)).size;
-  const totalUnrestricted = unrestrictedOrgNames.size;
+  // Unique organizations across the currently-filtered rows (what the user sees)
+  const uniqueOrgCount = useMemo(() => {
+    const names = new Set();
+    displayData.forEach(z => z.organizations.forEach(org => names.add(org)));
+    return names.size;
+  }, [displayData]);
 
   useEffect(() => {
     if (onSummaryChange) {
@@ -240,11 +181,10 @@ export default function CoverageReport({
         totalZips,
         zipsWithCoverage,
         zipsWithoutCoverage,
-        totalRestricted,
-        totalUnrestricted,
+        uniqueOrgCount,
       });
     }
-  }, [totalZips, zipsWithCoverage, zipsWithoutCoverage, totalRestricted, totalUnrestricted, onSummaryChange]);
+  }, [totalZips, zipsWithCoverage, zipsWithoutCoverage, uniqueOrgCount, onSummaryChange]);
 
   // Pass display data up for download
   useEffect(() => {
@@ -324,7 +264,6 @@ export default function CoverageReport({
                 {row.organizations.map((org, orgIdx) => {
                   const color = orgColorMap[org];
                   const isRegistered = registeredOrgNames.has(org);
-                  const isUnrestricted = unrestrictedOrgNames.has(org);
                   return (
                     <span key={org}>
                       {color ? (
@@ -334,18 +273,12 @@ export default function CoverageReport({
                             padding: "1px 6px",
                             borderRadius: "3px",
                             fontWeight: isRegistered ? 700 : 400,
-                            fontStyle: isUnrestricted ? "italic" : "normal",
-                            color: isUnrestricted ? UNRESTRICTED_COLOR : undefined,
                           }}
                         >
                           {org}
                         </span>
                       ) : (
-                        <span style={{
-                          fontWeight: isRegistered ? 700 : 400,
-                          fontStyle: isUnrestricted ? "italic" : "normal",
-                          color: isUnrestricted ? UNRESTRICTED_COLOR : undefined,
-                        }}>
+                        <span style={{ fontWeight: isRegistered ? 700 : 400 }}>
                           {org}
                         </span>
                       )}

@@ -13,9 +13,6 @@ const TABLES = [
   { sheetName: 'organizations', supabaseTable: 'organizations' },
   { sheetName: 'registered_organizations', supabaseTable: 'registered_organizations' },
   { sheetName: 'announcements', supabaseTable: 'announcements', transform: transformAnnouncement },
-  { sheetName: 'distress_data', supabaseTable: 'distress_data', transform: transformDistressData },
-  { sheetName: 'working_poor_data', supabaseTable: 'working_poor_data', transform: transformWorkingPoorData },
-  { sheetName: 'evictions_data', supabaseTable: 'evictions_data', transform: transformEvictionsData },
   { sheetName: 'zip_code_data', supabaseTable: 'zip_code_data', transform: transformZipCodeData, primaryKey: 'id' },
   { sheetName: 'header_config', supabaseTable: 'header_config', transform: transformHeaderConfig },
   { sheetName: 'fin_funding_data', supabaseTable: 'fin_funding_data', transform: transformFinFundingData, primaryKey: 'id' },
@@ -34,10 +31,6 @@ function passthroughTransform(row, skipKeys = []) {
   }
   return result;
 }
-
-function transformDistressData(row) { return passthroughTransform(row); }
-function transformWorkingPoorData(row) { return passthroughTransform(row); }
-function transformEvictionsData(row) { return passthroughTransform(row, ['id']); }
 
 function transformZipCodeData(row) { return passthroughTransform(row, ['id']); }
 
@@ -331,8 +324,6 @@ async function logSyncResults(syncCounts) {
     organizations_count: syncCounts.organizations,
     registered_organizations_count: syncCounts.registered_organizations,
     announcements_count: syncCounts.announcements,
-    distress_data_count: syncCounts.distress_data,
-    working_poor_data_count: syncCounts.working_poor_data,
     zip_code_data_count: syncCounts.zip_code_data,
     header_config_count: syncCounts.header_config,
     fin_funding_data_count: syncCounts.fin_funding_data,

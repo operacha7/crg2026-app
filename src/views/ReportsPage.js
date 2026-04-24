@@ -47,9 +47,8 @@ export default function ReportsPage() {
     setCoverageDisplayData(data);
   }, []);
 
-  // Coverage display filters (NavBar3 clickable stats)
+  // Coverage display filter (NavBar3 clickable stat)
   const [coverageDisplayFilter, setCoverageDisplayFilter] = useState("all");
-  const [coverageRestrictionFilter, setCoverageRestrictionFilter] = useState("all");
 
   // Reset all coverage filters
   const handleCoverageReset = useCallback(() => {
@@ -60,7 +59,6 @@ export default function ReportsPage() {
     setCoverageAssistanceType("");
     setCoverageStatus("Active");
     setCoverageDisplayFilter("all");
-    setCoverageRestrictionFilter("all");
   }, []);
 
   // Coverage filters object for download header
@@ -115,11 +113,13 @@ export default function ReportsPage() {
   }, []);
 
   // Zip Code Data report filter state
+  const [zcdCounties, setZcdCounties] = useState(new Set());
   const [zcdParentOrg, setZcdParentOrg] = useState("");
   const [zcdOrganization, setZcdOrganization] = useState(new Set());
   const [zcdAllExpanded, setZcdAllExpanded] = useState(false);
 
   const handleZcdReset = useCallback(() => {
+    setZcdCounties(new Set());
     setZcdParentOrg("");
     setZcdOrganization(new Set());
     setZcdAllExpanded(false);
@@ -186,7 +186,6 @@ export default function ReportsPage() {
             assistanceType={coverageAssistanceType}
             status={coverageStatus}
             displayFilter={coverageDisplayFilter}
-            restrictionFilter={coverageRestrictionFilter}
             onSummaryChange={handleSummaryChange}
             onDisplayDataChange={handleDisplayDataChange}
           />
@@ -219,6 +218,7 @@ export default function ReportsPage() {
         return (
           <ZipCodeDataReport
             ref={zcdReportRef}
+            counties={zcdCounties}
             parentOrg={zcdParentOrg}
             organization={zcdOrganization}
           />
@@ -270,6 +270,8 @@ export default function ReportsPage() {
           map2ActiveBase={map2ActiveBase}
           onMap2Reset={handleMap2Reset}
           onMap2Download={handleMap2Download}
+          zcdCounties={zcdCounties}
+          onZcdCountiesChange={setZcdCounties}
           zcdParentOrg={zcdParentOrg}
           onZcdParentOrgChange={setZcdParentOrg}
           zcdOrganization={zcdOrganization}
@@ -285,8 +287,6 @@ export default function ReportsPage() {
           coverageSummary={coverageSummary}
           coverageDisplayFilter={coverageDisplayFilter}
           onCoverageDisplayFilterChange={setCoverageDisplayFilter}
-          coverageRestrictionFilter={coverageRestrictionFilter}
-          onCoverageRestrictionFilterChange={setCoverageRestrictionFilter}
           coverageDisplayData={coverageDisplayData}
           coverageFilters={coverageFilters}
         />}

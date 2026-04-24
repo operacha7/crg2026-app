@@ -1,34 +1,39 @@
 // src/components/reports/ZipCodeDataReport.js
 // Displays zip code data table with distress, working poor, eviction,
-// and census data by zip code. Default sort: normal_consol_score descending.
-// Includes assistance icons column with expand/collapse to show organizations.
+// and census data by zip code.
+//
+// Two top-level groups: "Distress Score Calculated" (distress_score != null) and
+// "Distress Score Not Calculated" (the rest). Default sort (when the user hasn't
+// clicked a column) is compound: county asc, then distress_score desc in the
+// Calculated group and zip_code asc in the Not Calculated group.
+//
+// In default-sort mode, the Calculated group also shows a Houston Overall median
+// at the top and a per-county median at the top of each county block (Available
+// Funds / zip_fin_funding is intentionally blank in those summary rows).
+//
+// Click cycle on sortable column headers: asc → desc → default.
 
 import React, { useState, useMemo, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
 import { useAppData } from "../../Contexts/AppDataContext";
 import { getIconByName } from "../../icons/iconMap";
 import VerticalLineIcon from "../../icons/VerticalLineIcon";
 import ColumnHeaderFilter from "../ColumnHeaderFilter";
+import SortIcon from "../../icons/SortIcons";
 
 // Format helpers mapped by config format string
+// `percentage`: values are stored as fractions in zip_code_data (e.g. 0.194 for
+// 19.4%), so we multiply by 100 and append "%". Always one decimal place.
 const FORMAT_MAP = {
   text: (v) => v ?? "—",
   one_decimal: (v) => (v == null || v === "") ? "—" : Number(v).toFixed(1),
   two_decimal: (v) => (v == null || v === "") ? "—" : Number(v).toFixed(2),
   whole_number: (v) => (v == null || v === "") ? "—" : Math.round(Number(v)).toLocaleString(),
   whole_dollar: (v) => (v == null || v === "") ? "—" : "$" + Math.round(Number(v)).toLocaleString(),
+  percentage: (v) => (v == null || v === "") ? "—" : (Number(v) * 100).toFixed(1) + "%",
 };
 
 function getFormatter(formatStr) {
   return FORMAT_MAP[formatStr] || FORMAT_MAP.text;
-}
-
-// Sort arrow indicator
-function SortArrow({ active, direction }) {
-  return (
-    <span style={{ marginLeft: "4px", fontSize: "10px", opacity: active ? 1 : 0.4 }}>
-      {direction === "asc" ? "▲" : "▼"}
-    </span>
-  );
 }
 
 // Score highlight: applies to fields containing "score" in the name (dynamic, config-driven)
@@ -59,22 +64,28 @@ function getDciHighlight(quinValue) {
   return undefined;
 }
 
-// Section headers for exclude groups
+// Top-level section headers — split by whether distress_score is populated
 const SECTION_HEADERS = {
-  2: "Core Houston Area",
-  1: "Small Population (under 10,000)",
-  0: "PO Box / No Data Available",
+  calculated: "Distress Score Calculated",
+  notCalculated: "Distress Score Not Calculated",
 };
 
-// Field-specific aggregation rules for summary rows (Houston & org summaries)
-// Fields not listed default to "weighted" (population-weighted average)
+// Keys intentionally left blank on summary rows — aggregating them across
+// zips would be misleading (e.g. Available Funds is a per-zip allocation,
+// not something that sums or averages meaningfully at the metro level).
+const MEDIAN_SKIP_KEYS = new Set(["zip_fin_funding"]);
+
+// Field-level aggregation rules for summary rows. Anything not listed here
+// defaults to "median" (true median across the row set, with null values
+// filtered per-field).
 const FIELD_AGG = {
   population: "sum",
+  households: "sum",
   filings_count: "sum",
   claim_amount: "sum",
-  amount_per_filing: "calculated",  // claim_amount / filings_count
-  income_ratio: "calculated",       // org: weighted income / Houston weighted income
-  dci_quin: "derived",              // from weighted dci_score
+  amount_per_filing: "calculated",  // sum(claim_amount) / sum(filings_count)
+  income_ratio: "calculated",       // summary.median_household_income / houston.median_household_income
+  dci_quin: "derived",              // from median dci_score
   dci_catg: "derived",              // from dci_quin
 };
 
@@ -91,70 +102,74 @@ function dciQuinFromScore(score) {
 
 const DCI_CATG_LABELS = { 1: "Prosperous", 2: "Comfortable", 3: "Mid-Tier", 4: "At Risk", 5: "Distressed" };
 
-// Compute a summary row (Houston or org summary) from Core Houston Area rows
-// Uses population-weighted averages for rates/scores, sums for counts, calculated for derived fields
-// numericKeys: array of field names to aggregate
-// label: display text for zip_code column
-// marker: object to spread onto the row (e.g. { _isMedian: true } or { _isOrgMedian: true })
-// houstonRow: (optional) Houston summary row, needed for org income_ratio calculation
-// isOrgRow: boolean — true for org summaries (income_ratio = org/houston), false for Houston
-function computeSummaryRow(rows, numericKeys, label, marker, houstonRow, isOrgRow) {
+// Compute a summary row (Houston Overall, per-county, or per-org).
+//
+// Semantics:
+//   - Fields flagged "sum" in FIELD_AGG get a straight sum (nulls skipped).
+//   - Fields flagged "calculated" are derived in pass 2 from the sums/medians.
+//   - Fields flagged "derived" are derived in pass 3.
+//   - Everything else gets a true median of per-zip values (nulls skipped per-field).
+//
+// rows        — zip rows to aggregate
+// numericKeys — all visible numeric fields (from header_config)
+// label       — placeholder for the zip_code cell (caller overrides for clarity)
+// marker      — marker props for the row (e.g. { _isMedian, _isCountyMedian, ... })
+// houstonRow  — Houston Overall summary, used as the denominator for income_ratio.
+//               Pass null when computing Houston Overall itself — the function
+//               then uses summaryRow's own income as the denominator, so the
+//               ratio naturally resolves to 1.00 without any hardcoding.
+function computeSummaryRow(rows, numericKeys, label, marker, houstonRow) {
   const summaryRow = { zip_code: label, county: "", neighborhood: "", ...marker };
 
-  // Helper: compute sum of numeric values
-  const sum = (arr) => {
-    const valid = arr.filter(v => v != null && v !== "").map(Number);
-    return valid.length === 0 ? null : valid.reduce((a, b) => a + b, 0);
+  const toNumbers = (key) => rows
+    .map(r => r[key])
+    .filter(v => v != null && v !== "")
+    .map(Number)
+    .filter(n => !Number.isNaN(n));
+
+  const sum = (key) => {
+    const values = toNumbers(key);
+    return values.length === 0 ? null : values.reduce((a, b) => a + b, 0);
   };
 
-  // Helper: compute population-weighted average
-  // Pairs each value with its row's population, skipping rows where either is null
-  const weightedAvg = (key) => {
-    let totalWeight = 0;
-    let weightedSum = 0;
-    rows.forEach(r => {
-      const val = r[key];
-      const pop = r.population;
-      if (val == null || val === "" || pop == null || pop === "" || Number(pop) === 0) return;
-      const w = Number(pop);
-      totalWeight += w;
-      weightedSum += Number(val) * w;
-    });
-    return totalWeight === 0 ? null : weightedSum / totalWeight;
+  const trueMedian = (key) => {
+    const values = toNumbers(key).sort((a, b) => a - b);
+    if (values.length === 0) return null;
+    const mid = Math.floor(values.length / 2);
+    return values.length % 2 === 0 ? (values[mid - 1] + values[mid]) / 2 : values[mid];
   };
 
-  // Pass 1: compute weighted/sum fields
+  // Pass 1: sums and medians
   numericKeys.forEach(key => {
-    const agg = FIELD_AGG[key] || "weighted";
-    if (agg === "calculated" || agg === "derived") return; // computed in pass 2
+    const agg = FIELD_AGG[key] || "median";
+    if (agg === "calculated" || agg === "derived") return;
     if (agg === "sum") {
-      summaryRow[key] = sum(rows.map(r => r[key]));
+      summaryRow[key] = sum(key);
     } else {
-      // "weighted" — population-weighted average
-      summaryRow[key] = weightedAvg(key);
+      summaryRow[key] = trueMedian(key);
     }
   });
 
   // Pass 2: calculated fields
-  // amount_per_filing = claim_amount / filings_count
-  if (summaryRow.claim_amount != null && summaryRow.filings_count != null && summaryRow.filings_count !== 0) {
-    summaryRow.amount_per_filing = summaryRow.claim_amount / summaryRow.filings_count;
-  } else {
-    summaryRow.amount_per_filing = null;
-  }
+  // amount_per_filing = total claim amount / total filings count
+  summaryRow.amount_per_filing = (summaryRow.claim_amount != null && summaryRow.filings_count)
+    ? summaryRow.claim_amount / summaryRow.filings_count
+    : null;
 
-  // income_ratio: org weighted income / Houston weighted income
-  if (isOrgRow && houstonRow) {
-    const orgIncome = weightedAvg("median_household_income");
-    const houstonIncome = houstonRow.median_household_income;
-    summaryRow.income_ratio = (orgIncome != null && houstonIncome != null && houstonIncome !== 0)
-      ? orgIncome / houstonIncome : null;
-  }
-  // For Houston, income_ratio was already computed as weighted avg in pass 1
+  // income_ratio = this row's median income / Houston's median income.
+  // For Houston Overall itself, houstonRow is null → denominator = this row's
+  // own income → ratio = 1.00 by definition, no hardcoding.
+  const denom = houstonRow ? houstonRow.median_household_income : summaryRow.median_household_income;
+  summaryRow.income_ratio = (denom != null && denom !== 0 && summaryRow.median_household_income != null)
+    ? summaryRow.median_household_income / denom
+    : null;
 
-  // dci_quin and dci_catg derived from weighted dci_score
+  // Pass 3: derived
   summaryRow.dci_quin = dciQuinFromScore(summaryRow.dci_score);
   summaryRow.dci_catg = summaryRow.dci_quin != null ? (DCI_CATG_LABELS[summaryRow.dci_quin] || "") : "";
+
+  // Blank keys (don't aggregate)
+  MEDIAN_SKIP_KEYS.forEach(key => { summaryRow[key] = null; });
 
   return summaryRow;
 }
@@ -163,20 +178,20 @@ function computeSummaryRow(rows, numericKeys, label, marker, houstonRow, isOrgRo
 const ICON_ACTIVE_COLOR = "#B8001F";
 
 
-const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, organization }, ref) {
+const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ counties, parentOrg, organization }, ref) {
   const { zipCodeData, directory, assistance, headerConfig } = useAppData();
 
-  // Internal multi-select filter state (null = all selected / no filter)
-  const [selectedCounties, setSelectedCounties] = useState(null);
-  const [selectedZipCodes, setSelectedZipCodes] = useState(null);
+  // Internal filter state (null = no filter). Only Map Code has a popover —
+  // County and Zip Code are plain sortable headers now.
   const [selectedMapCodes, setSelectedMapCodes] = useState(null);
 
-  // Clear county/zip filters when parent or child org selection changes
+  // Clear map-code filter when parent, child org, or county selection changes
   useEffect(() => {
-    setSelectedCounties(null);
-    setSelectedZipCodes(null);
     setSelectedMapCodes(null);
-  }, [parentOrg, organization]);
+  }, [parentOrg, organization, counties]);
+
+  // Whether the user has an active county filter (Set of selected county names)
+  const hasCountyFilter = counties instanceof Set && counties.size > 0;
 
   // Build columns from header_config (filtered to zip_code_data, visible only, ordered by id_no)
   const COLUMNS = useMemo(() => {
@@ -191,31 +206,29 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
     }));
   }, [headerConfig]);
 
-  // Sort state - default: normal_consol_score descending
-  const [sortBy, setSortBy] = useState("normal_consol_score");
-  const [sortDir, setSortDir] = useState("desc");
+  // Sort state. Default (sortBy === null) renders rows by distress_score desc
+  // with no column highlighted — matches the neutral bars icon in headers.
+  // Click cycle depends on column type:
+  //   numeric: desc → asc → default
+  //   text:    asc  → desc → default
+  const [sortBy, setSortBy] = useState(null);
+  const [sortDir, setSortDir] = useState(null);
 
   // Expand state: Set of expanded zip codes (supports expand all)
   const [expandedZips, setExpandedZips] = useState(new Set());
   const [allExpanded, setAllExpanded] = useState(false);
 
-  const handleSort = (column) => {
-    if (sortBy === column) {
-      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortBy(column);
-      const colConfig = COLUMNS.find(c => c.key === column);
-      setSortDir(colConfig?.isText ? "asc" : "desc");
-    }
-  };
-
-  // Set of assist_ids that are financial assistance (is_fin_assist = true)
+  // Set of assist_ids we filter orgs to: Rent + Utilities only.
+  // This report is scoped to rent/utilities providers — the grayed-out chips
+  // in NavBar2Reports show the user which types are being filtered to.
   const finAssistIds = useMemo(() => {
-    return new Set(assistance.filter(a => a.is_fin_assist).map(a => a.assist_id));
+    return new Set(
+      assistance
+        .filter(a => a.assistance === "Rent" || a.assistance === "Utilities")
+        .map(a => a.assist_id)
+    );
   }, [assistance]);
 
-  // Build zip → Set<assist_id> lookup from directory (active records, financial assistance only)
-  // 99999 in client_zip_codes means the assist_id applies to ALL zips
   // Build assist_id → assistance record map for icon/name lookup
   const assistMap = useMemo(() => {
     const map = {};
@@ -231,7 +244,7 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
       if (r.status_id !== 1) return;
       if (!finAssistIds.has(r.assist_id)) return;
       const cz = Array.isArray(r.client_zip_codes) ? r.client_zip_codes : [];
-      if (!cz.includes("99999") && !cz.includes(zip)) return;
+      if (!cz.includes(zip)) return;
       const name = r.organization;
       if (!name) return;
       if (!orgMap[name]) orgMap[name] = { name, assistTypes: [] };
@@ -264,14 +277,12 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
     if (hasOrgFilter) filtered = filtered.filter(r => organization.has(r.organization));
 
     const zips = new Set();
-    let hasWildcard = false;
     filtered.forEach(r => {
       const cz = Array.isArray(r.client_zip_codes) ? r.client_zip_codes : [];
-      if (cz.includes("99999")) hasWildcard = true;
-      else cz.forEach(z => zips.add(z));
+      cz.forEach(z => zips.add(z));
     });
 
-    return hasWildcard ? null : zips;
+    return zips;
   }, [directory, parentOrg, organization, finAssistIds]);
 
   // Build set of org names to highlight in expanded rows (based on parent/org filter)
@@ -287,86 +298,122 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
   // Numeric keys for median calculation (all non-text visible columns)
   const NUMERIC_KEYS = useMemo(() => COLUMNS.filter(c => !c.isText).map(c => c.key), [COLUMNS]);
 
-  // Compute Houston median/summary row from exclude === 2 records (always from full dataset, not filtered)
-  const houstonMedianRow = useMemo(() => {
-    if (!zipCodeData || zipCodeData.length === 0) return null;
-    const eligible = zipCodeData.filter(r => r.exclude === 2);
-    if (eligible.length === 0) return null;
-    return computeSummaryRow(eligible, NUMERIC_KEYS, "Houston", { _isMedian: true }, null, false);
-  }, [zipCodeData, NUMERIC_KEYS]);
-
-  // Sort helper: sort an array by current sortBy/sortDir
   // Check if a column is text-type based on config
   const isTextColumn = useCallback((fieldName) => {
     const colConfig = COLUMNS.find(c => c.key === fieldName);
     return colConfig ? colConfig.isText : false;
   }, [COLUMNS]);
 
-  const sortSection = useCallback((data, defaultSort) => {
-    return [...data].sort((a, b) => {
-      const col = defaultSort || sortBy;
-      const dir = defaultSort ? (isTextColumn(col) ? "asc" : "desc") : sortDir;
-      const aVal = a[col];
-      const bVal = b[col];
-      if (aVal == null && bVal == null) return 0;
-      if (aVal == null) return 1;
-      if (bVal == null) return -1;
-      if (isTextColumn(col)) {
-        const cmp = String(aVal).localeCompare(String(bVal));
-        return dir === "asc" ? cmp : -cmp;
-      }
-      const cmp = Number(aVal) - Number(bVal);
-      return dir === "asc" ? cmp : -cmp;
-    });
-  }, [sortBy, sortDir, isTextColumn]);
-
-  // Helper: insert a summary row at the correct sort position in a sorted array
-  const insertAtSortPosition = useCallback((arr, summaryRow) => {
-    if (isTextColumn(sortBy)) {
-      arr.unshift(summaryRow);
-    } else {
-      const val = summaryRow[sortBy];
-      if (val == null) {
-        arr.push(summaryRow);
-      } else {
-        let idx = arr.findIndex(r => {
-          const v = r[sortBy];
-          if (v == null) return true;
-          return sortDir === "desc" ? Number(v) < val : Number(v) > val;
-        });
-        if (idx === -1) idx = arr.length;
-        arr.splice(idx, 0, summaryRow);
-      }
+  // Click cycle:
+  //   numeric column: first click → desc, second → asc, third → default (null)
+  //   text    column: first click → asc,  second → desc, third → default (null)
+  const handleSort = useCallback((column) => {
+    const textCol = isTextColumn(column);
+    if (sortBy !== column) {
+      setSortBy(column);
+      setSortDir(textCol ? "asc" : "desc");
+      return;
     }
+    // Same column clicked again — advance the cycle.
+    if (textCol && sortDir === "asc") setSortDir("desc");
+    else if (!textCol && sortDir === "desc") setSortDir("asc");
+    else { setSortBy(null); setSortDir(null); }
   }, [sortBy, sortDir, isTextColumn]);
 
-  // Helper: build sections from a set of zip code data rows
-  // prependRows: rows to place at the top of Core Houston Area (org summary, Houston) — used in org grouping mode
-  // insertRows: rows to insert at sort position in Core Houston Area — used in flat mode
-  const buildSections = useCallback((data, { prependRows = [], insertRows = [] } = {}) => {
-    const section2 = sortSection(data.filter(r => r.exclude === 2));
-    const section1 = sortSection(data.filter(r => r.exclude === 1));
-    const section0 = sortSection(data.filter(r => r.exclude !== 2 && r.exclude !== 1), "zip_code");
+  // Houston Overall summary — median of all zips in the table (nulls filtered
+  // per-field). Always computed from the full dataset, not the filtered view.
+  const houstonMedianRow = useMemo(() => {
+    if (!zipCodeData || zipCodeData.length === 0) return null;
+    const row = computeSummaryRow(zipCodeData, NUMERIC_KEYS, "Greater Houston Overall",
+      { _isMedian: true, _isHoustonMedian: true }, null);
+    if (row) { row.county = ""; row.zip_code = "Greater Houston Overall"; }
+    return row;
+  }, [zipCodeData, NUMERIC_KEYS]);
+
+  // Per-county summary rows. One median per county that has at least one
+  // scored zip (so the median always lands in the Calculated group when
+  // sorted). The median itself uses all zips in that county — nulls are
+  // filtered per-field inside computeSummaryRow.
+  // When a county filter is active, only emit medians for selected counties.
+  const countySummaryRows = useMemo(() => {
+    if (!zipCodeData || zipCodeData.length === 0) return [];
+    const byCounty = new Map();
+    zipCodeData.forEach(r => {
+      const c = r.county || "";
+      if (!c) return;
+      if (hasCountyFilter && !counties.has(c)) return;
+      if (!byCounty.has(c)) byCounty.set(c, []);
+      byCounty.get(c).push(r);
+    });
+    const result = [];
+    byCounty.forEach((rows, countyName) => {
+      if (!rows.some(r => r.distress_score != null)) return;
+      const med = computeSummaryRow(rows, NUMERIC_KEYS, "Median",
+        { _isMedian: true, _isCountyMedian: true, _medianCounty: countyName }, houstonMedianRow);
+      if (med) {
+        // Keep the county name on the row for sort-by-county stability,
+        // but the rendered label lives in zip_code spanning both columns
+        // (matches Greater Houston Overall). The county cell is skipped
+        // during render via the spanned-label branch.
+        med.county = countyName;
+        med.zip_code = `${countyName} County`;
+        result.push(med);
+      }
+    });
+    return result;
+  }, [zipCodeData, NUMERIC_KEYS, houstonMedianRow, hasCountyFilter, counties]);
+
+  // Two-key compare: primary sortBy/sortDir, with distress_score desc as the
+  // implicit secondary key. Secondary is skipped when primary IS distress_score.
+  // Nulls always sort to the end regardless of direction.
+  const compareField = useCallback((a, b, key, dir) => {
+    const aVal = a[key];
+    const bVal = b[key];
+    if (aVal == null && bVal == null) return 0;
+    if (aVal == null) return 1;
+    if (bVal == null) return -1;
+    if (isTextColumn(key)) {
+      const cmp = String(aVal).localeCompare(String(bVal));
+      return dir === "asc" ? cmp : -cmp;
+    }
+    const cmp = Number(aVal) - Number(bVal);
+    return dir === "asc" ? cmp : -cmp;
+  }, [isTextColumn]);
+
+  const compoundSort = useCallback((data) => {
+    // Default state (no column explicitly sorted): flat distress_score desc.
+    if (sortBy == null) {
+      return [...data].sort((a, b) => compareField(a, b, "distress_score", "desc"));
+    }
+    return [...data].sort((a, b) => {
+      const primaryCmp = compareField(a, b, sortBy, sortDir);
+      if (primaryCmp !== 0 || sortBy === "distress_score") return primaryCmp;
+      return compareField(a, b, "distress_score", "desc");
+    });
+  }, [sortBy, sortDir, compareField]);
+
+  // Build the report sections. Summary rows (Houston Overall, county medians,
+  // optional org summary) are merged into the Calculated group and sort
+  // alongside data rows — they are NOT pinned to the top.
+  const buildSections = useCallback((data, { summaryRows = [] } = {}) => {
+    const calcData = data.filter(r => r.distress_score != null);
+    const notCalcData = data.filter(r => r.distress_score == null);
+
+    const allCalc = [...summaryRows, ...calcData];
+    const sortedCalc = compoundSort(allCalc);
+    const sortedNotCalc = compoundSort(notCalcData);
 
     const result = [];
-    if (section2.length > 0 || prependRows.length > 0) {
-      result.push({ _sectionHeader: true, _sectionLabel: SECTION_HEADERS[2], _sectionExclude: 2 });
-      // Prepend summary rows at top (org grouping mode)
-      prependRows.forEach(row => { if (row) result.push(row); });
-      // Insert summary rows at sort position (flat mode)
-      insertRows.forEach(row => { if (row) insertAtSortPosition(section2, row); });
-      result.push(...section2);
+    if (sortedCalc.length > 0) {
+      result.push({ _sectionHeader: true, _sectionLabel: SECTION_HEADERS.calculated, _sectionKey: "calculated" });
+      result.push(...sortedCalc);
     }
-    if (section1.length > 0) {
-      result.push({ _sectionHeader: true, _sectionLabel: SECTION_HEADERS[1], _sectionExclude: 1 });
-      result.push(...section1);
-    }
-    if (section0.length > 0) {
-      result.push({ _sectionHeader: true, _sectionLabel: SECTION_HEADERS[0], _sectionExclude: 0 });
-      result.push(...section0);
+    if (sortedNotCalc.length > 0) {
+      result.push({ _sectionHeader: true, _sectionLabel: SECTION_HEADERS.notCalculated, _sectionKey: "notCalculated" });
+      result.push(...sortedNotCalc);
     }
     return result;
-  }, [sortSection, insertAtSortPosition]);
+  }, [compoundSort]);
 
   // Determine list of child orgs for grouping (when parent or org filter is active)
   // Filter by finAssistIds so parent org produces same org list as the Organization dropdown
@@ -385,28 +432,24 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
     const lookup = {};
     orgGroupList.forEach(org => {
       const zips = new Set();
-      let hasWildcard = false;
       directory.filter(r => r.status_id === 1 && r.organization === org && finAssistIds.has(r.assist_id)).forEach(r => {
         const cz = Array.isArray(r.client_zip_codes) ? r.client_zip_codes : [];
-        if (cz.includes("99999")) hasWildcard = true;
-        else cz.forEach(z => zips.add(z));
+        cz.forEach(z => zips.add(z));
       });
-      lookup[org] = hasWildcard ? null : zips; // null = serves all zips
+      lookup[org] = zips;
     });
     return lookup;
   }, [orgGroupList, directory, finAssistIds]);
 
-  // Filter data, split into sections by exclude, sort within each, add section headers
+  // Top-level sorted data. Summary rows (Houston Overall + per-county medians,
+  // or in org mode per-org + Houston) are passed to buildSections as data and
+  // sort inline with everything else.
   const sortedData = useMemo(() => {
     if (!zipCodeData || zipCodeData.length === 0) return [];
 
-    // Apply column header filters (county, zip)
     let baseData = zipCodeData;
-    if (selectedCounties) {
-      baseData = baseData.filter(r => selectedCounties.has(r.county));
-    }
-    if (selectedZipCodes) {
-      baseData = baseData.filter(r => selectedZipCodes.has(r.zip_code));
+    if (hasCountyFilter) {
+      baseData = baseData.filter(r => counties.has(r.county));
     }
     if (selectedMapCodes) {
       baseData = baseData.filter(r => selectedMapCodes.has(String(r.bivariate_map_code)));
@@ -416,21 +459,17 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
     if (orgGroupList && orgZipLookup) {
       const result = [];
       orgGroupList.forEach(orgName => {
-        const orgZips = orgZipLookup[orgName]; // null = all zips (wildcard)
+        const orgZips = orgZipLookup[orgName];
         const orgData = orgZips ? baseData.filter(r => orgZips.has(r.zip_code)) : baseData;
         if (orgData.length === 0) return;
 
-        // Compute org summary from Core Houston Area zips
-        const orgCoreZips = orgData.filter(r => r.exclude === 2);
-        const orgSummaryRow = orgCoreZips.length > 0
-          ? computeSummaryRow(orgCoreZips, NUMERIC_KEYS, orgName, { _isOrgMedian: true, _orgName: orgName }, houstonMedianRow, true)
+        const orgSummaryRow = orgData.some(r => r.distress_score != null)
+          ? computeSummaryRow(orgData, NUMERIC_KEYS, orgName, { _isOrgMedian: true, _orgName: orgName }, houstonMedianRow)
           : null;
 
-        // Org header
         result.push({ _orgHeader: true, _orgName: orgName });
-
-        // Build sections with org summary and Houston prepended at top of Core Houston
-        const sections = buildSections(orgData, { prependRows: [orgSummaryRow, houstonMedianRow] });
+        const summaryRowsForOrg = [orgSummaryRow, houstonMedianRow].filter(Boolean);
+        const sections = buildSections(orgData, { summaryRows: summaryRowsForOrg });
         result.push(...sections);
       });
       return result;
@@ -440,8 +479,9 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
     if (servedZips) {
       baseData = baseData.filter(r => servedZips.has(r.zip_code));
     }
-    return buildSections(baseData, { prependRows: [houstonMedianRow] });
-  }, [zipCodeData, selectedCounties, selectedZipCodes, selectedMapCodes, servedZips, sortBy, sortDir, houstonMedianRow, sortSection, isTextColumn, orgGroupList, orgZipLookup, buildSections, NUMERIC_KEYS]);
+    const summaries = [houstonMedianRow, ...countySummaryRows].filter(Boolean);
+    return buildSections(baseData, { summaryRows: summaries });
+  }, [zipCodeData, selectedMapCodes, servedZips, houstonMedianRow, countySummaryRows, orgGroupList, orgZipLookup, buildSections, NUMERIC_KEYS, hasCountyFilter, counties]);
 
   // Toggle all expand/collapse
   const toggleAllExpanded = useCallback(() => {
@@ -527,18 +567,24 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
       const isMedian = !!row._isMedian;
       const isOrgMedian = !!row._isOrgMedian;
       const isSummaryRow = isMedian || isOrgMedian;
-      const rowColor = isMedian ? "#8939ac" : isOrgMedian ? "#1A56DB" : "#222";
+      let rowColor = "#222";
+      if (row._isHoustonMedian) rowColor = "#005C72";
+      else if (row._isCountyMedian) rowColor = "#8939ac";
+      else if (isOrgMedian) rowColor = "#1A56DB";
       const rowWeight = isSummaryRow ? "bold" : "normal";
 
+      const isSpannedLabelRow = row._isHoustonMedian || row._isCountyMedian || isOrgMedian;
       const cells = pdfCols.map(col => {
+        if (isSpannedLabelRow && col.key === "county") return null;
+        const spanAttr = (isSpannedLabelRow && col.key === "zip_code") ? ' colspan="2"' : '';
         const scoreHighlight = DCI_FIELDS.has(col.key) ? getDciHighlight(row.dci_quin)
           : isScoreField(col.key) ? getScoreHighlight(row[col.key])
           : undefined;
         const formatted = col.format(row[col.key]);
         const align = col.isText ? "left" : "right";
         const bg = scoreHighlight ? `background:${scoreHighlight};` : "";
-        return `<td style="padding:3px 5px;text-align:${align};font-size:10px;border:1px solid #ddd;color:${rowColor};font-weight:${rowWeight};white-space:nowrap;${bg}">${formatted}</td>`;
-      }).join("");
+        return `<td${spanAttr} style="padding:3px 5px;text-align:${align};font-size:10px;border:1px solid #ddd;color:${rowColor};font-weight:${rowWeight};white-space:nowrap;${bg}">${formatted}</td>`;
+      }).filter(Boolean).join("");
 
       bodyRows.push(`<tr>${cells}</tr>`);
 
@@ -569,7 +615,7 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
       .subtitle { font-size: 10px; color: #B8001F; font-style: italic; padding: 0 10px 6px; }
     </style></head><body>
       <div class="title">CRG Zip Code Data Report</div>
-      <div class="subtitle">All data from 2024 unless stated otherwise &nbsp;|&nbsp; Generated ${dateStr}</div>
+      <div class="subtitle">Evictions data for 12 months ending April 2026. All other data from 2025 unless stated otherwise. &nbsp;|&nbsp; Generated ${dateStr}</div>
       <table><thead><tr>${thCells}</tr></thead><tbody>${bodyRows.join("")}</tbody></table>
     </body></html>`;
 
@@ -617,7 +663,13 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
   useImperativeHandle(ref, () => ({
     download: handleDownload,
     downloadPdf: handlePdfDownload,
-    resetFilters: () => { setSelectedCounties(null); setSelectedZipCodes(null); setExpandedZips(new Set()); setAllExpanded(false); },
+    resetFilters: () => {
+      setSelectedMapCodes(null);
+      setSortBy("county");
+      setSortDir("asc");
+      setExpandedZips(new Set());
+      setAllExpanded(false);
+    },
     toggleAllExpanded,
     allExpanded,
   }), [handleDownload, handlePdfDownload, toggleAllExpanded, allExpanded]);
@@ -635,25 +687,24 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
     return "4%"; // standard numeric columns
   }, []);
 
-  // Available values for column header filters
-  const allCounties = useMemo(() =>
-    [...new Set(zipCodeData.map(r => r.county).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
-    [zipCodeData]
-  );
-  const allZipCodes = useMemo(() =>
-    [...new Set(zipCodeData.map(r => r.zip_code).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
-    [zipCodeData]
-  );
+  // Available values for the Map Code filter popover (the only remaining filter)
   const allMapCodes = useMemo(() =>
     [...new Set(zipCodeData.map(r => r.bivariate_map_code != null ? String(r.bivariate_map_code) : null).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
     [zipCodeData]
   );
 
-  // Sort handler that accepts explicit direction (for ColumnHeaderFilter)
+  // Sort handler accepting an explicit direction (used by the Map Code popover
+  // buttons). Clicking the already-active direction clears the sort back to
+  // the default (no explicit column → flat distress_score desc).
   const handleSortWithDirection = useCallback((column, direction) => {
-    setSortBy(column);
-    setSortDir(direction);
-  }, []);
+    if (sortBy === column && sortDir === direction) {
+      setSortBy(null);
+      setSortDir(null);
+    } else {
+      setSortBy(column);
+      setSortDir(direction);
+    }
+  }, [sortBy, sortDir]);
 
   if (!zipCodeData || zipCodeData.length === 0) {
     return (
@@ -682,46 +733,6 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
                 width: colWidth,
                 overflow: "hidden",
               };
-              if (col.key === "county") {
-                return (
-                  <ColumnHeaderFilter
-                    key={col.key}
-                    label={col.label}
-                    values={allCounties}
-                    selectedValues={selectedCounties}
-                    onSelectionChange={setSelectedCounties}
-                    sortActive={sortBy === col.key}
-                    sortDirection={sortBy === col.key ? sortDir : "asc"}
-                    onSort={(dir) => handleSortWithDirection(col.key, dir)}
-                    thStyle={{
-                      ...baseThStyle,
-                      fontFamily: "Open Sans, sans-serif",
-                      fontWeight: 600,
-                      color: "white",
-                    }}
-                  />
-                );
-              }
-              if (col.key === "zip_code") {
-                return (
-                  <ColumnHeaderFilter
-                    key={col.key}
-              label={col.label}
-                    values={allZipCodes}
-                    selectedValues={selectedZipCodes}
-                    onSelectionChange={setSelectedZipCodes}
-                    sortActive={sortBy === col.key}
-                    sortDirection={sortBy === col.key ? sortDir : "asc"}
-                    onSort={(dir) => handleSortWithDirection(col.key, dir)}
-                    thStyle={{
-                      ...baseThStyle,
-                      fontFamily: "Open Sans, sans-serif",
-                      fontWeight: 600,
-                      color: "white",
-                    }}
-                  />
-                );
-              }
               if (col.key === "bivariate_map_code") {
                 return (
                   <ColumnHeaderFilter
@@ -750,7 +761,7 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
                   style={baseThStyle}
                 >
                   {col.label}
-                  <SortArrow active={sortBy === col.key} direction={sortBy === col.key ? sortDir : "desc"} />
+                  <SortIcon active={sortBy === col.key} direction={sortBy === col.key ? sortDir : "asc"} size={12} />
                 </th>
               );
             })}
@@ -785,7 +796,7 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
                 paddingBottom: "2px",
               }}
             >
-              All data from 2024 unless stated otherwise
+              Evictions data for 12 months ending April 2026. All other data from 2024 unless stated otherwise.
             </td>
           </tr>
           {sortedData.map((row, idx) => {
@@ -817,7 +828,7 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
             // Section header row
             if (row._sectionHeader) {
               return (
-                <React.Fragment key={`section-${row._sectionExclude}-${idx}`}>
+                <React.Fragment key={`section-${row._sectionKey}-${idx}`}>
                 <tr className="bg-white">
                   <td
                     colSpan={COLUMNS.length + 1}
@@ -847,8 +858,28 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
             const isExpanded = !isSummaryRow && expandedZips.has(zip);
             const bgColor = idx % 2 === 0 ? "#FFFFFF" : "#F5F5F5";
 
+            // Unique key per row. Plain zip_code isn't enough because every
+            // county median uses zip_code="Median" — all 15+ rows would share
+            // the same key and React would mis-reconcile on sort.
+            const rowKey = row._isHoustonMedian
+              ? "summary-houston-overall"
+              : row._isCountyMedian
+              ? `summary-county-${row._medianCounty}`
+              : row._isOrgMedian
+              ? `summary-org-${row._orgName}`
+              : `zip-${zip}-${idx}`;
+
+            // Summary-row text color:
+            //   Greater Houston Overall → teal (#005C72)
+            //   per-county median       → purple (#8939ac)
+            //   per-org median          → blue (#1A56DB)
+            let summaryColor;
+            if (row._isHoustonMedian) summaryColor = "#005C72";
+            else if (row._isCountyMedian) summaryColor = "#8939ac";
+            else if (isOrgMedian) summaryColor = "#1A56DB";
+
             return (
-              <React.Fragment key={zip || idx}>
+              <React.Fragment key={rowKey}>
                 {/* Data row */}
                 <tr
                   className="transition-colors duration-150"
@@ -857,9 +888,11 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
                   onMouseLeave={(e) => { if (!isSummaryRow) e.currentTarget.style.backgroundColor = bgColor; }}
                 >
                   {COLUMNS.map((col, colIdx) => {
-                    // Org summary row: span zip_code across zip+county columns, skip county cell
-                    if (isOrgMedian && col.key === "county") return null;
-                    const colSpan = (isOrgMedian && col.key === "zip_code") ? 2 : undefined;
+                    // Houston Overall and Org summary rows: span the zip_code label
+                    // across zip+county columns; skip the county cell.
+                    const isSpannedLabelRow = isOrgMedian || row._isHoustonMedian || row._isCountyMedian;
+                    if (isSpannedLabelRow && col.key === "county") return null;
+                    const colSpan = (isSpannedLabelRow && col.key === "zip_code") ? 2 : undefined;
 
                     const scoreHighlight = DCI_FIELDS.has(col.key) ? getDciHighlight(row.dci_quin)
                       : isScoreField(col.key) ? getScoreHighlight(row[col.key])
@@ -880,7 +913,7 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ parentOrg, org
                           overflow: "hidden",
                           textOverflow: isWideText ? undefined : "ellipsis",
                           fontSize: isWideText ? "13px" : "15px",
-                          color: isMedian ? "#8939ac" : isOrgMedian ? "#1A56DB" : undefined,
+                          color: summaryColor,
                           fontWeight: isSummaryRow ? 600 : 500,
                         }}
                       >

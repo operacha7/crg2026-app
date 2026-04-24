@@ -85,8 +85,6 @@ export function applyLLMFilters(directory, filters, assistanceLookup = {}) {
   if (filters.zip_codes && filters.zip_codes.length > 0) {
     filtered = filtered.filter(record => {
       const clientZips = parseClientZipCodes(record.client_zip_codes);
-      // Always include orgs that serve all areas (99999)
-      if (clientZips.includes("99999")) return true;
       return filters.zip_codes.some(zip => clientZips.includes(zip));
     });
   }

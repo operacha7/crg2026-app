@@ -1243,6 +1243,8 @@ export default function NavBar2() {
     setLlmSearchError,
     llmRelatedSearches,
     setLlmRelatedSearches,
+    pendingLlmAutoSearch,
+    setPendingLlmAutoSearch,
   } = useAppData();
 
   // Get organization name for logging
@@ -1260,6 +1262,25 @@ export default function NavBar2() {
     mq.addEventListener("change", enforceZip);
     return () => mq.removeEventListener("change", enforceZip);
   }, [activeSearchMode, setActiveSearchMode]);
+
+  // Handler for LLM search declared later via useCallback; ref so the auto-search
+  // effect can call it without adding a forward-reference dependency.
+  const handleLLMSearchRef = useRef(null);
+
+  // Deep-link auto-search for Ask-a-Question shares. When a recipient opens a
+  // ?mode=llm&q=... URL, AppDataContext sets pendingLlmAutoSearch=true and
+  // prefills llmSearchQuery. We wait for assistance + zipCodes to be loaded
+  // (searchWithLLM needs them) and then run the search exactly once.
+  useEffect(() => {
+    if (!pendingLlmAutoSearch) return;
+    if (!assistance?.length || !zipCodes?.length) return;
+    if (!llmSearchQuery?.trim()) {
+      setPendingLlmAutoSearch(false);
+      return;
+    }
+    setPendingLlmAutoSearch(false);
+    handleLLMSearchRef.current?.(llmSearchQuery);
+  }, [pendingLlmAutoSearch, assistance, zipCodes, llmSearchQuery, setPendingLlmAutoSearch]);
 
   // Handler for coordinates change from Distance panel
   const handleCoordinatesChange = (address, coordinates) => {
@@ -1445,6 +1466,11 @@ export default function NavBar2() {
     setClientAddress,
     setClientCoordinates,
   ]);
+
+  // Keep the ref in sync so the deep-link auto-search effect can call the latest handler.
+  useEffect(() => {
+    handleLLMSearchRef.current = handleLLMSearch;
+  }, [handleLLMSearch]);
 
   // Memoize zip code options (just the zip_code strings, sorted)
   // Filter by houston_area flag from database

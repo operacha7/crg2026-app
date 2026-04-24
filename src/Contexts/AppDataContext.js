@@ -93,12 +93,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
   const [zipCodes, setZipCodes] = useState([]);
   const [organizations, setOrganizations] = useState([]); // Derived from directory for NavBar2 dropdowns
   const [orgAssistanceMap, setOrgAssistanceMap] = useState({}); // org name → assist_ids array
-  const [distressData, setDistressData] = useState([]); // Census socioeconomic indicators by zip
-  const [distressData2023, setDistressData2023] = useState([]); // 2023 archive for YoY comparison
-  const [workingPoorData, setWorkingPoorData] = useState([]); // Census working poor indicators by zip
-  const [workingPoorData2023, setWorkingPoorData2023] = useState([]); // 2023 archive for YoY comparison
-  const [evictionsData, setEvictionsData] = useState([]); // Eviction indicators by zip
-  const [zipCodeData, setZipCodeData] = useState([]); // Combined scores by zip
+  const [zipCodeData, setZipCodeData] = useState([]); // Combined scores by zip (single source of truth for reports)
   const [headerConfig, setHeaderConfig] = useState([]); // Column display configuration
 
   // Loading state
@@ -137,6 +132,9 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
   const [llmSearchLoading, setLlmSearchLoading] = useState(false);
   const [llmSearchError, setLlmSearchError] = useState("");
   const [llmRelatedSearches, setLlmRelatedSearches] = useState([]); // Related search suggestions
+  // Set from a deep link (?mode=llm&q=...) so NavBar2 can auto-run the search once
+  // assistance/zipCodes are loaded. Cleared by the consumer after it runs.
+  const [pendingLlmAutoSearch, setPendingLlmAutoSearch] = useState(false);
 
   // Quick Tips panel state
   const [quickTipsOpen, setQuickTipsOpen] = useState(false);
@@ -202,31 +200,13 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
         (async () => {
           const phase2Start = performance.now();
           try {
-            const [
-              distressDataResult,
-              distressData2023Result,
-              workingPoorDataResult,
-              workingPoorData2023Result,
-              evictionsDataResult,
-              zipCodeDataResult,
-              headerConfigResult,
-            ] = await Promise.all([
-              dataService.getDistressData(),
-              dataService.getDistressData2023(),
-              dataService.getWorkingPoorData(),
-              dataService.getWorkingPoorData2023(),
-              dataService.getEvictionsData(),
+            const [zipCodeDataResult, headerConfigResult] = await Promise.all([
               dataService.getZipCodeData(),
               dataService.getHeaderConfig(),
             ]);
 
             if (!mounted) return;
 
-            setDistressData(distressDataResult);
-            setDistressData2023(distressData2023Result);
-            setWorkingPoorData(workingPoorDataResult);
-            setWorkingPoorData2023(workingPoorData2023Result);
-            setEvictionsData(evictionsDataResult);
             setZipCodeData(zipCodeDataResult);
             setHeaderConfig(headerConfigResult);
 
@@ -258,6 +238,14 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
               if (urlParams.get('city')) setSelectedLocationCity(urlParams.get('city'));
               if (urlParams.get('loczip')) setSelectedLocationZip(urlParams.get('loczip'));
               break;
+            case 'llm': {
+              const q = urlParams.get('q');
+              if (q) {
+                setLlmSearchQuery(q);
+                setPendingLlmAutoSearch(true);
+              }
+              break;
+            }
             default:
               break;
           }
@@ -332,11 +320,6 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
     zipCodes,
     organizations,
     orgAssistanceMap,
-    distressData,
-    distressData2023,
-    workingPoorData,
-    workingPoorData2023,
-    evictionsData,
     zipCodeData,
     headerConfig,
 
@@ -397,6 +380,8 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
     setLlmSearchError,
     llmRelatedSearches,
     setLlmRelatedSearches,
+    pendingLlmAutoSearch,
+    setPendingLlmAutoSearch,
 
     // Quick Tips panel state
     quickTipsOpen,
@@ -409,8 +394,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
     setQuickTipsHighlightChipToggle,
   }), [
     directory, assistance, zipCodes, organizations, orgAssistanceMap,
-    distressData, distressData2023, workingPoorData, workingPoorData2023,
-    evictionsData, zipCodeData, headerConfig,
+    zipCodeData, headerConfig,
     loggedInUser, loading, error,
     activeSearchMode, hasActiveSearchFilter,
     selectedZipCode, selectedParentOrg, selectedChildOrg,
@@ -419,7 +403,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
     clientAddress, clientCoordinates,
     drivingDistances, drivingDistancesLoading,
     llmSearchQuery, llmSearchFilters, llmSearchInterpretation,
-    llmSearchLoading, llmSearchError, llmRelatedSearches,
+    llmSearchLoading, llmSearchError, llmRelatedSearches, pendingLlmAutoSearch,
     quickTipsOpen, quickTipsExpandedSection, quickTipsShownThisSession, quickTipsHighlightChipToggle,
   ]);
 

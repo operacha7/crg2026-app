@@ -50,7 +50,7 @@ const POP_BAND_5 = "rgba(75, 0, 130, 0.55)";      // q5: 80-100 (deep indigo)
 // Unified fill layer - one color per zip at any given time
 // Priority: childHighlighted (teal) > base highlight > hover > [parent coverage in filter view] > metric colors
 // Uses feature-state for interactive states, GeoJSON property "density" for parent coverage
-function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thresholds = {}, showInteractiveHighlights = true, yoyMode = false) {
+function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thresholds = {}, showInteractiveHighlights = true) {
   // Build metric color expression based on active metric
   let metricExpression;
   if (metric === "working_poor") {
@@ -148,22 +148,11 @@ function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, thr
   // Priority 4: Parent coverage - now handled by org-coverage-circles layer (centroid dots)
   // (removed solid fill - circles preserve base metric gradient visibility)
 
-  // Priority 5: YoY overlay (when active, replaces metric colors)
-  if (yoyMode) {
-    // Single green for all improved zips, single red for all declined zips
-    fillColorExpr.push(
-      [">=", ["coalesce", ["get", "yoy_improved_rank"], 0], 1], "rgba(46, 125, 50, 0.50)",
-      [">=", ["coalesce", ["get", "yoy_declined_rank"], 0], 1], "rgba(211, 47, 47, 0.50)",
-    );
-    // All other zips: white/transparent
-    fillColorExpr.push("rgba(255, 255, 255, 0.08)");
-  } else {
-    // Priority 5: Metric colors
-    fillColorExpr.push(...metricExpression);
+  // Priority 5: Metric colors
+  fillColorExpr.push(...metricExpression);
 
-    // Fallback: no data
-    fillColorExpr.push("rgba(0, 0, 0, 0)");
-  }
+  // Fallback: no data
+  fillColorExpr.push("rgba(0, 0, 0, 0)");
 
   return {
     id: "unified-fill",
@@ -323,24 +312,11 @@ function getDistressBandColor(score) {
   return "rgba(66, 133, 244, 0.85)";                      // Blue
 }
 
-// Fields where higher values are GOOD (up arrow green, down arrow red)
-const HIGHER_IS_GOOD = new Set(["median_household_inc", "owner_occupancy", "income_ratio"]);
-// Fields where values are neutral (no trend arrow)
-const NEUTRAL_FIELDS = new Set(["population"]);
-
-// Trend arrow: direction = which way the number moved, color = good or bad
-function getTrendArrow(key, val2024, val2023) {
-  if (val2024 == null || val2023 == null || NEUTRAL_FIELDS.has(key)) return null;
-  const diff = val2024 - val2023;
-  if (diff === 0) return null;
-  const wentUp = diff > 0;
-  const isGood = HIGHER_IS_GOOD.has(key) ? wentUp : !wentUp;
-  return { arrow: wentUp ? "▲" : "▼", color: isGood ? "#4CAF50" : "#E74C3E" };
-}
-
 // Distress data field labels for display in the table
 // showMedian: true = show Houston metro median in comparison column
-const fmtPct = (v) => v != null ? `${Number(v).toFixed(1)}%` : "—";
+// Rate fields are stored as fractions in zip_code_data (e.g. 0.194 for 19.4%),
+// so multiply by 100 for display.
+const fmtPct = (v) => v != null ? `${(Number(v) * 100).toFixed(1)}%` : "—";
 const fmtDollar = (v) => v != null ? `$${Math.round(Number(v)).toLocaleString()}` : "—";
 const fmtPop = (v) => v != null ? Math.round(Number(v)).toLocaleString() : "—";
 const fmtRatio = (v) => v != null ? Number(v).toFixed(2) : "—";
@@ -351,10 +327,10 @@ const DISTRESS_FIELDS = [
   { key: "rank", label: "Rank", format: (v, total) => v != null ? `${v} of ${total}` : "—", isRank: true },
   { key: "population", label: "Population", format: fmtPop, showMedian: true, medianFormat: fmtPop },
   { key: "poverty_rate", label: "Poverty Rate", format: fmtPct, showMedian: true, medianFormat: fmtPct },
-  { key: "median_household_inc", label: "Median Household Income", format: fmtDollar, showMedian: true, medianFormat: fmtDollar },
+  { key: "median_household_income", label: "Median Household Income", format: fmtDollar, showMedian: true, medianFormat: fmtDollar },
   { key: "income_ratio", label: "Income Ratio", format: fmtRatio, showMedian: true, medianFormat: fmtRatio },
-  { key: "unemp_rate", label: "Unemployment Rate", format: fmtPct, showMedian: true, medianFormat: fmtPct },
-  { key: "no_health_ins", label: "No Health Insurance", format: fmtPct, showMedian: true, medianFormat: fmtPct },
+  { key: "unemployment_rate", label: "Unemployment Rate", format: fmtPct, showMedian: true, medianFormat: fmtPct },
+  { key: "no_health_insurance", label: "No Health Insurance", format: fmtPct, showMedian: true, medianFormat: fmtPct },
   { key: "snap", label: "SNAP Recipients", format: fmtPct, showMedian: true, medianFormat: fmtPct },
   { key: "no_hs_diploma", label: "No HS Diploma", format: fmtPct, showMedian: true, medianFormat: fmtPct },
   { key: "vacancy_rate", label: "Vacancy Rate", format: fmtPct, showMedian: true, medianFormat: fmtPct },
@@ -362,13 +338,13 @@ const DISTRESS_FIELDS = [
   { key: "no_vehicle", label: "No Vehicle", format: fmtPct, showMedian: true, medianFormat: fmtPct },
 ];
 
-// Compute Houston metro medians from distress_data array
+// Compute Houston metro medians from zip_code_data
+// (filtered to rows where distress_score is populated — the "Calculated" set)
 function computeHoustonMedians(distressData) {
   if (!distressData || distressData.length === 0) return {};
   const medians = {};
   const medianFields = DISTRESS_FIELDS.filter(f => f.showMedian).map(f => f.key);
-  // Only include fully scored zips (exclude === 2) in aggregate calculations
-  const reliableData = distressData.filter(d => d.exclude === 2);
+  const reliableData = distressData.filter(d => d.distress_score != null);
 
   medianFields.forEach(field => {
     const values = reliableData
@@ -391,19 +367,19 @@ const WORKING_POOR_FIELDS = [
   { key: "working_poor_rank", label: "Rank", format: (v, total) => v != null ? `${v} of ${total}` : "—", isRank: true },
   { key: "population", label: "Population", format: fmtPop, showMedian: true, medianFormat: fmtPop },
   { key: "poverty_rate", label: "Poverty Rate", format: fmtPct, showMedian: true, medianFormat: fmtPct },
-  { key: "unemp_rate", label: "Unemployment Rate", format: fmtPct, showMedian: true, medianFormat: fmtPct },
-  { key: "no_health_ins", label: "No Health Insurance", format: fmtPct, showMedian: true, medianFormat: fmtPct },
+  { key: "unemployment_rate", label: "Unemployment Rate", format: fmtPct, showMedian: true, medianFormat: fmtPct },
+  { key: "no_health_insurance", label: "No Health Insurance", format: fmtPct, showMedian: true, medianFormat: fmtPct },
   { key: "snap", label: "SNAP Recipients", format: fmtPct, showMedian: true, medianFormat: fmtPct },
   { key: "no_hs_diploma", label: "No HS Diploma", format: fmtPct, showMedian: true, medianFormat: fmtPct },
 ];
 
-// Compute Houston metro medians from working_poor_data array
-function computeWorkingPoorMedians(workingPoorData) {
-  if (!workingPoorData || workingPoorData.length === 0) return {};
+// Compute Houston metro medians from zip_code_data
+// (filtered to rows where working_poor_score is populated)
+function computeWorkingPoorMedians(zipCodeData) {
+  if (!zipCodeData || zipCodeData.length === 0) return {};
   const medians = {};
   const medianFields = WORKING_POOR_FIELDS.filter(f => f.showMedian).map(f => f.key);
-  // All working poor records are exclude === 2, so no filter needed
-  const reliableData = workingPoorData;
+  const reliableData = zipCodeData.filter(d => d.working_poor_score != null);
 
   medianFields.forEach(field => {
     const values = reliableData
@@ -434,10 +410,11 @@ const EVICTIONS_FIELDS = [
   { key: "amount_per_filing", label: "Amount per Filing", format: fmtDollar, showMedian: true, medianFormat: fmtDollar },
 ];
 
-// Compute Houston metro medians from evictions_data array (exclude=2 only)
+// Compute Houston metro medians from zip_code_data
+// (filtered to rows where evictions_score is populated)
 function computeEvictionsMedians(evictionsData) {
   if (!evictionsData || evictionsData.length === 0) return {};
-  const reliableData = evictionsData.filter(d => d.exclude === 2);
+  const reliableData = evictionsData.filter(d => d.evictions_score != null);
   const medians = {};
   const medianFields = EVICTIONS_FIELDS.filter(f => f.showMedian).map(f => f.key);
 
@@ -463,7 +440,7 @@ function getEvictionsBandColor(score) {
 // Ranked counts are computed dynamically from data (count of exclude===2 records)
 
 // Draggable distress data table component - shows census indicators for a clicked zip
-function DraggableDistressTable({ data, data2023, zipCode, neighborhood, houstonMedians, rankedCount, onClose }) {
+function DraggableDistressTable({ data, zipCode, neighborhood, houstonMedians, rankedCount, onClose }) {
   const dragState = useRef({ isDragging: false, startX: 0, startY: 0 });
   const [position, setPosition] = useState({ x: 0, y: 0 });
 
@@ -502,6 +479,10 @@ function DraggableDistressTable({ data, data2023, zipCode, neighborhood, houston
 
   if (!data || !zipCode) return null;
 
+  // Key data for the distress map is distress_score — drives bg color, banner,
+  // and whether score/rank rows render (replaces prior data.exclude logic).
+  const hasKeyData = data.distress_score != null;
+
   return (
     <div
       data-distress-table="true"
@@ -512,7 +493,7 @@ function DraggableDistressTable({ data, data2023, zipCode, neighborhood, houston
         right: "60px",
         transform: `translate(${position.x}px, ${position.y}px)`,
         width: "400px",
-        backgroundColor: data.exclude === 1 ? "rgba(105, 105, 118, 0.95)" : "rgba(34, 40, 49, 0.95)",
+        backgroundColor: hasKeyData ? "rgba(34, 40, 49, 0.95)" : "rgba(105, 105, 118, 0.95)",
         fontFamily: "Lexend, sans-serif",
         userSelect: "none",
       }}
@@ -538,6 +519,16 @@ function DraggableDistressTable({ data, data2023, zipCode, neighborhood, houston
           >
             Zip Code {zipCode}
           </h3>
+          {data.county && (
+            <p style={{
+              fontSize: "11px",
+              color: "#CCCCCC",
+              margin: "2px 0 0",
+              lineHeight: 1.3,
+            }}>
+              {data.county} County
+            </p>
+          )}
           {neighborhood && (
             <p style={{
               fontSize: "10px",
@@ -569,15 +560,15 @@ function DraggableDistressTable({ data, data2023, zipCode, neighborhood, houston
         </button>
       </div>
 
-      {/* Banner for exclude=1 (small population) */}
-      {data.exclude === 1 && (
+      {/* Banner when distress score is unavailable for this zip */}
+      {!hasKeyData && (
         <div style={{
           padding: "6px 14px",
           backgroundColor: "rgba(255, 179, 2, 0.15)",
           borderBottom: "1px solid rgba(255, 179, 2, 0.25)",
         }}>
           <span style={{ fontSize: "10px", color: "#FFB302", fontWeight: 500 }}>
-            Small population — data shown for reference only
+            Distress score not available — data shown for reference only
           </span>
           <br />
           <span style={{ fontSize: "9px", color: "#999", fontStyle: "italic" }}>
@@ -593,44 +584,25 @@ function DraggableDistressTable({ data, data2023, zipCode, neighborhood, houston
         borderBottom: "1px solid rgba(255,255,255,0.12)",
       }}>
         <span style={{ flex: 1, fontSize: "9px", color: "#888", fontWeight: 500 }}></span>
-        <span style={{ width: "60px", textAlign: "right", fontSize: "9px", color: "#FFFFFF", fontWeight: 600 }}>
-          2023
-        </span>
         <span style={{ width: "72px", textAlign: "right", fontSize: "9px", color: "#FFFFFF", fontWeight: 600 }}>
-          2024
+          Value
         </span>
         <span style={{ width: "60px", textAlign: "right", fontSize: "9px", color: "#8FB6FF", fontWeight: 600 }}>
           Houston*
         </span>
       </div>
 
-      {/* Data rows */}
+      {/* Data rows — when distress_score is missing, skip score/rank rows
+          (same pattern as the old exclude=1 branch) and show remaining raw
+          fields with an em-dash for any null values. */}
       <div style={{ padding: "4px 14px 2px" }}>
-        {data.exclude === 0 ? (
-          /* Exclude=0: garbage data — show population only + "no data available" */
-          <>
-            <div style={{ display: "flex", alignItems: "center", padding: "3px 0" }}>
-              <span style={{ flex: 1, fontSize: "11px", color: "#CCC" }}>Population</span>
-              <span style={{ fontSize: "12px", color: "#FFFFFF", fontWeight: 500 }}>
-                {data.population != null ? data.population.toLocaleString() : "—"}
-              </span>
-            </div>
-            <div style={{ padding: "12px 0", textAlign: "center" }}>
-              <span style={{ fontSize: "12px", color: "#888", fontStyle: "italic" }}>No data available</span>
-            </div>
-          </>
-        ) : (
-          /* Exclude=1 or 2: show data rows */
-          DISTRESS_FIELDS.map(({ key, label, format, highlight, showMedian, medianFormat, isRank }) => {
-            // Skip score and rank rows for exclude=1 (small population, raw data only)
-            if (data.exclude === 1 && (highlight || isRank)) return null;
+        {DISTRESS_FIELDS.map(({ key, label, format, highlight, showMedian, medianFormat, isRank }) => {
+            if (!hasKeyData && (highlight || isRank)) return null;
 
             const medianVal = houstonMedians?.[key];
             const fmtMedian = showMedian && medianVal != null
               ? (medianFormat ? medianFormat(medianVal) : medianVal.toLocaleString())
               : "";
-            const val2023 = data2023?.[key];
-            const trend = (data.exclude === 2 && !isRank) ? getTrendArrow(key, data[key], val2023) : null;
 
             return (
               <div key={key}>
@@ -651,17 +623,7 @@ function DraggableDistressTable({ data, data2023, zipCode, neighborhood, houston
                   }}>
                     {label}
                   </span>
-                  {/* 2023 value (skip for rank rows) */}
-                  <span style={{
-                    width: "60px",
-                    textAlign: "right",
-                    fontSize: highlight ? "13px" : "11px",
-                    color: "#999",
-                    fontWeight: highlight ? 600 : 400,
-                  }}>
-                    {isRank ? "" : (val2023 != null ? format(val2023) : "—")}
-                  </span>
-                  {/* 2024 value + trend arrow */}
+                  {/* Value */}
                   <span style={{
                     width: "72px",
                     textAlign: "right",
@@ -684,16 +646,6 @@ function DraggableDistressTable({ data, data2023, zipCode, neighborhood, houston
                       }} />
                     )}
                     {isRank ? format(data[key], rankedCount) : format(data[key])}
-                    {trend && (
-                      <span style={{
-                        fontSize: "9px",
-                        color: trend.color,
-                        flexShrink: 0,
-                        lineHeight: 1,
-                      }}>
-                        {trend.arrow}
-                      </span>
-                    )}
                   </span>
                   {/* Houston median value (skip for rank rows) */}
                   <span style={{
@@ -708,8 +660,7 @@ function DraggableDistressTable({ data, data2023, zipCode, neighborhood, houston
                 </div>
               </div>
             );
-          })
-        )}
+          })}
       </div>
 
       {/* Source citation + footnote */}
@@ -731,328 +682,9 @@ function DraggableDistressTable({ data, data2023, zipCode, neighborhood, houston
   );
 }
 
-// Fields used in distress score (exclude rank, population, and score itself — they're not score inputs)
-const DISTRESS_SCORE_DRIVERS = DISTRESS_FIELDS.filter(
-  f => f.showMedian && !f.isRank && f.key !== "population" && f.key !== "distress_score"
-);
-
-// Draggable YoY summary panel for distress data — Houston metro trends
-function DraggableDistressYoY({ distressData, distressData2023, houstonMedians, houstonMedians2023, onClose }) {
-  const dragState = useRef({ isDragging: false, startX: 0, startY: 0 });
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-
-  const handleMouseDown = (e) => {
-    if (!e.target.closest("[data-drag-handle]")) return;
-    e.preventDefault();
-    e.stopPropagation();
-    dragState.current = {
-      isDragging: true,
-      startX: e.clientX - position.x,
-      startY: e.clientY - position.y,
-    };
-    const handleMouseMove = (e) => {
-      if (!dragState.current.isDragging) return;
-      setPosition({
-        x: e.clientX - dragState.current.startX,
-        y: e.clientY - dragState.current.startY,
-      });
-    };
-    const handleMouseUp = () => {
-      dragState.current.isDragging = false;
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-  };
-
-  // Compute per-zip score changes and find top/bottom 5 (only fully scored zips)
-  const { top5Improved, top5Declined } = useMemo(() => {
-    if (!distressData?.length || !distressData2023?.length) return { top5Improved: [], top5Declined: [] };
-
-    const lookup2023 = {};
-    distressData2023.forEach(d => { if (d.zip_code) lookup2023[d.zip_code] = d; });
-
-    const changes = distressData
-      .filter(d => d.zip_code && d.exclude === 2 && d.distress_score != null && lookup2023[d.zip_code]?.distress_score != null)
-      .map(d => {
-        const prev = lookup2023[d.zip_code];
-        const scoreDiff = d.distress_score - prev.distress_score;
-
-        // Find top 2-3 key changes using percentage change (normalized comparison)
-        const metricChanges = [];
-        DISTRESS_SCORE_DRIVERS.forEach(({ key, label, format }) => {
-          const v2024 = d[key];
-          const v2023 = prev[key];
-          if (v2024 != null && v2023 != null && v2023 !== 0) {
-            const pctChange = ((v2024 - v2023) / Math.abs(v2023)) * 100;
-            // Only include meaningful changes (>1% change)
-            if (Math.abs(pctChange) > 1) {
-              const isGood = HIGHER_IS_GOOD.has(key) ? (v2024 > v2023) : (v2024 < v2023);
-              metricChanges.push({ key, label, pctChange, isGood, format, v2024 });
-            }
-          }
-        });
-        // Sort by absolute percentage change descending, take top 3
-        metricChanges.sort((a, b) => Math.abs(b.pctChange) - Math.abs(a.pctChange));
-        const keyChanges = metricChanges.slice(0, 3);
-
-        return {
-          zip: d.zip_code,
-          score2024: d.distress_score,
-          score2023: prev.distress_score,
-          diff: scoreDiff,
-          keyChanges,
-        };
-      });
-
-    // Sort by diff ascending (most improved = biggest negative diff)
-    const sorted = [...changes].sort((a, b) => a.diff - b.diff);
-    const top5Improved = sorted.slice(0, 5);
-    const top5Declined = sorted.slice(-5).reverse(); // worst at top
-
-    return { top5Improved, top5Declined };
-  }, [distressData, distressData2023]);
-
-  if (!houstonMedians || !houstonMedians2023) return null;
-
-  const fmtDiff = (diff) => {
-    const sign = diff > 0 ? "+" : "";
-    return `${sign}${diff.toLocaleString()}`;
-  };
-
-  // Metrics to show in Houston Metro summary (skip percentile)
-  const metroFields = DISTRESS_FIELDS.filter(f => f.showMedian && f.key !== "population");
-
-  return (
-    <div
-      data-distress-yoy="true"
-      onMouseDown={handleMouseDown}
-      className="absolute z-50 rounded-lg shadow-xl"
-      style={{
-        bottom: "60px",
-        left: "20px",
-        transform: `translate(${position.x}px, ${position.y}px)`,
-        width: "460px",
-        maxHeight: "85vh",
-        overflowY: "auto",
-        backgroundColor: "rgba(34, 40, 49, 0.95)",
-        fontFamily: "Lexend, sans-serif",
-        userSelect: "none",
-      }}
-    >
-      {/* Drag handle header */}
-      <div
-        data-drag-handle="true"
-        className="flex items-center justify-between rounded-t-lg"
-        style={{
-          padding: "10px 14px 8px",
-          cursor: "grab",
-          borderBottom: "1px solid rgba(255,255,255,0.1)",
-        }}
-      >
-        <h3 style={{
-          fontSize: "15px",
-          color: "#FFC857",
-          fontWeight: 600,
-          margin: 0,
-        }}>
-          Distress — Year over Year Change
-        </h3>
-        <button
-          onClick={(e) => { e.stopPropagation(); onClose(); }}
-          style={{
-            background: "none",
-            border: "none",
-            color: "#999",
-            cursor: "pointer",
-            fontSize: "18px",
-            lineHeight: 1,
-            padding: "0 4px",
-          }}
-        >
-          ×
-        </button>
-      </div>
-
-      {/* Section 1: Houston Metro Medians */}
-      <div style={{ padding: "8px 14px 4px" }}>
-        <div style={{
-          fontSize: "12px",
-          color: "#8FB6FF",
-          fontWeight: 600,
-          marginBottom: "6px",
-        }}>
-          Houston Metro Area Medians
-        </div>
-
-        {/* Column headers */}
-        <div style={{ display: "flex", padding: "0 0 4px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-          <span style={{ flex: 1, fontSize: "9px", color: "#888" }}></span>
-          <span style={{ width: "60px", textAlign: "right", fontSize: "9px", color: "#FFF", fontWeight: 600 }}>2023</span>
-          <span style={{ width: "60px", textAlign: "right", fontSize: "9px", color: "#FFF", fontWeight: 600 }}>2024</span>
-          <span style={{ width: "55px", textAlign: "right", fontSize: "9px", color: "#FFF", fontWeight: 600 }}>Change</span>
-        </div>
-
-        {metroFields.map(({ key, label, medianFormat, format }) => {
-          const v2023 = houstonMedians2023[key];
-          const v2024 = houstonMedians[key];
-          const fmt = medianFormat || format;
-          const trend = getTrendArrow(key, v2024, v2023);
-
-          return (
-            <div key={key} style={{
-              display: "flex",
-              alignItems: "center",
-              padding: key === "distress_score" ? "5px 0" : "2px 0",
-              borderBottom: key === "distress_score" ? "1px solid rgba(255,255,255,0.08)" : "none",
-            }}>
-              <span style={{
-                flex: 1,
-                fontSize: key === "distress_score" ? "11px" : "10px",
-                color: key === "distress_score" ? "#FFC857" : "#CCC",
-                fontWeight: key === "distress_score" ? 600 : 400,
-              }}>
-                {label}
-              </span>
-              <span style={{ width: "60px", textAlign: "right", fontSize: "10px", color: "#999" }}>
-                {v2023 != null ? fmt(v2023) : "—"}
-              </span>
-              <span style={{ width: "60px", textAlign: "right", fontSize: "10px", color: "#FFF", fontWeight: 500 }}>
-                {v2024 != null ? fmt(v2024) : "—"}
-              </span>
-              <span style={{
-                width: "55px",
-                textAlign: "right",
-                fontSize: "10px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "flex-end",
-                gap: "3px",
-              }}>
-                {trend && (
-                  <span style={{ color: trend.color, fontSize: "9px" }}>{trend.arrow}</span>
-                )}
-                <span style={{ color: "#CCC", fontSize: "9px" }}>
-                  {v2024 != null && v2023 != null ? (() => {
-                    const diff = Math.abs(v2024 - v2023);
-                    if (key === "distress_score") return Math.round(diff).toLocaleString();
-                    if (key === "median_household_inc") return `$${Math.round(diff).toLocaleString()}`;
-                    if (key === "income_ratio") return diff.toFixed(2);
-                    return `${Math.round(diff * 10) / 10}%`;
-                  })() : "—"}
-                </span>
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Section 2: Most Improved Zip Codes */}
-      <div style={{ padding: "8px 14px 4px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-        <div style={{
-          fontSize: "12px",
-          color: "#4CAF50",
-          fontWeight: 600,
-          marginBottom: "6px",
-        }}>
-          Most Improved Zip Codes
-        </div>
-
-        <div style={{ display: "flex", padding: "0 0 4px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-          <span style={{ width: "50px", fontSize: "9px", color: "#888" }}>Zip</span>
-          <span style={{ width: "50px", textAlign: "right", fontSize: "9px", color: "#FFF", fontWeight: 600 }}>Score</span>
-          <span style={{ width: "45px", textAlign: "right", fontSize: "9px", color: "#FFF", fontWeight: 600 }}>Chg</span>
-          <span style={{ flex: 1, fontSize: "9px", color: "#888", paddingLeft: "12px" }}>Key Changes</span>
-        </div>
-
-        {top5Improved.map((z) => {
-          const scoreTrend = getTrendArrow("distress_score", z.score2024, z.score2023);
-          return (
-            <div key={z.zip} style={{ display: "flex", alignItems: "flex-start", padding: "3px 0" }}>
-              <span style={{ width: "50px", fontSize: "11px", color: "#FFF", fontWeight: 500 }}>{z.zip}</span>
-              <span style={{ width: "50px", textAlign: "right", fontSize: "10px", color: "#FFF" }}>{z.score2024.toLocaleString()}</span>
-              <span style={{ width: "45px", textAlign: "right", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "2px" }}>
-                {scoreTrend && <span style={{ color: scoreTrend.color, fontSize: "9px" }}>{scoreTrend.arrow}</span>}
-                <span style={{ color: "#4CAF50", fontSize: "9px" }}>{fmtDiff(Math.round(z.diff))}</span>
-              </span>
-              <div style={{ flex: 1, paddingLeft: "12px" }}>
-                {z.keyChanges.length > 0 ? z.keyChanges.map((c, i) => (
-                  <div key={c.key} style={{ fontSize: "9px", color: "#CCC", lineHeight: "14px" }}>
-                    <span>{c.label}</span>
-                    <span style={{ color: c.isGood ? "#4CAF50" : "#E74C3E", marginLeft: "4px" }}>
-                      {c.pctChange > 0 ? "+" : ""}{c.pctChange.toFixed(1)}%
-                    </span>
-                  </div>
-                )) : <span style={{ fontSize: "9px", color: "#888" }}>—</span>}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Section 3: Most Declined Zip Codes */}
-      <div style={{ padding: "8px 14px 4px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-        <div style={{
-          fontSize: "12px",
-          color: "#E74C3E",
-          fontWeight: 600,
-          marginBottom: "6px",
-        }}>
-          Most Declined Zip Codes
-        </div>
-
-        <div style={{ display: "flex", padding: "0 0 4px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-          <span style={{ width: "50px", fontSize: "9px", color: "#888" }}>Zip</span>
-          <span style={{ width: "50px", textAlign: "right", fontSize: "9px", color: "#FFF", fontWeight: 600 }}>Score</span>
-          <span style={{ width: "45px", textAlign: "right", fontSize: "9px", color: "#FFF", fontWeight: 600 }}>Chg</span>
-          <span style={{ flex: 1, fontSize: "9px", color: "#888", paddingLeft: "12px" }}>Key Changes</span>
-        </div>
-
-        {top5Declined.map((z) => {
-          const scoreTrend = getTrendArrow("distress_score", z.score2024, z.score2023);
-          return (
-            <div key={z.zip} style={{ display: "flex", alignItems: "flex-start", padding: "3px 0" }}>
-              <span style={{ width: "50px", fontSize: "11px", color: "#FFF", fontWeight: 500 }}>{z.zip}</span>
-              <span style={{ width: "50px", textAlign: "right", fontSize: "10px", color: "#FFF" }}>{z.score2024.toLocaleString()}</span>
-              <span style={{ width: "45px", textAlign: "right", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "2px" }}>
-                {scoreTrend && <span style={{ color: scoreTrend.color, fontSize: "9px" }}>{scoreTrend.arrow}</span>}
-                <span style={{ color: "#E74C3E", fontSize: "9px" }}>{fmtDiff(Math.round(z.diff))}</span>
-              </span>
-              <div style={{ flex: 1, paddingLeft: "12px" }}>
-                {z.keyChanges.length > 0 ? z.keyChanges.map((c, i) => (
-                  <div key={c.key} style={{ fontSize: "9px", color: "#CCC", lineHeight: "14px" }}>
-                    <span>{c.label}</span>
-                    <span style={{ color: c.isGood ? "#4CAF50" : "#E74C3E", marginLeft: "4px" }}>
-                      {c.pctChange > 0 ? "+" : ""}{c.pctChange.toFixed(1)}%
-                    </span>
-                  </div>
-                )) : <span style={{ fontSize: "9px", color: "#888" }}>—</span>}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Footer */}
-      <div style={{
-        padding: "6px 14px 10px",
-        borderTop: "1px solid rgba(255,255,255,0.08)",
-      }}>
-        <span style={{ fontSize: "9px", color: "#888", fontStyle: "italic" }}>
-          Source: {CENSUS_SOURCE}
-        </span>
-        <br />
-        <span style={{ fontSize: "9px", color: "#888", fontStyle: "italic" }}>
-          Score change based on distress score (composite of all indicators).
-        </span>
-      </div>
-    </div>
-  );
-}
 
 // Draggable working poor data table component - shows working poor indicators for a clicked zip
-function DraggableWorkingPoorTable({ data, data2023, zipCode, neighborhood, houstonMedians, rankedCount, onClose }) {
+function DraggableWorkingPoorTable({ data, zipCode, neighborhood, houstonMedians, rankedCount, onClose }) {
   const dragState = useRef({ isDragging: false, startX: 0, startY: 0 });
   const [position, setPosition] = useState({ x: 0, y: 0 });
 
@@ -1091,6 +723,8 @@ function DraggableWorkingPoorTable({ data, data2023, zipCode, neighborhood, hous
 
   if (!data || !zipCode) return null;
 
+  const hasKeyData = data.working_poor_score != null;
+
   return (
     <div
       data-working-poor-table="true"
@@ -1101,7 +735,7 @@ function DraggableWorkingPoorTable({ data, data2023, zipCode, neighborhood, hous
         right: "60px",
         transform: `translate(${position.x}px, ${position.y}px)`,
         width: "400px",
-        backgroundColor: "rgba(34, 40, 49, 0.95)",
+        backgroundColor: hasKeyData ? "rgba(34, 40, 49, 0.95)" : "rgba(105, 105, 118, 0.95)",
         fontFamily: "Lexend, sans-serif",
         userSelect: "none",
       }}
@@ -1127,6 +761,16 @@ function DraggableWorkingPoorTable({ data, data2023, zipCode, neighborhood, hous
           >
             Zip Code {zipCode}
           </h3>
+          {data.county && (
+            <p style={{
+              fontSize: "11px",
+              color: "#CCCCCC",
+              margin: "2px 0 0",
+              lineHeight: 1.3,
+            }}>
+              {data.county} County
+            </p>
+          )}
           {neighborhood && (
             <p style={{
               fontSize: "10px",
@@ -1165,26 +809,39 @@ function DraggableWorkingPoorTable({ data, data2023, zipCode, neighborhood, hous
         borderBottom: "1px solid rgba(255,255,255,0.12)",
       }}>
         <span style={{ flex: 1, fontSize: "9px", color: "#888", fontWeight: 500 }}></span>
-        <span style={{ width: "60px", textAlign: "right", fontSize: "9px", color: "#FFFFFF", fontWeight: 600 }}>
-          2023
-        </span>
         <span style={{ width: "72px", textAlign: "right", fontSize: "9px", color: "#FFFFFF", fontWeight: 600 }}>
-          2024
+          Value
         </span>
         <span style={{ width: "60px", textAlign: "right", fontSize: "9px", color: "#8FB6FF", fontWeight: 600 }}>
           Houston*
         </span>
       </div>
 
+      {/* Banner when working-poor score is unavailable for this zip */}
+      {!hasKeyData && (
+        <div style={{
+          padding: "6px 14px",
+          backgroundColor: "rgba(255, 179, 2, 0.15)",
+          borderBottom: "1px solid rgba(255, 179, 2, 0.25)",
+        }}>
+          <span style={{ fontSize: "10px", color: "#FFB302", fontWeight: 500 }}>
+            Working Poor score not available — data shown for reference only
+          </span>
+          <br />
+          <span style={{ fontSize: "9px", color: "#999", fontStyle: "italic" }}>
+            Not scored or ranked. Excluded from Houston metro statistics.
+          </span>
+        </div>
+      )}
+
       {/* Data rows */}
       <div style={{ padding: "4px 14px 2px" }}>
         {WORKING_POOR_FIELDS.map(({ key, label, format, highlight, showMedian, medianFormat, isRank }) => {
+          if (!hasKeyData && (highlight || isRank)) return null;
           const medianVal = houstonMedians?.[key];
           const fmtMedian = showMedian && medianVal != null
             ? (medianFormat ? medianFormat(medianVal) : medianVal.toLocaleString())
             : "";
-          const val2023 = data2023?.[key];
-          const trend = !isRank ? getTrendArrow(key, data[key], val2023) : null;
 
           return (
             <div key={key}>
@@ -1205,17 +862,7 @@ function DraggableWorkingPoorTable({ data, data2023, zipCode, neighborhood, hous
                 }}>
                   {label}
                 </span>
-                {/* 2023 value (skip for rank rows) */}
-                <span style={{
-                  width: "60px",
-                  textAlign: "right",
-                  fontSize: highlight ? "13px" : "11px",
-                  color: "#999",
-                  fontWeight: highlight ? 600 : 400,
-                }}>
-                  {isRank ? "" : (val2023 != null ? format(val2023) : "—")}
-                </span>
-                {/* 2024 value + trend arrow */}
+                {/* Value */}
                 <span style={{
                   width: "72px",
                   textAlign: "right",
@@ -1238,16 +885,6 @@ function DraggableWorkingPoorTable({ data, data2023, zipCode, neighborhood, hous
                     }} />
                   )}
                   {isRank ? format(data[key], rankedCount) : format(data[key])}
-                  {trend && (
-                    <span style={{
-                      fontSize: "9px",
-                      color: trend.color,
-                      flexShrink: 0,
-                      lineHeight: 1,
-                    }}>
-                      {trend.arrow}
-                    </span>
-                  )}
                 </span>
                 {/* Houston median value (skip for rank rows) */}
                 <span style={{
@@ -1323,6 +960,10 @@ function DraggableEvictionsTable({ data, zipCode, neighborhood, houstonMedians, 
 
   if (!data || !zipCode) return null;
 
+  // Key data for the evictions map is evictions_score — drives bg, banner,
+  // and whether score/rank rows render.
+  const hasKeyData = data.evictions_score != null;
+
   return (
     <div
       data-evictions-table="true"
@@ -1333,7 +974,7 @@ function DraggableEvictionsTable({ data, zipCode, neighborhood, houstonMedians, 
         right: "60px",
         transform: `translate(${position.x}px, ${position.y}px)`,
         width: "420px",
-        backgroundColor: data.exclude === 1 ? "rgba(105, 105, 118, 0.95)" : "rgba(34, 40, 49, 0.95)",
+        backgroundColor: hasKeyData ? "rgba(34, 40, 49, 0.95)" : "rgba(105, 105, 118, 0.95)",
         fontFamily: "Lexend, sans-serif",
         userSelect: "none",
       }}
@@ -1359,6 +1000,16 @@ function DraggableEvictionsTable({ data, zipCode, neighborhood, houstonMedians, 
           >
             Zip Code {zipCode}
           </h3>
+          {data.county && (
+            <p style={{
+              fontSize: "11px",
+              color: "#CCCCCC",
+              margin: "2px 0 0",
+              lineHeight: 1.3,
+            }}>
+              {data.county} County
+            </p>
+          )}
           {neighborhood && (
             <p style={{
               fontSize: "10px",
@@ -1390,15 +1041,15 @@ function DraggableEvictionsTable({ data, zipCode, neighborhood, houstonMedians, 
         </button>
       </div>
 
-      {/* Exclude=1 amber banner */}
-      {data.exclude === 1 && (
+      {/* Banner when evictions score is unavailable for this zip */}
+      {!hasKeyData && (
         <div style={{
           padding: "6px 14px",
           backgroundColor: "rgba(255, 179, 2, 0.15)",
           borderBottom: "1px solid rgba(255, 179, 2, 0.25)",
         }}>
           <span style={{ fontSize: "10px", color: "#FFB302", fontWeight: 500 }}>
-            Small population — data shown for reference only
+            Evictions score not available — data shown for reference only
           </span>
           <br />
           <span style={{ fontSize: "9px", color: "#999", fontStyle: "italic" }}>
@@ -1422,18 +1073,11 @@ function DraggableEvictionsTable({ data, zipCode, neighborhood, houstonMedians, 
         </span>
       </div>
 
-      {/* Data rows */}
+      {/* Data rows — when evictions_score is missing, skip score/rank rows;
+          other fields render with em-dashes for null values. */}
       <div style={{ padding: "4px 14px 2px" }}>
-        {data.exclude === 0 ? (
-          /* Exclude=0: garbage data — show only "no data available" */
-          <div style={{ padding: "12px 0", textAlign: "center" }}>
-            <span style={{ fontSize: "12px", color: "#888", fontStyle: "italic" }}>No data available</span>
-          </div>
-        ) : (
-          /* Exclude=1 or 2: show data rows */
-          EVICTIONS_FIELDS.map(({ key, label, format, highlight, showMedian, medianFormat, isRank }) => {
-            // Skip score and rank rows for exclude=1
-            if (data.exclude === 1 && (highlight || isRank)) return null;
+        {EVICTIONS_FIELDS.map(({ key, label, format, highlight, showMedian, medianFormat, isRank }) => {
+            if (!hasKeyData && (highlight || isRank)) return null;
 
             const medianVal = houstonMedians?.[key];
             const fmtMedian = showMedian && medianVal != null
@@ -1493,8 +1137,7 @@ function DraggableEvictionsTable({ data, zipCode, neighborhood, houstonMedians, 
                 </div>
               </div>
             );
-          })
-        )}
+          })}
       </div>
 
       {/* Source citation + footnote */}
@@ -1517,7 +1160,7 @@ function DraggableEvictionsTable({ data, zipCode, neighborhood, houstonMedians, 
 }
 
 // Simple draggable population info box - shows just population for the clicked zip
-function DraggablePopulationTable({ population, zipCode, neighborhood, onClose }) {
+function DraggablePopulationTable({ population, zipCode, neighborhood, county, onClose, hasKeyData = true }) {
   const dragState = useRef({ isDragging: false, startX: 0, startY: 0 });
   const [position, setPosition] = useState({ x: 0, y: 0 });
 
@@ -1553,7 +1196,7 @@ function DraggablePopulationTable({ population, zipCode, neighborhood, onClose }
     window.addEventListener("mouseup", handleMouseUp);
   };
 
-  if (population == null || !zipCode) return null;
+  if (!zipCode) return null;
 
   return (
     <div
@@ -1564,7 +1207,7 @@ function DraggablePopulationTable({ population, zipCode, neighborhood, onClose }
         right: "60px",
         transform: `translate(${position.x}px, ${position.y}px)`,
         width: "280px",
-        backgroundColor: "rgba(34, 40, 49, 0.95)",
+        backgroundColor: hasKeyData ? "rgba(34, 40, 49, 0.95)" : "rgba(105, 105, 118, 0.95)",
         fontFamily: "Lexend, sans-serif",
         userSelect: "none",
       }}
@@ -1583,6 +1226,11 @@ function DraggablePopulationTable({ population, zipCode, neighborhood, onClose }
           <h3 style={{ fontSize: "15px", color: "#FFC857", fontWeight: 600, margin: 0 }}>
             Zip Code {zipCode}
           </h3>
+          {county && (
+            <p style={{ fontSize: "11px", color: "#CCCCCC", margin: "2px 0 0", lineHeight: 1.3 }}>
+              {county} County
+            </p>
+          )}
           {neighborhood && (
             <p style={{ fontSize: "10px", color: "#8FB6FF", margin: "2px 0 0", lineHeight: 1.3 }}>
               {neighborhood}
@@ -1606,12 +1254,25 @@ function DraggablePopulationTable({ population, zipCode, neighborhood, onClose }
         </button>
       </div>
 
+      {/* Banner when population data is unavailable */}
+      {!hasKeyData && (
+        <div style={{
+          padding: "6px 14px",
+          backgroundColor: "rgba(255, 179, 2, 0.15)",
+          borderBottom: "1px solid rgba(255, 179, 2, 0.25)",
+        }}>
+          <span style={{ fontSize: "10px", color: "#FFB302", fontWeight: 500 }}>
+            Population data not available for this zip code.
+          </span>
+        </div>
+      )}
+
       {/* Population value */}
       <div style={{ padding: "12px 14px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: "13px", color: "#CCC", fontWeight: 500 }}>Population</span>
           <span style={{ fontSize: "16px", color: "#FFFFFF", fontWeight: 600 }}>
-            {population.toLocaleString()}
+            {population != null ? population.toLocaleString() : "—"}
           </span>
         </div>
       </div>
@@ -1688,6 +1349,11 @@ function DraggableFundingTable({ data, zipCode, neighborhood, onClose }) {
           <h3 style={{ fontSize: "15px", color: "#FFC857", fontWeight: 600, margin: 0 }}>
             Zip Code {zipCode}
           </h3>
+          {data.county && (
+            <p style={{ fontSize: "11px", color: "#CCCCCC", margin: "2px 0 0", lineHeight: 1.3 }}>
+              {data.county} County
+            </p>
+          )}
           {neighborhood && (
             <p style={{ fontSize: "10px", color: "#8FB6FF", margin: "2px 0 0", lineHeight: 1.3 }}>
               {neighborhood}
@@ -1800,6 +1466,11 @@ function DraggableEfficiencyTable({ data, zipCode, neighborhood, onClose }) {
           <h3 style={{ fontSize: "15px", color: "#FFC857", fontWeight: 600, margin: 0 }}>
             Zip Code {zipCode}
           </h3>
+          {data.county && (
+            <p style={{ fontSize: "11px", color: "#CCCCCC", margin: "2px 0 0", lineHeight: 1.3 }}>
+              {data.county} County
+            </p>
+          )}
           {neighborhood && (
             <p style={{ fontSize: "10px", color: "#8FB6FF", margin: "2px 0 0", lineHeight: 1.3 }}>
               {neighborhood}
@@ -1947,6 +1618,11 @@ function DraggableBivariateTable({ data, zipCode, neighborhood, onClose }) {
           <h3 style={{ fontSize: "15px", color: "#FFC857", fontWeight: 600, margin: 0 }}>
             Zip Code {zipCode}
           </h3>
+          {data.county && (
+            <p style={{ fontSize: "11px", color: "#CCCCCC", margin: "2px 0 0", lineHeight: 1.3 }}>
+              {data.county} County
+            </p>
+          )}
           {neighborhood && (
             <p style={{ fontSize: "10px", color: "#8FB6FF", margin: "2px 0 0", lineHeight: 1.3 }}>
               {neighborhood}
@@ -2695,7 +2371,7 @@ const MapboxMap = forwardRef(function MapboxMap({
   activeBase = "distress",
   onViewModeChange,
 }, ref) {
-  const { directory, assistance, zipCodes, distressData, distressData2023, workingPoorData, workingPoorData2023, evictionsData, zipCodeData } = useAppData();
+  const { directory, assistance, zipCodes, zipCodeData } = useAppData();
   const mapRef = useRef(null);
   const mapContainerRef = useRef(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -2762,148 +2438,88 @@ const MapboxMap = forwardRef(function MapboxMap({
     );
   }, [zipCodes]);
 
-  // Distress score lookup: zip_code -> distress_score (only exclude === 2 get colored on map)
-  // Uses -1 sentinel for zips without data so score 0 (best zip) still gets colored
+  // Distress score lookup: zip_code -> distress_score (any row with a populated
+  // distress_score gets colored). Uses -1 sentinel for missing data so score 0
+  // (best zip) still gets colored.
   const distressLookup = useMemo(() => {
     const lookup = {};
-    if (!distressData) return lookup;
-    distressData.forEach((d) => {
-      if (d.zip_code && d.exclude === 2 && d.distress_score != null) {
+    if (!zipCodeData) return lookup;
+    zipCodeData.forEach((d) => {
+      if (d.zip_code && d.distress_score != null) {
         lookup[d.zip_code] = Number(d.distress_score);
       }
     });
     return lookup;
-  }, [distressData]);
+  }, [zipCodeData]);
 
-  // Working poor lookup: zip_code -> working_poor_score value (from working_poor_data table)
+  // Working poor lookup: zip_code -> working_poor_score value
   const workingPoorLookup = useMemo(() => {
     const lookup = {};
-    if (!workingPoorData) return lookup;
-    workingPoorData.forEach((d) => {
+    if (!zipCodeData) return lookup;
+    zipCodeData.forEach((d) => {
       if (d.zip_code && d.working_poor_score != null) {
         lookup[d.zip_code] = Number(d.working_poor_score) || 0;
       }
     });
     return lookup;
-  }, [workingPoorData]);
+  }, [zipCodeData]);
 
-  // Population score lookup: zip_code -> population_score (0-100, from distress data)
+  // Population score lookup: zip_code -> population_score (0-100)
   const populationScoreLookup = useMemo(() => {
     const lookup = {};
-    if (!distressData) return lookup;
-    distressData.forEach((d) => {
+    if (!zipCodeData) return lookup;
+    zipCodeData.forEach((d) => {
       if (d.zip_code && d.population_score != null) {
         lookup[d.zip_code] = Number(d.population_score) ?? -1;
       }
     });
     return lookup;
-  }, [distressData]);
+  }, [zipCodeData]);
 
   // Population raw value lookup: zip_code -> population (for info box display)
   const populationLookup = useMemo(() => {
     const lookup = {};
-    if (!distressData) return lookup;
-    distressData.forEach((d) => {
+    if (!zipCodeData) return lookup;
+    zipCodeData.forEach((d) => {
       if (d.zip_code && d.population != null) {
         lookup[d.zip_code] = Number(d.population) || 0;
       }
     });
     return lookup;
-  }, [distressData]);
+  }, [zipCodeData]);
 
-  // Distress data lookup: zip_code -> full distress record (for popup table)
+  // Distress data lookup: zip_code -> full zip_code_data record (for popup info box)
   const distressDataLookup = useMemo(() => {
     const lookup = {};
-    if (!distressData) return lookup;
-    distressData.forEach((d) => {
+    if (!zipCodeData) return lookup;
+    zipCodeData.forEach((d) => {
       if (d.zip_code) {
         lookup[d.zip_code] = d;
       }
     });
     return lookup;
-  }, [distressData]);
+  }, [zipCodeData]);
 
-  // Distress data 2023 lookup: zip_code -> full 2023 distress record (for YoY comparison)
-  const distressData2023Lookup = useMemo(() => {
-    const lookup = {};
-    if (!distressData2023) return lookup;
-    distressData2023.forEach((d) => {
-      if (d.zip_code) {
-        lookup[d.zip_code] = d;
-      }
-    });
-    return lookup;
-  }, [distressData2023]);
+  // Houston metro medians (rows where distress_score is populated)
+  const houstonMedians = useMemo(() => computeHoustonMedians(zipCodeData), [zipCodeData]);
 
-  // Houston metro medians computed from distress_data (for comparison column)
-  const houstonMedians = useMemo(() => computeHoustonMedians(distressData), [distressData]);
-  const houstonMedians2023 = useMemo(() => computeHoustonMedians(distressData2023), [distressData2023]);
+  // Working poor data lookup: zip_code -> full zip_code_data record (same data, different info box)
+  const workingPoorDataLookup = distressDataLookup;
 
-  // YoY summary panel state
-  const [showDistressYoY, setShowDistressYoY] = useState(false);
+  // Working poor metro medians (rows where working_poor_score is populated)
+  const workingPoorMedians = useMemo(() => computeWorkingPoorMedians(zipCodeData), [zipCodeData]);
 
-  // YoY top/bottom 5 zip codes for map highlighting (lightweight — just zip + rank, only fully scored zips)
-  const distressYoYZips = useMemo(() => {
-    if (!distressData?.length || !distressData2023?.length) return null;
-    const lookup2023 = {};
-    distressData2023.forEach(d => { if (d.zip_code) lookup2023[d.zip_code] = d; });
-    const changes = distressData
-      .filter(d => d.zip_code && d.exclude === 2 && d.distress_score != null && lookup2023[d.zip_code]?.distress_score != null)
-      .map(d => ({ zip: d.zip_code, diff: d.distress_score - lookup2023[d.zip_code].distress_score }));
-    const sorted = [...changes].sort((a, b) => a.diff - b.diff);
-    // improved = map of zip → rank 1-5 (1 = most improved)
-    const improved = {};
-    sorted.slice(0, 5).forEach((z, i) => { improved[z.zip] = i + 1; });
-    // declined = map of zip → rank 1-5 (1 = most declined)
-    const declined = {};
-    sorted.slice(-5).reverse().forEach((z, i) => { declined[z.zip] = i + 1; });
-    return { improved, declined };
-  }, [distressData, distressData2023]);
-
-  // Note: distressLookup only includes exclude===2 zips, so exclude=0/1 get score 0 (no map color).
-  // Info box data comes from distressDataLookup which includes all exclude levels.
-
-  // Working poor data lookup: zip_code -> full working poor record (for popup table)
-  const workingPoorDataLookup = useMemo(() => {
-    const lookup = {};
-    if (!workingPoorData) return lookup;
-    workingPoorData.forEach((d) => {
-      if (d.zip_code) {
-        lookup[d.zip_code] = d;
-      }
-    });
-    return lookup;
-  }, [workingPoorData]);
-
-  // Working poor data 2023 lookup: zip_code -> full 2023 working poor record (for YoY comparison)
-  const workingPoorData2023Lookup = useMemo(() => {
-    const lookup = {};
-    if (!workingPoorData2023) return lookup;
-    workingPoorData2023.forEach((d) => {
-      if (d.zip_code) {
-        lookup[d.zip_code] = d;
-      }
-    });
-    return lookup;
-  }, [workingPoorData2023]);
-
-  // Working poor metro medians computed from working_poor_data (for comparison column)
-  const workingPoorMedians = useMemo(() => computeWorkingPoorMedians(workingPoorData), [workingPoorData]);
-
-  // Working poor score lookup for map coloring: zip_code -> working_poor_score (already in workingPoorLookup)
-  // (No separate percentile lookup needed — using score directly for map coloring)
-
-  // Evictions lookup: zip_code -> evictions_score (only exclude===2, for map coloring)
+  // Evictions lookup: zip_code -> evictions_score (any row with a populated score)
   const evictionsLookup = useMemo(() => {
     const lookup = {};
-    if (!evictionsData) return lookup;
-    evictionsData.forEach((d) => {
-      if (d.zip_code && d.exclude === 2 && d.evictions_score != null) {
+    if (!zipCodeData) return lookup;
+    zipCodeData.forEach((d) => {
+      if (d.zip_code && d.evictions_score != null) {
         lookup[d.zip_code] = Number(d.evictions_score);
       }
     });
     return lookup;
-  }, [evictionsData]);
+  }, [zipCodeData]);
 
   // Funding score lookup: zip_code -> zip_fin_fund_score (from zip_code_data table)
   const fundingScoreLookup = useMemo(() => {
@@ -2953,36 +2569,72 @@ const MapboxMap = forwardRef(function MapboxMap({
     return lookup;
   }, [zipCodeData]);
 
-  // Evictions data lookup: zip_code -> full evictions record (for popup table)
-  const evictionsDataLookup = useMemo(() => {
-    const lookup = {};
-    if (!evictionsData) return lookup;
-    evictionsData.forEach((d) => {
-      if (d.zip_code) {
-        lookup[d.zip_code] = d;
-      }
-    });
-    return lookup;
-  }, [evictionsData]);
+  // Evictions data lookup: zip_code -> full zip_code_data record (for popup table)
+  const evictionsDataLookup = distressDataLookup;
 
-  // Evictions metro medians computed from evictions_data (for comparison column)
-  const evictionsMedians = useMemo(() => computeEvictionsMedians(evictionsData), [evictionsData]);
+  // Evictions metro medians (rows where evictions_score is populated)
+  const evictionsMedians = useMemo(() => computeEvictionsMedians(zipCodeData), [zipCodeData]);
 
-  // Dynamic ranked counts — count of exclude===2 records in each dataset
+  // Dynamic ranked counts — per-metric counts of rows with a populated score
   const distressRankedCount = useMemo(() => {
-    if (!distressData) return 0;
-    return distressData.filter(d => d.exclude === 2).length;
-  }, [distressData]);
+    if (!zipCodeData) return 0;
+    return zipCodeData.filter(d => d.distress_score != null).length;
+  }, [zipCodeData]);
 
   const workingPoorRankedCount = useMemo(() => {
-    if (!workingPoorData) return 0;
-    return workingPoorData.filter(d => d.exclude === 2).length;
-  }, [workingPoorData]);
+    if (!zipCodeData) return 0;
+    return zipCodeData.filter(d => d.working_poor_score != null).length;
+  }, [zipCodeData]);
 
   const evictionsRankedCount = useMemo(() => {
-    if (!evictionsData) return 0;
-    return evictionsData.filter(d => d.exclude === 2).length;
-  }, [evictionsData]);
+    if (!zipCodeData) return 0;
+    return zipCodeData.filter(d => d.evictions_score != null).length;
+  }, [zipCodeData]);
+
+  // Per-row in-app ranks (since `rank` / `working_poor_rank` are no longer
+  // stored as columns). Rank by descending score within rows where that score
+  // is populated, ties broken by zip_code asc.
+  const distressRankLookup = useMemo(() => {
+    const lookup = {};
+    if (!zipCodeData) return lookup;
+    const ranked = zipCodeData
+      .filter(d => d.distress_score != null)
+      .sort((a, b) => {
+        const diff = Number(b.distress_score) - Number(a.distress_score);
+        if (diff !== 0) return diff;
+        return String(a.zip_code).localeCompare(String(b.zip_code));
+      });
+    ranked.forEach((d, i) => { lookup[d.zip_code] = i + 1; });
+    return lookup;
+  }, [zipCodeData]);
+
+  const workingPoorRankLookup = useMemo(() => {
+    const lookup = {};
+    if (!zipCodeData) return lookup;
+    const ranked = zipCodeData
+      .filter(d => d.working_poor_score != null)
+      .sort((a, b) => {
+        const diff = Number(b.working_poor_score) - Number(a.working_poor_score);
+        if (diff !== 0) return diff;
+        return String(a.zip_code).localeCompare(String(b.zip_code));
+      });
+    ranked.forEach((d, i) => { lookup[d.zip_code] = i + 1; });
+    return lookup;
+  }, [zipCodeData]);
+
+  const evictionsRankLookup = useMemo(() => {
+    const lookup = {};
+    if (!zipCodeData) return lookup;
+    const ranked = zipCodeData
+      .filter(d => d.evictions_score != null)
+      .sort((a, b) => {
+        const diff = Number(b.evictions_score) - Number(a.evictions_score);
+        if (diff !== 0) return diff;
+        return String(a.zip_code).localeCompare(String(b.zip_code));
+      });
+    ranked.forEach((d, i) => { lookup[d.zip_code] = i + 1; });
+    return lookup;
+  }, [zipCodeData]);
 
   // Is the map in base view (clean metric) vs filter view (overlay + metric)?
   const isBaseView = viewMode !== "filter_view";
@@ -2992,11 +2644,10 @@ const MapboxMap = forwardRef(function MapboxMap({
   const rawDisplayMetric = isBaseView ? viewMode : activeBase;
   const displayMetric = (rawDisplayMetric === "efficiency_ratio" && efficiencySubMode === "bivariate") ? "bivariate" : rawDisplayMetric;
 
-  // Memoized unified fill style - recomputed when viewMode, activeBase, or YoY mode change
-  const isDistressYoYActive = showDistressYoY && (isBaseView ? displayMetric === "distress" : activeBase === "distress");
+  // Memoized unified fill style - recomputed when viewMode or activeBase change
   const unifiedFillStyle = useMemo(() => {
-    return getUnifiedFillStyle(displayMetric, !isBaseView, {}, !isBaseView, isDistressYoYActive);
-  }, [displayMetric, isBaseView, isDistressYoYActive]);
+    return getUnifiedFillStyle(displayMetric, !isBaseView, {}, !isBaseView);
+  }, [displayMetric, isBaseView]);
 
   // Zip codes by county lookup
   const houstonZipsByCounty = useMemo(() => {
@@ -3155,13 +2806,11 @@ const MapboxMap = forwardRef(function MapboxMap({
             funding_score: fundingScoreLookup[f.properties.ZCTA5CE20] ?? -1,
             efficiency_score: efficiencyScoreLookup[f.properties.ZCTA5CE20] ?? -1,
             bivariate_code: bivariateCodeLookup[f.properties.ZCTA5CE20] || "",
-            yoy_improved_rank: distressYoYZips?.improved[f.properties.ZCTA5CE20] || 0,
-            yoy_declined_rank: distressYoYZips?.declined[f.properties.ZCTA5CE20] || 0,
           },
         })),
     };
     return filtered;
-  }, [allGeoJsonData, boundaryZips, parentCoverage, distressLookup, workingPoorLookup, populationLookup, populationScoreLookup, evictionsLookup, fundingScoreLookup, efficiencyScoreLookup, bivariateCodeLookup, distressYoYZips]);
+  }, [allGeoJsonData, boundaryZips, parentCoverage, distressLookup, workingPoorLookup, populationLookup, populationScoreLookup, evictionsLookup, fundingScoreLookup, efficiencyScoreLookup, bivariateCodeLookup]);
 
   // Derive centroid point GeoJSON from polygon data for org coverage circles
   const centroidGeoJson = useMemo(() => {
@@ -3434,7 +3083,9 @@ const MapboxMap = forwardRef(function MapboxMap({
       return;
     }
 
-    // In population base view, clicking a zip boundary opens/toggles the population info box
+    // In population base view, clicking a zip boundary opens/toggles the
+    // population info box. Allow any zip in zipCodeData — when population is
+    // null the info box shows a banner and an em-dash value.
     if (isBaseView && displayMetric === "population") {
       const map = mapRef.current?.getMap();
       if (map && map.getLayer("unified-fill")) {
@@ -3443,7 +3094,7 @@ const MapboxMap = forwardRef(function MapboxMap({
         });
         if (features.length > 0) {
           const clickedZip = features[0].properties.ZCTA5CE20;
-          if (clickedZip && populationLookup[clickedZip] != null) {
+          if (clickedZip && distressDataLookup[clickedZip]) {
             setPopulationTableZip(prev => prev === clickedZip ? null : clickedZip);
             return;
           }
@@ -3494,7 +3145,7 @@ const MapboxMap = forwardRef(function MapboxMap({
           setFundingTableZip(prev => prev === clickedZip ? null : clickedZip);
           setDistressTableZip(null); setWorkingPoorTableZip(null); setEvictionsTableZip(null); setPopulationTableZip(null);
           return;
-        } else if (activeBase === "population" && clickedZip && populationLookup[clickedZip] != null) {
+        } else if (activeBase === "population" && clickedZip && distressDataLookup[clickedZip]) {
           setPopulationTableZip(prev => prev === clickedZip ? null : clickedZip);
           setDistressTableZip(null); setWorkingPoorTableZip(null); setEvictionsTableZip(null); setFundingTableZip(null);
           return;
@@ -3563,7 +3214,7 @@ const MapboxMap = forwardRef(function MapboxMap({
         setWorkingPoorTableZip(zip);
       } else if (displayMetric === "evictions" && evictionsDataLookup[zip]) {
         setEvictionsTableZip(zip);
-      } else if (displayMetric === "population" && populationLookup[zip] != null) {
+      } else if (displayMetric === "population" && distressDataLookup[zip]) {
         setPopulationTableZip(zip);
       } else if (displayMetric === "funding_level" && fundingDataLookup[zip]) {
         setFundingTableZip(zip);
@@ -3578,7 +3229,7 @@ const MapboxMap = forwardRef(function MapboxMap({
         setEfficiencyTableZip(zip);
       } else if (activeBase === "funding_level" && fundingDataLookup[zip]) {
         setFundingTableZip(zip);
-      } else if (activeBase === "population" && populationLookup[zip] != null) {
+      } else if (activeBase === "population" && distressDataLookup[zip]) {
         setPopulationTableZip(zip);
       } else if (activeBase === "evictions" && evictionsDataLookup[zip]) {
         setEvictionsTableZip(zip);
@@ -4072,7 +3723,7 @@ const MapboxMap = forwardRef(function MapboxMap({
   };
 
   // Draw distress data table on canvas (for base view zip code selection)
-  const drawDistressTableOnCanvas = (ctx, data, data2023, zipCode, neighborhood, medians, containerEl) => {
+  const drawDistressTableOnCanvas = (ctx, data, zipCode, neighborhood, medians, containerEl) => {
     if (!data || !zipCode) return;
     const el = containerEl.querySelector("[data-distress-table]");
     if (!el) return;
@@ -4085,8 +3736,9 @@ const MapboxMap = forwardRef(function MapboxMap({
     const h = eRect.height;
     const pad = 14;
 
-    // Background (lighter for exclude=1)
-    const bgColor = data.exclude === 1 ? "rgba(105, 100, 110, 0.95)" : "rgba(34, 40, 49, 0.95)";
+    // Key data = distress_score populated (matches screen info box logic)
+    const hasKeyData = data.distress_score != null;
+    const bgColor = hasKeyData ? "rgba(34, 40, 49, 0.95)" : "rgba(105, 100, 110, 0.95)";
     drawRoundedRect(ctx, x, y, w, h, 8, bgColor);
     ctx.textBaseline = "top";
 
@@ -4098,6 +3750,14 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.fillText(`Zip Code ${zipCode}`, x + pad, cy);
     cy += 20;
 
+    // County (if present)
+    if (data.county) {
+      ctx.font = "400 11px Lexend, sans-serif";
+      ctx.fillStyle = "#CCCCCC";
+      ctx.fillText(`${data.county} County`, x + pad, cy);
+      cy += 14;
+    }
+
     // Neighborhood (if present)
     if (neighborhood) {
       ctx.font = "400 10px Lexend, sans-serif";
@@ -4106,8 +3766,8 @@ const MapboxMap = forwardRef(function MapboxMap({
       cy += 14;
     }
 
-    // Banner for exclude=1 (small population)
-    if (data.exclude === 1) {
+    // Banner when distress score is unavailable
+    if (!hasKeyData) {
       ctx.fillStyle = "rgba(255, 179, 2, 0.15)";
       ctx.fillRect(x, cy, w, 30);
       ctx.strokeStyle = "rgba(255, 179, 2, 0.25)";
@@ -4118,7 +3778,7 @@ const MapboxMap = forwardRef(function MapboxMap({
       cy += 6;
       ctx.font = "500 10px Lexend, sans-serif";
       ctx.fillStyle = "#FFB302";
-      ctx.fillText("Small population — data shown for reference only", x + pad, cy);
+      ctx.fillText("Distress score not available — data shown for reference only", x + pad, cy);
       cy += 13;
       ctx.font = "italic 9px Lexend, sans-serif";
       ctx.fillStyle = "#999999";
@@ -4135,19 +3795,16 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.stroke();
     cy += 8;
 
-    // Column headers: 2023 | 2024 | Houston*
-    const col2023W = 60;
+    // Column headers: Value | Houston*
     const col2024W = 72;
     const colHoustonW = 60;
     const colHoustonX = x + w - pad - colHoustonW;
     const col2024X = colHoustonX - col2024W;
-    const col2023X = col2024X - col2023W;
 
     ctx.font = "600 9px Lexend, sans-serif";
     ctx.textAlign = "right";
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillText("2023", col2023X + col2023W, cy);
-    ctx.fillText("2024", col2024X + col2024W, cy);
+    ctx.fillText("Value", col2024X + col2024W, cy);
     ctx.fillStyle = "#8FB6FF";
     ctx.fillText("Houston*", colHoustonX + colHoustonW, cy);
     ctx.textAlign = "left";
@@ -4163,6 +3820,7 @@ const MapboxMap = forwardRef(function MapboxMap({
 
     // Data rows
     DISTRESS_FIELDS.forEach(({ key, label, format, highlight, showMedian, medianFormat, isRank }) => {
+      if (!hasKeyData && (highlight || isRank)) return;
       // Row with highlight styling for distress score
       const rowPadY = highlight ? 6 : 3;
       cy += rowPadY;
@@ -4173,17 +3831,10 @@ const MapboxMap = forwardRef(function MapboxMap({
       ctx.textAlign = "left";
       ctx.fillText(label, x + pad, cy);
 
-      // 2023 value
+      // Value (with distress band circle for highlight row)
       ctx.textAlign = "right";
-      const val2023 = data2023?.[key];
-      ctx.font = highlight ? "600 13px Lexend, sans-serif" : "400 11px Lexend, sans-serif";
-      ctx.fillStyle = "#999999";
-      ctx.fillText(val2023 != null ? format(val2023) : "—", col2023X + col2023W, cy);
-
-      // 2024 value (with distress band circle for highlight row)
       const formattedVal = isRank ? format(data[key], distressRankedCount) : format(data[key]);
       if (highlight) {
-        // Draw distress band color circle
         const circleX = col2024X + col2024W - ctx.measureText(formattedVal).width - 18;
         ctx.fillStyle = getDistressBandColor(data.distress_score);
         ctx.beginPath();
@@ -4193,14 +3844,6 @@ const MapboxMap = forwardRef(function MapboxMap({
       ctx.font = highlight ? "700 14px Lexend, sans-serif" : "500 12px Lexend, sans-serif";
       ctx.fillStyle = "#FFFFFF";
       ctx.fillText(formattedVal, col2024X + col2024W, cy);
-
-      // Trend arrow on every row (direction = number movement, color = good/bad)
-      const trend = getTrendArrow(key, data[key], val2023);
-      if (trend) {
-        ctx.font = "9px Lexend, sans-serif";
-        ctx.fillStyle = trend.color;
-        ctx.fillText(trend.arrow, col2024X + col2024W + 2, cy);
-      }
 
       // Houston median value
       const medianVal = medians?.[key];
@@ -4243,7 +3886,7 @@ const MapboxMap = forwardRef(function MapboxMap({
   };
 
   // Draw working poor data table on canvas (for base view zip code selection)
-  const drawWorkingPoorTableOnCanvas = (ctx, data, data2023, zipCode, neighborhood, medians, containerEl) => {
+  const drawWorkingPoorTableOnCanvas = (ctx, data, zipCode, neighborhood, medians, containerEl) => {
     if (!data || !zipCode) return;
     const el = containerEl.querySelector("[data-working-poor-table]");
     if (!el) return;
@@ -4256,8 +3899,11 @@ const MapboxMap = forwardRef(function MapboxMap({
     const h = eRect.height;
     const pad = 14;
 
+    // Key data = working_poor_score populated
+    const hasKeyData = data.working_poor_score != null;
+
     // Background
-    drawRoundedRect(ctx, x, y, w, h, 8, "rgba(34, 40, 49, 0.95)");
+    drawRoundedRect(ctx, x, y, w, h, 8, hasKeyData ? "rgba(34, 40, 49, 0.95)" : "rgba(105, 100, 110, 0.95)");
     ctx.textBaseline = "top";
 
     let cy = y + 10;
@@ -4268,12 +3914,40 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.fillText(`Zip Code ${zipCode}`, x + pad, cy);
     cy += 20;
 
+    // County (if present)
+    if (data.county) {
+      ctx.font = "400 11px Lexend, sans-serif";
+      ctx.fillStyle = "#CCCCCC";
+      ctx.fillText(`${data.county} County`, x + pad, cy);
+      cy += 14;
+    }
+
     // Neighborhood (if present)
     if (neighborhood) {
       ctx.font = "400 10px Lexend, sans-serif";
       ctx.fillStyle = "#8FB6FF";
       ctx.fillText(truncateText(ctx, neighborhood, w - pad * 2), x + pad, cy);
       cy += 14;
+    }
+
+    // Banner when working-poor score is unavailable
+    if (!hasKeyData) {
+      ctx.fillStyle = "rgba(255, 179, 2, 0.15)";
+      ctx.fillRect(x, cy, w, 30);
+      ctx.strokeStyle = "rgba(255, 179, 2, 0.25)";
+      ctx.beginPath();
+      ctx.moveTo(x, cy + 30);
+      ctx.lineTo(x + w, cy + 30);
+      ctx.stroke();
+      cy += 6;
+      ctx.font = "500 10px Lexend, sans-serif";
+      ctx.fillStyle = "#FFB302";
+      ctx.fillText("Working Poor score not available — data shown for reference only", x + pad, cy);
+      cy += 13;
+      ctx.font = "italic 9px Lexend, sans-serif";
+      ctx.fillStyle = "#999999";
+      ctx.fillText("Not scored or ranked. Excluded from Houston metro statistics.", x + pad, cy);
+      cy += 15;
     }
 
     // Header divider
@@ -4285,19 +3959,16 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.stroke();
     cy += 8;
 
-    // Column headers: 2023 | 2024 | Houston*
-    const col2023W = 60;
+    // Column headers: Value | Houston*
     const col2024W = 72;
     const colHoustonW = 60;
     const colHoustonX = x + w - pad - colHoustonW;
     const col2024X = colHoustonX - col2024W;
-    const col2023X = col2024X - col2023W;
 
     ctx.font = "600 9px Lexend, sans-serif";
     ctx.textAlign = "right";
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillText("2023", col2023X + col2023W, cy);
-    ctx.fillText("2024", col2024X + col2024W, cy);
+    ctx.fillText("Value", col2024X + col2024W, cy);
     ctx.fillStyle = "#8FB6FF";
     ctx.fillText("Houston*", colHoustonX + colHoustonW, cy);
     ctx.textAlign = "left";
@@ -4313,6 +3984,7 @@ const MapboxMap = forwardRef(function MapboxMap({
 
     // Data rows
     WORKING_POOR_FIELDS.forEach(({ key, label, format, highlight, showMedian, medianFormat, isRank }) => {
+      if (!hasKeyData && (highlight || isRank)) return;
       // Row with highlight styling for working poor score
       const rowPadY = highlight ? 6 : 3;
       cy += rowPadY;
@@ -4323,17 +3995,10 @@ const MapboxMap = forwardRef(function MapboxMap({
       ctx.textAlign = "left";
       ctx.fillText(label, x + pad, cy);
 
-      // 2023 value
+      // Value (with working poor band circle for highlight row)
       ctx.textAlign = "right";
-      const val2023 = data2023?.[key];
-      ctx.font = highlight ? "600 13px Lexend, sans-serif" : "400 11px Lexend, sans-serif";
-      ctx.fillStyle = "#999999";
-      ctx.fillText(val2023 != null ? format(val2023) : "—", col2023X + col2023W, cy);
-
-      // 2024 value (with working poor band circle for highlight row)
       const formattedVal = isRank ? format(data[key], workingPoorRankedCount) : format(data[key]);
       if (highlight) {
-        // Draw working poor band color circle
         const circleX = col2024X + col2024W - ctx.measureText(formattedVal).width - 18;
         ctx.fillStyle = getWorkingPoorBandColor(data.working_poor_score);
         ctx.beginPath();
@@ -4343,14 +4008,6 @@ const MapboxMap = forwardRef(function MapboxMap({
       ctx.font = highlight ? "700 14px Lexend, sans-serif" : "500 12px Lexend, sans-serif";
       ctx.fillStyle = "#FFFFFF";
       ctx.fillText(formattedVal, col2024X + col2024W, cy);
-
-      // Trend arrow on every row (direction = number movement, color = good/bad)
-      const trend = getTrendArrow(key, data[key], val2023);
-      if (trend) {
-        ctx.font = "9px Lexend, sans-serif";
-        ctx.fillStyle = trend.color;
-        ctx.fillText(trend.arrow, col2024X + col2024W + 2, cy);
-      }
 
       // Houston median value
       const medianVal = medians?.[key];
@@ -4406,7 +4063,9 @@ const MapboxMap = forwardRef(function MapboxMap({
     const h = eRect.height;
     const pad = 14;
 
-    const bgColor = data.exclude === 1 ? "rgba(105, 105, 118, 0.95)" : "rgba(34, 40, 49, 0.95)";
+    // Key data = evictions_score populated
+    const hasKeyData = data.evictions_score != null;
+    const bgColor = hasKeyData ? "rgba(34, 40, 49, 0.95)" : "rgba(105, 105, 118, 0.95)";
     drawRoundedRect(ctx, x, y, w, h, 8, bgColor);
     ctx.textBaseline = "top";
 
@@ -4417,6 +4076,13 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.fillText(`Zip Code ${zipCode}`, x + pad, cy);
     cy += 20;
 
+    if (data.county) {
+      ctx.font = "400 11px Lexend, sans-serif";
+      ctx.fillStyle = "#CCCCCC";
+      ctx.fillText(`${data.county} County`, x + pad, cy);
+      cy += 14;
+    }
+
     if (neighborhood) {
       ctx.font = "400 10px Lexend, sans-serif";
       ctx.fillStyle = "#8FB6FF";
@@ -4424,8 +4090,8 @@ const MapboxMap = forwardRef(function MapboxMap({
       cy += 14;
     }
 
-    // Exclude=1 amber banner
-    if (data.exclude === 1) {
+    // Banner when evictions score is unavailable
+    if (!hasKeyData) {
       ctx.fillStyle = "rgba(255, 179, 2, 0.15)";
       ctx.fillRect(x, cy, w, 30);
       ctx.strokeStyle = "rgba(255, 179, 2, 0.25)";
@@ -4433,7 +4099,7 @@ const MapboxMap = forwardRef(function MapboxMap({
       ctx.font = "500 10px Lexend, sans-serif";
       ctx.fillStyle = "#FFB302";
       ctx.textAlign = "left";
-      ctx.fillText("Small population — data shown for reference only", x + pad, cy + 6);
+      ctx.fillText("Evictions score not available — data shown for reference only", x + pad, cy + 6);
       ctx.font = "italic 9px Lexend, sans-serif";
       ctx.fillStyle = "#999999";
       ctx.fillText("Not scored or ranked. Excluded from Houston metro statistics.", x + pad, cy + 18);
@@ -4468,19 +4134,8 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.stroke();
     cy += 6;
 
-    if (data.exclude === 0) {
-      // Exclude=0: no data available
-      cy += 12;
-      ctx.font = "italic 12px Lexend, sans-serif";
-      ctx.fillStyle = "#888888";
-      ctx.textAlign = "center";
-      ctx.fillText("No data available", x + w / 2, cy);
-      ctx.textAlign = "left";
-      cy += 20;
-    } else {
     EVICTIONS_FIELDS.forEach(({ key, label, format, highlight, showMedian, medianFormat, isRank }) => {
-      // Skip score and rank rows for exclude=1
-      if (data.exclude === 1 && (highlight || isRank)) return;
+      if (!hasKeyData && (highlight || isRank)) return;
 
       const rowPadY = highlight ? 6 : 3;
       cy += rowPadY;
@@ -4523,7 +4178,6 @@ const MapboxMap = forwardRef(function MapboxMap({
         cy += 2;
       }
     });
-    } // end else (exclude !== 0)
 
     cy += 4;
     ctx.strokeStyle = "rgba(255,255,255,0.08)";
@@ -5056,16 +4710,18 @@ const MapboxMap = forwardRef(function MapboxMap({
       // Step 4: Draw info box / distress table and legend directly on canvas (avoids dom-to-image border artifacts)
       drawInfoBoxOnCanvas(ctx, infoBoxData, container);
       if (distressTableZip) {
-        const distressRecord = distressDataLookup[distressTableZip];
-        const distressRecord2023 = distressData2023Lookup[distressTableZip];
+        const distressRecord = distressDataLookup[distressTableZip]
+          ? { ...distressDataLookup[distressTableZip], rank: distressRankLookup[distressTableZip] ?? null }
+          : null;
         const neighborhood = zipCodes?.find(z => z.zip_code === distressTableZip)?.neighborhood || "";
-        drawDistressTableOnCanvas(ctx, distressRecord, distressRecord2023, distressTableZip, neighborhood, houstonMedians, container);
+        drawDistressTableOnCanvas(ctx, distressRecord, distressTableZip, neighborhood, houstonMedians, container);
       }
       if (workingPoorTableZip) {
-        const wpRecord = workingPoorDataLookup[workingPoorTableZip];
-        const wpRecord2023 = workingPoorData2023Lookup[workingPoorTableZip];
+        const wpRecord = workingPoorDataLookup[workingPoorTableZip]
+          ? { ...workingPoorDataLookup[workingPoorTableZip], working_poor_rank: workingPoorRankLookup[workingPoorTableZip] ?? null }
+          : null;
         const neighborhood = zipCodes?.find(z => z.zip_code === workingPoorTableZip)?.neighborhood || "";
-        drawWorkingPoorTableOnCanvas(ctx, wpRecord, wpRecord2023, workingPoorTableZip, neighborhood, workingPoorMedians, container);
+        drawWorkingPoorTableOnCanvas(ctx, wpRecord, workingPoorTableZip, neighborhood, workingPoorMedians, container);
       }
       if (evictionsTableZip) {
         const evRecord = evictionsDataLookup[evictionsTableZip];
@@ -5095,7 +4751,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     } finally {
       setIsDownloading(false);
     }
-  }, [isDownloading, assistanceLabel, hasAssistance, orgPins, selectedOrgKey, showOrgLabels, infoBoxData, isDensityMode, parentCoverage, parentOrg, county, displayMetric, isBaseView, distressTableZip, distressDataLookup, distressData2023Lookup, houstonMedians, workingPoorTableZip, workingPoorDataLookup, workingPoorData2023Lookup, workingPoorMedians, evictionsTableZip, evictionsDataLookup, evictionsMedians, zipCodes]);
+  }, [isDownloading, assistanceLabel, hasAssistance, orgPins, selectedOrgKey, showOrgLabels, infoBoxData, isDensityMode, parentCoverage, parentOrg, county, displayMetric, isBaseView, distressTableZip, distressDataLookup, distressRankLookup, houstonMedians, workingPoorTableZip, workingPoorDataLookup, workingPoorRankLookup, workingPoorMedians, evictionsTableZip, evictionsDataLookup, evictionsMedians, zipCodes]);
 
   // Expose download method to parent via ref
   useImperativeHandle(ref, () => ({
@@ -5290,31 +4946,6 @@ const MapboxMap = forwardRef(function MapboxMap({
           <ViewModeDropdown viewMode={viewMode} onViewModeChange={onViewModeChange} />
         )}
 
-        {/* YoY Change button - only when distress map is active */}
-        {(isBaseView ? displayMetric === "distress" : activeBase === "distress") && (
-          <button
-            onClick={() => setShowDistressYoY(prev => !prev)}
-            className="transition-all duration-200 hover:brightness-125"
-            style={{
-              height: "36px",
-              width: "100%",
-              padding: "0 14px",
-              borderRadius: "6px",
-              fontFamily: "'Open Sans', sans-serif",
-              fontSize: "13px",
-              fontWeight: 500,
-              backgroundColor: showDistressYoY ? "#005C72" : "rgba(34, 40, 49, 0.85)",
-              color: showDistressYoY ? "#FFC857" : "#FFFFFF",
-              border: showDistressYoY ? "1px solid #005C72" : "1px solid rgba(255,255,255,0.2)",
-              cursor: "pointer",
-              backdropFilter: "blur(4px)",
-              userSelect: "none",
-            }}
-          >
-            Year Over Year Change
-          </button>
-        )}
-
         {/* Efficiency / Bivariate toggle - only when Distress vs. Funding is active */}
         {(isBaseView ? (displayMetric === "efficiency_ratio" || displayMetric === "bivariate") : activeBase === "efficiency_ratio") && (
           <div
@@ -5442,10 +5073,9 @@ const MapboxMap = forwardRef(function MapboxMap({
       {!isBaseView && <DraggableInfoBox info={infoBoxData} onClose={handleInfoBoxClose} />}
 
       {/* Draggable distress data table - in distress base view or when activeBase is distress in filter view */}
-      {(isBaseView ? displayMetric === "distress" : activeBase === "distress") && distressTableZip && (
+      {(isBaseView ? displayMetric === "distress" : activeBase === "distress") && distressTableZip && distressDataLookup[distressTableZip] && (
         <DraggableDistressTable
-          data={distressDataLookup[distressTableZip]}
-          data2023={distressData2023Lookup[distressTableZip]}
+          data={{ ...distressDataLookup[distressTableZip], rank: distressRankLookup[distressTableZip] ?? null }}
           zipCode={distressTableZip}
           neighborhood={zipCodes?.find(z => z.zip_code === distressTableZip)?.neighborhood || ""}
           houstonMedians={houstonMedians}
@@ -5454,22 +5084,10 @@ const MapboxMap = forwardRef(function MapboxMap({
         />
       )}
 
-      {/* Draggable distress YoY summary panel */}
-      {(isBaseView ? displayMetric === "distress" : activeBase === "distress") && showDistressYoY && (
-        <DraggableDistressYoY
-          distressData={distressData}
-          distressData2023={distressData2023}
-          houstonMedians={houstonMedians}
-          houstonMedians2023={houstonMedians2023}
-          onClose={() => setShowDistressYoY(false)}
-        />
-      )}
-
       {/* Draggable working poor data table - in working poor base view or when activeBase is working_poor in filter view */}
-      {(isBaseView ? displayMetric === "working_poor" : activeBase === "working_poor") && workingPoorTableZip && (
+      {(isBaseView ? displayMetric === "working_poor" : activeBase === "working_poor") && workingPoorTableZip && workingPoorDataLookup[workingPoorTableZip] && (
         <DraggableWorkingPoorTable
-          data={workingPoorDataLookup[workingPoorTableZip]}
-          data2023={workingPoorData2023Lookup[workingPoorTableZip]}
+          data={{ ...workingPoorDataLookup[workingPoorTableZip], working_poor_rank: workingPoorRankLookup[workingPoorTableZip] ?? null }}
           zipCode={workingPoorTableZip}
           neighborhood={zipCodes?.find(z => z.zip_code === workingPoorTableZip)?.neighborhood || ""}
           houstonMedians={workingPoorMedians}
@@ -5479,9 +5097,9 @@ const MapboxMap = forwardRef(function MapboxMap({
       )}
 
       {/* Draggable evictions data table - in evictions base view or when activeBase is evictions in filter view */}
-      {(isBaseView ? displayMetric === "evictions" : activeBase === "evictions") && evictionsTableZip && (
+      {(isBaseView ? displayMetric === "evictions" : activeBase === "evictions") && evictionsTableZip && evictionsDataLookup[evictionsTableZip] && (
         <DraggableEvictionsTable
-          data={evictionsDataLookup[evictionsTableZip]}
+          data={{ ...evictionsDataLookup[evictionsTableZip], rank: evictionsRankLookup[evictionsTableZip] ?? null }}
           zipCode={evictionsTableZip}
           neighborhood={zipCodes?.find(z => z.zip_code === evictionsTableZip)?.neighborhood || ""}
           houstonMedians={evictionsMedians}
@@ -5496,6 +5114,8 @@ const MapboxMap = forwardRef(function MapboxMap({
           population={populationLookup[populationTableZip]}
           zipCode={populationTableZip}
           neighborhood={zipCodes?.find(z => z.zip_code === populationTableZip)?.neighborhood || ""}
+          county={distressDataLookup[populationTableZip]?.county || ""}
+          hasKeyData={populationLookup[populationTableZip] != null}
           onClose={() => setPopulationTableZip(null)}
         />
       )}

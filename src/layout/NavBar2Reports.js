@@ -534,6 +534,8 @@ export default function NavBar2Reports({
   onMap2Reset,
   onMap2Download,
   // Zip Code Data filter props
+  zcdCounties,
+  onZcdCountiesChange,
   zcdParentOrg,
   onZcdParentOrgChange,
   zcdOrganization,
@@ -1015,10 +1017,24 @@ export default function NavBar2Reports({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map2AvailableAssistance]);
 
-  // === Zip Code Data (zcd) cross-filtered options (financial assistance orgs only) ===
+  // === Zip Code Data (zcd) cross-filtered options ===
+  // Scope: Rent + Utilities providers only. The grayed-out chips in the
+  // ZCD filter row show the user which assistance types are being filtered to.
   const finAssistIds = useMemo(() => {
-    return new Set(assistance.filter(a => a.is_fin_assist).map(a => a.assist_id));
+    return new Set(
+      assistance
+        .filter(a => a.assistance === "Rent" || a.assistance === "Utilities")
+        .map(a => a.assist_id)
+    );
   }, [assistance]);
+
+  // Counties available for the ZCD county filter: Houston-area counties that
+  // have at least one zip served by a rent/utilities org.
+  const zcdCountyOptions = useMemo(() => {
+    return [...new Set(
+      zipCodes.filter(z => z.houston_area === "Y").map(z => z.county).filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b));
+  }, [zipCodes]);
 
   const zcdParentOrgOptions = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === 1 && finAssistIds.has(r.assist_id));
@@ -1332,22 +1348,18 @@ export default function NavBar2Reports({
           </button>
         </div>
       ) : selectedReport === "consolidated" ? (
-        /* Zip Code Data filters: Parent Org, Organization, Download */
+        /* Zip Code Data filters: County (multi), Parent Org, Organization, static Rent/Utilities chips, Active chip */
         <div className="flex items-center justify-between w-full">
         <div className="flex items-center" style={{ gap: "var(--gap-navbar2-filters)" }}>
-          <span
-            className="font-opensans"
-            style={{
-              color: "#FFFFFF",
-              fontSize: "12px",
-              fontStyle: "italic",
-              fontWeight: 500,
-              maxWidth: "250px",
-              lineHeight: "1.3",
-            }}
-          >
-            Limited to Organizations who provide Financial Assistance
-          </span>
+          <SearchableDropdown
+            placeholder="-- County --"
+            options={zcdCountyOptions}
+            value={zcdCounties}
+            onChange={onZcdCountiesChange}
+            format1={true}
+            multi={true}
+            multiLabel="Multiple Counties"
+          />
           <SearchableDropdown
             placeholder="-- Parent Org --"
             options={zcdParentOrgOptions}
@@ -1364,6 +1376,44 @@ export default function NavBar2Reports({
             multi={true}
             multiLabel="Multiple Organizations"
           />
+          {/* Static, non-clickable chips showing the implicit assistance-type
+              filter: results are limited to orgs providing Rent + Utilities.
+              Rendered with the Group 1 (yellow) bg at 0.5 opacity to imply
+              "filter is on, but not changeable". */}
+          {["Rent", "Utilities"].map((assistName) => {
+            const item = assistance.find(a => a.assistance === assistName);
+            if (!item) return null;
+            const iconResult = item.icon ? getIconByName(item.icon) : null;
+            const IconComponents = iconResult
+              ? (Array.isArray(iconResult) ? iconResult : [iconResult])
+              : [];
+            return (
+              <div
+                key={assistName}
+                className="flex items-center font-opensans"
+                style={{
+                  height: "var(--height-navbar2-btn)",
+                  paddingLeft: "12px",
+                  paddingRight: "12px",
+                  borderRadius: "var(--radius-assistance-chip)",
+                  fontSize: "var(--font-size-navbar2-btn)",
+                  fontWeight: 500,
+                  letterSpacing: "var(--letter-spacing-assistance-chip)",
+                  backgroundColor: "var(--color-assistance-group1)",
+                  color: "var(--color-assistance-text)",
+                  gap: "8px",
+                  whiteSpace: "nowrap",
+                  opacity: 0.5,
+                }}
+                title={`Only ${assistName} assistance orgs are included`}
+              >
+                {IconComponents.map((IconComp, idx) => (
+                  <IconComp key={idx} size={20} />
+                ))}
+                {assistName}
+              </div>
+            );
+          })}
           <div
             className="flex items-center font-opensans"
             style={{

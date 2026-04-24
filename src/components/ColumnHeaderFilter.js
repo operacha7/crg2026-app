@@ -3,6 +3,7 @@
 // Renders as a <th> that opens a dropdown when clicked.
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import SortIcon from "../icons/SortIcons";
 
 export default function ColumnHeaderFilter({
   label,
@@ -93,10 +94,8 @@ export default function ColumnHeaderFilter({
             </React.Fragment>
           ))}
         </span>
-        {/* Sort arrow - matches SortArrow pattern from other columns */}
-        <span style={{ marginLeft: "4px", fontSize: "10px", opacity: sortActive ? 1 : 0.4 }}>
-          {sortDirection === "asc" ? "▲" : "▼"}
-        </span>
+        {/* Sort indicator — shared SortIcon pattern (bars when inactive, arrow when active) */}
+        <SortIcon active={sortActive} direction={sortDirection} size={12} />
         {/* Filter funnel icon: dim when no filter, solid gold when filter active */}
         <svg
           width="12"

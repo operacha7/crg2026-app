@@ -1,8 +1,7 @@
 // src/layout/NavBar3Reports.js
 // Live stats cards for Reports page
 // Shows: Top Zip Code | Top Assistance | Top Organization (all time)
-// Coverage report: clickable stats to filter table + download button
-// Includes Restricted/Unrestricted counts (unrestricted label shown in italic)
+// Coverage report: clickable stats to filter table + unique org count + download button
 
 import { useState, useEffect } from "react";
 import { fetchLiveStats } from "../services/usageService";
@@ -68,7 +67,7 @@ function StatCard({ heading, value, percentage }) {
 }
 
 // Reusable clickable stat button for NavBar3 coverage
-function ClickableStat({ label, value, isActive, onClick, title, italic = false }) {
+function ClickableStat({ label, value, isActive, onClick, title }) {
   return (
     <button
       onClick={onClick}
@@ -88,7 +87,6 @@ function ClickableStat({ label, value, isActive, onClick, title, italic = false 
         fontWeight: isActive ? 500 : 200,
         transition: "color 0.2s",
         textDecoration: isActive ? "underline" : "none",
-        fontStyle: italic ? "italic" : "normal",
       }}>
         {label}: <strong>{value}</strong>
       </span>
@@ -108,8 +106,6 @@ export default function NavBar3Reports({
   coverageSummary,
   coverageDisplayFilter,
   onCoverageDisplayFilterChange,
-  coverageRestrictionFilter,
-  onCoverageRestrictionFilterChange,
   coverageDisplayData,
   coverageFilters,
 }) {
@@ -130,11 +126,6 @@ export default function NavBar3Reports({
   const handleDisplayFilterClick = (filterType) => {
     if (!onCoverageDisplayFilterChange) return;
     onCoverageDisplayFilterChange(coverageDisplayFilter === filterType ? "all" : filterType);
-  };
-
-  const handleRestrictionFilterClick = (filterType) => {
-    if (!onCoverageRestrictionFilterChange) return;
-    onCoverageRestrictionFilterChange(coverageRestrictionFilter === filterType ? "all" : filterType);
   };
 
   // Download CSV
@@ -164,12 +155,9 @@ export default function NavBar3Reports({
     if (coverageDisplayFilter && coverageDisplayFilter !== "all") {
       filterLines.push(`Coverage Filter: ${coverageDisplayFilter === "covered" ? "Covered Only" : "No Coverage Only"}`);
     }
-    if (coverageRestrictionFilter && coverageRestrictionFilter !== "all") {
-      filterLines.push(`Restriction Filter: ${coverageRestrictionFilter === "restricted" ? "Restricted Only" : "Unrestricted Only"}`);
-    }
     if (coverageSummary) {
       filterLines.push(`Total Zip Codes: ${coverageSummary.totalZips} | Covered: ${coverageSummary.zipsWithCoverage} | No Coverage: ${coverageSummary.zipsWithoutCoverage}`);
-      filterLines.push(`Restricted Orgs: ${coverageSummary.totalRestricted} | Unrestricted Orgs: ${coverageSummary.totalUnrestricted}`);
+      filterLines.push(`Unique Organizations: ${coverageSummary.uniqueOrgCount}`);
     }
     filterLines.push("");
 
@@ -235,24 +223,10 @@ export default function NavBar3Reports({
 
             <StatSeparator />
 
-            {/* Restricted - clickable */}
-            <ClickableStat
-              label="Restricted"
-              value={coverageSummary.totalRestricted}
-              isActive={coverageRestrictionFilter === "restricted"}
-              onClick={() => handleRestrictionFilterClick("restricted")}
-              title={coverageRestrictionFilter === "restricted" ? "Click to show all" : "Click to show only restricted orgs"}
-            />
-
-            {/* Unrestricted - clickable, italic to match table styling */}
-            <ClickableStat
-              label="Unrestricted"
-              value={coverageSummary.totalUnrestricted}
-              isActive={coverageRestrictionFilter === "unrestricted"}
-              onClick={() => handleRestrictionFilterClick("unrestricted")}
-              title={coverageRestrictionFilter === "unrestricted" ? "Click to show all" : "Click to show only unrestricted orgs"}
-              italic
-            />
+            {/* Unique organization count — reflects whatever filter is applied */}
+            <span className="font-opensans" style={{ fontSize: "18px", color: "#FDF6E3", fontWeight: 200, padding: "4px 12px" }}>
+              Unique Organizations: <strong>{coverageSummary.uniqueOrgCount}</strong>
+            </span>
           </div>
         ) : (
           <span className="text-white/70 font-opensans" style={{ fontSize: "14px" }}>

@@ -130,11 +130,9 @@ export default function ZipCodePage({
     switch (activeSearchMode) {
       case "zipcode":
         // Filter by client zip codes (orgs that SERVE this zip)
-        filtered = filtered.filter(record => {
-          const hasZip = record.client_zip_codes?.includes(selectedZipCode);
-          const hasAllZips = record.client_zip_codes?.includes("99999");
-          return hasZip || hasAllZips;
-        });
+        filtered = filtered.filter(record =>
+          record.client_zip_codes?.includes(selectedZipCode)
+        );
         
         // Get coordinates for distance calculation
         // Priority: clientCoordinates (user override) > zip centroid
@@ -419,32 +417,47 @@ export default function ZipCodePage({
     return true;
   };
 
-  // Send Text validation. Unlike Email/PDF, Text doesn't use row selection — the recipient
-  // receives a deep link to the same filtered view. So we gate on filter state + results only.
-  const validateSmsSelection = () => {
-    const missingZip = !selectedZipCode;
+  // Returns an error message if the current search-mode filters aren't ready for SMS,
+  // or null if the mode is valid. Split out to keep validateSmsSelection readable.
+  const getSmsModeError = () => {
     const missingAssistance = activeAssistanceChips.size === 0;
 
-    if (missingZip && missingAssistance) {
-      showAnimatedToast(
-        "⚠️ Please select a zip code and at least one assistance type.",
-        "error"
-      );
-      return false;
+    if (activeSearchMode === "zipcode") {
+      if (!selectedZipCode && missingAssistance) return "⚠️ Please select a zip code and at least one assistance type.";
+      if (!selectedZipCode) return "⚠️ Please select a zip code.";
+      if (missingAssistance) return "⚠️ Please select at least one assistance type.";
+      return null;
     }
-    if (missingZip) {
-      showAnimatedToast("⚠️ Please select a zip code.", "error");
-      return false;
+    if (activeSearchMode === "organization") {
+      if (!selectedParentOrg && !selectedChildOrg) return "⚠️ Please select a parent or child organization.";
+      if (missingAssistance) return "⚠️ Please select at least one assistance type.";
+      return null;
     }
-    if (missingAssistance) {
-      showAnimatedToast("⚠️ Please select at least one assistance type.", "error");
+    if (activeSearchMode === "location") {
+      const hasLocation = !!selectedLocationCounty || !!selectedLocationCity ||
+                          !!selectedLocationZip || !!selectedLocationNeighborhood;
+      if (!hasLocation) return "⚠️ Please select a county, city, zip code, or neighborhood.";
+      if (missingAssistance) return "⚠️ Please select at least one assistance type.";
+      return null;
+    }
+    if (activeSearchMode === "llm") {
+      if (!llmSearchQuery?.trim()) return "⚠️ Please enter a question to search.";
+      if (!llmSearchFilters) return "⚠️ Please run the search before sending.";
+      return null;
+    }
+    return null;
+  };
+
+  // Send Text validation. Unlike Email/PDF, Text doesn't use row selection — the recipient
+  // receives a deep link to the same filtered view. Gating rules differ per search mode.
+  const validateSmsSelection = () => {
+    const modeError = getSmsModeError();
+    if (modeError) {
+      showAnimatedToast(modeError, "error");
       return false;
     }
     if (!displayDirectory || displayDirectory.length === 0) {
-      showAnimatedToast(
-        "⚠️ No resources match these filters — nothing to send.",
-        "error"
-      );
+      showAnimatedToast("⚠️ No resources match these filters — nothing to send.", "error");
       return false;
     }
 
