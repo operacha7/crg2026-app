@@ -177,35 +177,50 @@ export async function fetchMonthlyUsage({
 
   console.log('fetchMonthlyUsage date range:', { startMonthStr, endMonthStr, months });
 
-  let query = supabase
-    .from('v_monthly_usage')
-    .select('*', { count: 'exact' })
-    .gte('month', startMonthStr)
-    .lte('month', endMonthStr)
-    .order('month', { ascending: true })
-    .limit(10000);  // Increase from default 1000 to handle granular data
+  // Supabase enforces a server-side max-rows cap (default 1000) regardless of
+  // .limit(), so paginate via .range() to be sure we get every row. Without
+  // this, the most recent month's rows (last in ascending order) get silently
+  // dropped once the view exceeds 1000 rows.
+  const PAGE_SIZE = 1000;
+  let allData = [];
+  let from = 0;
 
-  if (reg_organization && reg_organization !== 'All' && reg_organization !== 'All Organizations') {
-    query = query.eq('reg_organization', reg_organization);
+  while (true) {
+    let query = supabase
+      .from('v_monthly_usage')
+      .select('*')
+      .gte('month', startMonthStr)
+      .lte('month', endMonthStr)
+      .order('month', { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (reg_organization && reg_organization !== 'All' && reg_organization !== 'All Organizations') {
+      query = query.eq('reg_organization', reg_organization);
+    }
+
+    if (action_type) {
+      query = query.eq('action_type', action_type);
+    }
+
+    if (search_mode) {
+      query = query.eq('search_mode', search_mode);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Monthly usage error:', error);
+      return allData;
+    }
+
+    allData = allData.concat(data);
+
+    if (data.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
   }
 
-  if (action_type) {
-    query = query.eq('action_type', action_type);
-  }
-
-  if (search_mode) {
-    query = query.eq('search_mode', search_mode);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Monthly usage error:', error);
-    return [];
-  }
-
-  console.log('fetchMonthlyUsage result:', data);
-  return data || [];
+  console.log('fetchMonthlyUsage result:', allData);
+  return allData;
 }
 
 /**
