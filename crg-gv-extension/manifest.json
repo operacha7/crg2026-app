@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CRG Google Voice Helper",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Auto-fills phone number and message in Google Voice when sending texts from CRG Houston.",
   "permissions": ["storage"],
   "background": {
@@ -16,7 +16,8 @@
   ],
   "externally_connectable": {
     "matches": [
-      "https://crghouston.operacha.org/*",
+      "https://crghouston.org/*",
+      "https://www.crghouston.org/*",
       "http://localhost:*/*"
     ]
   },
