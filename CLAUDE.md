@@ -1203,7 +1203,7 @@ The Quick Tips pattern can be reused for other contextual help. When a feature c
 
 ## Hosting & Infrastructure
 
-- **Domain:** crghouston.operacha.org
+- **Domain:** crghouston.org (migrated from crghouston.operacha.org; old subdomain 301-redirects to new domain)
 - **Hosting:** Cloudflare Pages
 - **Database:** Supabase (new 2026 schema)
 - **Email:** Resend (domain: crghouston.operacha.org)

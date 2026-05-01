@@ -123,11 +123,11 @@ export function ResourceEmail({
           <Text style={styles.websiteLink}>
             You can also access the same information at{' '}
             <Link
-              href="https://crghouston.operacha.org?utm_source=email&utm_medium=email&utm_campaign=resource_list"
+              href="https://crghouston.org?utm_source=email&utm_medium=email&utm_campaign=resource_list"
               target="_blank"
               style={styles.link}
             >
-              crghouston.operacha.org
+              crghouston.org
             </Link>
             .
           </Text>
@@ -193,7 +193,7 @@ export function ResourceEmail({
           <Hr style={styles.hr} />
           <Section style={styles.footer}>
             <Link
-              href="https://crghouston.operacha.org?utm_source=email&utm_medium=email&utm_campaign=resource_list"
+              href="https://crghouston.org?utm_source=email&utm_medium=email&utm_campaign=resource_list"
               target="_blank"
               style={styles.footerLink}
             >

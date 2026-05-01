@@ -444,7 +444,7 @@ body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 0; }
 <div style="font-size: 12px;">By: ${registeredOrgName || "—"}</div>
 </div>
 <p style="font-size: 12px; line-height: 1.5; margin: 0 0 20px 0;">
-We strive to ensure that our information is current and accurate but funding levels and eligibility requirements can change at any time. For the most current information contact the organization directly. You may also access the same information at <a href="https://crghouston.operacha.org" style="color: #0066cc;">crghouston.operacha.org</a>.
+We strive to ensure that our information is current and accurate but funding levels and eligibility requirements can change at any time. For the most current information contact the organization directly. You may also access the same information at <a href="https://crghouston.org" style="color: #0066cc;">crghouston.org</a>.
 </p>
 <div>
 ${htmlContent}
@@ -523,7 +523,7 @@ ${htmlContent}
 export function buildShareUrl(searchContext, activeAssistanceChips) {
   const baseUrl = window.location.hostname === "localhost"
     ? "http://localhost:3000"
-    : "https://crghouston.operacha.org";
+    : "https://crghouston.org";
 
   const params = new URLSearchParams();
   params.set("guest", "1");
