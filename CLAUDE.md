@@ -630,7 +630,7 @@ All design values defined as CSS custom properties, referenced by Tailwind confi
 - **Email Service:** Resend API via Cloudflare Function (`functions/sendEmail.js`)
 - **PDF Service:** PDFShift API via Cloudflare Function (`functions/createPdf.js`)
 - **Translation Service:** Google Cloud Translation API v2 via Cloudflare Function (`functions/translate.js`)
-- **From Address:** `info@crghouston.operacha.org` (configured in Resend)
+- **From Address:** `info@crghouston.org` (configured in Resend)
 - **Email Service Module:** `src/services/emailService.js` - Centralized email/PDF logic
 - **UI Components:**
   - `src/components/EmailPanel.js` - Dropdown panel UI for email/PDF entry with preview and language selector
@@ -1206,7 +1206,7 @@ The Quick Tips pattern can be reused for other contextual help. When a feature c
 - **Domain:** crghouston.org (migrated from crghouston.operacha.org; old subdomain 301-redirects to new domain)
 - **Hosting:** Cloudflare Pages
 - **Database:** Supabase (new 2026 schema)
-- **Email:** Resend (domain: crghouston.operacha.org)
+- **Email:** Resend (domain: crghouston.org)
 - **PDF:** PDFShift
 - **LLM Help:** Anthropic Claude API
 - **API Keys:** Configured in Cloudflare environment variables

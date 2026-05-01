@@ -82,7 +82,7 @@ export async function onRequest({ request, env }) {
       await request.json();
 
     const payload = {
-      from: '"Community Resources Guide" <info@crghouston.operacha.org>',
+      from: '"Community Resources Guide" <info@crghouston.org>',
       to: recipient,
       subject,
       html: htmlBody,
