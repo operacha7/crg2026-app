@@ -24,6 +24,7 @@ export default function PageLayout({
   smsBody = "",
   onSmsInitiated,
   onMessagesHandoff,
+  onGvAutoSent,
 }) {
   const [helpPanelOpen, setHelpPanelOpen] = useState(false);
 
@@ -48,6 +49,7 @@ export default function PageLayout({
             smsBody={smsBody}
             onSmsInitiated={onSmsInitiated}
             onMessagesHandoff={onMessagesHandoff}
+            onGvAutoSent={onGvAutoSent}
           />
         )}
 

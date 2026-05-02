@@ -85,28 +85,17 @@ Replace the current login-form-as-homepage with a client-first layout. Preserve 
 │ 🇺🇸 © 2026 O Peracha. All Rights Reserved. Icons by icons8.com         │  ← copyright footer (red)
 └────────────────────────────────────────────────────────────────────────┘
 ```
+**Design Tokens
 
-**Specific elements**
+I have removed all the design elements from this document because I have made too many changes and will continue to tweak it.  When we are ready for this portion please refer to the Login Page.png image in the docs folder of this project.  I will then give you the specific design tokens.
 
-- **Top header (dark navy, slim):** Logo + "Community Resources Guide Houston" wordmark on left. Single "About" button in top-right corner — neutral cream/beige pill button. No Login button in header.
-- **Hero panel (cream/beige rounded panel, right side of viewport over artwork):**
-  - **H1:** `Free help across Greater Houston` — dark red / maroon color
-  - **Tagline:** `Quickly search through 1000+ resources to find help in your area. Select a zip code and assistance type from below.` — with `zip code` and `assistance` highlighted in red as inline emphasis
-  - **Zip code dropdown:** labeled "Select Your Zip Code" with empty state by default. Standard `<select>` element.
-  - **Choose Assistance section:** white background nested inside the cream panel, with rounded corners. Heading text "Choose Assistance" in red.
-- **Chips:** all 30 assistance types visible, organized by the 6 groups, each chip is a real `<a>` tag (see implementation note below). Group color coding matches the existing in-app modal (yellow / purple / pink / light green / light blue / cream-tan). The four chips in Group 1 (Rent, Utilities, Food, Clothing) are rendered LARGER than the rest to emphasize they are the most-requested types. Larger spacing between groups creates visual separation; group labels are intentionally NOT included.
-- **Secondary footer (dark, above copyright):** five links: `About · Privacy Policy · Terms of Service · Contact Support · Organization Log-in`. Plain text link styling.
-- **Copyright footer (red, bottom):** unchanged from current — flag emoji, copyright line, icons8 attribution.
+Note that the groups that the chips are assigned to are stored in the assistance Supabase table as category.
+
+
 
 **Layout (mobile)**
 
-To be mocked separately, but the documented plan is:
-- Top-right "About" replaced by a hamburger icon
-- Hamburger menu contains: About, Privacy Policy, Terms of Service, Contact Support, Organization Log-in
-- Artwork compresses to a banner at the top
-- Hero panel takes full width below
-- Chip groups stack vertically with the same group spacing pattern
-- Copyright footer remains visible at the bottom
+see image 
 
 **Critical implementation detail: every chip must be a real `<a>` tag, not a `<button>` with a JS handler.**
 
@@ -286,7 +275,7 @@ Coverage spans:
 
 If you represent an organization and would like to request an account, update resource information, or suggest a new resource, please reach out directly:
 
-developer@operacha.org
+support@operacha.org
 
 Add `/about` to the sitemap. About is linked from both the top header (homepage only) and the footer (every page).
 

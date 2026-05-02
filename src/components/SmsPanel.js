@@ -35,6 +35,7 @@ export default function SmsPanel({
   composedBody = "",
   onInitiated,
   onMessagesHandoff,
+  onGvAutoSent,
 }) {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [feedback, setFeedback] = useState("");
@@ -121,6 +122,19 @@ export default function SmsPanel({
     try {
       await sendToGvExtension(phoneNumber, composedBody);
       showFeedback("Sent to Google Voice — phone and message will auto-fill.");
+
+      // Fire onGvAutoSent the next time the user returns to this tab. Optimistic:
+      // we trust that the extension's auto-click landed (same fidelity model as
+      // email/PDF success — Resend/PDFShift 200 doesn't guarantee delivery either).
+      if (typeof onGvAutoSent === "function") {
+        const handleVisible = () => {
+          if (!document.hidden) {
+            document.removeEventListener("visibilitychange", handleVisible);
+            try { onGvAutoSent(); } catch { /* best-effort */ }
+          }
+        };
+        document.addEventListener("visibilitychange", handleVisible);
+      }
     } catch {
       // Extension failed — fall back to manual method
       const ok = await copyToClipboard(composedBody);

@@ -30,6 +30,7 @@ export default function NavBar1({
   smsBody = "",
   onSmsInitiated,
   onMessagesHandoff,
+  onGvAutoSent,
 }) {
   // Orange counter shows totalCount initially (before any filter applied),
   // then shows filteredCount once user starts filtering
@@ -443,6 +444,7 @@ export default function NavBar1({
                 composedBody={smsBody}
                 onInitiated={onSmsInitiated}
                 onMessagesHandoff={onMessagesHandoff}
+                onGvAutoSent={onGvAutoSent}
               />
             </div>
           </div>
@@ -550,6 +552,7 @@ export default function NavBar1({
                 composedBody={smsBody}
                 onInitiated={onSmsInitiated}
                 onMessagesHandoff={onMessagesHandoff}
+                onGvAutoSent={onGvAutoSent}
               />
             </div>
           </div>

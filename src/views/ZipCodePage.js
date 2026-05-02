@@ -483,6 +483,12 @@ export default function ZipCodePage({
     );
   };
 
+  // Fires when the user returns to the CRG tab after a GV (auto) send. Optimistic —
+  // assumes the extension's auto-click landed (no DOM observation in GV).
+  const handleGvAutoSent = () => {
+    showAnimatedToast("✅ Text sent successfully.", "success");
+  };
+
   // Pre-compose the SMS body so the panel can preview it and hand it off verbatim.
   // Memoized so NavBar1 doesn't re-render on unrelated state changes just because
   // this string got a new reference.
@@ -527,6 +533,7 @@ export default function ZipCodePage({
       smsBody={smsBody}
       onSmsInitiated={handleSmsInitiated}
       onMessagesHandoff={handleMessagesHandoff}
+      onGvAutoSent={handleGvAutoSent}
     >
 
    <Helmet>
