@@ -8,6 +8,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAppData } from "../../Contexts/AppDataContext";
 import { fetchOrganizations } from "../../services/usageService";
+import { matchesParentOrSubgroup } from "../../utils/orgFilters";
 
 // Sort arrow indicator
 function SortArrow({ active, direction }) {
@@ -94,7 +95,8 @@ export default function CoverageReport({
       if (record.assist_id !== assistId) return false;
       if (record.status_id !== statusId) return false;
       if (parentOrg) {
-        if (record.org_parent !== parentOrg) return false;
+        // parentOrg may be a real parent or a subgroup (e.g., "District 4")
+        if (!matchesParentOrSubgroup(record, parentOrg)) return false;
       }
       if (childOrg) {
         if (record.organization !== childOrg) return false;

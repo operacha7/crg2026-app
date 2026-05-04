@@ -10,6 +10,7 @@ import { useAppData } from "../Contexts/AppDataContext";
 import { ChevronDownIcon } from "../icons/ChevronDownIcon";
 import { DownloadIcon } from "../icons/DownloadIcon";
 import { getIconByName } from "../icons/iconMap";
+import { buildParentDropdownOptions, matchesParentOrSubgroup } from "../utils/orgFilters";
 
 // Group colors for the 6 assistance groups (matches NavBar3)
 const GROUP_COLORS = {
@@ -171,21 +172,44 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, maxCha
   const inputRef = useRef(null);
   const hasValue = multi ? (value instanceof Set && value.size > 0) : (value && value !== "");
 
-  // Display text for multi-select mode
+  // Normalize options to {value, label} so the rest of the component is uniform.
+  // Strings are treated as label === value (backward compat for the many flat dropdowns).
+  const normalizedOptions = useMemo(
+    () => options.map((opt) => (typeof opt === "string" ? { value: opt, label: opt } : opt)),
+    [options]
+  );
+
+  // Display text for the closed button. For single-select, look up the label
+  // by matching value (so subgroup picks like "District 4" don't show the
+  // "— " indent prefix). Multi-select keeps current behavior (displays the
+  // raw value when only one is selected).
+  const singleSelectLabel = useMemo(() => {
+    if (multi || !hasValue) return null;
+    const match = normalizedOptions.find((o) => o.value === value);
+    return match ? match.label.replace(/^— /, "") : value;
+  }, [multi, hasValue, normalizedOptions, value]);
   const displayText = multi
     ? (value instanceof Set && value.size === 1 ? [...value][0] : (value instanceof Set && value.size > 1 ? multiLabel : null))
-    : value;
+    : singleSelectLabel;
 
   const truncateText = (text) => {
     if (!text || text.length <= maxChars) return text;
     return text.substring(0, maxChars - 3) + "...";
   };
 
+  // A subgroup option (one with `parent` set) is included when its parent's
+  // value matched directly — so typing "Society" pulls up the parent and its
+  // districts together, even though the district labels don't contain "Society".
   const filteredOptions = useMemo(() => {
-    if (!searchText.trim()) return options;
+    if (!searchText.trim()) return normalizedOptions;
     const search = searchText.toLowerCase();
-    return options.filter(opt => opt.toLowerCase().includes(search));
-  }, [options, searchText]);
+    const directMatches = new Set(
+      normalizedOptions.filter((opt) => opt.label.toLowerCase().includes(search)).map((opt) => opt.value)
+    );
+    return normalizedOptions.filter(
+      (opt) => directMatches.has(opt.value) || (opt.parent && directMatches.has(opt.parent))
+    );
+  }, [normalizedOptions, searchText]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -231,7 +255,7 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, maxCha
       setIsOpen(false);
       setSearchText("");
     } else if (e.key === "Enter" && filteredOptions.length === 1) {
-      handleSelect(filteredOptions[0]);
+      handleSelect(filteredOptions[0].value);
     }
   };
 
@@ -310,21 +334,21 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, maxCha
                 No matches found
               </div>
             ) : (
-              filteredOptions.map((opt, idx) => {
-                const isChecked = multi ? (value instanceof Set && value.has(opt)) : (value === opt);
+              filteredOptions.map((opt) => {
+                const isChecked = multi ? (value instanceof Set && value.has(opt.value)) : (value === opt.value);
                 return (
                   <button
-                    key={idx}
-                    onClick={(e) => { e.stopPropagation(); handleSelect(opt); }}
-                    onMouseEnter={() => setHoveredOption(opt)}
+                    key={opt.value}
+                    onClick={(e) => { e.stopPropagation(); handleSelect(opt.value); }}
+                    onMouseEnter={() => setHoveredOption(opt.value)}
                     onMouseLeave={() => setHoveredOption(null)}
                     className="w-full text-left px-4 py-2 font-opensans flex items-center gap-2"
                     style={{
                       fontSize: "14px",
                       color: "var(--color-dropdown-text)",
-                      backgroundColor: hoveredOption === opt ? "var(--color-dropdown-hover-bg)" : (isChecked && !multi ? "var(--color-dropdown-active-bg)" : "transparent"),
+                      backgroundColor: hoveredOption === opt.value ? "var(--color-dropdown-hover-bg)" : (isChecked && !multi ? "var(--color-dropdown-active-bg)" : "transparent"),
                     }}
-                    title={opt}
+                    title={opt.label}
                   >
                     {multi && (
                       <input
@@ -334,7 +358,7 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, maxCha
                         style={{ width: "16px", height: "16px", accentColor: "#005C72", pointerEvents: "none" }}
                       />
                     )}
-                    {truncateText(opt)}
+                    {truncateText(opt.label)}
                   </button>
                 );
               })
@@ -696,7 +720,7 @@ export default function NavBar2Reports({
     // Filter directory by status + assistance + parent + child
     let filtered = directory.filter(r => r.status_id === statusId);
     if (assistId) filtered = filtered.filter(r => r.assist_id === assistId);
-    if (coverageParentOrg) filtered = filtered.filter(r => r.org_parent === coverageParentOrg);
+    if (coverageParentOrg) filtered = filtered.filter(r => matchesParentOrSubgroup(r, coverageParentOrg));
     if (coverageChildOrg) filtered = filtered.filter(r => r.organization === coverageChildOrg);
 
     // Collect all zip codes served by these orgs
@@ -731,7 +755,7 @@ export default function NavBar2Reports({
     let filtered = directory.filter(r => r.status_id === statusId);
     if (assistId) filtered = filtered.filter(r => r.assist_id === assistId);
     filtered = filtered.filter(r => orgServesArea(r, coverageCounty, null)); // county but not zip
-    if (coverageParentOrg) filtered = filtered.filter(r => r.org_parent === coverageParentOrg);
+    if (coverageParentOrg) filtered = filtered.filter(r => matchesParentOrSubgroup(r, coverageParentOrg));
     if (coverageChildOrg) filtered = filtered.filter(r => r.organization === coverageChildOrg);
 
     const servedZips = new Set();
@@ -751,22 +775,15 @@ export default function NavBar2Reports({
     return validZips.sort();
   }, [directory, statusId, assistId, coverageCounty, coverageParentOrg, coverageChildOrg, orgServesArea, houstonZipsByCounty, allHoustonZips]);
 
-  // Parent org options: mutually filtered by all OTHER filters, multi-child only
+  // Parent org options: mutually filtered by all OTHER filters. Multi-child only.
+  // Returns [{value, label}]; subgroups (e.g. SVdP districts) appear nested
+  // under their parent with a "— " indent prefix.
   const parentOrgOptions = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === statusId);
     if (assistId) filtered = filtered.filter(r => r.assist_id === assistId);
     filtered = filtered.filter(r => orgServesArea(r, coverageCounty, coverageZipCode));
     if (coverageChildOrg) filtered = filtered.filter(r => r.organization === coverageChildOrg);
-    const parentChildCount = {};
-    filtered.forEach(r => {
-      if (!r.org_parent) return;
-      const children = parentChildCount[r.org_parent] || (parentChildCount[r.org_parent] = new Set());
-      if (r.organization) children.add(r.organization);
-    });
-    return Object.entries(parentChildCount)
-      .filter(([, children]) => children.size > 1)
-      .map(([parent]) => parent)
-      .sort();
+    return buildParentDropdownOptions(filtered);
   }, [directory, statusId, assistId, coverageCounty, coverageZipCode, coverageChildOrg, orgServesArea]);
 
   // Child org options: mutually filtered by all OTHER filters
@@ -774,7 +791,7 @@ export default function NavBar2Reports({
     let filtered = directory.filter(r => r.status_id === statusId);
     if (assistId) filtered = filtered.filter(r => r.assist_id === assistId);
     filtered = filtered.filter(r => orgServesArea(r, coverageCounty, coverageZipCode));
-    if (coverageParentOrg) filtered = filtered.filter(r => r.org_parent === coverageParentOrg);
+    if (coverageParentOrg) filtered = filtered.filter(r => matchesParentOrSubgroup(r, coverageParentOrg));
     const children = [...new Set(filtered.map(r => r.organization).filter(Boolean))];
     return children.sort();
   }, [directory, statusId, assistId, coverageCounty, coverageZipCode, coverageParentOrg, orgServesArea]);
@@ -783,7 +800,7 @@ export default function NavBar2Reports({
   const availableAssistance = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === statusId);
     filtered = filtered.filter(r => orgServesArea(r, coverageCounty, coverageZipCode));
-    if (coverageParentOrg) filtered = filtered.filter(r => r.org_parent === coverageParentOrg);
+    if (coverageParentOrg) filtered = filtered.filter(r => matchesParentOrSubgroup(r, coverageParentOrg));
     if (coverageChildOrg) filtered = filtered.filter(r => r.organization === coverageChildOrg);
     const availableIds = new Set(filtered.map(r => r.assist_id));
     return assistance.filter(a => availableIds.has(a.assist_id));
@@ -843,7 +860,7 @@ export default function NavBar2Reports({
   }, [coverageZipCodeOptions]);
 
   useEffect(() => {
-    if (coverageParentOrg && !parentOrgOptions.includes(coverageParentOrg)) {
+    if (coverageParentOrg && !parentOrgOptions.some(o => o.value === coverageParentOrg)) {
       onCoverageParentOrgChange?.("");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -892,7 +909,7 @@ export default function NavBar2Reports({
 
     let filtered = directory.filter(r => r.status_id === 1);
     if (map2AssistId) filtered = filtered.filter(r => r.assist_id === map2AssistId);
-    if (map2ParentOrg) filtered = filtered.filter(r => r.org_parent === map2ParentOrg);
+    if (map2ParentOrg) filtered = filtered.filter(r => matchesParentOrSubgroup(r, map2ParentOrg));
     if (map2Organization) filtered = filtered.filter(r => r.organization === map2Organization);
 
     // Collect counties served by matching orgs
@@ -917,7 +934,7 @@ export default function NavBar2Reports({
     let filtered = directory.filter(r => r.status_id === 1);
     if (map2AssistId) filtered = filtered.filter(r => r.assist_id === map2AssistId);
     filtered = filtered.filter(r => orgServesArea(r, map2County, null)); // county but not zip (we're computing zip options)
-    if (map2ParentOrg) filtered = filtered.filter(r => r.org_parent === map2ParentOrg);
+    if (map2ParentOrg) filtered = filtered.filter(r => matchesParentOrSubgroup(r, map2ParentOrg));
     if (map2Organization) filtered = filtered.filter(r => r.organization === map2Organization);
 
     // Collect all served zips from matching orgs
@@ -939,22 +956,14 @@ export default function NavBar2Reports({
     return validZips.sort();
   }, [directory, map2County, map2AssistId, map2ParentOrg, map2Organization, orgServesArea, houstonZipsByCounty, allHoustonZips]);
 
-  // Parent org options - filtered by all OTHER filters (county, zip, assistance, org), multi-child only
+  // Parent org options - filtered by all OTHER filters (county, zip, assistance, org), multi-child only.
+  // Returns [{value, label}] with subgroups nested under their parent.
   const map2ParentOrgOptions = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === 1);
     if (map2AssistId) filtered = filtered.filter(r => r.assist_id === map2AssistId);
     filtered = filtered.filter(r => orgServesArea(r, map2County, map2ZipCode));
     if (map2Organization) filtered = filtered.filter(r => r.organization === map2Organization);
-    const parentChildCount = {};
-    filtered.forEach(r => {
-      if (!r.org_parent) return;
-      const children = parentChildCount[r.org_parent] || (parentChildCount[r.org_parent] = new Set());
-      if (r.organization) children.add(r.organization);
-    });
-    return Object.entries(parentChildCount)
-      .filter(([, children]) => children.size > 1)
-      .map(([parent]) => parent)
-      .sort();
+    return buildParentDropdownOptions(filtered);
   }, [directory, map2County, map2ZipCode, map2AssistId, map2Organization, orgServesArea]);
 
   // Organization options - filtered by all OTHER filters (county, zip, assistance, parent)
@@ -962,7 +971,7 @@ export default function NavBar2Reports({
     let filtered = directory.filter(r => r.status_id === 1);
     if (map2AssistId) filtered = filtered.filter(r => r.assist_id === map2AssistId);
     filtered = filtered.filter(r => orgServesArea(r, map2County, map2ZipCode));
-    if (map2ParentOrg) filtered = filtered.filter(r => r.org_parent === map2ParentOrg);
+    if (map2ParentOrg) filtered = filtered.filter(r => matchesParentOrSubgroup(r, map2ParentOrg));
     const orgs = [...new Set(filtered.map(r => r.organization).filter(Boolean))];
     return orgs.sort();
   }, [directory, map2County, map2ZipCode, map2AssistId, map2ParentOrg, orgServesArea]);
@@ -973,7 +982,7 @@ export default function NavBar2Reports({
   const map2AvailableAssistance = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === 1);
     filtered = filtered.filter(r => orgServesArea(r, map2County, map2ZipCode));
-    if (map2ParentOrg) filtered = filtered.filter(r => r.org_parent === map2ParentOrg);
+    if (map2ParentOrg) filtered = filtered.filter(r => matchesParentOrSubgroup(r, map2ParentOrg));
     if (map2Organization) filtered = filtered.filter(r => r.organization === map2Organization);
     const availableIds = new Set(filtered.map(r => r.assist_id));
     let result = assistance.filter(a => availableIds.has(a.assist_id));
@@ -997,7 +1006,7 @@ export default function NavBar2Reports({
   }, [map2ZipCodeOptions]);
 
   useEffect(() => {
-    if (map2ParentOrg && !map2ParentOrgOptions.includes(map2ParentOrg)) {
+    if (map2ParentOrg && !map2ParentOrgOptions.some(o => o.value === map2ParentOrg)) {
       onMap2ParentOrgChange?.("");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1039,28 +1048,18 @@ export default function NavBar2Reports({
   const zcdParentOrgOptions = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === 1 && finAssistIds.has(r.assist_id));
     if (zcdOrganization instanceof Set && zcdOrganization.size > 0) filtered = filtered.filter(r => zcdOrganization.has(r.organization));
-    // Only include parents that have multiple children (single-child parents are redundant with Organization dropdown)
-    const parentChildCount = {};
-    filtered.forEach(r => {
-      if (!r.org_parent) return;
-      const children = parentChildCount[r.org_parent] || (parentChildCount[r.org_parent] = new Set());
-      if (r.organization) children.add(r.organization);
-    });
-    return Object.entries(parentChildCount)
-      .filter(([, children]) => children.size > 1)
-      .map(([parent]) => parent)
-      .sort((a, b) => a.localeCompare(b));
+    return buildParentDropdownOptions(filtered);
   }, [directory, zcdOrganization, finAssistIds]);
 
   const zcdOrgOptions = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === 1 && finAssistIds.has(r.assist_id));
-    if (zcdParentOrg) filtered = filtered.filter(r => r.org_parent === zcdParentOrg);
+    if (zcdParentOrg) filtered = filtered.filter(r => matchesParentOrSubgroup(r, zcdParentOrg));
     return [...new Set(filtered.map(r => r.organization).filter(Boolean))].sort();
   }, [directory, zcdParentOrg, finAssistIds]);
 
   // Auto-clear zcd filters when options no longer include current value
   useEffect(() => {
-    if (zcdParentOrg && !zcdParentOrgOptions.includes(zcdParentOrg)) onZcdParentOrgChange?.("");
+    if (zcdParentOrg && !zcdParentOrgOptions.some(o => o.value === zcdParentOrg)) onZcdParentOrgChange?.("");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zcdParentOrgOptions]);
   useEffect(() => {

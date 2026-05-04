@@ -11,6 +11,7 @@ import { logUsage } from "../services/usageService";
 import { searchWithLLM } from "../services/llmSearchService";
 import { geocodeAddress } from "../services/geocodeService";
 import { LOADING_MESSAGES } from "../constants/loadingMessages";
+import { buildParentDropdownOptions, matchesParentOrSubgroup } from "../utils/orgFilters";
 
 // Search mode definitions
 const SEARCH_MODES = {
@@ -169,6 +170,10 @@ const FilterDropdown = HoverDropdown;
 // SearchableDropdown - allows typing to filter options (searches anywhere in name)
 // Used for organization dropdowns where user wants to find "Health" anywhere in org name
 // Click to open, click to close
+//
+// Options accept either bare strings (label === value) or {value, label} objects.
+// This lets the parent dropdown render subgroups indented (e.g., "— District 4")
+// while the underlying filter value stays clean (e.g., "District 4").
 function SearchableDropdown({ placeholder, options = [], value, onChange, allowReset = true, maxChars = 74 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredOption, setHoveredOption] = useState(null);
@@ -177,18 +182,40 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
   const inputRef = useRef(null);
   const hasValue = value && value !== "";
 
+  // Normalize options to {value, label} so the rest of the component is uniform.
+  const normalizedOptions = useMemo(
+    () => options.map((opt) => (typeof opt === "string" ? { value: opt, label: opt } : opt)),
+    [options]
+  );
+
   // Truncate text if longer than maxChars
   const truncateText = (text) => {
     if (!text || text.length <= maxChars) return text;
     return text.substring(0, maxChars - 3) + "...";
   };
 
-  // Filter options by search text (case-insensitive, matches anywhere)
+  // Label to show in the closed button: prefer the matching option's label so
+  // selected values (e.g., "District 4") aren't shown with the "— " indent prefix.
+  const selectedLabel = useMemo(() => {
+    if (!hasValue) return "";
+    const match = normalizedOptions.find((o) => o.value === value);
+    return match ? match.label.replace(/^— /, "") : value;
+  }, [hasValue, normalizedOptions, value]);
+
+  // Filter options by search text (case-insensitive, matches anywhere on the label).
+  // A subgroup option (one with `parent` set) is included if its parent's value
+  // matched directly — so typing "Society" surfaces "Society of St Vincent de Paul"
+  // along with all of its districts even though the district labels don't contain "Society".
   const filteredOptions = useMemo(() => {
-    if (!searchText.trim()) return options;
+    if (!searchText.trim()) return normalizedOptions;
     const search = searchText.toLowerCase();
-    return options.filter(opt => opt.toLowerCase().includes(search));
-  }, [options, searchText]);
+    const directMatches = new Set(
+      normalizedOptions.filter((opt) => opt.label.toLowerCase().includes(search)).map((opt) => opt.value)
+    );
+    return normalizedOptions.filter(
+      (opt) => directMatches.has(opt.value) || (opt.parent && directMatches.has(opt.parent))
+    );
+  }, [normalizedOptions, searchText]);
 
   // Handle click outside to close
   useEffect(() => {
@@ -229,7 +256,7 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
       setSearchText("");
     } else if (e.key === "Enter" && filteredOptions.length === 1) {
       // Auto-select if only one match
-      handleSelect(filteredOptions[0]);
+      handleSelect(filteredOptions[0].value);
     }
   };
 
@@ -261,7 +288,7 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
           whiteSpace: "nowrap",
         }}
       >
-        {hasValue ? truncateText(value) : placeholder}
+        {hasValue ? truncateText(selectedLabel) : placeholder}
       </button>
 
       {isOpen && (
@@ -313,22 +340,22 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
                 No matches found
               </div>
             ) : (
-              filteredOptions.map((opt, idx) => (
+              filteredOptions.map((opt) => (
                 <button
-                  key={idx}
-                  onClick={(e) => { e.stopPropagation(); handleSelect(opt); }}
-                  onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); handleSelect(opt); }}
-                  onMouseEnter={() => setHoveredOption(opt)}
+                  key={opt.value}
+                  onClick={(e) => { e.stopPropagation(); handleSelect(opt.value); }}
+                  onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); handleSelect(opt.value); }}
+                  onMouseEnter={() => setHoveredOption(opt.value)}
                   onMouseLeave={() => setHoveredOption(null)}
                   className="w-full text-left px-4 py-2 font-opensans"
                   style={{
                     fontSize: "var(--font-size-navbar2-dropdown-option)",
                     color: "var(--color-dropdown-text)",
-                    backgroundColor: hoveredOption === opt ? "var(--color-dropdown-hover-bg)" : (value === opt ? "var(--color-dropdown-active-bg)" : "transparent"),
+                    backgroundColor: hoveredOption === opt.value ? "var(--color-dropdown-hover-bg)" : (value === opt.value ? "var(--color-dropdown-active-bg)" : "transparent"),
                   }}
-                  title={opt}
+                  title={opt.label}
                 >
-                  {truncateText(opt)}
+                  {truncateText(opt.label)}
                 </button>
               ))
             )}
@@ -1007,9 +1034,9 @@ function OrganizationFilters({
       // Show all organizations if no parent selected
       return organizations.map(o => o.organization).sort();
     }
-    // Filter to children of selected parent
+    // Filter to children of selected parent (or selected subgroup, e.g. "District 4")
     return organizations
-      .filter(o => o.org_parent === selectedParent)
+      .filter(o => matchesParentOrSubgroup(o, selectedParent))
       .map(o => o.organization)
       .sort();
   }, [selectedParent, organizations]);
@@ -1487,20 +1514,13 @@ export default function NavBar2() {
     return zipCodes.find(z => z.zip_code === selectedZipCode);
   }, [selectedZipCode, zipCodes]);
 
-  // Memoize organization options for Organization mode
-  const parentOrgOptions = useMemo(() => {
-    // Only include parents that have multiple children (single-child parents are redundant with Organization dropdown)
-    const parentChildCount = {};
-    organizations.forEach(o => {
-      if (!o.org_parent) return;
-      const children = parentChildCount[o.org_parent] || (parentChildCount[o.org_parent] = new Set());
-      if (o.organization) children.add(o.organization);
-    });
-    return Object.entries(parentChildCount)
-      .filter(([, children]) => children.size > 1)
-      .map(([parent]) => parent)
-      .sort();
-  }, [organizations]);
+  // Memoize organization options for Organization mode.
+  // Returns [{value, label}] entries; subgroups (e.g., SVdP districts) appear
+  // nested under their parent with a "— " indent prefix on the label.
+  const parentOrgOptions = useMemo(
+    () => buildParentDropdownOptions(organizations),
+    [organizations]
+  );
 
   // Distance button requires exactly 1 active assistance type to prevent large API calls
   const distanceDisabled = activeAssistanceChips.size !== 1;

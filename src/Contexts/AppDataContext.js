@@ -72,7 +72,7 @@ function buildOrgAssistanceMap(directoryData) {
 }
 
 // Build organizations list from directory data for NavBar2 dropdowns
-// Returns array of { organization, org_parent } for parent/child dropdown population
+// Returns array of { organization, org_parent, subgroup } for parent/child dropdown population
 function buildOrganizationsList(directoryData) {
   const orgMap = new Map(); // Use Map to dedupe by organization name
   directoryData.forEach(record => {
@@ -80,6 +80,7 @@ function buildOrganizationsList(directoryData) {
       orgMap.set(record.organization, {
         organization: record.organization,
         org_parent: record.org_parent || record.organization,
+        subgroup: record.subgroup || null,
       });
     }
   });

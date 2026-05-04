@@ -11,6 +11,7 @@ import { sendEmail, createPdf, buildSmsBody, fetchOrgPhone, generateSearchHeader
 import { getDrivingDistances } from "../services/geocodeService";
 import { logUsage } from "../services/usageService";
 import { applyLLMFilters } from "../services/llmSearchService";
+import { matchesParentOrSubgroup } from "../utils/orgFilters";
 
 export default function ZipCodePage({
   loggedInUser,
@@ -149,7 +150,9 @@ export default function ZipCodePage({
         if (selectedChildOrg) {
           filtered = filtered.filter(record => record.organization === selectedChildOrg);
         } else if (selectedParentOrg) {
-          filtered = filtered.filter(record => record.org_parent === selectedParentOrg);
+          // selectedParentOrg may be either a real parent (matches org_parent)
+          // or a subgroup like "District 4" (matches subgroup).
+          filtered = filtered.filter(record => matchesParentOrSubgroup(record, selectedParentOrg));
         }
         break;
 

@@ -142,6 +142,7 @@ export type Database = {
           status_date: string | null
           status_id: number | null
           status_text: string | null
+          subgroup: string | null
           webpage: string | null
           zip_neighborhoods: string | null
         }
@@ -173,6 +174,7 @@ export type Database = {
           status_date?: string | null
           status_id?: number | null
           status_text?: string | null
+          subgroup?: string | null
           webpage?: string | null
           zip_neighborhoods?: string | null
         }
@@ -204,6 +206,7 @@ export type Database = {
           status_date?: string | null
           status_id?: number | null
           status_text?: string | null
+          subgroup?: string | null
           webpage?: string | null
           zip_neighborhoods?: string | null
         }

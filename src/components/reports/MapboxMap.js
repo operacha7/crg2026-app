@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback, useRef, useMemo, forwardRef, useImper
 import MapGL, { Source, Layer, Marker, NavigationControl } from "react-map-gl/mapbox";
 import { useAppData } from "../../Contexts/AppDataContext";
 import { MapPinIcon } from "../../icons/MapPinIcon";
+import { matchesParentOrSubgroup } from "../../utils/orgFilters";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -3262,7 +3263,8 @@ const MapboxMap = forwardRef(function MapboxMap({
 
     // Filter by parent org
     if (parentOrg) {
-      filtered = filtered.filter((r) => r.org_parent === parentOrg);
+      // parentOrg may be a real parent or a subgroup (e.g., "District 4")
+      filtered = filtered.filter((r) => matchesParentOrSubgroup(r, parentOrg));
     }
 
     // Filter by specific organization

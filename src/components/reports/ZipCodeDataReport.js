@@ -19,6 +19,7 @@ import { getIconByName } from "../../icons/iconMap";
 import VerticalLineIcon from "../../icons/VerticalLineIcon";
 import ColumnHeaderFilter from "../ColumnHeaderFilter";
 import SortIcon from "../../icons/SortIcons";
+import { matchesParentOrSubgroup } from "../../utils/orgFilters";
 
 // Format helpers mapped by config format string
 // `percentage`: values are stored as fractions in zip_code_data (e.g. 0.194 for
@@ -273,7 +274,7 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ counties, pare
     if (!parentOrg && !hasOrgFilter) return null;
 
     let filtered = directory.filter(r => r.status_id === 1 && finAssistIds.has(r.assist_id));
-    if (parentOrg) filtered = filtered.filter(r => r.org_parent === parentOrg);
+    if (parentOrg) filtered = filtered.filter(r => matchesParentOrSubgroup(r, parentOrg));
     if (hasOrgFilter) filtered = filtered.filter(r => organization.has(r.organization));
 
     const zips = new Set();
@@ -289,7 +290,7 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ counties, pare
   const highlightedOrgs = useMemo(() => {
     if (!parentOrg && !hasOrgFilter) return null;
     let filtered = directory.filter(r => r.status_id === 1 && finAssistIds.has(r.assist_id));
-    if (parentOrg) filtered = filtered.filter(r => r.org_parent === parentOrg);
+    if (parentOrg) filtered = filtered.filter(r => matchesParentOrSubgroup(r, parentOrg));
     if (hasOrgFilter) filtered = filtered.filter(r => organization.has(r.organization));
     return new Set(filtered.map(r => r.organization).filter(Boolean));
   }, [directory, parentOrg, organization, finAssistIds]);
@@ -420,7 +421,7 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ counties, pare
   const orgGroupList = useMemo(() => {
     if (!parentOrg && !hasOrgFilter) return null;
     let filtered = directory.filter(r => r.status_id === 1 && finAssistIds.has(r.assist_id));
-    if (parentOrg) filtered = filtered.filter(r => r.org_parent === parentOrg);
+    if (parentOrg) filtered = filtered.filter(r => matchesParentOrSubgroup(r, parentOrg));
     if (hasOrgFilter) filtered = filtered.filter(r => organization.has(r.organization));
     return [...new Set(filtered.map(r => r.organization).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   }, [directory, parentOrg, hasOrgFilter, organization, finAssistIds]);
