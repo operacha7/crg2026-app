@@ -166,6 +166,8 @@ function getUnifiedFillStyle(metric = "distress", showParentCoverage = true, sho
       [">=", ["coalesce", ["get", "efficiency_score"], -1], 20], DISTRESS_GREEN,
       [">",  ["coalesce", ["get", "efficiency_score"], -1], 0],  DISTRESS_BLUE,
     ];
+  } else if (metric === "no_base_map") {
+    metricExpression = [];
   } else if (metric === "bivariate") {
     // 3x3 bivariate choropleth using bivariate_map_code (text: "11"-"33")
     // Textbook two-hue Stevens palette: red (distress) × blue (funding gap)
@@ -2679,6 +2681,7 @@ function BivariateLegend({ standalone }) {
 
 // Metric legend bar switcher - renders the correct legend bar based on viewMode
 function MetricLegendBar({ viewMode, standalone }) {
+  if (viewMode === "no_base_map") return null;
   if (viewMode === "working_poor") return <WorkingPoorLegendBar standalone={standalone} />;
   if (viewMode === "evictions") return <EvictionsLegendBar standalone={standalone} />;
   if (viewMode === "family_vulnerability") return <FamilyVulnerabilityLegendBar standalone={standalone} />;
@@ -2691,6 +2694,7 @@ function MetricLegendBar({ viewMode, standalone }) {
 
 // Base legend - always visible, shows distress colors from the start
 function BaseLegend({ viewMode }) {
+  if (viewMode === "no_base_map") return null;
   return (
     <div
       data-legend="true"
@@ -2767,6 +2771,7 @@ const VIEW_MODE_OPTIONS = [
   { value: "family_vulnerability", label: "Family Vulnerability Index" },
   { value: "funding_level", label: "Funding Level" },
   { value: "efficiency_ratio", label: "Distress vs. Funding" },
+  { value: "no_base_map", label: "No Base Map" },
   { value: "filter_view", label: "Filter Overlay" },
 ];
 
@@ -3540,8 +3545,8 @@ const MapboxMap = forwardRef(function MapboxMap({
 
   // Handle clicking map area
   const handleMapClick = useCallback((e) => {
-    // In distress base view, clicking a zip boundary opens/toggles the distress data table
-    if (isBaseView && displayMetric === "distress") {
+    // In distress (or no-base-map) base view, clicking a zip boundary opens/toggles the distress data table
+    if (isBaseView && (displayMetric === "distress" || displayMetric === "no_base_map")) {
       const map = mapRef.current?.getMap();
       if (map && map.getLayer("unified-fill")) {
         const features = map.queryRenderedFeatures(e.point, {
@@ -5356,6 +5361,7 @@ const MapboxMap = forwardRef(function MapboxMap({
 
   // Draw metric legend bar on canvas (distress/working poor/population)
   const drawMetricBarOnCanvas = (ctx, x, y, w, pad, mode) => {
+    if (mode === "no_base_map") return y;
     let cy = y;
     // Divider
     ctx.strokeStyle = "#E0E0E0";
@@ -5495,6 +5501,7 @@ const MapboxMap = forwardRef(function MapboxMap({
   };
 
   const drawBaseLegendOnCanvas = (ctx, containerEl, mode) => {
+    if (mode === "no_base_map") return;
     const { height } = containerEl.getBoundingClientRect();
 
     if (mode === "bivariate") {
@@ -5700,7 +5707,7 @@ const MapboxMap = forwardRef(function MapboxMap({
       }
 
       // Step 3: Draw base map title on canvas (top left)
-      const baseMapLabels = { distress: "Distress Levels", working_poor: "Working Poor", evictions: "Evictions", population: "Population", funding_level: "Funding Level", efficiency_ratio: "Distress vs. Funding", bivariate: "Distress vs. Funding" };
+      const baseMapLabels = { distress: "Distress Levels", working_poor: "Working Poor", evictions: "Evictions", population: "Population", funding_level: "Funding Level", efficiency_ratio: "Distress vs. Funding", bivariate: "Distress vs. Funding", no_base_map: "No Base Map" };
       const baseMapTitle = `Base Map: ${baseMapLabels[displayMetric] || "Distress Levels"}`;
       ctx.font = "700 16px 'Open Sans', sans-serif";
       ctx.fillStyle = "#2E5A88";
@@ -5845,8 +5852,16 @@ const MapboxMap = forwardRef(function MapboxMap({
             <Layer {...unifiedFillStyle} />
             <Layer {...boundaryLineStyle} />
             {/* Teal border on parent-covered zips, magenta on selected child's zips */}
-            {!isBaseView && hasAssistance && <Layer {...orgCoverageBorderTealStyle} />}
-            {!isBaseView && hasAssistance && <Layer {...orgCoverageBorderMagentaStyle} />}
+            {/* Always mounted; visibility toggled to avoid first-paint race when the layer
+                is added in the same render as the geoJsonData density update */}
+            <Layer
+              {...orgCoverageBorderTealStyle}
+              layout={{ visibility: !isBaseView && hasAssistance ? "visible" : "none" }}
+            />
+            <Layer
+              {...orgCoverageBorderMagentaStyle}
+              layout={{ visibility: !isBaseView && hasAssistance ? "visible" : "none" }}
+            />
             <Layer {...zipLabelStyle} />
           </Source>
         )}
@@ -5983,7 +5998,7 @@ const MapboxMap = forwardRef(function MapboxMap({
             textOverflow: "ellipsis",
           }}
         >
-          Base Map: {{ distress: "Distress Levels", working_poor: "Working Poor", evictions: "Evictions", family_vulnerability: "Family Vulnerability Index", family_bivariate: "Family Vulnerability Index", funding_level: "Funding Level", efficiency_ratio: "Distress vs. Funding", bivariate: "Distress vs. Funding" }[displayMetric] || "Distress Levels"}
+          Base Map: {{ distress: "Distress Levels", working_poor: "Working Poor", evictions: "Evictions", family_vulnerability: "Family Vulnerability Index", family_bivariate: "Family Vulnerability Index", funding_level: "Funding Level", efficiency_ratio: "Distress vs. Funding", bivariate: "Distress vs. Funding", no_base_map: "No Base Map" }[displayMetric] || "Distress Levels"}
         </div>
 
         {/* View Mode dropdown (custom) + methodology ⓘ icon (only when active metric has a blurb) */}
@@ -6163,7 +6178,9 @@ const MapboxMap = forwardRef(function MapboxMap({
       {!isBaseView && <DraggableInfoBox info={infoBoxData} onClose={handleInfoBoxClose} />}
 
       {/* Draggable distress data table - in distress base view or when activeBase is distress in filter view */}
-      {(isBaseView ? displayMetric === "distress" : activeBase === "distress") && distressTableZip && distressDataLookup[distressTableZip] && (
+      {(isBaseView
+        ? (displayMetric === "distress" || displayMetric === "no_base_map")
+        : (activeBase === "distress" || activeBase === "no_base_map")) && distressTableZip && distressDataLookup[distressTableZip] && (
         <DraggableDistressTable
           data={{ ...distressDataLookup[distressTableZip], rank: distressRankLookup[distressTableZip] ?? null }}
           zipCode={distressTableZip}
