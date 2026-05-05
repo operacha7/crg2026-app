@@ -8,8 +8,6 @@ import {
   HelpBubbleIcon,
   ReportsIcon,
   AnnouncementsIcon,
-  PrivacyPolicyIcon,
-  ContactSupportIcon,
   HomeIcon,
   QuickTipsIcon,
 } from "../icons";
@@ -18,20 +16,19 @@ import { useAppData } from "../Contexts/AppDataContext";
 import HelpPanel from "../components/HelpPanel";
 import QuickTipsPanel from "../components/QuickTipsPanel";
 
+// Legal and Contact Support icons removed — both are now reachable from the
+// site-wide secondary footer (Privacy Policy / Terms of Service / Contact
+// Support), so the duplicates in the vertical bar were redundant.
 const navItems = [
   { id: "quicktips", Icon: QuickTipsIcon, label: "Quick Tips" },
   { id: "information", Icon: HelpBubbleIcon, label: "Help" },
   { id: "reports", Icon: ReportsIcon, label: "Reports" },
   { id: "announcements", Icon: AnnouncementsIcon, label: "Announcements" },
-  { id: "privacy", Icon: PrivacyPolicyIcon, label: "Legal" },
-  { id: "contact", Icon: ContactSupportIcon, label: "Contact Support" },
 ];
 
 // Map nav item ids to their routes
 const navRoutes = {
   reports: "/reports",
-  privacy: "/privacy",
-  contact: "/support",
   announcements: "/announcements",
 };
 
@@ -62,8 +59,8 @@ export default function VerticalNavBar({ externalHelpOpen, onHelpOpenChange }) {
     setQuickTipsExpandedSection,
   } = useAppData();
 
-  // Home is active when we're on the root path
-  const isHomeActive = location.pathname === "/";
+  // Home is active when we're on the working ZipCodePage URL.
+  const isHomeActive = location.pathname === "/find";
 
   // Determine active item based on current route
   const getActiveItem = () => {
@@ -108,7 +105,8 @@ export default function VerticalNavBar({ externalHelpOpen, onHelpOpenChange }) {
     setClientAddress("");
     setClientCoordinates("");
     // Note: Assistance selections are NOT cleared - they persist until session restart
-    navigate("/");
+    // Navigate to /find (the in-app ZipCodePage URL); / is the public HomePage now.
+    navigate("/find");
   };
 
   return (

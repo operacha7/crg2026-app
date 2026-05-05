@@ -30,6 +30,7 @@
   },
   "scripts": {
     "start": "vite",
+    "prebuild": "node scripts/generate-sitemap.js",
     "build": "vite build",
     "preview": "vite preview",
     "sync": "node scripts/sync-to-supabase.js",

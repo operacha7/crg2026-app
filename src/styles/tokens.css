@@ -13,6 +13,27 @@
   --color-footer-bg: #B8001F;
   --color-footer-text: #FFFFFF;
 
+  /* Secondary footer (sits above the red copyright bar on every page) */
+  --color-footer-secondary-bg: #43747D;
+  --color-footer-secondary-text: #FFFFFF;
+  --font-size-footer-secondary: 14px;
+  --height-footer-secondary: 30px; /* match --height-footer */
+  --gap-footer-secondary-links: clamp(16px, 3vw, 40px);
+
+  /* Home Page */
+  --color-home-navbar-bg: #222831;
+  --color-home-navbar-about: #F3EED9;
+  --color-home-right-area-bg: #660000; /* maroon frame around the white panel */
+  --color-home-panel-bg: #FFFFFF;
+  --color-home-panel-inner-bg: #43747D;
+  --color-home-h1: #660000;
+  --color-home-tagline: #222831;
+  --color-home-label: #FFFFFF;
+  --color-home-zip-dropdown-bg: #FCD290;
+  --color-home-zip-dropdown-text: #222831;
+  --color-home-chip-bg: #F3EED9;
+  --color-home-chip-text: #000000;
+
   /* Vertical Nav Bar */
   --color-vertical-nav-accent: #948979;
   --color-vertical-nav-bg: #222831;
@@ -117,18 +138,23 @@
   --color-assistance-selected-border: #000000;
   --color-assistance-text: #000000;
 
-  /* Login Panel */
-  /* Note: Login panel uses --color-panel-body-bg for body and --color-panel-header-bg for header */
-  --color-login-panel-title: #FFFFFF;
-  --color-login-btn-guest-bg: #FDF6E3;
-  --color-login-btn-guest-text: #000000;
-  --color-login-label-bg: #FDF6E3;
-  --color-login-label-text: #000000;
-  --color-login-input-bg: #2C4146;
-  --color-login-input-text: #FFFFFF;
-  --color-login-btn-login-bg: #d27953;
-  --color-login-btn-login-text: #000000;
-  --radius-login-btn: 5px;
+  /* Login Panel
+   * Buttons use the standard panel button tokens (--color-panel-btn-cancel-bg,
+   * --color-panel-btn-ok-bg, --width-panel-btn, --height-panel-btn,
+   * --radius-panel-btn) — same look as the Assistance panel. */
+  --color-login-panel-bg: #FFFFFF;
+  --color-login-panel-border: #43747D;
+  --width-login-panel-border: 5px;
+  --radius-login-panel: 20px;
+  --color-login-label: #660000;
+  --font-size-login-title: 20px;
+  --font-size-login-label: 14px;
+  --font-weight-login: 600; /* Semibold — applies to title, labels, and inputs */
+  --color-login-input-bg: #F3EED9;
+  --color-login-input-text: #000000;
+  --font-size-login-input-org: 18px;
+  --font-size-login-input-passcode: 14px;
+  --radius-login-input: 5px;
 
   /* ==========================================
    * TYPOGRAPHY

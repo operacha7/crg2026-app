@@ -3,6 +3,10 @@
 
 User-agent: *
 Allow: /
+# Block legacy zip-filter URL pattern on the homepage to avoid duplicate
+# indexing. The working search lives at /find and /assistance/[slug] pages,
+# both of which use canonical tags to consolidate ?zip= variants.
+Disallow: /?zip=
 
 # Sitemap location
 Sitemap: https://crghouston.org/sitemap.xml

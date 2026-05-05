@@ -1,6 +1,5 @@
 // src/views/ZipCodePage.js
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { Helmet } from "react-helmet-async";
 import PageLayout from "../layout/PageLayout";
 import ResultsList from "../components/ResultsList";
 import { motion } from "framer-motion";
@@ -538,15 +537,6 @@ export default function ZipCodePage({
       onMessagesHandoff={handleMessagesHandoff}
       onGvAutoSent={handleGvAutoSent}
     >
-
-   <Helmet>
-      <title>Search by Zip Code | Community Resources Guide</title>
-      <meta
-        name="description"
-        content="Find food, housing, legal, and utility assistance by zip code across the Greater Houston Area."
-      />
-    </Helmet>
-
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* Legacy controls removed - now handled by NavBar1 (counters), NavBar2 (zip dropdown), NavBar3 (assistance) */}
 

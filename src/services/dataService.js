@@ -112,7 +112,7 @@ export const dataService = {
   async getAssistance() {
     const { data, error } = await supabase
       .from('assistance')
-      .select('id_no, assistance, group, icon, assist_id, is_fin_assist')
+      .select('id_no, assistance, group, icon, assist_id, is_fin_assist, url_slug, category')
       .order('id_no', { ascending: true });
 
     if (error) {

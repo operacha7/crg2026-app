@@ -1,19 +1,10 @@
-// src/views/LegalPage.js
-// 2026 Redesign - Combined Privacy Policy and Terms of Service page
-//
-// TO UPDATE CONTENT:
-// Edit the PRIVACY_POLICY_HTML or TERMS_OF_SERVICE_HTML strings below.
-// Also update public/privacy-policy.html to keep the standalone version in sync.
+// src/views/legalContent.js
+// Shared HTML content for the public /privacy and /terms pages. Kept as a
+// single source so PrivacyPage and TermsPage stay thin wrappers — edit the
+// strings here to update the live text. Also update public/privacy-policy.html
+// to keep the standalone version in sync.
 
-import React, { useState } from 'react';
-import VerticalNavBar from '../layout/VerticalNavBar';
-import Footer from '../layout/Footer';
-import MobileMenu from '../components/MobileMenu';
-
-// =============================================================================
-// PRIVACY POLICY CONTENT
-// =============================================================================
-const PRIVACY_POLICY_HTML = `
+export const PRIVACY_POLICY_HTML = `
 <h1>Privacy Policy</h1>
 <p style="color:#666; font-size:14px;">Effective Date: April 18, 2026</p>
 <hr>
@@ -28,7 +19,7 @@ const PRIVACY_POLICY_HTML = `
 
 <h4>Organization Resources</h4>
 <p>We collect publicly available information about organizations that provide assistance in the Greater Houston area. This may include organization name, address, phone number, hours of operation, supported zip codes, types of assistance offered, and primary requirements.</p>
-<p>Organizations may request removal of their information by contacting us at <strong>developer@operacha.org</strong>.</p>
+<p>Organizations may request removal of their information by contacting us at <strong>info@crghouston.org</strong>.</p>
 
 <h4>Registered Users</h4>
 <p>For registered organizations, we collect usage information associated with an assigned user ID. This includes which features are used, search criteria selected, and resources recommended to clients.</p>
@@ -87,15 +78,12 @@ const PRIVACY_POLICY_HTML = `
 <hr>
 
 <h3>7. Contact Us</h3>
-<p>If you have questions or concerns about this Privacy Policy, you may contact us by clicking <strong>"Contact Support"</strong> within the Application or by emailing <strong>developer@operacha.org</strong>.</p>
+<p>If you have questions or concerns about this Privacy Policy, you may contact us by clicking <strong>"Contact Support"</strong> within the Application or by emailing <strong>info@crghouston.org</strong>.</p>
 <p><strong>Omar Peracha</strong></p>
 <p>April 18, 2026</p>
 `;
 
-// =============================================================================
-// TERMS OF SERVICE CONTENT
-// =============================================================================
-const TERMS_OF_SERVICE_HTML = `
+export const TERMS_OF_SERVICE_HTML = `
 <h1>Terms of Service</h1>
 <p style="color:#666; font-size:14px;">Effective Date: April 18, 2026</p>
 <hr>
@@ -125,147 +113,7 @@ const TERMS_OF_SERVICE_HTML = `
 <hr>
 
 <h3>6. Contact</h3>
-<p>Questions or concerns regarding these Terms may be directed to the developer by clicking <strong>"Contact Support"</strong> within the Application or by emailing <strong>developer@operacha.org</strong>.</p>
+<p>Questions or concerns regarding these Terms may be directed to the developer by clicking <strong>"Contact Support"</strong> within the Application or by emailing <strong>info@crghouston.org</strong>.</p>
 <p><strong>Omar Peracha</strong></p>
 <p>April 18, 2026</p>
 `;
-
-// =============================================================================
-// COMPONENT CODE - No need to modify below this line
-// =============================================================================
-
-const LegalPage = ({ loggedInUser }) => {
-  const [activeTab, setActiveTab] = useState('privacy'); // 'privacy' or 'terms'
-
-  return (
-    <div className="h-screen flex flex-row overflow-hidden">
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* NavBar1 - Header */}
-        <nav
-          className="bg-navbar1-bg flex items-center justify-between"
-          style={{
-            height: 'var(--height-navbar1)',
-            paddingLeft: 'var(--padding-navbar1-left)',
-            paddingRight: 'var(--padding-navbar1-right)',
-          }}
-        >
-          {/* Left side - Logo and Title */}
-          <div
-            className="flex items-center"
-            style={{ gap: 'var(--gap-navbar1-logo-title)' }}
-          >
-            <img
-              src="/images/CRG Logo 2025.webp"
-              alt="CRG Logo"
-              style={{
-                width: 'var(--size-navbar1-logo)',
-                height: 'var(--size-navbar1-logo)',
-              }}
-              className="object-contain"
-            />
-            <h1
-              className="text-navbar1-title font-comfortaa"
-              style={{
-                fontSize: 'var(--font-size-navbar1-title)',
-                fontWeight: 'var(--font-weight-navbar1-title)',
-                letterSpacing: 'var(--letter-spacing-navbar1-title)',
-              }}
-            >
-              Community Resources Guide Houston
-            </h1>
-          </div>
-
-          {/* Right side - Page label (desktop) / hamburger (mobile) */}
-          <span
-            className="hidden lg:inline font-opensans"
-            style={{
-              color: 'var(--color-navbar1-title)',
-              fontSize: 'var(--font-size-navbar1-btn)',
-              fontWeight: 'var(--font-weight-navbar1-btn)',
-              letterSpacing: 'var(--letter-spacing-navbar1-btn)',
-            }}
-          >
-            Legal
-          </span>
-          <div className="lg:hidden">
-            <MobileMenu />
-          </div>
-        </nav>
-
-        {/* NavBar2 - Tab selector */}
-        <nav
-          className="bg-navbar2-bg flex items-center"
-          style={{
-            height: 'var(--height-navbar2)',
-            paddingLeft: 'var(--padding-navbar2-left)',
-            paddingRight: 'var(--padding-navbar2-right)',
-            gap: 'var(--gap-navbar2-mode-buttons)',
-          }}
-        >
-          {/* Privacy Policy Tab */}
-          <button
-            onClick={() => setActiveTab('privacy')}
-            className="font-opensans transition-all duration-200 hover:brightness-125"
-            style={{
-              height: 'var(--height-navbar2-btn)',
-              paddingLeft: 'var(--padding-navbar2-btn-x)',
-              paddingRight: 'var(--padding-navbar2-btn-x)',
-              borderRadius: 'var(--radius-navbar2-btn)',
-              fontSize: 'var(--font-size-navbar2-btn)',
-              fontWeight: 'var(--font-weight-navbar2-btn)',
-              letterSpacing: 'var(--letter-spacing-navbar2-btn)',
-              backgroundColor: activeTab === 'privacy' ? 'var(--color-navbar2-btn-active-bg)' : 'transparent',
-              color: activeTab === 'privacy' ? 'var(--color-navbar2-btn-active-text)' : 'var(--color-navbar2-btn-inactive-text)',
-            }}
-          >
-            Privacy Policy
-          </button>
-
-          {/* Terms of Service Tab */}
-          <button
-            onClick={() => setActiveTab('terms')}
-            className="font-opensans transition-all duration-200 hover:brightness-125"
-            style={{
-              height: 'var(--height-navbar2-btn)',
-              paddingLeft: 'var(--padding-navbar2-btn-x)',
-              paddingRight: 'var(--padding-navbar2-btn-x)',
-              borderRadius: 'var(--radius-navbar2-btn)',
-              fontSize: 'var(--font-size-navbar2-btn)',
-              fontWeight: 'var(--font-weight-navbar2-btn)',
-              letterSpacing: 'var(--letter-spacing-navbar2-btn)',
-              backgroundColor: activeTab === 'terms' ? 'var(--color-navbar2-btn-active-bg)' : 'transparent',
-              color: activeTab === 'terms' ? 'var(--color-navbar2-btn-active-text)' : 'var(--color-navbar2-btn-inactive-text)',
-            }}
-          >
-            Terms of Service
-          </button>
-        </nav>
-
-        {/* Main content - Legal text */}
-        <main
-          className="flex-1 overflow-y-auto p-8"
-          style={{ backgroundColor: 'var(--color-page-background-cream)' }}
-        >
-          <div
-            className="legal-content max-w-4xl mx-auto bg-white rounded-lg shadow-md p-8"
-            style={{ fontFamily: 'var(--font-family-body)' }}
-            dangerouslySetInnerHTML={{
-              __html: activeTab === 'privacy' ? PRIVACY_POLICY_HTML : TERMS_OF_SERVICE_HTML
-            }}
-          />
-        </main>
-
-        {/* Footer */}
-        <Footer />
-      </div>
-
-      {/* Vertical nav bar — desktop only; mobile uses the hamburger in NavBar1 */}
-      <div className="hidden lg:block">
-        <VerticalNavBar />
-      </div>
-    </div>
-  );
-};
-
-export default LegalPage;

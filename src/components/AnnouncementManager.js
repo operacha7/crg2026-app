@@ -2,6 +2,7 @@
 // 2026 Redesign - Updated to use new AnnouncementService API
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import AnnouncementService from '../services/AnnouncementService';
 import AnnouncementPopup from './AnnouncementPopup';
@@ -19,6 +20,12 @@ const AnnouncementManager = ({ loggedInUser }) => {
   const [currentAnnouncementIndex, setCurrentAnnouncementIndex] = useState(0);
   const [showPopup, setShowPopup] = useState(false);
   const [initialized, setInitialized] = useState(false);
+
+  // Defer the popup while the login modal is up — otherwise the announcement
+  // stacks behind the modal where it can't be read or dismissed. Once the user
+  // logs in or cancels, ?login=1 is stripped and the popup renders normally.
+  const [searchParams] = useSearchParams();
+  const isLoginModalOpen = searchParams.get('login') === '1';
 
   // Load active announcements on component mount
   useEffect(() => {
@@ -73,7 +80,7 @@ const AnnouncementManager = ({ loggedInUser }) => {
 
   return (
     <AnimatePresence>
-      {showPopup && currentAnnouncement && (
+      {showPopup && currentAnnouncement && !isLoginModalOpen && (
         <AnnouncementPopup
           announcement={currentAnnouncement}
           onClose={handleCloseAnnouncement}
