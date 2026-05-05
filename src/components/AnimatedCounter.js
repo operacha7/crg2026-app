@@ -23,26 +23,30 @@ export default function AnimatedCounter({
 }) {
   const [displayValue, setDisplayValue] = useState(0);
   const [isGlowing, setIsGlowing] = useState(false);
-  const previousValueRef = useRef(0);
+  // Mirrors the latest rendered value. We can't use displayValue directly
+  // inside the effect because the effect's deps shouldn't include it (would
+  // re-run mid-animation), and we can't use a write-once "previous value"
+  // ref because React StrictMode in dev runs each effect twice — setup,
+  // cleanup, setup — which would cause the second run to think the value
+  // hadn't changed from the previousValueRef set during the first run, and
+  // bail out before any frame painted. Tracking the actual rendered value
+  // makes the second run start from 0 (or wherever we really are visually)
+  // rather than from a phantom "previously committed" value.
+  const displayValueRef = useRef(0);
   const animationRef = useRef(null);
-  const isFirstRender = useRef(true);
 
   useEffect(() => {
-    // On first render, animate from 0 to the initial value
-    const startValue = isFirstRender.current ? 0 : previousValueRef.current;
+    const startValue = displayValueRef.current;
     const endValue = value;
 
-    // If no change needed, skip animation
-    if (startValue === endValue && !isFirstRender.current) {
-      return;
+    // Genuinely no change — skip the animation entirely.
+    if (startValue === endValue) {
+      return undefined;
     }
 
     // Trigger glow effect
     setIsGlowing(true);
     const glowTimeout = setTimeout(() => setIsGlowing(false), duration + 500);
-
-    isFirstRender.current = false;
-    previousValueRef.current = value;
 
     // Cancel any existing animation
     if (animationRef.current) {
@@ -62,6 +66,7 @@ export default function AnimatedCounter({
 
       const currentValue = Math.round(startValue + diff * easedProgress);
       setDisplayValue(currentValue);
+      displayValueRef.current = currentValue;
 
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate);

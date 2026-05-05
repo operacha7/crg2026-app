@@ -15,7 +15,6 @@ import MobileMenu from "../components/MobileMenu";
 const SMS_WARNING_ACK_KEY = "crg_sms_warning_acknowledged";
 
 export default function NavBar1({
-  totalCount = 0,
   filteredCount = 0,
   selectedCount = 0,
   onSendEmail,
@@ -32,9 +31,12 @@ export default function NavBar1({
   onMessagesHandoff,
   onGvAutoSent,
 }) {
-  // Orange counter shows totalCount initially (before any filter applied),
-  // then shows filteredCount once user starts filtering
-  const displayFilteredCount = filteredCount > 0 ? filteredCount : totalCount;
+  // Orange counter always reflects the current filtered count. With the
+  // show-all-by-default UX, this is the full directory count when nothing
+  // is selected and the narrowed count once filters are applied. (Pre-2026
+  // there was a `filteredCount > 0 ? filteredCount : totalCount` fallback
+  // because "no filter" meant filteredCount=0; that's no longer the case.)
+  const displayFilteredCount = filteredCount;
 
   // Panel state
   const [showEmailPanel, setShowEmailPanel] = useState(false);

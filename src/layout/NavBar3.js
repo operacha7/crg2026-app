@@ -23,18 +23,17 @@ const GROUP_COLORS = {
 
 // Assistance button - changes text based on whether chips exist
 // No chevron - panel opens on hover
-function AssistanceButton({ hasSelections, hasActiveSearchFilter, onClick, buttonRef }) {
-  // Three states: disabled (no filter + no selections), prompting (filter active, no selections), active (has selections)
-  let buttonState;
-  if (hasSelections) {
-    buttonState = "active";
-  } else if (hasActiveSearchFilter) {
-    buttonState = "prompting";
-  } else {
-    buttonState = "disabled";
-  }
+// Two states: prompting (no chips selected, gold + clickable — same as the
+// Zip Code dropdown's empty state, so users can pick zip and assistance in
+// either order), active (chips selected, dark blue). The "disabled" state
+// from the pre-2026 design — which gated assistance behind picking a zip
+// first — has been removed in favor of the show-all-by-default UX.
+function AssistanceButton({ hasSelections, onClick, buttonRef }) {
+  const buttonState = hasSelections ? "active" : "prompting";
 
-  // Track previous state to detect transition to prompting (for animation)
+  // Track previous state to detect transition to prompting (for animation).
+  // The animation now only fires when chips are cleared back to empty —
+  // not on initial mount, since prompting is the default state.
   const prevStateRef = useRef(buttonState);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -48,12 +47,6 @@ function AssistanceButton({ hasSelections, hasActiveSearchFilter, onClick, butto
   }, [buttonState]);
 
   const stateStyles = {
-    disabled: {
-      backgroundColor: "var(--color-navbar3-btn-disabled-bg)",
-      color: "#000000",
-      border: "var(--border-width-btn) solid var(--color-navbar3-btn-disabled-border)",
-      opacity: 0.5,
-    },
     prompting: {
       backgroundColor: "var(--color-navbar3-btn-prompting-bg)",
       color: "var(--color-navbar3-btn-prompting-text)",
@@ -95,11 +88,8 @@ function AssistanceButton({ hasSelections, hasActiveSearchFilter, onClick, butto
       `}</style>
       <button
         ref={buttonRef}
-        onClick={buttonState === "disabled" ? undefined : onClick}
-        disabled={buttonState === "disabled"}
-        className={`font-opensans transition-all duration-200 flex items-center gap-2 ${
-          buttonState === "disabled" ? "cursor-not-allowed" : "hover:brightness-125 cursor-pointer"
-        }`}
+        onClick={onClick}
+        className="font-opensans transition-all duration-200 flex items-center gap-2 hover:brightness-125 cursor-pointer"
         style={{
           height: "var(--height-navbar3-btn)",
           minWidth: "var(--min-width-choose-btn)",
@@ -428,7 +418,6 @@ export default function NavBar3() {
     setActiveAssistanceChips,
     loggedInUser,
     activeSearchMode,
-    hasActiveSearchFilter,
     // Quick Tips state for auto-opening on first multi-selection
     setQuickTipsOpen,
     setQuickTipsExpandedSection,
@@ -699,7 +688,6 @@ export default function NavBar3() {
           >
             <AssistanceButton
               hasSelections={savedSelections.length > 0}
-              hasActiveSearchFilter={hasActiveSearchFilter}
               onClick={handleOpenPanel}
               buttonRef={buttonRef}
             />
@@ -767,13 +755,8 @@ export default function NavBar3() {
           >
             <button
               ref={buttonRef}
-              onClick={savedSelections.length === 0 && !hasActiveSearchFilter ? undefined : handleOpenPanel}
-              disabled={savedSelections.length === 0 && !hasActiveSearchFilter}
-              className={`font-opensans text-sm px-3 py-1.5 rounded transition-all flex items-center gap-1 ${
-                savedSelections.length === 0 && !hasActiveSearchFilter
-                  ? "cursor-not-allowed"
-                  : "hover:brightness-125 cursor-pointer"
-              }`}
+              onClick={handleOpenPanel}
+              className="font-opensans text-sm px-3 py-1.5 rounded transition-all flex items-center gap-1 hover:brightness-125 cursor-pointer"
               style={{
                 ...(savedSelections.length > 0
                   ? {
@@ -781,18 +764,11 @@ export default function NavBar3() {
                       color: "var(--color-navbar3-btn-active-text)",
                       border: "var(--border-width-btn) solid var(--color-navbar3-btn-active-border)",
                     }
-                  : hasActiveSearchFilter
-                    ? {
-                        backgroundColor: "var(--color-navbar3-btn-prompting-bg)",
-                        color: "var(--color-navbar3-btn-prompting-text)",
-                        border: "var(--border-width-btn) solid var(--color-navbar3-btn-prompting-border)",
-                      }
-                    : {
-                        backgroundColor: "var(--color-navbar3-btn-disabled-bg)",
-                        color: "#000000",
-                        border: "var(--border-width-btn) solid var(--color-navbar3-btn-disabled-border)",
-                        opacity: 0.5,
-                      }
+                  : {
+                      backgroundColor: "var(--color-navbar3-btn-prompting-bg)",
+                      color: "var(--color-navbar3-btn-prompting-text)",
+                      border: "var(--border-width-btn) solid var(--color-navbar3-btn-prompting-border)",
+                    }
                 ),
               }}
             >

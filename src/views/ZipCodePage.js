@@ -69,57 +69,13 @@ export default function ZipCodePage({
     loadOrgPhone();
   }, [loggedInUser]);
 
-  // Determine if we have an active filter based on search mode
-  const hasActiveFilter = useMemo(() => {
-    switch (activeSearchMode) {
-      case "zipcode":
-        return !!selectedZipCode;
-      case "organization":
-        return !!selectedParentOrg || !!selectedChildOrg;
-      case "location":
-        return !!selectedLocationZip || !!selectedLocationCity || !!selectedLocationCounty || !!selectedLocationNeighborhood;
-      case "llm":
-        return !!llmSearchFilters; // LLM mode has filters when search has been performed
-      default:
-        return false;
-    }
-  }, [activeSearchMode, selectedZipCode, selectedParentOrg, selectedChildOrg, selectedLocationZip, selectedLocationCity, selectedLocationCounty, selectedLocationNeighborhood, llmSearchFilters]);
-
-  // Get the appropriate prompt message based on search mode
-  const getPromptMessage = () => {
-    switch (activeSearchMode) {
-      case "zipcode":
-        return {
-          title: "Please Select a Zip Code to Initiate a Search",
-          subtitle: "Results will appear here after you select a zip code from the dropdown above."
-        };
-      case "organization":
-        return {
-          title: "Please Select an Organization to View Results",
-          subtitle: "Choose a parent or child organization from the dropdowns above."
-        };
-      case "location":
-        return {
-          title: "Please Select a Location to View Results",
-          subtitle: "Choose a county, city, or zip code to see organizations in that area."
-        };
-      case "llm":
-        return {
-          title: "Enter a Search Query",
-          subtitle: "Type your search in the text box above (e.g., 'food pantry open Thursday')."
-        };
-      default:
-        return {
-          title: "Please Make a Selection",
-          subtitle: "Use the filters above to search for resources."
-        };
-    }
-  };
-
   // Filter directory based on active search mode and filters
   const filteredDirectory = useMemo(() => {
-    // If no filter is active, return empty array (show prompt)
-    if (!hasActiveFilter) {
+    // LLM mode is the one mode that still requires a query before showing
+    // anything — it's a search box, not a filter, so an empty query has no
+    // meaningful "show all" interpretation. All other modes show the full
+    // directory until the user narrows down.
+    if (activeSearchMode === "llm" && !llmSearchFilters) {
       return [];
     }
 
@@ -129,18 +85,26 @@ export default function ZipCodePage({
     // Apply mode-specific filtering
     switch (activeSearchMode) {
       case "zipcode":
-        // Filter by client zip codes (orgs that SERVE this zip)
-        filtered = filtered.filter(record =>
-          record.client_zip_codes?.includes(selectedZipCode)
-        );
-        
-        // Get coordinates for distance calculation
-        // Priority: clientCoordinates (user override) > zip centroid
-        if (clientCoordinates) {
+        // Filter by client zip codes (orgs that SERVE this zip). When no zip
+        // is selected, skip the filter and show the full directory; the user
+        // can then pick zip and/or assistance in either order.
+        if (selectedZipCode) {
+          filtered = filtered.filter(record =>
+            record.client_zip_codes?.includes(selectedZipCode)
+          );
+
+          // Get coordinates for distance calculation
+          // Priority: clientCoordinates (user override) > zip centroid
+          if (clientCoordinates) {
+            refCoords = parseCoordinates(clientCoordinates);
+          } else {
+            const zipData = zipCodes.find(z => z.zip_code === selectedZipCode);
+            refCoords = zipData ? parseCoordinates(zipData.coordinates) : null;
+          }
+        } else if (clientCoordinates) {
+          // User entered a custom address but hasn't picked a zip — still
+          // calculate distances against that address.
           refCoords = parseCoordinates(clientCoordinates);
-        } else {
-          const zipData = zipCodes.find(z => z.zip_code === selectedZipCode);
-          refCoords = zipData ? parseCoordinates(zipData.coordinates) : null;
         }
         break;
 
@@ -238,7 +202,7 @@ export default function ZipCodePage({
 
     // Sorting is handled by ResultsList (status_id, assist_id, miles)
     return filtered;
-  }, [directory, zipCodes, assistance, activeSearchMode, selectedZipCode, selectedParentOrg, selectedChildOrg, selectedLocationZip, selectedLocationCity, selectedLocationCounty, selectedLocationNeighborhood, activeAssistanceChips, hasActiveFilter, clientCoordinates, llmSearchFilters]);
+  }, [directory, zipCodes, assistance, activeSearchMode, selectedZipCode, selectedParentOrg, selectedChildOrg, selectedLocationZip, selectedLocationCity, selectedLocationCounty, selectedLocationNeighborhood, activeAssistanceChips, clientCoordinates, llmSearchFilters]);
 
   // Fetch driving distances when user enters a custom address
   // This runs after filtering to only fetch for visible results
@@ -517,12 +481,19 @@ export default function ZipCodePage({
   // Generate header text for email/PDF preview based on search mode
   const headerText = generateSearchHeader(buildSearchContext());
 
+  // Orange counter reflects only Active (status_id 1) and Limited
+  // (status_id 2) records — the same set users actually see in the table
+  // (ResultsList's default status filter is "active-limited"). Excluding
+  // Inactive (3) and Closed (4) keeps the counter honest about how many
+  // records are currently surfaced.
+  const isActiveOrLimited = (r) => r.status_id === 1 || r.status_id === 2;
+  const visibleFilteredCount = inlineFilteredCount !== null
+    ? inlineFilteredCount
+    : displayDirectory.filter(isActiveOrLimited).length;
+
   return (
     <PageLayout
-      totalCount={directory.filter(r => r.status_id !== 3).length}
-      filteredCount={inlineFilteredCount !== null
-        ? inlineFilteredCount
-        : displayDirectory.filter(r => r.status_id !== 3).length}
+      filteredCount={visibleFilteredCount}
       selectedCount={selectedRows.length}
       onSendEmail={validateEmailSelection}
       onCreatePdf={validatePdfSelection}
@@ -549,13 +520,15 @@ export default function ZipCodePage({
           <div className="flex items-center justify-center h-64">
             <div className="text-red-500">Error loading data: {error}</div>
           </div>
-        ) : !hasActiveFilter ? (
+        ) : (activeSearchMode === "llm" && !llmSearchFilters) ? (
+          // LLM mode is the only mode that still shows the empty prompt —
+          // a search box without a query has no "show all" interpretation.
           <div className="flex flex-col items-center justify-center h-64 text-center p-6">
             <div className="text-xl font-medium text-gray-600 mb-4">
-              {getPromptMessage().title}
+              Enter a Search Query
             </div>
             <div className="text-gray-500 max-w-md">
-              {getPromptMessage().subtitle}
+              Type your search in the text box above (e.g., &apos;food pantry open Thursday&apos;).
             </div>
           </div>
         ) : (
