@@ -11,10 +11,16 @@ import { useState, useRef, useEffect } from "react";
 import { Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+// In-app default — matches the homepage hamburger except Home replaces About
+// (in-app users need a way back; the homepage IS home so it offers About
+// instead). NavBar1 and SupportPage both pick this up by calling
+// `<MobileMenu />` with no args.
 const DEFAULT_ITEMS = [
   { label: "Home", path: "/" },
-  { label: "Contact Support", path: "/support" },
   { label: "Privacy Policy", path: "/privacy" },
+  { label: "Terms of Service", path: "/terms" },
+  { label: "Contact Support", path: "/support" },
+  { label: "Organization Login", path: "/find?login=1" },
 ];
 
 export default function MobileMenu({
