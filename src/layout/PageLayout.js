@@ -28,9 +28,15 @@ export default function PageLayout({
   const [helpPanelOpen, setHelpPanelOpen] = useState(false);
 
   return (
-    <div className="lg:h-dvh lg:flex lg:flex-row lg:overflow-hidden overflow-auto min-h-dvh bg-gray-50 text-gray-900 font-opensans">
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col lg:overflow-hidden">
+    <div className="h-dvh flex flex-col lg:flex-row overflow-hidden bg-gray-50 text-gray-900 font-opensans">
+      {/* Main content area — flex-col on both mobile and desktop so the
+          NavBars stay pinned at the top and the results area scrolls within
+          a bounded height. This bounded height is what lets ResultsList's
+          react-virtuoso virtualize correctly; without it the results list
+          tries to grow to fit all 1000+ rows and the page becomes unresponsive
+          on mobile. min-h-0 is required for flex children to shrink below
+          their content height. */}
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0">
         {/* NavBar 1 - Top header with logo, title, counters, buttons */}
         {showNav && (
           <NavBar1
@@ -57,8 +63,11 @@ export default function PageLayout({
         {/* NavBar 3 - Assistance type filters */}
         {showNav && <NavBar3 />}
 
-        {/* Main Content - ResultsHeader now rendered inside ResultsList */}
-        <main className="lg:flex-1 lg:flex lg:flex-col lg:overflow-hidden">{children}</main>
+        {/* Main Content - ResultsHeader now rendered inside ResultsList.
+            flex-col flex-1 overflow-hidden on both breakpoints so the bounded
+            height propagates down to ResultsList → react-virtuoso. min-h-0
+            allows the flex child to shrink under content size. */}
+        <main className="flex-1 flex flex-col overflow-hidden min-h-0">{children}</main>
 
         {/* Footer */}
         <Footer />

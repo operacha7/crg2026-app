@@ -4,6 +4,7 @@
 // Sort/filter state managed locally via useReducer
 
 import { useMemo, useReducer, useEffect, useRef, useCallback } from "react";
+import { Virtuoso } from "react-virtuoso";
 import ResultRow from "./ResultRow";
 import ResultsHeader from "../layout/ResultsHeader";
 import FilterRow from "./FilterRow";
@@ -299,7 +300,7 @@ export default function ResultsList({
     const hasInlineFilters = hasActiveFilters;
 
     return (
-      <div className="flex-1 flex flex-col lg:overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0">
         {/* Header + filter row always render */}
         <ResultsHeader
           sortColumn={state.sortColumn}
@@ -379,7 +380,7 @@ export default function ResultsList({
   }
 
   return (
-    <div className="flex-1 flex flex-col lg:overflow-hidden">
+    <div className="flex-1 flex flex-col overflow-hidden min-h-0">
       {/* Fixed header + filter row */}
       <ResultsHeader
         sortColumn={state.sortColumn}
@@ -405,25 +406,35 @@ export default function ResultsList({
         />
       )}
 
-      {/* Scrollable result rows */}
-      <div className="flex-1 overflow-y-auto">
-        {sortedRecords.map((record, index) => {
-          const assistanceInfo = getAssistanceInfo(record);
-          return (
-            <ResultRow
-              key={record.id}
-              record={record}
-              isSelected={selectedIds.has(record.id)}
-              onSelect={handleSelect}
-              assistanceIcon={assistanceInfo.icon}
-              assistanceLabel={assistanceInfo.label}
-              allAssistanceTypes={assistanceData}
-              orgAssistanceMap={orgAssistanceMap}
-              rowIndex={index}
-              isDrivingDistance={isDrivingDistance}
-            />
-          );
-        })}
+      {/* Virtualized result rows. Only the rows currently visible in the
+          viewport mount; the rest are placeholder space. Replaces a plain
+          `.map()` over 1000+ rows that was freezing the main thread on
+          mobile (every interaction queued behind a multi-second render).
+          minHeight:0 lets this flex child shrink under its content height
+          so Virtuoso's internal scroll container gets a bounded size. */}
+      <div className="flex-1" style={{ minHeight: 0 }}>
+        <Virtuoso
+          style={{ height: "100%" }}
+          data={sortedRecords}
+          computeItemKey={(_, record) => record.id}
+          increaseViewportBy={400}
+          itemContent={(index, record) => {
+            const assistanceInfo = getAssistanceInfo(record);
+            return (
+              <ResultRow
+                record={record}
+                isSelected={selectedIds.has(record.id)}
+                onSelect={handleSelect}
+                assistanceIcon={assistanceInfo.icon}
+                assistanceLabel={assistanceInfo.label}
+                allAssistanceTypes={assistanceData}
+                orgAssistanceMap={orgAssistanceMap}
+                rowIndex={index}
+                isDrivingDistance={isDrivingDistance}
+              />
+            );
+          }}
+        />
       </div>
     </div>
   );

@@ -131,7 +131,14 @@ export default function LoginModal({ onLoginSuccess }) {
           boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
         }}
       >
+        {/* key={org} forces React to remount the form whenever the selected
+            organization changes. The fresh-DOM passcode input causes Chrome's
+            password manager to re-run autofill against the new "username"
+            (the hidden field below), filling in the saved passcode for the
+            newly-selected org instead of leaving the previous org's passcode
+            in place. */}
         <form
+          key={org || "no-org"}
           onSubmit={handleSubmit}
           autoComplete="on"
           style={{ padding: "24px 28px" }}
