@@ -1,20 +1,26 @@
 // src/components/MobileMenu.js
-// Mobile-only hamburger menu used in NavBar1 (on ZipCodePage) and in the
-// custom headers of SupportPage / LegalPage. Provides Home / Contact Support /
-// Privacy Policy navigation. VerticalNavBar is hidden on mobile, so this
-// menu is the way to reach those pages and return home.
+// Mobile-only hamburger menu used in NavBar1 (on ZipCodePage) and on public
+// pages via HomeNavBar. VerticalNavBar is hidden on mobile, so this menu is
+// the way to reach auxiliary pages and return home.
+//
+// Default items are the in-app set (Home / Support / Privacy). Public pages
+// pass their own `items` prop and an `iconColor` matching the surrounding
+// header so the hamburger reads correctly against different backgrounds.
 
 import { useState, useRef, useEffect } from "react";
 import { Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const MENU_ITEMS = [
+const DEFAULT_ITEMS = [
   { label: "Home", path: "/" },
   { label: "Contact Support", path: "/support" },
   { label: "Privacy Policy", path: "/privacy" },
 ];
 
-export default function MobileMenu() {
+export default function MobileMenu({
+  items = DEFAULT_ITEMS,
+  iconColor = "var(--color-footer-bg)",
+}) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
@@ -48,7 +54,7 @@ export default function MobileMenu() {
         ref={buttonRef}
         onClick={() => setOpen((v) => !v)}
         className="p-2 hover:brightness-125 transition-all"
-        style={{ color: "var(--color-footer-bg)" }}
+        style={{ color: iconColor }}
         aria-label="Menu"
       >
         <Menu size={26} />
@@ -71,7 +77,7 @@ export default function MobileMenu() {
             overflow: "hidden",
           }}
         >
-          {MENU_ITEMS.map((item, idx) => (
+          {items.map((item, idx) => (
             <button
               key={item.path}
               onClick={() => {
@@ -85,7 +91,7 @@ export default function MobileMenu() {
                 color: "#222831",
                 backgroundColor: "#FFFFFF",
                 borderBottom:
-                  idx < MENU_ITEMS.length - 1 ? "1px solid #F0F0F0" : "none",
+                  idx < items.length - 1 ? "1px solid #F0F0F0" : "none",
               }}
             >
               {item.label}

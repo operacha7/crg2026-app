@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Helmet } from 'react-helmet-async';
 import VerticalNavBar from '../layout/VerticalNavBar';
 import Footer from '../layout/Footer';
 import MobileMenu from '../components/MobileMenu';
@@ -116,6 +117,22 @@ const SupportPage = ({ loggedInUser }) => {
 
   return (
     <div className="h-screen flex flex-row overflow-hidden">
+      <Helmet>
+        <title>Contact Support | CRG Houston</title>
+        <meta
+          name="description"
+          content="Contact the Community Resources Guide Houston for support, questions, feedback, or to suggest updates to the directory."
+        />
+        <link rel="canonical" href="https://crghouston.org/support" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://crghouston.org/support" />
+        <meta property="og:title" content="Contact Support | CRG Houston" />
+        <meta
+          property="og:description"
+          content="Contact the Community Resources Guide Houston for support, questions, feedback, or to suggest updates to the directory."
+        />
+      </Helmet>
+
       {/* Main content area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* NavBar1 - Header */}

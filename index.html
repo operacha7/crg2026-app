@@ -14,12 +14,16 @@
     >
     <meta name="keywords" content="Houston community resources, Houston assistance, free help Houston, food pantry Houston, rent assistance Houston, utility help Houston, Houston social services, Greater Houston Area resources">
 
-    <!-- ✅ Canonical URL -->
-    <link rel="canonical" href="https://crghouston.org/">
+    <!-- Canonical URL and og:url are set per-route by react-helmet-async at
+         render time (see HomePage, MainApp slug route, etc.). Intentionally
+         omitted from this static HTML — a hardcoded canonical pointing at "/"
+         was causing Googlebot to treat every route as a duplicate of the
+         homepage when its renderer failed/deferred and fell back to the raw
+         HTML. With no static canonical, Google treats each URL as its own
+         canonical; Helmet still adds the correct one when JS runs. -->
 
     <!-- ✅ Open Graph Tags (Facebook, LinkedIn) -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://crghouston.org/">
     <meta property="og:title" content="Community Resources Guide Houston | Free Assistance Directory">
     <meta property="og:description" content="Free directory of 1,000+ community resources from 526 organizations across the Greater Houston Area. Search by zip code for food, rent, utilities, housing, medical, legal, and job assistance.">
     <meta property="og:image" content="https://crghouston.org/images/CRG%20Logo%202025.webp">

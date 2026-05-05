@@ -74,6 +74,14 @@ export default function HomePage() {
           name="description"
           content="Free online directory of 1,000+ community resources from 526 organizations across the Greater Houston Area. Find rent, utilities, food, clothing, and more."
         />
+        <link rel="canonical" href="https://crghouston.org/" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://crghouston.org/" />
+        <meta property="og:title" content="CRG Houston — Free help across Greater Houston" />
+        <meta
+          property="og:description"
+          content="Free online directory of 1,000+ community resources from 526 organizations across the Greater Houston Area. Find rent, utilities, food, clothing, and more."
+        />
       </Helmet>
 
       <HomeNavBar />
@@ -176,7 +184,7 @@ export default function HomePage() {
                 id="home-zip"
                 value={selectedZip}
                 onChange={(e) => setSelectedZip(e.target.value)}
-                className="font-opensans"
+                className="font-opensans w-full lg:w-auto lg:min-w-[200px] box-border"
                 style={{
                   background: "var(--color-home-zip-dropdown-bg)",
                   color: "var(--color-home-zip-dropdown-text)",
@@ -185,7 +193,7 @@ export default function HomePage() {
                   padding: "6px 10px",
                   fontSize: 18,
                   fontWeight: 600,
-                  minWidth: 200,
+                  maxWidth: "100%",
                 }}
               >
                 <option value="">— Select —</option>

@@ -1,21 +1,22 @@
 // src/layout/HomeNavBar.js
-// Public-page variant of NavBar1: same dark band + logo + wordmark, but the
-// right side is a single contextual link — "About" when the user is on the
-// homepage, "Home" everywhere else (e.g., /about, /privacy, /terms).
+// Public-page variant of NavBar1: same dark band + logo + wordmark.
 //
-// Why contextual: the logo + wordmark are already a Link to "/", but that
-// convention isn't always discovered by users who are new to the web or
-// arrive in a moment of stress. The contextual link gives them an explicit,
-// always-visible affordance that points to wherever they aren't.
+// Desktop right side is a single contextual link — "About" when the user is on
+// the homepage, "Home" everywhere else (e.g., /about, /privacy, /terms).
 //
-// "Home" goes back via the browser history rather than always to /. That way
-// a user who landed on /privacy from inside the app (e.g., footer link from
-// /find) gets returned to where they were instead of being kicked to the
-// public homepage. If there's no in-app history (direct URL, refresh,
-// external referrer), it falls back to /.
+// Mobile right side is a hamburger that opens the full set of public
+// navigation (Home / About / Privacy / Terms / Support / Org Login). The teal
+// secondary footer is hidden on mobile, so the hamburger is the way to reach
+// those pages on phones.
+//
+// Why a contextual desktop link: the logo + wordmark are already a Link to
+// "/", but that convention isn't always discovered by users who are new to the
+// web or arrive in a moment of stress. The contextual link gives them an
+// explicit, always-visible affordance that points to wherever they aren't.
 
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import MobileMenu from "../components/MobileMenu";
 
 export default function HomeNavBar() {
   const location = useLocation();
@@ -29,6 +30,18 @@ export default function HomeNavBar() {
       navigate(-1);
     }
   };
+
+  // Hamburger contents: same five items as the teal secondary footer, plus
+  // an explicit "Home" link when not already on /. Mirrors the desktop
+  // contextual link so mobile users still have a one-tap way back home.
+  const mobileItems = [
+    ...(isHome ? [] : [{ label: "Home", path: "/" }]),
+    { label: "About", path: "/about" },
+    { label: "Privacy Policy", path: "/privacy" },
+    { label: "Terms of Service", path: "/terms" },
+    { label: "Contact Support", path: "/support" },
+    { label: "Organization Login", path: "/find?login=1" },
+  ];
 
   const rightLinkStyle = {
     color: "var(--color-home-navbar-about)",
@@ -71,24 +84,35 @@ export default function HomeNavBar() {
         </h1>
       </Link>
 
-      {isHome ? (
-        <Link
-          to="/about"
-          className="hover:brightness-125 font-opensans"
-          style={rightLinkStyle}
-        >
-          About
-        </Link>
-      ) : (
-        <button
-          type="button"
-          onClick={handleHomeClick}
-          className="hover:brightness-125 font-opensans"
-          style={{ ...rightLinkStyle, background: "none", border: "none", cursor: "pointer" }}
-        >
-          Home
-        </button>
-      )}
+      {/* Desktop: contextual About / Home text link */}
+      <div className="hidden lg:block">
+        {isHome ? (
+          <Link
+            to="/about"
+            className="hover:brightness-125 font-opensans"
+            style={rightLinkStyle}
+          >
+            About
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={handleHomeClick}
+            className="hover:brightness-125 font-opensans"
+            style={{ ...rightLinkStyle, background: "none", border: "none", cursor: "pointer" }}
+          >
+            Home
+          </button>
+        )}
+      </div>
+
+      {/* Mobile: hamburger menu with full public-nav set */}
+      <div className="lg:hidden">
+        <MobileMenu
+          items={mobileItems}
+          iconColor="var(--color-home-navbar-about)"
+        />
+      </div>
     </nav>
   );
 }

@@ -27,8 +27,10 @@ export default function Footer() {
 
   return (
     <>
+      {/* Teal secondary tier hidden on mobile — its links live in the
+          HomeNavBar hamburger / NavBar1 hamburger on small screens. */}
       <div
-        className="flex items-center justify-center w-full"
+        className="hidden lg:flex items-center justify-center w-full"
         style={{
           background: "var(--color-footer-secondary-bg)",
           color: "var(--color-footer-secondary-text)",
