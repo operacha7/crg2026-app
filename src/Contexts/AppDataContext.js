@@ -87,7 +87,7 @@ function buildOrganizationsList(directoryData) {
   return [...orgMap.values()].sort((a, b) => a.organization.localeCompare(b.organization));
 }
 
-export const AppDataProvider = ({ children, loggedInUser }) => {
+export const AppDataProvider = ({ children, loggedInUser, onLogout }) => {
   // Data state - loaded once on mount
   const [directory, setDirectory] = useState([]);
   const [assistance, setAssistance] = useState([]);
@@ -326,6 +326,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
 
     // Auth
     loggedInUser,
+    onLogout,
 
     // Status
     loading,
@@ -396,7 +397,7 @@ export const AppDataProvider = ({ children, loggedInUser }) => {
   }), [
     directory, assistance, zipCodes, organizations, orgAssistanceMap,
     zipCodeData, headerConfig,
-    loggedInUser, loading, error,
+    loggedInUser, onLogout, loading, error,
     activeSearchMode, hasActiveSearchFilter,
     selectedZipCode, selectedParentOrg, selectedChildOrg,
     selectedLocationCounty, selectedLocationCity, selectedLocationZip, selectedLocationNeighborhood,

@@ -375,11 +375,26 @@ function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select 
   const inputRef = useRef(null);
   const hasValue = value && value !== "";
 
-  // Filter options by search text
+  // Normalize options so a caller can pass either a list of zip strings or
+  // {value, label} objects (label is "zip — city"). Search/match still happens
+  // against the zip value, but the rendered text uses the label.
+  const normalizedOptions = useMemo(
+    () => options.map((opt) => (typeof opt === "string" ? { value: opt, label: opt } : opt)),
+    [options]
+  );
+
+  // Type-ahead filter against the zip value (the user types digits, not city).
   const filteredOptions = useMemo(() => {
-    if (!searchText.trim()) return options;
-    return options.filter(opt => opt.startsWith(searchText));
-  }, [options, searchText]);
+    if (!searchText.trim()) return normalizedOptions;
+    return normalizedOptions.filter((opt) => opt.value.startsWith(searchText));
+  }, [normalizedOptions, searchText]);
+
+  // Closed-state button shows the city alongside the selected zip.
+  const selectedLabel = useMemo(() => {
+    if (!hasValue) return placeholder;
+    const match = normalizedOptions.find((opt) => opt.value === value);
+    return match ? match.label : value;
+  }, [hasValue, value, normalizedOptions, placeholder]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -412,7 +427,7 @@ function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && filteredOptions.length > 0) {
       // Select first matching option on Enter
-      handleSelect(filteredOptions[0]);
+      handleSelect(filteredOptions[0].value);
     } else if (e.key === "Escape") {
       setIsOpen(false);
       setSearchText("");
@@ -463,7 +478,7 @@ function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select 
           ),
         }}
       >
-        {hasValue ? value : placeholder}
+        {selectedLabel}
         {usePromptingStyle && (
           <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0, marginLeft: "4px" }}>
             <path d="M7 10l5 5 5-5z" />
@@ -501,28 +516,28 @@ function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select 
           {/* Options list */}
           <div className="max-h-[350px] overflow-y-auto">
             {filteredOptions.length > 0 ? (
-              filteredOptions.map((opt, idx) => (
+              filteredOptions.map((opt) => (
                 <button
-                  key={idx}
+                  key={opt.value}
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleSelect(opt);
+                    handleSelect(opt.value);
                   }}
                   onTouchEnd={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    handleSelect(opt);
+                    handleSelect(opt.value);
                   }}
-                  onMouseEnter={() => setHoveredOption(opt)}
+                  onMouseEnter={() => setHoveredOption(opt.value)}
                   onMouseLeave={() => setHoveredOption(null)}
                   className="w-full text-left px-4 py-2 font-opensans"
                   style={{
                     fontSize: "var(--font-size-navbar2-dropdown-option)",
                     color: "var(--color-dropdown-text)",
-                    backgroundColor: hoveredOption === opt ? "var(--color-dropdown-hover-bg)" : (value === opt ? "var(--color-dropdown-active-bg)" : "transparent"),
+                    backgroundColor: hoveredOption === opt.value ? "var(--color-dropdown-hover-bg)" : (value === opt.value ? "var(--color-dropdown-active-bg)" : "transparent"),
                   }}
                 >
-                  {opt}
+                  {opt.label}
                 </button>
               ))
             ) : (
@@ -1101,7 +1116,9 @@ function LocationFilters({
     return cities.sort();
   }, [zipCodes, selectedCounty]);
 
-  // Get zips filtered by county and city
+  // Get zips filtered by county and city. Each option carries the city in its
+  // label ("77002 — Houston") so the closed dropdown and the open list both
+  // show the city. The selected value remains the bare zip code.
   const zipOptions = useMemo(() => {
     let filtered = zipCodes;
     if (selectedCounty) {
@@ -1111,9 +1128,12 @@ function LocationFilters({
       filtered = filtered.filter(z => z.city === selectedCity);
     }
     return filtered
-      .map(z => z.zip_code)
-      .filter(Boolean)
-      .sort();
+      .filter(z => z.zip_code)
+      .sort((a, b) => a.zip_code.localeCompare(b.zip_code))
+      .map(z => ({
+        value: z.zip_code,
+        label: z.city ? `${z.zip_code} — ${z.city}` : z.zip_code,
+      }));
   }, [zipCodes, selectedCounty, selectedCity]);
 
   // Get neighborhoods from directory.org_neighborhood, filtered by selected zip
@@ -1499,13 +1519,17 @@ export default function NavBar2() {
     handleLLMSearchRef.current = handleLLMSearch;
   }, [handleLLMSearch]);
 
-  // Memoize zip code options (just the zip_code strings, sorted)
-  // Filter by houston_area flag from database
+  // Memoize zip code options as {value, label} objects so the dropdown can
+  // show the city alongside the zip ("77002 — Houston") while still using the
+  // bare zip as the selected value. Filter by houston_area flag from database.
   const zipCodeOptions = useMemo(() => {
     return zipCodes
       .filter(z => z.zip_code && z.houston_area === "Y")
-      .map(z => z.zip_code)
-      .sort();
+      .sort((a, b) => a.zip_code.localeCompare(b.zip_code))
+      .map(z => ({
+        value: z.zip_code,
+        label: z.city ? `${z.zip_code} — ${z.city}` : z.zip_code,
+      }));
   }, [zipCodes]);
 
   // Get the full zip data for the selected zip (for neighborhood display)
@@ -1695,8 +1719,8 @@ export default function NavBar2() {
           }}
         >
           <option value="">Choose Zip Code</option>
-          {zipCodeOptions.map((zip) => (
-            <option key={zip} value={zip}>{zip}</option>
+          {zipCodeOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
       </div>

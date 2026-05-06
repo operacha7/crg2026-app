@@ -1,15 +1,25 @@
 // src/auth/LoginModal.js
-// Site-wide login modal that opens whenever the URL carries `?login=1` and no
-// user is signed in. Triggered from Footer's "Organization Login" link, which
-// navigates to `/?login=1`. Replaces the standalone /login page from the
-// pre-2026 design — all extra chrome (guest button, scrolling org list,
+// Site-wide login modal that opens whenever the URL carries `?login=1`.
+// Triggered from Footer / MobileMenu / HomeNavBar via a relative `?login=1`
+// link, so the modal pops up on whatever page the user clicked from rather
+// than redirecting to /find first. Replaces the standalone /login page from
+// the pre-2026 design — all extra chrome (guest button, scrolling org list,
 // background art, contact-support fallback) is gone. Per the redesign brief:
 // only an organization dropdown, a passcode input, and Login / Cancel.
+//
+// Post-login navigation:
+//   - From the homepage (/) → forward to /find so the user lands inside the
+//     working app (matches the original "log in and start using it" flow).
+//   - From anywhere else → stay put. A user already inside the app stays on
+//     the page they were viewing; cancelling leaves them on /about, /find,
+//     /privacy, etc. with no disruption.
 //
 // Visual: white panel with a 5px maroon-teal (#43747D) border and 20px radius.
 // Title and labels are #660000 (semibold). Inputs are cream (#F3EED9) with
 // black text. Buttons reuse the standard panel button tokens (red Cancel,
-// green Login) so they match the Assistance panel etc.
+// green Login) so they match the Assistance panel etc. The full-screen wrapper
+// has a transparent background — the page underneath stays visible so the
+// login feels like an inline panel rather than a context-switching takeover.
 
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
@@ -100,7 +110,14 @@ export default function LoginModal({ onLoginSuccess }) {
     if (matched) {
       setError("");
       onLoginSuccess(matched);
-      close();
+      // Logging in from the homepage forwards into the working app; logging
+      // in from anywhere else (including in-app re-login to switch orgs)
+      // leaves the user where they were.
+      if (location.pathname === "/") {
+        navigate("/find", { replace: true });
+      } else {
+        close();
+      }
     } else {
       setError("Invalid organization or passcode.");
     }
@@ -111,7 +128,7 @@ export default function LoginModal({ onLoginSuccess }) {
   return (
     <div
       className="fixed inset-0 flex items-center justify-center"
-      style={{ background: "rgba(0, 0, 0, 0.5)", zIndex: 1000 }}
+      style={{ background: "transparent", zIndex: 1000 }}
       onClick={close}
       role="dialog"
       aria-modal="true"

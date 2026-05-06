@@ -10,6 +10,7 @@ import {
   AnnouncementsIcon,
   HomeIcon,
   QuickTipsIcon,
+  LogoutIcon,
 } from "../icons";
 import Tooltip from "../components/Tooltip";
 import { useAppData } from "../Contexts/AppDataContext";
@@ -57,6 +58,10 @@ export default function VerticalNavBar({ externalHelpOpen, onHelpOpenChange }) {
     quickTipsOpen,
     setQuickTipsOpen,
     setQuickTipsExpandedSection,
+    // Auth — used to gate the Logout icon. Guests have nothing to log out of,
+    // so the icon only renders for registered (non-guest) users.
+    loggedInUser,
+    onLogout,
   } = useAppData();
 
   // Home is active when we're on the working ZipCodePage URL.
@@ -125,8 +130,15 @@ export default function VerticalNavBar({ externalHelpOpen, onHelpOpenChange }) {
           width: "var(--width-vertical-nav-main)",
         }}
       >
-        {/* Home icon at top */}
-        <div className="flex justify-center mt-[10px]">
+        {/* Home icon — wrapper height matches NavBar1 so the icon's vertical
+            center sits exactly on NavBar1's center, optically lining the icon
+            up with the Send Email / Create PDF / Send Text buttons across the
+            top header. The vertical nav starts at the same y as NavBar1, so
+            equal heights guarantee equal centers. */}
+        <div
+          className="flex items-center justify-center"
+          style={{ height: "var(--height-navbar1)" }}
+        >
           <Tooltip text="Home" position="left">
             <button
               onClick={handleHomeClick}
@@ -137,6 +149,27 @@ export default function VerticalNavBar({ externalHelpOpen, onHelpOpenChange }) {
             </button>
           </Tooltip>
         </div>
+
+        {/* Logout icon — wrapper height matches NavBar2 so the icon centers
+            on NavBar2's center, lining it up with the search-mode buttons
+            (Ask a Question, etc.). Registered users only; guests have
+            nothing to log out of and would otherwise see an inert icon. */}
+        {loggedInUser && !loggedInUser.isGuest && onLogout && (
+          <div
+            className="flex items-center justify-center"
+            style={{ height: "var(--height-navbar2)" }}
+          >
+            <Tooltip text="Logout" position="left">
+              <button
+                onClick={onLogout}
+                className="transition-all duration-200 hover:brightness-125 focus:outline-none"
+                aria-label="Logout"
+              >
+                <LogoutIcon size={35} />
+              </button>
+            </Tooltip>
+          </div>
+        )}
 
         {/* Spacer to push icons to bottom */}
         <div className="flex-1" />

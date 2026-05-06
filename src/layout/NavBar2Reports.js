@@ -616,6 +616,22 @@ export default function NavBar2Reports({
     return lookup;
   }, [zipCodes]);
 
+  // Reverse lookup: zip code → city. Used to render zip dropdowns as
+  // "77002 — Houston" so users can recognize the area without memorizing zips.
+  const zipToCityLookup = useMemo(() => {
+    const lookup = {};
+    zipCodes.forEach(z => {
+      if (z.zip_code) lookup[z.zip_code] = z.city || "";
+    });
+    return lookup;
+  }, [zipCodes]);
+
+  // Helper: turn a zip string into a {value, label} option for SearchableDropdown.
+  const buildZipOption = useCallback((zip) => {
+    const city = zipToCityLookup[zip];
+    return { value: zip, label: city ? `${zip} — ${city}` : zip };
+  }, [zipToCityLookup]);
+
   // Helper: get all counties served by an org (via client_zip_codes)
   const getServedCounties = useCallback((r) => {
     const clientZips = Array.isArray(r.client_zip_codes) ? r.client_zip_codes : [];
@@ -772,8 +788,9 @@ export default function NavBar2Reports({
     } else {
       validZips = hasWildcard ? [...allHoustonZips] : [...servedZips].filter(z => allHoustonZips.has(z));
     }
-    return validZips.sort();
-  }, [directory, statusId, assistId, coverageCounty, coverageParentOrg, coverageChildOrg, orgServesArea, houstonZipsByCounty, allHoustonZips]);
+    validZips.sort();
+    return validZips.map(buildZipOption);
+  }, [directory, statusId, assistId, coverageCounty, coverageParentOrg, coverageChildOrg, orgServesArea, houstonZipsByCounty, allHoustonZips, buildZipOption]);
 
   // Parent org options: mutually filtered by all OTHER filters. Multi-child only.
   // Returns [{value, label}]; subgroups (e.g. SVdP districts) appear nested
@@ -853,7 +870,7 @@ export default function NavBar2Reports({
   }, [countyOptions]);
 
   useEffect(() => {
-    if (coverageZipCode && !coverageZipCodeOptions.includes(coverageZipCode)) {
+    if (coverageZipCode && !coverageZipCodeOptions.some(o => o.value === coverageZipCode)) {
       onCoverageZipCodeChange?.("");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -953,8 +970,9 @@ export default function NavBar2Reports({
     } else {
       validZips = hasWildcard ? [...allHoustonZips] : [...servedZips].filter(z => allHoustonZips.has(z));
     }
-    return validZips.sort();
-  }, [directory, map2County, map2AssistId, map2ParentOrg, map2Organization, orgServesArea, houstonZipsByCounty, allHoustonZips]);
+    validZips.sort();
+    return validZips.map(buildZipOption);
+  }, [directory, map2County, map2AssistId, map2ParentOrg, map2Organization, orgServesArea, houstonZipsByCounty, allHoustonZips, buildZipOption]);
 
   // Parent org options - filtered by all OTHER filters (county, zip, assistance, org), multi-child only.
   // Returns [{value, label}] with subgroups nested under their parent.
@@ -999,7 +1017,7 @@ export default function NavBar2Reports({
   }, [map2CountyOptions]);
 
   useEffect(() => {
-    if (map2ZipCode && !map2ZipCodeOptions.includes(map2ZipCode)) {
+    if (map2ZipCode && !map2ZipCodeOptions.some(o => o.value === map2ZipCode)) {
       onMap2ZipCodeChange?.("");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

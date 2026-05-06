@@ -19,7 +19,7 @@ const ReportsPage = lazy(() => import("./views/ReportsPage"));
 const SupportPage = lazy(() => import("./views/SupportPage"));
 const AnnouncementsPage = lazy(() => import("./views/AnnouncementsPage"));
 
-export default function MainApp({ loggedInUser }) {
+export default function MainApp({ loggedInUser, onLogout }) {
   const location = useLocation();
 
   useEffect(() => {
@@ -51,7 +51,7 @@ useEffect(() => {
 }, []);
 
   return (
-    <AppDataProvider loggedInUser={loggedInUser}>
+    <AppDataProvider loggedInUser={loggedInUser} onLogout={onLogout}>
       {/* Add ScheduledReload component */}
       <ScheduledReload />
       {/* Add AnnouncementManager */}

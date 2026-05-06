@@ -40,7 +40,9 @@ export default function HomeNavBar() {
     { label: "Privacy Policy", path: "/privacy" },
     { label: "Terms of Service", path: "/terms" },
     { label: "Contact Support", path: "/support" },
-    { label: "Organization Login", path: "/find?login=1" },
+    // Relative path so the modal opens on the current page; LoginModal
+    // forwards to /find after a successful login from the homepage.
+    { label: "Organization Login", path: "?login=1" },
   ];
 
   const rightLinkStyle = {

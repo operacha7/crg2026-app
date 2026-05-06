@@ -74,6 +74,15 @@ export default function App() {
   // the login modal open).
   const effectiveUser = user || (isPublicMainPath(location.pathname) ? GUEST_USER : null);
 
+  // Logout: clear the registered user and drop back on the marketing
+  // homepage. The vertical nav (where the logout icon lives) doesn't render
+  // on /, so the icon disappears as soon as it's used — no visible
+  // post-logout state to worry about.
+  const handleLogout = () => {
+    setUser(null);
+    navigate("/", { replace: true });
+  };
+
   // When an auth-gated MainApp path (e.g. /reports, /announcements) is hit
   // without a user, send them to /find with the login modal open. /find is
   // the public URL for ZipCodePage so the modal stacks over the working app
@@ -115,7 +124,7 @@ export default function App() {
             element={
               effectiveUser ? (
                 <Suspense fallback={null}>
-                  <MainApp loggedInUser={effectiveUser} />
+                  <MainApp loggedInUser={effectiveUser} onLogout={handleLogout} />
                 </Suspense>
               ) : (
                 <Navigate to={getLoginRedirectPath()} replace />

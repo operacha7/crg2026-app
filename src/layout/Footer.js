@@ -8,18 +8,17 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { USFlagIcon } from "../icons";
 
-// "Organization Login" deliberately points at /find?login=1 instead of any
-// route on the public marketing layer. The site-wide LoginModal in App.js
-// listens for ?login=1 and opens — so the click always lands on the working
-// ZipCodePage with the modal up, regardless of the page the user clicked
-// from. Successful login leaves them right where they can start using the
-// app; cancel leaves them on /find as a guest.
+// "Organization Login" uses a relative `?login=1` link so the modal opens on
+// the current page (homepage, /about, /find, etc.) rather than navigating to
+// /find first. The site-wide LoginModal in App.js listens for ?login=1 and
+// opens. After a successful login from the homepage the modal forwards the
+// user to /find; from anywhere else it leaves them where they were.
 const SECONDARY_LINKS = [
   { label: "About", to: "/about" },
   { label: "Privacy Policy", to: "/privacy" },
   { label: "Terms of Service", to: "/terms" },
   { label: "Contact Support", to: "/support" },
-  { label: "Organization Login", to: "/find?login=1" },
+  { label: "Organization Login", to: "?login=1" },
 ];
 
 export default function Footer() {

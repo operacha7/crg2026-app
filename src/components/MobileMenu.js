@@ -20,7 +20,9 @@ const DEFAULT_ITEMS = [
   { label: "Privacy Policy", path: "/privacy" },
   { label: "Terms of Service", path: "/terms" },
   { label: "Contact Support", path: "/support" },
-  { label: "Organization Login", path: "/find?login=1" },
+  // Relative path: opens the login modal on the current page rather than
+  // navigating to /find first. LoginModal handles post-login forwarding.
+  { label: "Organization Login", path: "?login=1" },
 ];
 
 export default function MobileMenu({
