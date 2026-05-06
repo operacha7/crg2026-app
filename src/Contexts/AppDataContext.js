@@ -4,6 +4,7 @@
 
 import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { dataService } from '../services/dataService';
+import { readPhase1Cache, writePhase1Cache } from '../services/dataCache';
 
 const AppDataContext = createContext();
 
@@ -169,6 +170,28 @@ export const AppDataProvider = ({ children, loggedInUser, onLogout }) => {
   useEffect(() => {
     let mounted = true;
 
+    // Stale-while-revalidate: if there's a cached Phase 1 payload from a
+    // previous session, render the app from it immediately while the fresh
+    // fetch runs below. Eliminates the ~2s "Loading data..." screen on the
+    // second and subsequent visits. The user briefly sees yesterday's data
+    // until the fresh fetch lands and React swaps in updated rows — fine for
+    // a directory that mutates slowly via the daily Sheets→Supabase sync.
+    const cached = readPhase1Cache();
+    if (cached) {
+      const cachedMappedDirectory = cached.directory.map(mapDirectoryRecord);
+      const cachedAssistanceMap = buildOrgAssistanceMap(cached.directory);
+      const cachedOrgsList = buildOrganizationsList(cached.directory);
+
+      setDirectory(cachedMappedDirectory);
+      setAssistance(cached.assistance);
+      setZipCodes(cached.zipCodes);
+      setOrganizations(cachedOrgsList);
+      setOrgAssistanceMap(cachedAssistanceMap);
+      setLoading(false);
+
+      console.log(`💾 AppDataContext: rendered from cache (${cached.directory.length} directory rows), revalidating in background`);
+    }
+
     const loadAllData = async () => {
       console.log('📦 AppDataContext: Phase 1 (core)...');
       const startTime = performance.now();
@@ -193,6 +216,14 @@ export const AppDataProvider = ({ children, loggedInUser, onLogout }) => {
         setOrganizations(orgsList);
         setOrgAssistanceMap(assistanceMap);
         setLoading(false);
+
+        // Persist for the next visit. Fire-and-forget; the cache module
+        // swallows quota / disabled-storage errors internally.
+        writePhase1Cache({
+          directory: directoryData,
+          assistance: assistanceData,
+          zipCodes: zipCodesData,
+        });
 
         const phase1Time = Math.round(performance.now() - startTime);
         console.log(`✅ AppDataContext: Phase 1 done in ${phase1Time}ms (${directoryData.length} directory, ${assistanceData.length} assistance, ${zipCodesData.length} zipCodes)`);
@@ -285,7 +316,10 @@ export const AppDataProvider = ({ children, loggedInUser, onLogout }) => {
         }
       } catch (err) {
         console.error('❌ AppDataContext: Error loading data:', err);
-        if (mounted) {
+        // If we already rendered from cache, keep the cached state visible
+        // and don't surface an error overlay — the user has a usable app.
+        // Only fail loudly when there's no cache to fall back on.
+        if (mounted && !cached) {
           setError(err.message);
           setLoading(false);
         }

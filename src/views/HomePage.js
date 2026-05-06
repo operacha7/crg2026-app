@@ -47,6 +47,19 @@ export default function HomePage() {
       });
   }, []);
 
+  // Prefetch the MainApp chunk in parallel with the homepage's own data
+  // fetch. Almost every homepage visitor either clicks an assistance chip
+  // (→ /assistance/[slug] inside MainApp) or logs in (→ /find inside
+  // MainApp), so we pay the chunk-download cost now while the user reads
+  // the page rather than after they click. The lazy() in App.js shares the
+  // browser's chunk cache, so the second import resolves instantly.
+  // .catch() swallows the rejection — a failed prefetch is recoverable
+  // (lazy() will just re-fetch on demand) and shouldn't surface as an
+  // unhandled promise rejection.
+  useEffect(() => {
+    import("../MainApp").catch(() => {});
+  }, []);
+
   // Group assistance rows by `category`, preserving the order each category
   // first appears in (assistance table is ordered by id_no).
   const categories = useMemo(() => {

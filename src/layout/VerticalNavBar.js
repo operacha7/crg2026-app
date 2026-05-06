@@ -58,9 +58,7 @@ export default function VerticalNavBar({ externalHelpOpen, onHelpOpenChange }) {
     quickTipsOpen,
     setQuickTipsOpen,
     setQuickTipsExpandedSection,
-    // Auth — used to gate the Logout icon. Guests have nothing to log out of,
-    // so the icon only renders for registered (non-guest) users.
-    loggedInUser,
+    // Auth — onLogout clears the user (registered or guest) and returns to /.
     onLogout,
   } = useAppData();
 
@@ -152,9 +150,11 @@ export default function VerticalNavBar({ externalHelpOpen, onHelpOpenChange }) {
 
         {/* Logout icon — wrapper height matches NavBar2 so the icon centers
             on NavBar2's center, lining it up with the search-mode buttons
-            (Ask a Question, etc.). Registered users only; guests have
-            nothing to log out of and would otherwise see an inert icon. */}
-        {loggedInUser && !loggedInUser.isGuest && onLogout && (
+            (Ask a Question, etc.). Shown to guests as well as registered
+            users: a guest clicking it clears the auto-created guest state
+            and returns to the marketing homepage, matching the user-facing
+            mental model that "logout = leave the app." */}
+        {onLogout && (
           <div
             className="flex items-center justify-center"
             style={{ height: "var(--height-navbar2)" }}

@@ -74,14 +74,36 @@ export default function App() {
   // the login modal open).
   const effectiveUser = user || (isPublicMainPath(location.pathname) ? GUEST_USER : null);
 
-  // Logout: clear the registered user and drop back on the marketing
-  // homepage. The vertical nav (where the logout icon lives) doesn't render
-  // on /, so the icon disappears as soon as it's used — no visible
-  // post-logout state to worry about.
+  // Logout coordination flag. The catchall auth gate (which redirects
+  // unauthenticated users hitting /reports etc. to /find?login=1) renders
+  // its <Navigate> the moment effectiveUser becomes null. From an
+  // auth-gated path like /reports, that fires against an intermediate
+  // frame where the pathname hasn't yet flipped to "/" — so the redirect
+  // beats our own navigate("/") and the user lands on /find instead of /.
+  //
+  // Setting this flag first tells the catchall to render null (no
+  // redirect) for the brief window between user-clear and pathname-/.
+  // It's reset by an effect once we've actually arrived at "/", so it
+  // can't strand the user in a no-redirect state on an auth-gated path.
+  const [logoutInProgress, setLogoutInProgress] = useState(false);
+
+  // Logout: drop everyone (registered users AND guests) back on the
+  // marketing homepage. The vertical nav (where the logout icon lives)
+  // doesn't render on /, so the icon disappears as soon as it's used.
   const handleLogout = () => {
+    setLogoutInProgress(true);
     setUser(null);
     navigate("/", { replace: true });
   };
+
+  // Clear the logout flag once we've landed on /. Guarded on pathname so a
+  // mid-logout pathname change to anywhere other than / wouldn't incorrectly
+  // clear the flag and let the catchall fire its redirect.
+  useEffect(() => {
+    if (logoutInProgress && location.pathname === "/") {
+      setLogoutInProgress(false);
+    }
+  }, [logoutInProgress, location.pathname]);
 
   // When an auth-gated MainApp path (e.g. /reports, /announcements) is hit
   // without a user, send them to /find with the login modal open. /find is
@@ -97,6 +119,24 @@ export default function App() {
       }
     }
     return `/find?${params.toString()}`;
+  };
+
+  // Renders MainApp for authenticated users; null while a logout is racing
+  // pathname toward "/" (so the catchall doesn't fire its login redirect
+  // against the intermediate auth-gated frame); otherwise the standard
+  // <Navigate> redirect to the login path.
+  const renderMainAppOrAuthGate = () => {
+    if (effectiveUser) {
+      return (
+        <Suspense fallback={null}>
+          <MainApp loggedInUser={effectiveUser} onLogout={handleLogout} />
+        </Suspense>
+      );
+    }
+    if (logoutInProgress) {
+      return null;
+    }
+    return <Navigate to={getLoginRedirectPath()} replace />;
   };
 
   return (
@@ -119,18 +159,7 @@ export default function App() {
 
           {/* Everything else routes through MainApp. Public MainApp paths
               auto-guest; private paths redirect home with the login modal. */}
-          <Route
-            path="/*"
-            element={
-              effectiveUser ? (
-                <Suspense fallback={null}>
-                  <MainApp loggedInUser={effectiveUser} onLogout={handleLogout} />
-                </Suspense>
-              ) : (
-                <Navigate to={getLoginRedirectPath()} replace />
-              )
-            }
-          />
+          <Route path="/*" element={renderMainAppOrAuthGate()} />
         </Routes>
 
         {/* Site-wide login modal — opens whenever ?login=1 is present.

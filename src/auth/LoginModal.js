@@ -61,6 +61,19 @@ export default function LoginModal({ onLoginSuccess }) {
     };
   }, []);
 
+  // Prefetch the MainApp chunk while the user is typing their passcode. A
+  // successful login forwards into MainApp (→ /find from the homepage, or
+  // stay-in-place from any other page that already mounts MainApp), so we
+  // start the chunk download as soon as the modal opens. Covers entry
+  // points that didn't flow through HomePage (clicking Organization Login
+  // from /about, /privacy, /terms). .catch() prevents an unhandled
+  // rejection if the network drops — lazy() will retry on demand.
+  useEffect(() => {
+    if (isOpen) {
+      import("../MainApp").catch(() => {});
+    }
+  }, [isOpen]);
+
   // Reset transient state every time the modal opens — so reopening the modal
   // after a cancel doesn't show stale errors or a previously typed passcode.
   useEffect(() => {
