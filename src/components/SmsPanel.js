@@ -25,6 +25,14 @@ function isChromeBrowser() {
   return /Chrome\//.test(ua) || /Edg\//.test(ua);
 }
 
+// Mobile browsers (iOS and Android) can't run Chrome extensions, so the
+// "Google Voice (auto)" card is hidden entirely on mobile.
+function isMobileBrowser() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  return /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
+}
+
 /**
  * SmsPanel - Card-based panel for sending resource links via text
  */
@@ -45,6 +53,8 @@ export default function SmsPanel({
   const [showExtensionPrompt, setShowExtensionPrompt] = useState(false);
 
   const isChrome = isChromeBrowser();
+  const isMobile = isMobileBrowser();
+  const canUseGvAuto = isChrome && !isMobile;
 
   // Reset state when panel opens; check for extension
   useEffect(() => {
@@ -54,11 +64,11 @@ export default function SmsPanel({
       setSendingViaExtension(false);
       setShowQrCode(false);
       setShowExtensionPrompt(false);
-      if (isChrome) {
+      if (canUseGvAuto) {
         isGvExtensionInstalled().then(setExtensionInstalled);
       }
     }
-  }, [isOpen, isChrome]);
+  }, [isOpen, canUseGvAuto]);
 
   const digits = phoneNumber.replace(/\D/g, "");
   const isValidPhone = digits.length === 10;
@@ -342,7 +352,8 @@ export default function SmsPanel({
         )}
 
         {/* ---- CARD 1: Google Voice (auto) ---- */}
-        {isValidPhone && !showExtensionPrompt && (
+        {/* Hidden on mobile — Chrome extensions don't run on mobile browsers. */}
+        {isValidPhone && !isMobile && !showExtensionPrompt && (
           <button
             onClick={handleGvAuto}
             disabled={sendingViaExtension || (!isChrome && !extensionInstalled)}

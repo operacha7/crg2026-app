@@ -367,6 +367,19 @@ async function syncAll() {
   await logSyncResults(syncCounts);
 
   console.log('\n✓ Sync complete!');
+
+  // Cache-key reminder. Only matters when the sync involved a SCHEMA change
+  // (added / removed / renamed columns in directory, assistance, or zip_codes).
+  // Row content updates do NOT require a bump — the in-app stale-while-
+  // revalidate cache picks them up automatically on the next page load.
+  console.log('\n──────────────────────────────────────────────────────────────');
+  console.log('⚠️  SCHEMA CHANGE? Bump the Phase 1 cache key before deploying.');
+  console.log('   File: src/services/dataCache.js:20');
+  console.log('   Change CACHE_KEY (e.g. "crg-phase1-v1" → "crg-phase1-v2")');
+  console.log('   so existing browsers discard their cached older shape and');
+  console.log('   refetch — otherwise components may crash on missing fields.');
+  console.log('   Skip this if you only added/edited rows.');
+  console.log('──────────────────────────────────────────────────────────────');
 }
 
 syncAll().catch(console.error);
