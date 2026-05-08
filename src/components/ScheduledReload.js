@@ -58,10 +58,12 @@ const ScheduledReload = () => {
     const msUntilReload = getMillisecondsUntilReload();
     console.log(`Scheduled reload in ${Math.floor(msUntilReload / 3600000)} hours and ${Math.floor((msUntilReload % 3600000) / 60000)} minutes`);
     
-    // Set timeout for the reload
+    // Set timeout for the reload. Navigates to "/" (full page load) rather than
+    // calling reload() so the user is dropped on the homepage and all in-memory
+    // auth/session state is cleared, regardless of which path they were on.
     const reloadTimeout = setTimeout(() => {
       console.log('Executing scheduled 2 AM reload');
-      window.location.reload();
+      window.location.href = '/';
     }, msUntilReload);
     
     // Clean up the timeout if the component unmounts
