@@ -1277,7 +1277,15 @@ export default function NavBar2() {
   const regOrgName = loggedInUser?.reg_organization || 'Guest';
 
   // Mobile is locked to Zip Code mode — force it whenever we're under the lg breakpoint.
+  // Exception: SMS deep links (?guest=1 with a non-zipcode mode) are honored on mobile,
+  // since the recipient's whole point is to land on the sender's filtered view.
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isDeepLink = urlParams.get("guest") === "1" &&
+                       urlParams.get("mode") &&
+                       urlParams.get("mode") !== SEARCH_MODES.ZIPCODE;
+    if (isDeepLink) return;
+
     const mq = window.matchMedia("(max-width: 1023px)");
     const enforceZip = () => {
       if (mq.matches && activeSearchMode !== SEARCH_MODES.ZIPCODE) {

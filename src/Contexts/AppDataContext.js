@@ -269,6 +269,7 @@ export const AppDataProvider = ({ children, loggedInUser, onLogout }) => {
               if (urlParams.get('county')) setSelectedLocationCounty(urlParams.get('county'));
               if (urlParams.get('city')) setSelectedLocationCity(urlParams.get('city'));
               if (urlParams.get('loczip')) setSelectedLocationZip(urlParams.get('loczip'));
+              if (urlParams.get('neighborhood')) setSelectedLocationNeighborhood(urlParams.get('neighborhood'));
               break;
             case 'llm': {
               const q = urlParams.get('q');

@@ -530,7 +530,7 @@ export function buildShareUrl(searchContext, activeAssistanceChips) {
 
   const { searchMode, selectedZip, selectedParentOrg, selectedChildOrg,
           selectedLocationZip, selectedLocationCity, selectedLocationCounty,
-          llmQuery } = searchContext || {};
+          selectedLocationNeighborhood, llmQuery } = searchContext || {};
 
   if (searchMode) params.set("mode", searchMode);
 
@@ -546,6 +546,7 @@ export function buildShareUrl(searchContext, activeAssistanceChips) {
       if (selectedLocationCounty) params.set("county", selectedLocationCounty);
       if (selectedLocationCity) params.set("city", selectedLocationCity);
       if (selectedLocationZip) params.set("loczip", selectedLocationZip);
+      if (selectedLocationNeighborhood) params.set("neighborhood", selectedLocationNeighborhood);
       break;
     case "llm":
       if (llmQuery) params.set("q", llmQuery);

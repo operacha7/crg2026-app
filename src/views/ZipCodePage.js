@@ -314,6 +314,7 @@ export default function ZipCodePage({
     selectedLocationZip,
     selectedLocationCity,
     selectedLocationCounty,
+    selectedLocationNeighborhood,
     llmQuery: llmSearchQuery,
   });
 
@@ -396,14 +397,12 @@ export default function ZipCodePage({
     }
     if (activeSearchMode === "organization") {
       if (!selectedParentOrg && !selectedChildOrg) return "⚠️ Please select a parent or child organization.";
-      if (missingAssistance) return "⚠️ Please select at least one assistance type.";
       return null;
     }
     if (activeSearchMode === "location") {
       const hasLocation = !!selectedLocationCounty || !!selectedLocationCity ||
                           !!selectedLocationZip || !!selectedLocationNeighborhood;
       if (!hasLocation) return "⚠️ Please select a county, city, zip code, or neighborhood.";
-      if (missingAssistance) return "⚠️ Please select at least one assistance type.";
       return null;
     }
     if (activeSearchMode === "llm") {
@@ -470,6 +469,7 @@ export default function ZipCodePage({
     selectedLocationCounty,
     selectedLocationCity,
     selectedLocationZip,
+    selectedLocationNeighborhood,
     llmSearchQuery,
     activeAssistanceChips,
     loggedInUser,

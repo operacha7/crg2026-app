@@ -468,6 +468,16 @@ export default function NavBar3() {
   // Temporary selections while panel is open
   const [tempSelections, setTempSelections] = useState([]);
 
+  // Keep saved chips in sync with externally-set active chips (e.g. when an SMS
+  // deep link arrives and AppDataContext populates activeAssistanceChips before
+  // NavBar3 mounts). Additive only — never removes chips the user added locally.
+  useEffect(() => {
+    setSavedSelections((prev) => {
+      const missing = [...activeAssistanceChips].filter((id) => !prev.includes(id));
+      return missing.length === 0 ? prev : [...prev, ...missing];
+    });
+  }, [activeAssistanceChips]);
+
   // Ref for the panel to detect outside clicks
   const panelRef = useRef(null);
   const buttonRef = useRef(null);
