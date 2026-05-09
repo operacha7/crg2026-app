@@ -562,7 +562,6 @@ function LLMSearchDropdown({
   isLoading,
   interpretation,
   error,
-  relatedSearches = [],
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [localValue, setLocalValue] = useState(value || "");
@@ -685,28 +684,10 @@ function LLMSearchDropdown({
         </span>
       )}
       {!isLoading && hasValue && interpretation && !error && (
-        <div className="ml-3 flex items-center gap-3 flex-wrap">
+        <div className="ml-3 flex items-center">
           <span className="text-white/80 text-sm font-opensans italic">
             {interpretation}
           </span>
-          {/* Related search suggestions */}
-          {relatedSearches.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-white/50 text-xs">Try:</span>
-              {relatedSearches.slice(0, 3).map((suggestion, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    onChange(suggestion);
-                    onSearch(suggestion);
-                  }}
-                  className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-colors"
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       )}
       {!isLoading && error && (
@@ -772,7 +753,7 @@ function LLMSearchDropdown({
               value={localValue}
               onChange={(e) => setLocalValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="e.g., food pantry open Monday morning in 77027"
+              placeholder="e.g., food pantry open on Monday near 123 Main St, 77002"
               className="w-full p-3 rounded resize-none"
               style={{
                 height: "120px",
@@ -1217,7 +1198,6 @@ function LLMFilters({
   isLoading,
   interpretation,
   error,
-  relatedSearches,
   clientAddress,
   clientCoordinates,
   onCoordinatesChange,
@@ -1233,7 +1213,6 @@ function LLMFilters({
         isLoading={isLoading}
         interpretation={interpretation}
         error={error}
-        relatedSearches={relatedSearches}
       />
       <DistanceButtonWithPanel
         isActive={!!clientCoordinates}
@@ -1615,7 +1594,6 @@ export default function NavBar2() {
             isLoading={llmSearchLoading}
             interpretation={llmSearchInterpretation}
             error={llmSearchError}
-            relatedSearches={llmRelatedSearches}
             clientAddress={clientAddress}
             clientCoordinates={clientCoordinates}
             onCoordinatesChange={handleCoordinatesChange}
@@ -1684,6 +1662,49 @@ export default function NavBar2() {
           />
         </div>
       </div>
+
+      {/* ========== RELATED-SEARCH CHIP STRIP (LLM mode only) ==========
+          Renders below the main NavBar2 row — only when Ask-a-Question is
+          active and the LLM returned suggestions. Doesn't grow the NavBar2
+          row itself. */}
+      {activeSearchMode === SEARCH_MODES.LLM &&
+        llmRelatedSearches?.length > 0 &&
+        !llmSearchLoading && (
+          <div
+            className="hidden lg:flex items-center flex-wrap gap-2"
+            style={{
+              backgroundColor: "var(--color-navbar2-bg)",
+              paddingLeft: "var(--padding-navbar2-left)",
+              paddingRight: "var(--padding-navbar2-right)",
+              paddingTop: "8px",
+              paddingBottom: "10px",
+              borderTop: "1px solid rgba(255,255,255,0.08)",
+            }}
+          >
+            <span className="text-white/60 text-xs font-opensans uppercase tracking-wider">
+              Try:
+            </span>
+            {llmRelatedSearches.slice(0, 5).map((suggestion) => (
+              <button
+                key={suggestion}
+                onClick={() => handleLLMSearch(suggestion)}
+                className="font-opensans transition-all hover:brightness-110"
+                style={{
+                  fontSize: "13px",
+                  padding: "5px 12px",
+                  borderRadius: "999px",
+                  backgroundColor: "#FFFFFF",
+                  color: "#222831",
+                  border: "1px solid rgba(255,255,255,0.4)",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        )}
 
       {/* ========== MOBILE LAYOUT (<lg) ========== */}
       {/* Mobile is locked to Zip Code mode — no mode selector, no neighborhood, no distance */}

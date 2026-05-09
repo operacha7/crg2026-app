@@ -5,6 +5,88 @@
 import { createClient } from "@supabase/supabase-js";
 import { LLM_MODEL } from "./config.js";
 
+const FILTER_TOOL = {
+  name: "apply_filters",
+  description:
+    "Extract structured search filters from a natural language query about community resources. Fill the fields the user actually mentioned and leave the rest unset. Use the error field for queries that should be redirected to another search mode or that are unclear.",
+  input_schema: {
+    type: "object",
+    properties: {
+      assistance_types: {
+        type: "array",
+        items: { type: "string" },
+        description: "Exact assistance type names from the provided list",
+      },
+      zip_codes: {
+        type: "array",
+        items: { type: "string" },
+        description: "5-digit zip codes the org should serve",
+      },
+      days: {
+        type: "array",
+        items: {
+          type: "string",
+          enum: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+        },
+      },
+      time_filter: {
+        type: "object",
+        properties: {
+          type: {
+            type: "string",
+            enum: [
+              "morning",
+              "afternoon",
+              "evening",
+              "before",
+              "after",
+              "between",
+            ],
+          },
+          time: { type: "string", description: "HH:MM 24-hour" },
+          start: { type: "string", description: "HH:MM 24-hour" },
+          end: { type: "string", description: "HH:MM 24-hour" },
+        },
+      },
+      status_ids: {
+        type: "array",
+        items: { type: "integer", enum: [1, 2, 3] },
+        description: "1=Active, 2=Limited, 3=Inactive. Default [1].",
+      },
+      max_miles: { type: "number" },
+      requirements_keywords: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "Keywords searched in requirements and hours_notes fields",
+      },
+      neighborhood: { type: "string" },
+      organization_name: { type: "string" },
+      county: { type: "string" },
+      city: { type: "string" },
+      geocode_address: {
+        type: "string",
+        description:
+          "Street address mentioned in the query, for distance calculation",
+      },
+      interpretation: {
+        type: "string",
+        description: "Short human-readable interpretation of the search",
+      },
+      related_searches: {
+        type: "array",
+        items: { type: "string" },
+        description: "2-3 short related search suggestions",
+      },
+      error: {
+        type: "string",
+        description:
+          "Set to a brief explanation if the query is unclear or should be redirected to another search mode. When set, leave filter fields unset.",
+      },
+    },
+  },
+};
+
 /**
  * Log LLM search query to Supabase for improvement tracking
  */
@@ -98,7 +180,8 @@ export async function onRequest(context) {
     // Build the system prompt with context about the data
     const systemPrompt = buildSystemPrompt(assistanceTypes, zipCodes);
 
-    // Call Claude API
+    // Call Claude API with prompt caching on the system prompt + tool use
+    // for guaranteed JSON shape.
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -109,7 +192,15 @@ export async function onRequest(context) {
       body: JSON.stringify({
         model: LLM_MODEL,
         max_tokens: 1024,
-        system: systemPrompt,
+        system: [
+          {
+            type: "text",
+            text: systemPrompt,
+            cache_control: { type: "ephemeral" },
+          },
+        ],
+        tools: [FILTER_TOOL],
+        tool_choice: { type: "tool", name: "apply_filters" },
         messages: [
           {
             role: "user",
@@ -135,19 +226,21 @@ export async function onRequest(context) {
       );
     }
 
-    // Parse Claude's response
-    const claudeResponse = data.content[0].text;
-    console.log("🤖 Claude response:", claudeResponse);
+    if (data.usage) {
+      console.log("📊 Usage:", JSON.stringify(data.usage));
+    }
 
-    // Extract JSON from response
-    const filters = parseClaudeResponse(claudeResponse);
+    // Extract the tool_use block — guaranteed by tool_choice forcing apply_filters
+    const toolUseBlock = data.content?.find((b) => b.type === "tool_use");
+    const filters = toolUseBlock?.input || null;
 
-    if (!filters) {
+    if (!filters || filters.error) {
+      console.log("🤖 Redirect/unclear:", filters?.error || "no tool_use block");
       return new Response(
         JSON.stringify({
           success: false,
           message: "Could not understand the search query. Please try rephrasing.",
-          rawResponse: claudeResponse,
+          rawResponse: filters?.error || JSON.stringify(data.content),
         }),
         {
           status: 200,
@@ -253,7 +346,7 @@ ${zipNote}
 
 ## RESPONSE FORMAT:
 
-Always respond with ONLY a JSON object (no markdown, no explanation outside the JSON):
+Call the apply_filters tool. Fill fields the user mentioned; leave the rest unset. The shape:
 
 {
   "assistance_types": ["Food", "Rent"],  // Array of assistance type names, or null if not specified
@@ -345,19 +438,25 @@ Response: {"assistance_types":["Food"],"zip_codes":null,"days":null,"time_filter
 Query: "rent help within 3 miles of 5678 Westheimer Rd"
 Response: {"assistance_types":["Rent"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":3,"requirements_keywords":null,"neighborhood":null,"organization_name":null,"county":null,"city":null,"geocode_address":"5678 Westheimer Rd, Houston, TX","interpretation":"Rent assistance within 3 miles of 5678 Westheimer Rd"}
 
+Query: "help with phone bills"
+Response: {"assistance_types":null,"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":["Phone","Lifeline"],"neighborhood":null,"organization_name":null,"county":null,"city":null,"interpretation":"Phone bill assistance and Lifeline Program","related_searches":["internet bill help","utility bill assistance","Lifeline Program"]}
+
 Query: "medical help close to 9900 Memorial Dr Houston TX 77024"
 Response: {"assistance_types":["Medical - Primary Care","Medical - Dental & Vision","Medical - Mental Health","Medical - Addiction Recovery","Medical - Program Enrollment","Medical - Bill Payment"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":null,"neighborhood":null,"organization_name":null,"county":null,"city":null,"geocode_address":"9900 Memorial Dr, Houston, TX 77024","interpretation":"Medical assistance near 9900 Memorial Dr"}
 
 IMPORTANT:
-- Only return valid JSON, nothing else
+- Always call the apply_filters tool
 - Use exact assistance type names from the list above
 - SYNONYM EXPANSION (map common terms to assistance types):
 
   FOOD:
-  - "groceries", "pantry", "food bank", "food pantry", "meals", "hungry", "eat" → Food
+  - "groceries", "pantry", "food bank", "food pantry", "hungry", "eat" → Food
+  - "meals", "prepared meals", "soup kitchen", "free meals", "hot meals", "lunch", "dinner", "meal delivery", "meals on wheels" → Food + add ["meal","meals","soup","prepared","lunch","dinner","delivered"] to requirements_keywords (these orgs serve prepared food rather than just distributing groceries)
 
   UTILITIES:
   - "power bill", "electric bill", "electricity", "gas bill", "water bill", "light bill", "energy assistance", "LIHEAP" → Utilities
+  - "phone bill", "phone bills", "phone service", "cell phone bill", "wireless bill", "help with phone", "lifeline", "lifeline program" → leave assistance_types null, set requirements_keywords to ["Phone", "Lifeline"]
+  - "internet bill", "internet service", "wifi bill", "broadband", "ACP", "affordable connectivity" → leave assistance_types null, set requirements_keywords to ["Internet", "ACP"]
 
   RENT:
   - "rent help", "rent assistance", "eviction", "behind on rent", "can't pay rent", "rental assistance", "mortgage", "mortgage help", "mortgage assistance", "foreclosure" → Rent
@@ -448,44 +547,13 @@ IMPORTANT:
   - Suggest variations (e.g., different days, times, or locations)
   - Suggest broader or narrower searches
   - Keep suggestions short and natural (3-6 words each)
-- REDIRECT SIMPLE QUERIES: "Ask a Question" has API costs, so redirect queries that can be answered by other search modes:
-  - "What are [Org Name]'s hours?" → Return error with interpretation: "For organization hours, use the Organization search mode and look up [Org Name] directly."
-  - "What resources are in [county/city/zip]?" → Return error with interpretation: "For resources by location, use the Location search mode."
-  - "What [assistance type] is in [zip code]?" → Return error with interpretation: "For assistance by zip code, use the Zip Code search mode and select the assistance type."
+  - DO NOT suggest "near me" / "close to me" — geolocation is not auto-applied. If proximity matters, suggest a specific zip code or neighborhood the user already mentioned, otherwise omit proximity from suggestions.
+  - Suggestions should stay related to the same intent. For "food pantry open Saturday morning", suggest variations like "free meals Saturday" or "food pantry open Sunday" — don't drift to unrelated categories.
+- REDIRECT SIMPLE QUERIES: "Ask a Question" has API costs, so redirect queries that can be answered by other search modes by setting the error field:
+  - "What are [Org Name]'s hours?" → error: "For organization hours, use the Organization search mode and look up [Org Name] directly."
+  - "What resources are in [county/city/zip]?" → error: "For resources by location, use the Location search mode."
+  - "What [assistance type] is in [zip code]?" → error: "For assistance by zip code, use the Zip Code search mode and select the assistance type."
   - Only process complex queries that combine multiple filters (e.g., "food pantry open Thursday morning within 5 miles") that cannot be easily done with other search modes.
-- If the query is unclear or doesn't relate to finding resources, return: {"error":"Could not interpret query","interpretation":"Please describe what type of assistance you're looking for"}`;
+- If the query is unclear or doesn't relate to finding resources, set the error field to a brief explanation (e.g. "Could not interpret query") and leave the filter fields unset`;
 }
 
-/**
- * Parse Claude's response to extract JSON filters
- */
-function parseClaudeResponse(response) {
-  try {
-    // Try to parse the entire response as JSON
-    const parsed = JSON.parse(response.trim());
-
-    // Check if it's an error response
-    if (parsed.error) {
-      return null;
-    }
-
-    return parsed;
-  } catch (e) {
-    // Try to extract JSON from the response if it contains other text
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      try {
-        const parsed = JSON.parse(jsonMatch[0]);
-        if (parsed.error) {
-          return null;
-        }
-        return parsed;
-      } catch (e2) {
-        console.error("Failed to parse extracted JSON:", e2);
-        return null;
-      }
-    }
-    console.error("Failed to parse Claude response:", e);
-    return null;
-  }
-}

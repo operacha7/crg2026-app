@@ -96,21 +96,22 @@ export function applyLLMFilters(directory, filters, assistanceLookup = {}) {
     );
   }
 
-  // Filter by day of week (check org_hours JSON)
-  // Note: Records with null hours are INCLUDED (hours unknown, might be available)
+  // Filter by day of week.
+  // Strict when ANY day info is present anywhere — in hours.regular[].days,
+  // hours.special[].pattern (e.g. "2nd Tu"), hours.labeled[].days, or in
+  // hours_notes free text. Lenient only when no day info exists anywhere.
   if (filters.days && filters.days.length > 0) {
+    const wantedDays = filters.days.map(normalizeDay);
     filtered = filtered.filter(record => {
       const hours = parseHoursJson(record.hours || record.org_hours);
-      // Include records with unknown hours - they might be open
-      if (!hours || !hours.regular) return true;
+      const knownDays = collectKnownDays(hours, record.hours_notes);
 
-      return filters.days.some(day => {
-        return hours.regular.some(slot => {
-          // Handle both single day and day ranges
-          const days = slot.days || [];
-          return days.some(d => normalizeDay(d) === normalizeDay(day));
-        });
-      });
+      if (knownDays.length > 0) {
+        return wantedDays.some(d => knownDays.includes(d));
+      }
+
+      // Truly no day info — include
+      return true;
     });
   }
 
@@ -213,6 +214,56 @@ function parseHoursJson(hours) {
   } catch {
     return null;
   }
+}
+
+/**
+ * Collect every day-of-week mention anywhere in a record's hours data.
+ * Returns deduped 2-letter codes. Used by the day filter to decide whether the
+ * record has ANY day info (strict match required) or none at all (include).
+ *
+ * Hours JSON has three arrays: regular[].days, special[].pattern (free text
+ * like "2nd Tu"), and labeled[].days. Plus hours_notes free text.
+ */
+function collectKnownDays(hours, hoursNotes) {
+  const daysFromEntries = (entries) =>
+    (entries || []).flatMap(e => (e.days || []).map(normalizeDay));
+  const daysFromPatterns = (entries) =>
+    (entries || []).flatMap(e => extractDaysFromText(e.pattern));
+
+  const all = [
+    ...daysFromEntries(hours?.regular),
+    ...daysFromPatterns(hours?.special),
+    ...daysFromEntries(hours?.labeled),
+    ...extractDaysFromText(hoursNotes),
+  ];
+
+  // Strip any non-2-letter codes that snuck through normalizeDay's fallback
+  return [...new Set(all)].filter(d => d.length === 2);
+}
+
+/**
+ * Extract day-of-week mentions from free text (e.g. hours_notes).
+ * Returns a deduped list of 2-letter codes that appear in the text.
+ * Used so a record like "2nd & 4th We: Call for hours" is excluded from a
+ * Saturday-only filter even though it has no structured hours.regular data.
+ */
+function extractDaysFromText(text) {
+  if (!text || typeof text !== "string") return [];
+  const lower = text.toLowerCase();
+  const patterns = [
+    { code: "mo", regex: /\b(mondays?|mon|mo)\b/ },
+    { code: "tu", regex: /\b(tuesdays?|tues|tue|tu)\b/ },
+    { code: "we", regex: /\b(wednesdays?|wed|we)\b/ },
+    { code: "th", regex: /\b(thursdays?|thurs|thu|th)\b/ },
+    { code: "fr", regex: /\b(fridays?|fri|fr)\b/ },
+    { code: "sa", regex: /\b(saturdays?|sat|sa)\b/ },
+    { code: "su", regex: /\b(sundays?|sun|su)\b/ },
+  ];
+  const found = [];
+  for (const { code, regex } of patterns) {
+    if (regex.test(lower)) found.push(code);
+  }
+  return found;
 }
 
 /**
