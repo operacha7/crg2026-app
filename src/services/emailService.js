@@ -559,7 +559,7 @@ export function buildShareUrl(searchContext, activeAssistanceChips) {
     params.set("assist", [...activeAssistanceChips].join(","));
   }
 
-  return `${baseUrl}/?${params.toString()}`;
+  return `${baseUrl}/find?${params.toString()}`;
 }
 
 /**
