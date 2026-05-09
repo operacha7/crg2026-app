@@ -12,6 +12,7 @@ import {
   parseRequirements,
 } from "../utils/formatters";
 import { ResourceEmail } from "../emails";
+import { buildTransitDirectionsUrl } from "../utils/transitUrl";
 
 // Default callback phone number if org doesn't have one configured
 const DEFAULT_ORG_PHONE = "713-664-5350";
@@ -151,7 +152,7 @@ function formatHoursPdfHtml(record) {
  * - Right column: Phone, hours, hours notes
  * - Full-width bottom: Requirements
  */
-export function formatPdfResourcesHtml(selectedData, includeAssistanceHeaders = true) {
+export function formatPdfResourcesHtml(selectedData, includeAssistanceHeaders = true, clientCoordinates = null) {
   const hasNonActive = selectedData.some((r) => (r.status_id ?? 1) !== 1);
 
   if (hasNonActive) {
@@ -172,7 +173,8 @@ export function formatPdfResourcesHtml(selectedData, includeAssistanceHeaders = 
         const inner = renderAssistanceGroupsHtml(
           statusGroup.items,
           includeAssistanceHeaders,
-          () => ++runningIndex
+          () => ++runningIndex,
+          clientCoordinates
         );
         return `
 <h2 style="font-family: Arial, sans-serif; font-size: 16px; color: #B8001F; margin-top: 24px; margin-bottom: 10px; border-bottom: 1px solid #B8001F; padding-bottom: 4px;">Status:&nbsp;&nbsp;${statusGroup.statusLabel}</h2>
@@ -182,10 +184,10 @@ ${inner}`;
   }
 
   let runningIndex = 0;
-  return renderAssistanceGroupsHtml(selectedData, includeAssistanceHeaders, () => ++runningIndex);
+  return renderAssistanceGroupsHtml(selectedData, includeAssistanceHeaders, () => ++runningIndex, clientCoordinates);
 }
 
-function renderAssistanceGroupsHtml(items, includeAssistanceHeaders, nextIndex) {
+function renderAssistanceGroupsHtml(items, includeAssistanceHeaders, nextIndex, clientCoordinates = null) {
   const sortedData = getSortedData(items);
 
   const grouped = sortedData.reduce((acc, item) => {
@@ -232,6 +234,9 @@ function renderAssistanceGroupsHtml(items, includeAssistanceHeaders, nextIndex) 
         </div>
         <div style="font-size: 12px; padding-left: 20px;">
           <a href="${e.googlemaps || "#"}" target="_blank" style="color: #0066cc; text-decoration: underline;">${addressHtml}</a>${distanceText ? `<span style="font-style: italic; color: #666; padding-left: 10px;">${distanceText}</span>` : ""}
+        </div>
+        <div style="padding-left: 20px; margin-top: 6px;">
+          <a href="${buildTransitDirectionsUrl(e, clientCoordinates)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 2px 12px; border: 1px solid #FF0000; border-radius: 999px; color: #FF0000; font-size: 12px; font-weight: 500; letter-spacing: 0.02em; text-decoration: none; white-space: nowrap;">Bus Route</a>
         </div>
       </td>
       <!-- Right column: Phone, hours, hours notes -->
@@ -319,6 +324,7 @@ export async function sendEmail({
   loggedInUser,
   orgPhone,
   language = "en",
+  clientCoordinates = null,
   // Legacy prop - still supported for backwards compatibility
   selectedZip,
 }) {
@@ -333,6 +339,7 @@ export async function sendEmail({
       resources: selectedData,
       headerText: headerText,
       orgPhone: orgPhone || DEFAULT_ORG_PHONE,
+      clientCoordinates,
     })
   );
 
@@ -391,6 +398,7 @@ export async function createPdf({
   searchContext,
   loggedInUser,
   language = "en",
+  clientCoordinates = null,
   // Legacy prop - still supported for backwards compatibility
   selectedZip,
 }) {
@@ -404,7 +412,7 @@ export async function createPdf({
   const selectionText = headerText.replace("Resources for ", "").replace("Resources", "All");
 
   // Use PDF-specific formatting (3-column layout)
-  const htmlContent = formatPdfResourcesHtml(selectedData);
+  const htmlContent = formatPdfResourcesHtml(selectedData, true, clientCoordinates);
 
   const getCurrentDate = () => {
     const today = new Date();
@@ -444,7 +452,7 @@ body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 0; }
 <div style="font-size: 12px;">By: ${registeredOrgName || "—"}</div>
 </div>
 <p style="font-size: 12px; line-height: 1.5; margin: 0 0 20px 0;">
-We strive to ensure that our information is current and accurate but funding levels and eligibility requirements can change at any time. For the most current information contact the organization directly. You may also access the same information at <a href="https://crghouston.org" style="color: #0066cc;">crghouston.org</a>.
+We strive to ensure that our information is current and accurate but funding levels and eligibility requirements can change at any time. For the most current information contact the organization directly. <em>For the most up-to-date listings and to explore even more resources on your own, please feel free to visit us at <a href="https://crghouston.org" style="color: #0066cc; font-style: normal; font-weight: bold;">crghouston.org</a>.</em>
 </p>
 <div>
 ${htmlContent}

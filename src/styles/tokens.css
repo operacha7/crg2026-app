@@ -116,8 +116,9 @@
   --color-results-status-limited-bg: #e7d93e;
   --color-results-status-inactive-bg: #e7923e;
   --color-results-status-closed-bg: #E74C3E;
-  --color-results-assistance-icon: #2D5A27;
-  --color-results-assistance-icon-secondary: #050500;
+  --color-results-assistance-icon: #b400f0;
+  --color-results-assistance-icon-secondary: #2D5A27;
+  --color-results-transit-icon: #FF0000;
   --color-results-expand-chevron: #FF0004;
   --color-results-distance-label: #666666;
   --color-results-checkbox-checked: #8FBC8F;

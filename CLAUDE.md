@@ -163,6 +163,7 @@ Results display format is consistent regardless of filters applied.
 3. **Organization** - Org name (18px, semibold) + address below (10px gap, regular weight)
    - No favicon (removed)
    - Address consolidated from org_address1, org_address2, city/state/zip
+   - **Transit directions icon** (right side of column, 28px, `--color-results-transit-icon` `#FF0000`, with 100px right margin so it visually belongs to the Organization column rather than the Assistance icons) — deep-links to Google Maps with `travelmode=transit`, origin=clientCoordinates if set, destination=org_coordinates. Free (no API). See `src/utils/transitUrl.js`.
 4. **Assistance** (NEW) - All assistance type icons for this org (20px, olive `#808000`)
    - Moved from Organization column to dedicated column
 5. **Hours** - Two-column layout (days right-aligned, hours right-aligned)
@@ -745,6 +746,7 @@ Assistance: Rent
 - Hours notes in red italic (no border - email client compatibility)
 - Grouped by assist_id, sorted by assist_id → distance within groups
 - Status field removed from email (warning shown before send if Inactive selected)
+- **"Bus Route" pill below the address** (both email and PDF) — outlined red pill linking to Google Maps `travelmode=transit`. Origin = the sender's `clientCoordinates` (from Distance panel or Ask-a-Question) when set, otherwise omitted (Google Maps prompts the recipient for an origin). All inline styles only — falls back gracefully to a plain red "Bus Route" hyperlink if an email client strips the border/padding. Implementation: `buildTransitDirectionsUrl()` in `src/utils/transitUrl.js` is reused across the on-screen row, SMS share link, email, and PDF.
 
 ### Dynamic Email/PDF Headers
 The header text changes based on the active search mode. Uses "most specific wins" logic.

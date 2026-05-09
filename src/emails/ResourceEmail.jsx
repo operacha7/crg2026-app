@@ -94,6 +94,7 @@ export function ResourceEmail({
   headerText = 'Resources',
   orgPhone = '713-664-5350',
   previewText = 'Your requested community resources',
+  clientCoordinates = null,
 }) {
   const hasNonActive = resources.some((r) => (r.status_id ?? 1) !== 1);
   const grouped = hasNonActive ? null : groupByAssistance(resources);
@@ -119,13 +120,15 @@ export function ResourceEmail({
             <span style={{ color: 'red', fontStyle: 'italic' }}>do not reply</span>.
           </Text>
 
-          {/* Website link */}
+          {/* Website link — italicized invitation, with the hyperlink itself in
+              regular (non-italic) bold so it visually pops as the actionable element. */}
           <Text style={styles.websiteLink}>
-            You can also access the same information at{' '}
+            For the most up-to-date listings and to explore even more resources on
+            your own, please feel free to visit us at{' '}
             <Link
               href="https://crghouston.org?utm_source=email&utm_medium=email&utm_campaign=resource_list"
               target="_blank"
-              style={styles.link}
+              style={styles.linkBoldNonItalic}
             >
               crghouston.org
             </Link>
@@ -150,6 +153,7 @@ export function ResourceEmail({
                   addressLines={formatAddress(resource)}
                   requirements={parseRequirements(resource.requirements)}
                   distanceText={formatDistance(resource.distance)}
+                  clientCoordinates={clientCoordinates}
                 />
               ))}
             </Section>
@@ -237,10 +241,17 @@ const styles = {
   websiteLink: {
     fontSize: '14px',
     marginBottom: '24px',
+    fontStyle: 'italic',
   },
   link: {
     color: '#0066cc',
     textDecoration: 'underline',
+  },
+  linkBoldNonItalic: {
+    color: '#0066cc',
+    textDecoration: 'underline',
+    fontStyle: 'normal',
+    fontWeight: 'bold',
   },
   statusHeader: {
     fontFamily: 'Arial, sans-serif',

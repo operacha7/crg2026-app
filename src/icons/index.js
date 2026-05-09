@@ -49,6 +49,7 @@ export { EducationChildrenIcon } from './EducationChildrenIcon';
 export { ChildcareIcon } from './ChildcareIcon';
 export { JobsIcon } from './JobsIcon';
 export { TransportationIcon } from './TransportationIcon';
+export { TransitIcon } from './TransitIcon';
 export { ImmigrationIcon } from './ImmigrationIcon';
 export { LegalIcon } from './LegalIcon';
 export { SeniorsIcon } from './SeniorsIcon';

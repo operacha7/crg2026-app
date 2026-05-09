@@ -7,6 +7,7 @@ import { useState, useEffect, useMemo } from "react";
 import { render } from "@react-email/components";
 import DropPanel from "./DropPanel";
 import { ResourceEmail } from "../emails";
+import { useAppData } from "../Contexts/AppDataContext";
 
 /**
  * EmailPanel - Panel for email/PDF with inactive resource warning and preview
@@ -42,6 +43,10 @@ export default function EmailPanel({
   headerText = "Resources",
   orgPhone = "713-664-5350",
 }) {
+  // Pull the user's address from context so the preview's Bus Route links
+  // include the same origin that the actual email/PDF will use.
+  const { clientCoordinates } = useAppData();
+
   // Track which view to show: "warning" or "input"
   const [currentView, setCurrentView] = useState("input");
   const [recipient, setRecipient] = useState("");
@@ -62,6 +67,7 @@ export default function EmailPanel({
               resources: selectedData,
               headerText: headerText,
               orgPhone: orgPhone,
+              clientCoordinates,
             })
           );
           setPreviewHtml(html);
@@ -73,7 +79,7 @@ export default function EmailPanel({
       };
       generatePreview();
     }
-  }, [isOpen, isPdfMode, selectedData, headerText, orgPhone]);
+  }, [isOpen, isPdfMode, selectedData, headerText, orgPhone, clientCoordinates]);
 
   // Translate preview when language changes
   useEffect(() => {

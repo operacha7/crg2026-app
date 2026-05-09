@@ -3,6 +3,7 @@
 
 import { Section, Text, Link } from '@react-email/components';
 import { HoursTable, HoursNotes } from './HoursTable';
+import { buildTransitDirectionsUrl } from '../../utils/transitUrl';
 
 /**
  * Displays a single resource with all its details
@@ -24,6 +25,7 @@ export function ResourceCard({
   addressLines,
   requirements,
   distanceText,
+  clientCoordinates,
 }) {
 
   return (
@@ -51,6 +53,20 @@ export function ResourceCard({
         {distanceText && (
           <span style={styles.distance}>&nbsp;&nbsp;&nbsp;{distanceText}</span>
         )}
+      </Text>
+
+      {/* Bus Route pill - opens Google Maps with travelmode=transit. If the email
+          client strips the border/padding, the underlying <a> remains a clickable
+          red "Bus Route" hyperlink. */}
+      <Text style={styles.busRouteWrapper}>
+        <Link
+          href={buildTransitDirectionsUrl(resource, clientCoordinates)}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={styles.busRoutePill}
+        >
+          Bus Route
+        </Link>
       </Text>
 
       {/* Phone number - 8px gap above */}
@@ -111,6 +127,25 @@ const styles = {
   distance: {
     fontStyle: 'italic',
     color: '#666666',
+  },
+  busRouteWrapper: {
+    margin: '6px 0 0 0',
+    paddingLeft: '24px',
+    fontSize: '12px',
+  },
+  busRoutePill: {
+    display: 'inline-block',
+    padding: '2px 12px',
+    border: '1px solid #FF0000',
+    borderRadius: '999px',
+    color: '#FF0000',
+    backgroundColor: 'transparent',
+    fontSize: '12px',
+    fontWeight: 500,
+    lineHeight: 1,
+    letterSpacing: '0.02em',
+    textDecoration: 'none',
+    whiteSpace: 'nowrap',
   },
   phone: {
     fontSize: '16px',

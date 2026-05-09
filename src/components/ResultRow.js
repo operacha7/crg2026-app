@@ -4,12 +4,13 @@
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { getIconByName, getIconNames } from "../icons/iconMap";
-import { Car11Icon } from "../icons";
+import { Car11Icon, TransitIcon } from "../icons";
 import {
   formatHoursFromJson,
   formatAddress,
   formatIconName,
 } from "../utils/formatters";
+import { buildTransitDirectionsUrl } from "../utils/transitUrl";
 
 // Max height for collapsed content area (enforces uniform row height)
 // Approximately 6 lines at ~20px each = 120px
@@ -137,6 +138,7 @@ function ResultRow({
   orgAssistanceMap = {},
   rowIndex = 0,
   isDrivingDistance = false,
+  clientCoordinates = null,
 }) {
   const [requirementsExpanded, setRequirementsExpanded] = useState(false);
   const [zipExpanded, setZipExpanded] = useState(false);
@@ -422,7 +424,7 @@ function ResultRow({
         className="hidden lg:grid border-b border-results-row-border font-opensans transition-colors duration-150 results-row-hover"
         style={{
           gridTemplateColumns: GRID_COLUMNS,
-          padding: "12px 0 12px 10px",
+          padding: "12px 0",
           minHeight: "100px",
           borderBottomWidth: "0.5px",
           ...getBgStyle(),
@@ -494,8 +496,9 @@ function ResultRow({
         )}
       </div>
 
-      {/* Organization Column - org name + address below, gap before (20px) */}
-      <div className="flex flex-col" style={{ paddingLeft: "20px" }}>
+      {/* Organization Column - org name + address (left), transit icon (right) */}
+      <div className="flex flex-row items-start justify-between" style={{ paddingLeft: "20px", gap: "16px" }}>
+        <div className="flex flex-col">
         {/* Organization name - hyperlink to webpage if available */}
         {record.webpage ? (
           <a
@@ -561,6 +564,35 @@ function ResultRow({
             </div>
           )
         )}
+        </div>
+        {/* Transit directions: outlined pill deep-linking to Google Maps with travelmode=transit.
+            100px right margin so it visually belongs to the Organization column, not the
+            adjacent Assistance icons. */}
+        <a
+          href={buildTransitDirectionsUrl(record, clientCoordinates)}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center rounded-full shrink-0 hover:brightness-125"
+          style={{
+            gap: "6px",
+            padding: "4px 8px",
+            border: `2px solid var(--color-results-transit-icon)`,
+            color: "var(--color-results-transit-icon)",
+            backgroundColor: "transparent",
+            fontSize: "12px",
+            fontWeight: 600,
+            letterSpacing: "0.02em",
+            textDecoration: "none",
+            lineHeight: 1,
+            whiteSpace: "nowrap",
+            marginRight: "100px",
+            marginTop: "30px",
+          }}
+        >
+          <TransitIcon size={18} />
+          <span>Bus Route</span>
+        </a>
       </div>
 
       {/* Assistance Column - icons for all assistance types this org provides */}

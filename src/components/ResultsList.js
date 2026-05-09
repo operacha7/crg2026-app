@@ -431,6 +431,7 @@ export default function ResultsList({
                 orgAssistanceMap={orgAssistanceMap}
                 rowIndex={index}
                 isDrivingDistance={isDrivingDistance}
+                clientCoordinates={clientCoordinates}
               />
             );
           }}

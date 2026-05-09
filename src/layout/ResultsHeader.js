@@ -53,7 +53,6 @@ export default function ResultsHeader({
         className="w-full grid items-center"
         style={{
           gridTemplateColumns: GRID_COLUMNS,
-          paddingLeft: "10px",
         }}
       >
         {columns.map((col) => {

@@ -330,6 +330,7 @@ export default function ZipCodePage({
       loggedInUser,
       orgPhone,
       language,
+      clientCoordinates,
     });
 
     // Reset selections and show toast
@@ -351,6 +352,7 @@ export default function ZipCodePage({
       loggedInUser,
       orgPhone,
       language,
+      clientCoordinates,
     });
 
     // Reset selections and show toast
