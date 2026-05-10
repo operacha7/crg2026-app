@@ -58,13 +58,13 @@ const ICON_MAP = {
     <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-btn-active-bg)", color: "var(--color-navbar2-btn-active-text)" }}>Zip Code</span>
   ),
   "[[ORGANIZATION_BTN]]": (
-    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-bg)", color: "var(--color-navbar2-btn-inactive-text)" }}>Organization</span>
+    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-btn-inactive-bg)", color: "var(--color-navbar2-btn-inactive-text)" }}>Organization</span>
   ),
   "[[LOCATION_BTN]]": (
-    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-bg)", color: "var(--color-navbar2-btn-inactive-text)" }}>Location</span>
+    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-btn-inactive-bg)", color: "var(--color-navbar2-btn-inactive-text)" }}>Location</span>
   ),
   "[[ASK_QUESTION_BTN]]": (
-    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-bg)", color: "var(--color-navbar2-btn-inactive-text)" }}>Ask a Question</span>
+    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-btn-inactive-bg)", color: "var(--color-navbar2-btn-inactive-text)" }}>Ask a Question</span>
   ),
 
   // Dropdowns and input fields (uses NavBar2 dropdown tokens)
@@ -72,7 +72,7 @@ const ICON_MAP = {
     <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-dropdown-bg)", color: "var(--color-navbar2-dropdown-text)" }}>77002 ▾</span>
   ),
   "[[LLM_INPUT]]": (
-    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-bg)", color: "var(--color-navbar2-btn-inactive-text)" }}>What are you looking for today?</span>
+    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-btn-inactive-bg)", color: "var(--color-navbar2-btn-inactive-text)" }}>What are you looking for today?</span>
   ),
 
   // Distance icon

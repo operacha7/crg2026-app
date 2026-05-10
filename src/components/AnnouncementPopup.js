@@ -44,7 +44,7 @@ const AnnouncementPopup = ({ announcement, onClose, currentIndex, totalCount }) 
             width: '90vw',
             maxHeight: 'calc(90vh - 80px)', // Leave room for button below
             boxShadow: '10px 10px 30px var(--color-memo-shadow)',
-            fontFamily: 'var(--font-family-body)',
+            fontFamily: 'var(--font-family-memo)',
           }}
           initial={{ scale: 0.9, opacity: 0, y: -20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -93,7 +93,7 @@ const AnnouncementPopup = ({ announcement, onClose, currentIndex, totalCount }) 
                 fontSize: 'var(--font-size-memo-label)',
                 color: 'var(--color-memo-text)',
                 marginBottom: '30px',
-                lineHeight: 1.4,
+                lineHeight: 'var(--line-height-memo)',
               }}
             >
               {/* Date row */}
@@ -127,18 +127,26 @@ const AnnouncementPopup = ({ announcement, onClose, currentIndex, totalCount }) 
               </div>
 
               {/* Subject row */}
-              <div className="flex">
+              <div className="flex flex-1">
                 <span
                   style={{
                     fontWeight: 'var(--font-weight-memo-label)',
                     width: '80px',
+                    flexShrink: 0,
                   }}
                 >
                   Subject:
                 </span>
-                <span style={{ fontWeight: 'var(--font-weight-memo-body)' }}>
-                  {announcement.title}
-                </span>
+                {announcement.title_html ? (
+                  <span
+                    style={{ fontWeight: 'var(--font-weight-memo-body)', flex: 1 }}
+                    dangerouslySetInnerHTML={{ __html: announcement.title_html }}
+                  />
+                ) : (
+                  <span style={{ fontWeight: 'var(--font-weight-memo-body)' }}>
+                    {announcement.title}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -150,12 +158,26 @@ const AnnouncementPopup = ({ announcement, onClose, currentIndex, totalCount }) 
               fontSize: 'var(--font-size-memo-body)',
               fontWeight: 'var(--font-weight-memo-body)',
               color: 'var(--color-memo-text)',
-              lineHeight: 1.4,
+              lineHeight: 'var(--line-height-memo)',
               padding: '0 var(--padding-memo) var(--padding-memo) var(--padding-memo)',
               minHeight: '100px',
             }}
-            dangerouslySetInnerHTML={{ __html: announcement.message_html }}
-          />
+          >
+            <div dangerouslySetInnerHTML={{ __html: announcement.message_html }} />
+            {announcement.expiration_date && (
+              <div
+                style={{
+                  marginTop: '32px',
+                  textAlign: 'right',
+                  fontSize: 'var(--font-size-memo-expires)',
+                  color: 'var(--color-memo-title)',
+                  fontWeight: 'var(--font-weight-memo-body)',
+                }}
+              >
+                Expires: {formatDate(announcement.expiration_date)}
+              </div>
+            )}
+          </div>
         </motion.div>
 
         {/* Button - outside the paper, uses standard panel button tokens */}

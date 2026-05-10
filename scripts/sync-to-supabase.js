@@ -79,6 +79,11 @@ function transformAnnouncement(row) {
 
   const messageHtml = paragraphs.join('\n');
 
+  // Build title_html from format_0 + title (rendered inline, wrapped in <span>).
+  // format_0 is a sheet-only column; title_html lives in Supabase. If title is
+  // blank, leave title_html null so the React side falls back to plain title.
+  const titleHtml = formatTitle(row.title || '', row.format_0 || '');
+
   // Return transformed row with only the fields that match Supabase columns
   // Note: id_no is omitted - Supabase SERIAL will auto-generate it
   return {
@@ -87,6 +92,7 @@ function transformAnnouncement(row) {
     audience_code: audienceCode,
     reg_organization: row.reg_organization || null,
     title: row.title,
+    title_html: titleHtml,
     message_html: messageHtml,
   };
 }
@@ -107,8 +113,9 @@ function parseDate(dateStr) {
   return str;
 }
 
-// Convert format codes and paragraph text into HTML
-// Supported codes: bold, italic, underline, bullet, boldfirst, 6-char hex color
+// Convert format codes and paragraph text into HTML.
+// Paragraph-level codes (column): bold, italic, underline, bullet, boldfirst, center, 6-char hex color
+// Inline tokens parsed inside text by parseInline(): **bold**, _italic_, ==highlight==, {#HEX}colored{/}
 function formatParagraph(text, formatCodes) {
   const codes = formatCodes
     ? formatCodes.split(',').map(c => c.trim().toLowerCase())
@@ -119,12 +126,13 @@ function formatParagraph(text, formatCodes) {
   const isUnderline = codes.includes('underline');
   const isBullet = codes.includes('bullet');
   const isBoldFirst = codes.includes('boldfirst');
+  const isCenter = codes.includes('center');
 
   // Find hex color code (6 characters, with or without leading #)
   const hexColorRaw = codes.find(c => /^#?[0-9a-f]{6}$/i.test(c));
   const hexColor = hexColorRaw ? hexColorRaw.replace(/^#/, '') : null;
 
-  // Build inline styles (for whole paragraph or items)
+  // Inline styles applied to the text-bearing element (span/li/p)
   const styles = [];
   if (isBold) styles.push('font-weight: bold');
   if (isItalic) styles.push('font-style: italic');
@@ -132,6 +140,9 @@ function formatParagraph(text, formatCodes) {
   if (hexColor) styles.push(`color: #${hexColor.toUpperCase()}`);
 
   const styleAttr = styles.length > 0 ? ` style="${styles.join('; ')}"` : '';
+
+  // Center is block-level — applies to the wrapper (<p> or <ul>)
+  const centerAttr = isCenter ? ` style="text-align: center"` : '';
 
   if (isBullet && isBoldFirst) {
     // Each line becomes a bullet point with first line of each bullet bolded
@@ -156,17 +167,17 @@ function formatParagraph(text, formatCodes) {
       if (dotIndex !== -1) {
         const firstPart = trimmed.substring(0, dotIndex + 1);
         const restPart = trimmed.substring(dotIndex + 1);
-        return `  <li><span${firstStyleAttr}>${escapeHtml(firstPart)}</span><span${restBulletStyleAttr}>${escapeHtml(restPart)}</span></li>`;
+        return `  <li><span${firstStyleAttr}>${parseInline(firstPart)}</span><span${restBulletStyleAttr}>${parseInline(restPart)}</span></li>`;
       }
       // No split point found — bold the whole line
-      return `  <li${firstStyleAttr}>${escapeHtml(trimmed)}</li>`;
+      return `  <li${firstStyleAttr}>${parseInline(trimmed)}</li>`;
     }).join('\n');
-    return `<ul>\n${listItems}\n</ul>`;
+    return `<ul${centerAttr}>\n${listItems}\n</ul>`;
   } else if (isBullet) {
     // Each line becomes a bullet point
     const lines = text.split('\n').filter(line => line.trim());
-    const listItems = lines.map(line => `  <li${styleAttr}>${escapeHtml(line.trim())}</li>`).join('\n');
-    return `<ul>\n${listItems}\n</ul>`;
+    const listItems = lines.map(line => `  <li${styleAttr}>${parseInline(line.trim())}</li>`).join('\n');
+    return `<ul${centerAttr}>\n${listItems}\n</ul>`;
   } else if (isBoldFirst) {
     // Bold only the first line, rest is normal (with other styles applied)
     const lines = text.split('\n');
@@ -188,15 +199,74 @@ function formatParagraph(text, formatCodes) {
     const firstStyleAttr = ` style="${firstStyles.join('; ')}"`;
 
     if (restLines.trim()) {
-      return `<p><span${firstStyleAttr}>${escapeHtml(firstLine)}</span><br/><span${restStyleAttr}>${escapeHtml(restLines)}</span></p>`;
+      return `<p${centerAttr}><span${firstStyleAttr}>${parseInline(firstLine)}</span><br/><span${restStyleAttr}>${parseInline(restLines)}</span></p>`;
     } else {
-      // Only one line - just bold it
-      return `<p${firstStyleAttr}>${escapeHtml(firstLine)}</p>`;
+      // Single-line boldfirst — fold center into the same <p> style attr
+      const combined = [...firstStyles];
+      if (isCenter) combined.push('text-align: center');
+      return `<p style="${combined.join('; ')}">${parseInline(firstLine)}</p>`;
     }
   } else {
-    // Regular paragraph
-    return `<p${styleAttr}>${escapeHtml(text)}</p>`;
+    // Regular paragraph — merge center with the inline styles on <p>
+    const combined = [...styles];
+    if (isCenter) combined.push('text-align: center');
+    const combinedAttr = combined.length > 0 ? ` style="${combined.join('; ')}"` : '';
+    return `<p${combinedAttr}>${parseInline(text)}</p>`;
   }
+}
+
+// Generate HTML for the announcement subject (title). Wrapped in <span> so it
+// renders inline inside the "Subject:" row of the memo. Supports the same
+// paragraph-level codes as formatParagraph except bullet/boldfirst (which
+// don't make sense for a one-line title). Inline markdown is parsed too.
+function formatTitle(text, formatCodes) {
+  if (!text?.trim()) return null;
+
+  const codes = formatCodes
+    ? formatCodes.split(',').map(c => c.trim().toLowerCase())
+    : [];
+
+  const isBold = codes.includes('bold');
+  const isItalic = codes.includes('italic');
+  const isUnderline = codes.includes('underline');
+  const isCenter = codes.includes('center');
+
+  const hexColorRaw = codes.find(c => /^#?[0-9a-f]{6}$/i.test(c));
+  const hexColor = hexColorRaw ? hexColorRaw.replace(/^#/, '') : null;
+
+  const styles = [];
+  if (isBold) styles.push('font-weight: bold');
+  if (isItalic) styles.push('font-style: italic');
+  if (isUnderline) styles.push('text-decoration: underline');
+  if (hexColor) styles.push(`color: #${hexColor.toUpperCase()}`);
+  if (isCenter) {
+    // text-align only works on block elements, so promote the span to block
+    // and let it span the available width of the Subject row.
+    styles.push('display: block', 'width: 100%', 'text-align: center');
+  }
+
+  const styleAttr = styles.length > 0 ? ` style="${styles.join('; ')}"` : '';
+  return `<span${styleAttr}>${parseInline(text)}</span>`;
+}
+
+// Parse inline markdown tokens after HTML-escaping the raw input.
+// Tokens: **bold**, _italic_, ==highlight== (yellow), {#HEX}colored text{/}
+// Invalid hex (anything that isn't exactly 6 hex chars) silently strips the
+// {#...}{/} wrapper and renders the inner text plain — user preference, so a
+// typo in the hex defaults the text back to black instead of leaving stray
+// braces visible.
+function parseInline(text) {
+  if (text === null || text === undefined) return '';
+  let s = escapeHtml(text);
+  // Bold first, so ** isn't eaten by the italic pass
+  s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/_(.+?)_/g, '<em>$1</em>');
+  s = s.replace(/==(.+?)==/g, '<mark style="background-color:#FFFF00">$1</mark>');
+  // Valid hex color first
+  s = s.replace(/\{#([0-9a-fA-F]{6})\}(.+?)\{\/\}/g, '<span style="color:#$1">$2</span>');
+  // Then strip any remaining {#...}{/} wrappers (invalid hex → render plain)
+  s = s.replace(/\{#[^}]*\}(.+?)\{\/\}/g, '$1');
+  return s;
 }
 
 // Escape HTML special characters

@@ -41,6 +41,7 @@
   /* NavBar 1 */
   --color-navbar1-bg: #222831;
   --color-navbar1-title: #FFFFFF;
+  --color-navbar1-section-title: #F3EED9; /* "Announcements" and similar page section labels */
   --color-navbar1-counter-text-filtered: #002E62;
   --color-navbar1-counter-text-selected: #EB6E1F;
   --color-navbar1-counter-filtered: #EB6E1F;
@@ -341,7 +342,7 @@
 
   /* Memo Colors */
   --color-memo-bg: #FFFFFF;
-  --color-memo-title: #2500E2;
+  --color-memo-title: #283593;
   --color-memo-text: #000000;
   --color-memo-label: #000000;
   --color-memo-shadow: rgba(0, 0, 0, 0.5);
@@ -350,16 +351,19 @@
   --color-memo-overlay-bg: rgba(0, 0, 0, 0.6);
 
   /* Memo Typography */
+  --font-family-memo: 'Lora', Georgia, serif;
+  --line-height-memo: 1.6;
   --font-size-memo-title: 90px;
   --font-weight-memo-title: 600;
-  --font-size-memo-body: 16px;
+  --font-size-memo-body: 18px;
   --font-weight-memo-body: 400;
   --font-size-memo-label: 16px;
   --font-weight-memo-label: 600;
+  --font-size-memo-expires: 14px;
 
   /* Memo Sizing */
-  --width-memo-max: 550px;
-  --height-memo-min: 700px;
+  --width-memo-max: 650px;
+  --height-memo-min: 800px;
   --padding-memo: 40px;
   --size-memo-logo: 40px;
   --top-memo-logo: 20px;

@@ -29,7 +29,7 @@ const MemoDisplay = ({ announcement }) => {
         width: '100%',
         maxHeight: 'calc(80vh - 60px)', // Constrain height to viewport
         boxShadow: '10px 10px 30px var(--color-memo-shadow)',
-        fontFamily: 'var(--font-family-body)',
+        fontFamily: 'var(--font-family-memo)',
       }}
     >
       {/* Fixed header section (doesn't scroll) */}
@@ -73,7 +73,7 @@ const MemoDisplay = ({ announcement }) => {
             fontSize: 'var(--font-size-memo-label)',
             color: 'var(--color-memo-text)',
             marginBottom: '30px',
-            lineHeight: 1.4,
+            lineHeight: 'var(--line-height-memo)',
           }}
         >
           <div className="flex mb-1">
@@ -92,13 +92,20 @@ const MemoDisplay = ({ announcement }) => {
               {toText}
             </span>
           </div>
-          <div className="flex">
-            <span style={{ fontWeight: 'var(--font-weight-memo-label)', width: '80px' }}>
+          <div className="flex flex-1">
+            <span style={{ fontWeight: 'var(--font-weight-memo-label)', width: '80px', flexShrink: 0 }}>
               Subject:
             </span>
-            <span style={{ fontWeight: 'var(--font-weight-memo-body)' }}>
-              {announcement.title}
-            </span>
+            {announcement.title_html ? (
+              <span
+                style={{ fontWeight: 'var(--font-weight-memo-body)', flex: 1 }}
+                dangerouslySetInnerHTML={{ __html: announcement.title_html }}
+              />
+            ) : (
+              <span style={{ fontWeight: 'var(--font-weight-memo-body)' }}>
+                {announcement.title}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -110,12 +117,26 @@ const MemoDisplay = ({ announcement }) => {
           fontSize: 'var(--font-size-memo-body)',
           fontWeight: 'var(--font-weight-memo-body)',
           color: 'var(--color-memo-text)',
-          lineHeight: 1.4,
+          lineHeight: 'var(--line-height-memo)',
           padding: '0 var(--padding-memo) var(--padding-memo) var(--padding-memo)',
           minHeight: '100px',
         }}
-        dangerouslySetInnerHTML={{ __html: announcement.message_html }}
-      />
+      >
+        <div dangerouslySetInnerHTML={{ __html: announcement.message_html }} />
+        {announcement.expiration_date && (
+          <div
+            style={{
+              marginTop: '32px',
+              textAlign: 'right',
+              fontSize: 'var(--font-size-memo-expires)',
+              color: 'var(--color-memo-title)',
+              fontWeight: 'var(--font-weight-memo-body)',
+            }}
+          >
+            Expires: {formatDate(announcement.expiration_date)}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -261,22 +282,27 @@ function AnnouncementDropdown({ announcements, currentIndex, onSelect }) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Trigger button */}
+      {/* Trigger button — mirrors an active NavBar2 button (filled blue + white text),
+          showing the current announcement title the way the Organization search mode
+          shows the selected parent/child org. */}
       <button
         onClick={handleClick}
-        className="font-opensans transition-all duration-200 text-left bg-transparent text-navbar2-btn-inactive-text hover:bg-white/10"
+        className="font-opensans transition-all duration-200 text-left hover:brightness-125 flex items-center gap-1"
         style={{
           height: 'var(--height-navbar2-btn)',
           paddingLeft: 'var(--padding-navbar2-btn-x)',
           paddingRight: 'var(--padding-navbar2-btn-x)',
           borderRadius: 'var(--radius-navbar2-btn)',
-          fontSize: '18px',
+          fontSize: 'var(--font-size-navbar2-btn)',
           fontWeight: 'var(--font-weight-navbar2-btn)',
           letterSpacing: 'var(--letter-spacing-navbar2-btn)',
           whiteSpace: 'nowrap',
+          backgroundColor: 'var(--color-navbar2-btn-active-bg)',
+          color: 'var(--color-navbar2-btn-active-text)',
+          border: 'var(--border-width-btn) solid var(--color-navbar2-btn-active-border)',
         }}
       >
-        Select Announcement
+        {announcements[currentIndex]?.title || 'Select Announcement'}
       </button>
 
       {/* Dropdown panel */}
@@ -455,7 +481,7 @@ const AnnouncementsPage = ({ loggedInUser }) => {
           <span
             className="font-opensans"
             style={{
-              color: 'var(--color-navbar1-title)',
+              color: 'var(--color-navbar1-section-title)',
               fontSize: 'var(--font-size-navbar1-btn)',
               fontWeight: 'var(--font-weight-navbar1-btn)',
               letterSpacing: 'var(--letter-spacing-navbar1-btn)',
