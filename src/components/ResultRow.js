@@ -496,9 +496,13 @@ function ResultRow({
         )}
       </div>
 
-      {/* Organization Column - org name + address (left), transit icon (right) */}
-      <div className="flex flex-row items-start justify-between" style={{ paddingLeft: "20px", gap: "16px" }}>
-        <div className="flex flex-col">
+      {/* Organization Column - org name spans the full column width on its own row.
+          Below it, a flex row with align-items: flex-end places the address on the
+          left and the Bus Route pill on the right; the pill's bottom edge aligns
+          with the bottom of the last address line (no matter how many lines the
+          address wraps to). For virtual orgs with no address the address column is
+          empty, so the pill ends up where the first address line would have been. */}
+      <div style={{ paddingLeft: "20px" }}>
         {/* Organization name - hyperlink to webpage if available */}
         {record.webpage ? (
           <a
@@ -527,72 +531,81 @@ function ResultRow({
             {record.organization}
           </span>
         )}
-        {/* Address below org name with 10px gap - hyperlink to Google Maps if available */}
-        {addressLines.length > 0 && (
-          record.googlemaps ? (
-            <a
-              href={record.googlemaps}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-col hover:underline"
-              style={{
-                marginTop: "10px",
-                fontSize: "var(--font-size-results-default)",
-                fontWeight: "var(--font-weight-results-default)",
-                letterSpacing: "var(--letter-spacing-results-default)",
-                color: "#0066cc",
-                textDecoration: "none",
-              }}
-            >
-              {addressLines.map((line, idx) => (
-                <div key={idx}>{line}</div>
-              ))}
-            </a>
-          ) : (
-            <div
-              className="flex flex-col"
-              style={{
-                marginTop: "10px",
-                fontSize: "var(--font-size-results-default)",
-                fontWeight: "var(--font-weight-results-default)",
-                letterSpacing: "var(--letter-spacing-results-default)",
-              }}
-            >
-              {addressLines.map((line, idx) => (
-                <div key={idx}>{line}</div>
-              ))}
-            </div>
-          )
-        )}
-        </div>
-        {/* Transit directions: outlined pill deep-linking to Google Maps with travelmode=transit.
-            100px right margin so it visually belongs to the Organization column, not the
-            adjacent Assistance icons. */}
-        <a
-          href={buildTransitDirectionsUrl(record, clientCoordinates)}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center rounded-full shrink-0 hover:brightness-125"
+        <div
+          className="flex"
           style={{
-            gap: "6px",
-            padding: "4px 8px",
-            border: `2px solid var(--color-results-transit-icon)`,
-            color: "var(--color-results-transit-icon)",
-            backgroundColor: "transparent",
-            fontSize: "12px",
-            fontWeight: 600,
-            letterSpacing: "0.02em",
-            textDecoration: "none",
-            lineHeight: 1,
-            whiteSpace: "nowrap",
-            marginRight: "100px",
-            marginTop: "30px",
+            alignItems: "flex-end",
+            marginTop: "10px",
+            gap: "16px",
           }}
         >
-          <TransitIcon size={18} />
-          <span>Bus Route</span>
-        </a>
+          {/* Address column (flex:1 pushes the pill to the right edge of the
+              column even when there's no address, and minWidth:0 lets long
+              addresses wrap rather than expand the column). */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {addressLines.length > 0 && (
+              record.googlemaps ? (
+                <a
+                  href={record.googlemaps}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col hover:underline"
+                  style={{
+                    fontSize: "var(--font-size-results-default)",
+                    fontWeight: "var(--font-weight-results-default)",
+                    letterSpacing: "var(--letter-spacing-results-default)",
+                    color: "#0066cc",
+                    textDecoration: "none",
+                  }}
+                >
+                  {addressLines.map((line, idx) => (
+                    <div key={idx}>{line}</div>
+                  ))}
+                </a>
+              ) : (
+                <div
+                  className="flex flex-col"
+                  style={{
+                    fontSize: "var(--font-size-results-default)",
+                    fontWeight: "var(--font-weight-results-default)",
+                    letterSpacing: "var(--letter-spacing-results-default)",
+                  }}
+                >
+                  {addressLines.map((line, idx) => (
+                    <div key={idx}>{line}</div>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+          {/* Transit directions: outlined pill deep-linking to Google Maps with
+              travelmode=transit. 100px right margin keeps it inside the
+              Organization column rather than crowding the Assistance icons. */}
+          <a
+            href={buildTransitDirectionsUrl(record, clientCoordinates)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center rounded-full shrink-0 hover:brightness-125"
+            style={{
+              gap: "6px",
+              padding: "4px 8px",
+              border: `2px solid var(--color-results-transit-icon)`,
+              color: "var(--color-results-transit-icon)",
+              backgroundColor: "transparent",
+              fontSize: "12px",
+              fontWeight: 600,
+              letterSpacing: "0.02em",
+              textDecoration: "none",
+              lineHeight: 1,
+              whiteSpace: "nowrap",
+              marginRight: "100px",
+            }}
+          >
+            <TransitIcon size={18} />
+            <span>Bus Route</span>
+          </a>
+        </div>
       </div>
 
       {/* Assistance Column - icons for all assistance types this org provides */}

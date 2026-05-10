@@ -13,7 +13,8 @@ import {
   AnnouncementsIcon,
   PrivacyPolicyIcon,
   ContactSupportIcon,
-  DistanceIcon,
+  Car1Icon,
+  TransitIcon,
   ChevronDownIcon,
   QuickTipsIcon,
   MedicalPrimaryCareIcon,
@@ -28,6 +29,11 @@ const QUICK_TIPS_TOPICS = [
     content: AssistanceTypesTip,
   },
   {
+    id: "bus-route",
+    title: "Bus Route",
+    content: BusRouteTip,
+  },
+  {
     id: "counters",
     title: "Counters",
     content: CountersTip,
@@ -35,7 +41,7 @@ const QUICK_TIPS_TOPICS = [
   {
     id: "distance",
     title: "Distance",
-    titleIcon: DistanceIcon,
+    titleIcon: Car1Icon,
     content: DistanceTip,
   },
   {
@@ -396,7 +402,7 @@ function DistanceTip() {
           className="inline-flex items-center justify-center rounded p-1"
           style={{ backgroundColor: "var(--color-navbar2-bg)" }}
         >
-          <DistanceIcon size={24} />
+          <Car1Icon size={24} />
         </span>
         <span style={{ color: "var(--color-quicktips-section-body-text)", fontSize: "var(--font-size-quicktips-body)" }}>
           Click to enter a client address for more accurate distances
@@ -405,6 +411,51 @@ function DistanceTip() {
 
       <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
         Results will be sorted by distance from that address.
+      </p>
+    </div>
+  );
+}
+
+function BusRouteTip() {
+  return (
+    <div className="space-y-4">
+      <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
+        Each result row has a <strong>Bus Route</strong> link below the address that opens
+        Google Maps with public-transit directions to the organization.
+      </p>
+
+      <div className="flex items-center gap-3">
+        <span
+          className="inline-flex items-center rounded-full"
+          style={{
+            gap: "6px",
+            padding: "4px 8px",
+            border: "2px solid var(--color-results-transit-icon)",
+            color: "var(--color-results-transit-icon)",
+            backgroundColor: "transparent",
+            fontSize: "12px",
+            fontWeight: 600,
+            letterSpacing: "0.02em",
+            lineHeight: 1,
+            whiteSpace: "nowrap",
+          }}
+        >
+          <TransitIcon size={18} />
+          <span>Bus Route</span>
+        </span>
+        <span style={{ color: "var(--color-quicktips-section-body-text)", fontSize: "var(--font-size-quicktips-body)" }}>
+          Opens transit directions in Google Maps
+        </span>
+      </div>
+
+      <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
+        If you've entered a client address in the <strong>Distance</strong> panel,
+        that address is used as the starting point. Otherwise Google Maps prompts
+        the rider for an origin.
+      </p>
+
+      <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
+        The same Bus Route link is included in emails and PDFs sent from the app.
       </p>
     </div>
   );
@@ -597,7 +648,7 @@ function ResultsTip() {
             className="inline-flex items-center justify-center ml-1 rounded"
             style={{ backgroundColor: "var(--color-navbar2-bg)", padding: "2px 4px" }}
           >
-            <DistanceIcon size={14} />
+            <Car1Icon size={14} />
           </span>
         </span>
       </div>

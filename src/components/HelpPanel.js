@@ -13,7 +13,7 @@ import {
   AnnouncementsIcon,
   PrivacyPolicyIcon,
   ContactSupportIcon,
-  DistanceIcon,
+  Car1Icon,
   FoodPantriesIcon,
   RentIcon,
   UtilitiesIcon,
@@ -78,7 +78,7 @@ const ICON_MAP = {
   // Distance icon
   "[[DISTANCE_ICON]]": (
     <span className="inline-flex items-center justify-center rounded" style={{ backgroundColor: "var(--color-navbar2-bg)", padding: "2px 4px" }}>
-      <DistanceIcon size={20} />
+      <Car1Icon size={20} />
     </span>
   ),
 
