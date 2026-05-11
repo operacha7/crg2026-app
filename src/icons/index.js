@@ -25,6 +25,7 @@ export { ChevronRightIcon } from './ChevronRightIcon';
 export { ChevronDownIcon } from './ChevronDownIcon';
 export { FunnelIcon } from './FunnelIcon';
 export { MapPinIcon } from './MapPinIcon';
+export { HomeMarkerIcon } from './HomeMarkerIcon';
 
 // currentColor icons (inherit color from CSS)
 export { RentIcon } from './RentIcon';

@@ -3,22 +3,45 @@
 // Shows Assistance button + selected assistance type chips + dropdown panel
 // Fetches assistance types from Supabase for dynamic/evergreen groups
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { dataService } from "../services/dataService";
 import { getIconByName } from "../icons/iconMap";
 import { useAppData } from "../Contexts/AppDataContext";
 import { logUsage } from "../services/usageService";
+import AddressChipButton from "../components/AddressChipButton";
+
+// Search-mode constants — must match the values used in AppDataContext / NavBar2
+const SEARCH_MODES = {
+  ZIPCODE: "zipcode",
+  ORGANIZATION: "organization",
+  LOCATION: "location",
+  LLM: "llm",
+};
 
 const MAX_INDIVIDUAL_SELECTIONS = 3;
 
-// Group colors for the 6 groups (unselected state)
-const GROUP_COLORS = {
-  1: "var(--color-assistance-group1)",
-  2: "var(--color-assistance-group2)",
-  3: "var(--color-assistance-group3)",
-  4: "var(--color-assistance-group4)",
-  5: "var(--color-assistance-group5)",
-  6: "var(--color-assistance-group6)",
+// Panel columns are grouped by the `category` field on each assistance row —
+// the same field HomePage uses — so the panel mirrors the homepage layout.
+// Column order matches the homepage (left-to-right): Basic Needs → Housing →
+// Medical → Family & Education → Life & Community.
+//
+// Color reuses the existing --color-assistance-group* tokens so we don't
+// fork the palette. Life & Community reuses Group 6's orange (per user) and
+// is the only double-width column because it has the most assistance types.
+const CATEGORY_ORDER = [
+  "Basic Needs",
+  "Housing",
+  "Medical",
+  "Family & Education",
+  "Life & Community",
+];
+
+const CATEGORY_COLORS = {
+  "Basic Needs":        "var(--color-assistance-group1)",
+  "Housing":            "var(--color-assistance-group2)",
+  "Medical":            "var(--color-assistance-group3)",
+  "Family & Education": "var(--color-assistance-group4)",
+  "Life & Community":   "var(--color-assistance-group6)",
 };
 
 // Assistance button - changes text based on whether chips exist
@@ -89,16 +112,16 @@ function AssistanceButton({ hasSelections, onClick, buttonRef }) {
       <button
         ref={buttonRef}
         onClick={onClick}
-        className="font-opensans transition-all duration-200 flex items-center gap-2 hover:brightness-125 cursor-pointer"
+        className="font-opensans transition-all duration-200 flex items-center gap-2 hover:brightness-125 cursor-pointer flex-shrink-0"
         style={{
           height: "var(--height-navbar3-btn)",
-          minWidth: "var(--min-width-choose-btn)",
           paddingLeft: "var(--padding-navbar2-btn-x)",
           paddingRight: "var(--padding-navbar2-btn-x)",
           borderRadius: "var(--radius-navbar2-btn)",
           fontSize: "var(--font-size-navbar2-btn)",
           fontWeight: "var(--font-weight-navbar2-btn)",
           letterSpacing: "var(--letter-spacing-navbar2-btn)",
+          whiteSpace: "nowrap",
           ...stateStyles[buttonState],
           ...animationStyles,
         }}
@@ -179,78 +202,68 @@ function PanelTypeButton({ name, icon, groupColor, isSelected, onClick, disabled
         letterSpacing: "var(--letter-spacing-assistance-chip)",
         fontWeight: "500",
         border: isSelected ? "1px solid var(--color-assistance-selected-border)" : "1px solid transparent",
-        whiteSpace: "nowrap",
         width: "100%",
+        // min-width:0 lets the flex item shrink to its declared 100% width;
+        // without it, intrinsic content width (long names like
+        // "Medical - Program Enrollment") would push the chip past the
+        // column edge and into the next column. The ellipsis span below
+        // then truncates the visible text cleanly.
+        minWidth: 0,
         textAlign: "center",
       }}
     >
       {IconComponents.map((IconComp, idx) => (
         <IconComp key={idx} size={25} />
       ))}
-      {name}
+      <span
+        style={{
+          minWidth: 0,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {name}
+      </span>
     </button>
   );
 }
 
-// Group button - toggles all items in group
-function GroupButton({ name, color, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className="font-opensans transition-all duration-200 hover:brightness-110"
-      style={{
-        backgroundColor: color,
-        color: "var(--color-assistance-text)",
-        width: "100%", // Match column width (widest chip determines size)
-        height: "var(--height-assistance-group-btn)",
-        borderRadius: "var(--radius-assistance-chip)",
-        fontSize: "var(--font-size-assistance-chip)",
-        letterSpacing: "var(--letter-spacing-assistance-chip)",
-        fontWeight: "700",
-      }}
-    >
-      {name}
-    </button>
-  );
-}
-
-// Helper: Group assistance data by group number
+// Helper: Group assistance data by `category` (mirrors HomePage). Categories
+// are returned in CATEGORY_ORDER; unknown categories (defensive — shouldn't
+// happen with current data) are appended at the end so types never disappear
+// if the data introduces a new category before the code is updated.
 function groupAssistanceData(assistanceList) {
-  const groups = {};
+  const byCategory = new Map();
 
   assistanceList.forEach((item) => {
-    const groupNum = item.group;
-    if (!groups[groupNum]) {
-      groups[groupNum] = {
-        id: groupNum,
-        name: `Group ${groupNum}`,
-        color: GROUP_COLORS[groupNum] || GROUP_COLORS[1],
+    const category = item.category;
+    if (!category) return; // Skip rows missing a category — they can't be placed.
+    if (!byCategory.has(category)) {
+      byCategory.set(category, {
+        id: category,
+        name: category,
+        color: CATEGORY_COLORS[category] || "var(--color-assistance-group1)",
         types: [],
-      };
+      });
     }
-    // Use assist_id from assistance table - matches directory.assist_id (both text)
-    groups[groupNum].types.push({
+    byCategory.get(category).types.push({
       id: item.assist_id, // Text field, matches directory.assist_id
       name: item.assistance,
       icon: item.icon,
     });
   });
 
-  // Convert to array and sort by group number
-  return Object.values(groups).sort((a, b) => a.id - b.id);
-}
-
-// Helper: Check if selections represent a full single group
-function isFullGroupSelected(selectedIds, groups) {
-  for (const group of groups) {
-    const groupTypeIds = group.types.map((t) => t.id);
-    const allSelected = groupTypeIds.every((id) => selectedIds.includes(id));
-    const onlyThisGroup = selectedIds.every((id) => groupTypeIds.includes(id));
-    if (allSelected && onlyThisGroup && groupTypeIds.length > 0) {
-      return group.id;
+  // Emit known categories first in the homepage order, then any unknown ones.
+  const ordered = [];
+  CATEGORY_ORDER.forEach((cat) => {
+    if (byCategory.has(cat)) {
+      ordered.push(byCategory.get(cat));
+      byCategory.delete(cat);
     }
-  }
-  return null;
+  });
+  byCategory.forEach((group) => ordered.push(group));
+  return ordered;
 }
 
 // Dropdown Panel Component
@@ -259,24 +272,111 @@ function AssistancePanel({
   groups,
   selectedIds,
   onTypeToggle,
-  onGroupToggle,
   onSave,
   onClear,
   panelRef,
 }) {
+  // Scroll-hint state. canScrollUp/Down track whether there's hidden content
+  // above or below the visible scroll area; `bouncing` triggers a one-time
+  // pulse on the bottom chip when the panel first opens with overflow —
+  // that's the cue users were missing ("am I supposed to do something else?").
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+  const [bouncing, setBouncing] = useState(false);
+
+  // Local ref for scroll tracking. The parent (NavBar3) renders AssistancePanel
+  // TWICE — once in the desktop branch, once in the mobile branch — both
+  // attached to the same `panelRef`. Whichever mounts second wins, so the
+  // external panelRef can point at the hidden (display:none) variant. We use
+  // a local ref here so each instance tracks scroll on its *own* div, then
+  // forward to panelRef via callback ref so click-outside detection still works.
+  const localScrollRef = useRef(null);
+  const setRefs = useCallback(
+    (el) => {
+      localScrollRef.current = el;
+      if (typeof panelRef === "function") panelRef(el);
+      else if (panelRef) panelRef.current = el;
+    },
+    [panelRef]
+  );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const el = localScrollRef.current;
+    if (!el) return;
+    // Note: we don't filter the hidden variant here. `offsetParent` is null
+    // for any `position: fixed` element regardless of visibility, so it isn't
+    // a reliable "am I rendered?" check. Instead we rely on the math —
+    // the hidden variant has clientHeight=0/scrollHeight=0, so canScrollDown
+    // computes to false and its indicator never renders.
+
+    let bounceTimeout;
+    const checkScroll = () => {
+      setCanScrollUp(el.scrollTop > 8);
+      setCanScrollDown(el.scrollHeight - el.scrollTop - el.clientHeight > 8);
+    };
+
+    // Defer first check until after content has laid out, so scrollHeight is accurate.
+    const raf = requestAnimationFrame(() => {
+      checkScroll();
+      if (el.scrollHeight - el.clientHeight > 8) {
+        setBouncing(true);
+        bounceTimeout = setTimeout(() => setBouncing(false), 2400);
+      }
+    });
+
+    el.addEventListener("scroll", checkScroll, { passive: true });
+    // ResizeObserver covers viewport resizes and dynamic content height changes
+    // (e.g., chip wrap reflow when the user resizes the window mid-session).
+    const ro = new ResizeObserver(checkScroll);
+    ro.observe(el);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      if (bounceTimeout) clearTimeout(bounceTimeout);
+      el.removeEventListener("scroll", checkScroll);
+      ro.disconnect();
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  const fullGroupId = isFullGroupSelected(selectedIds, groups);
-  const isInFullGroupMode = fullGroupId !== null;
   const selectionCount = selectedIds.length;
+  const atLimit = selectionCount >= MAX_INDIVIDUAL_SELECTIONS;
+
+  // Click handlers for the scroll-hint chips — clicking nudges the panel
+  // ~280px (roughly one chip-row's worth) in the indicated direction.
+  // Uses localScrollRef so each instance scrolls its own div (panelRef can
+  // point at the inactive variant — see ref-wiring comment above).
+  const scrollDown = () => localScrollRef.current?.scrollBy({ top: 280, behavior: "smooth" });
+  const scrollUp = () => localScrollRef.current?.scrollBy({ top: -280, behavior: "smooth" });
+
+  const scrollHintPillStyle = {
+    backgroundColor: "var(--color-panel-header-bg)",
+    color: "var(--color-panel-title)",
+    padding: "8px 18px",
+    borderRadius: "999px",
+    fontSize: "13px",
+    fontWeight: 600,
+    letterSpacing: "0.02em",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.35)",
+    border: "1px solid rgba(255, 255, 255, 0.15)",
+    cursor: "pointer",
+    pointerEvents: "auto",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    whiteSpace: "nowrap",
+    fontFamily: "'Open Sans', sans-serif",
+  };
 
   return (
     <div
-      ref={panelRef}
+      ref={setRefs}
       className="fixed mt-2 shadow-xl z-50 overflow-auto"
       style={{
         borderRadius: "var(--radius-panel)",
-        width: "min(1300px, calc(100vw - 32px))", // Responsive: max 1300px or screen width - 32px
+        width: "min(1200px, calc(100vw - 32px))", // Responsive: max 1200px or screen width - 32px
         maxHeight: "calc(100dvh - 230px)", // Leave room for navbars (dvh handles mobile URL bar)
         left: "16px",
         right: "16px",
@@ -287,6 +387,46 @@ function AssistancePanel({
       onMouseDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
     >
+      <style>{`
+        @keyframes scrollHintBounce {
+          0%, 100% { transform: translate(-50%, 0); }
+          50%      { transform: translate(-50%, -7px); }
+        }
+      `}</style>
+
+      {/* Top scroll hint — appears once the user has scrolled past the top.
+          Rendered inside a zero-height sticky wrapper so toggling visibility
+          doesn't shift content. The pill is absolute-positioned at the top
+          of the visible scroll area. pointer-events: none on the wrapper
+          lets clicks fall through; the pill itself re-enables pointer-events
+          so the click-to-scroll button still works. */}
+      {canScrollUp && (
+        <div
+          style={{
+            position: "sticky",
+            top: 0,
+            height: 0,
+            zIndex: 20,
+            pointerEvents: "none",
+          }}
+        >
+          <button
+            type="button"
+            onClick={scrollUp}
+            style={{
+              ...scrollHintPillStyle,
+              position: "absolute",
+              top: "12px",
+              left: "50%",
+              transform: "translateX(-50%)",
+            }}
+          >
+            <span style={{ fontSize: "16px", lineHeight: 1 }}>↑</span>
+            Scroll up
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div
         className="flex flex-col items-center justify-center"
@@ -316,7 +456,7 @@ function AssistancePanel({
             letterSpacing: "var(--letter-spacing-panel-subtitle)",
           }}
         >
-          (Select one Group or up to three Assistance Types)
+          (Select up to 3 assistance types)
         </p>
       </div>
 
@@ -324,52 +464,74 @@ function AssistancePanel({
       <div
         style={{
           backgroundColor: "var(--color-panel-body-bg)",
+          // 20px uniform padding — halved from the prior 40px horizontal so
+          // chip columns sit closer to the panel edge. The extra horizontal
+          // room is reclaimed via the column gap below.
           padding: "20px",
         }}
       >
-        {/* Groups grid - wraps on smaller screens */}
-        <div className="flex flex-wrap gap-4 justify-center">
-          {groups.map((group) => {
-            // Determine if this group's items should be disabled
-            const isGroupDisabled = isInFullGroupMode && fullGroupId !== group.id;
-
-            return (
-              <div key={group.id} className="flex flex-col items-stretch">
-                <GroupButton
-                  name={group.name}
-                  color={group.color}
-                  onClick={() => onGroupToggle(group.id)}
-                />
-                <div className="mt-3 space-y-2">
-                  {group.types.map((type) => {
-                    const isSelected = selectedIds.includes(type.id);
-
-                    // Can select if:
-                    // 1. Already selected (can always deselect)
-                    // 2. In full group mode for THIS group
-                    // 3. Not in full group mode and under the limit
-                    const canSelect = isSelected ||
-                      (isInFullGroupMode && fullGroupId === group.id) ||
-                      (!isInFullGroupMode && selectionCount < MAX_INDIVIDUAL_SELECTIONS);
-
-                    const isDisabled = isGroupDisabled || (!isSelected && !canSelect);
-
-                    return (
-                      <PanelTypeButton
-                        key={type.id}
-                        name={type.name}
-                        icon={type.icon}
-                        groupColor={group.color}
-                        isSelected={isSelected}
-                        onClick={() => onTypeToggle(type.id, group.id)}
-                        disabled={isDisabled}
-                      />
-                    );
-                  })}
-                </div>
+        {/* Category columns — mirrors HomePage grouping. Each column is
+            sized to fit its widest chip via `width: max-content`, so chip
+            labels are never truncated. The 1fr inner grid makes every chip
+            in a column the same width (= the column width). Heading pill
+            stretches to the column width via width:100%. flex-wrap means
+            narrow viewports reflow columns onto multiple rows. */}
+        <div
+          className="flex flex-wrap justify-center"
+          style={{ gap: "20px" }}
+        >
+          {groups.map((group) => (
+            <div
+              key={group.id}
+              className="flex flex-col items-stretch"
+              style={{ width: "max-content" }}
+            >
+              <div
+                className="font-opensans flex items-center justify-center"
+                style={{
+                  backgroundColor: group.color,
+                  color: "var(--color-assistance-text)",
+                  width: "100%",
+                  height: "var(--height-assistance-group-btn)",
+                  // Horizontal padding so the heading text doesn't touch the
+                  // pill edge when a category has only short chips (e.g. Basic
+                  // Needs) and the heading itself drives the column width.
+                  padding: "0 16px",
+                  borderRadius: "var(--radius-assistance-chip)",
+                  fontSize: "var(--font-size-assistance-chip)",
+                  letterSpacing: "var(--letter-spacing-assistance-chip)",
+                  fontWeight: "500",
+                }}
+              >
+                {group.name}
               </div>
-            );
-          })}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr",
+                  gap: "20px",
+                  marginTop: "20px",
+                }}
+              >
+                {group.types.map((type) => {
+                  const isSelected = selectedIds.includes(type.id);
+                  // Already-selected types can always be toggled off; otherwise gate on the cap.
+                  const isDisabled = !isSelected && atLimit;
+                  return (
+                    <PanelTypeButton
+                      key={type.id}
+                      name={type.name}
+                      icon={type.icon}
+                      groupColor={group.color}
+                      isSelected={isSelected}
+                      onClick={() => onTypeToggle(type.id, group.id)}
+                      disabled={isDisabled}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Footer with buttons - closer together on mobile */}
@@ -407,6 +569,37 @@ function AssistancePanel({
           </button>
         </div>
       </div>
+
+      {/* Bottom scroll hint — visible whenever content extends below the
+          fold. Bounces 3× when the panel first opens with overflow, then
+          stays static. Same zero-height sticky pattern as the top hint. */}
+      {canScrollDown && (
+        <div
+          style={{
+            position: "sticky",
+            bottom: 0,
+            height: 0,
+            zIndex: 20,
+            pointerEvents: "none",
+          }}
+        >
+          <button
+            type="button"
+            onClick={scrollDown}
+            style={{
+              ...scrollHintPillStyle,
+              position: "absolute",
+              bottom: "12px",
+              left: "50%",
+              transform: "translate(-50%, 0)",
+              animation: bouncing ? "scrollHintBounce 0.7s ease-in-out 3" : "none",
+            }}
+          >
+            <span style={{ fontSize: "16px", lineHeight: 1 }}>↓</span>
+            Scroll for more
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -418,6 +611,22 @@ export default function NavBar3() {
     setActiveAssistanceChips,
     loggedInUser,
     activeSearchMode,
+    // Filter state from each search mode — used to gate the Address chip
+    selectedZipCode,
+    selectedParentOrg,
+    selectedChildOrg,
+    selectedLocationCounty,
+    selectedLocationCity,
+    selectedLocationZip,
+    selectedLocationNeighborhood,
+    llmSearchFilters,
+    // Custom-address state — Address chip reads/writes these
+    clientAddress,
+    clientCoordinates,
+    setClientAddress,
+    setClientCoordinates,
+    // Zip data — used to pre-fill the centroid in the Distance panel for Zip mode
+    zipCodes,
     // Quick Tips state for auto-opening on first multi-selection
     setQuickTipsOpen,
     setQuickTipsExpandedSection,
@@ -425,6 +634,68 @@ export default function NavBar3() {
     setQuickTipsShownThisSession,
     setQuickTipsHighlightChipToggle,
   } = useAppData();
+
+  // ---- Address chip gating ----
+  // Enabled when (a) the active search mode has a filter selection AND (b) exactly 1 assistance chip is active.
+  // LLM mode is the exception: a submitted question is enough (no assistance type required).
+  // Reason: prevents triggering a large geocoding + Distance Matrix lookup against unfiltered results.
+  const hasFilterSelection = useMemo(() => {
+    switch (activeSearchMode) {
+      case SEARCH_MODES.ZIPCODE:
+        return !!selectedZipCode;
+      case SEARCH_MODES.ORGANIZATION:
+        return !!selectedParentOrg || !!selectedChildOrg;
+      case SEARCH_MODES.LOCATION:
+        return !!selectedLocationCounty || !!selectedLocationCity
+          || !!selectedLocationZip || !!selectedLocationNeighborhood;
+      case SEARCH_MODES.LLM:
+        return llmSearchFilters != null;
+      default:
+        return false;
+    }
+  }, [
+    activeSearchMode,
+    selectedZipCode,
+    selectedParentOrg,
+    selectedChildOrg,
+    selectedLocationCounty,
+    selectedLocationCity,
+    selectedLocationZip,
+    selectedLocationNeighborhood,
+    llmSearchFilters,
+  ]);
+
+  const hasOneAssistance = activeAssistanceChips.size === 1;
+
+  const addressDisabled = activeSearchMode === SEARCH_MODES.LLM
+    ? !hasFilterSelection
+    : !(hasFilterSelection && hasOneAssistance);
+
+  let addressTooltip;
+  if (!addressDisabled) {
+    addressTooltip = "Enter Address for distances & Bus Routes";
+  } else if (activeSearchMode === SEARCH_MODES.LLM) {
+    addressTooltip = "Ask a question to enable address entry";
+  } else if (!hasFilterSelection && !hasOneAssistance) {
+    addressTooltip = "Make a search filter selection and select one assistance type";
+  } else if (!hasFilterSelection) {
+    addressTooltip = "Make a selection from the search filter to enable address entry";
+  } else {
+    addressTooltip = "Select one assistance type to enable address entry";
+  }
+
+  // Centroid pre-fill for the Distance panel — only meaningful in Zip / Location modes
+  const addressDefaultCoordinates = useMemo(() => {
+    const zip = selectedZipCode || selectedLocationZip;
+    if (!zip || !zipCodes) return "";
+    const match = zipCodes.find((z) => z.zip_code === zip);
+    return match?.coordinates || "";
+  }, [selectedZipCode, selectedLocationZip, zipCodes]);
+
+  const handleAddressChange = (address, coordinates) => {
+    setClientAddress(address);
+    setClientCoordinates(coordinates);
+  };
 
   // Get organization name for logging
   const regOrgName = loggedInUser?.reg_organization || 'Guest';
@@ -558,51 +829,18 @@ export default function NavBar3() {
     }
   };
 
-  // Handle type toggle in panel
-  const handleTypeToggle = (typeId, groupId) => {
+  // Handle type toggle in panel. Already-selected types can always be deselected;
+  // otherwise the user can add up to MAX_INDIVIDUAL_SELECTIONS individual types.
+  const handleTypeToggle = (typeId) => {
     setTempSelections((prev) => {
-      const isCurrentlySelected = prev.includes(typeId);
-
-      if (isCurrentlySelected) {
+      if (prev.includes(typeId)) {
         return prev.filter((id) => id !== typeId);
-      } else {
-        const fullGroupId = isFullGroupSelected(prev, groups);
-
-        if (fullGroupId) {
-          if (groupId !== fullGroupId) {
-            return prev;
-          }
-          return [...prev, typeId];
-        } else {
-          if (prev.length >= MAX_INDIVIDUAL_SELECTIONS) {
-            return prev;
-          }
-          return [...prev, typeId];
-        }
       }
+      if (prev.length >= MAX_INDIVIDUAL_SELECTIONS) {
+        return prev;
+      }
+      return [...prev, typeId];
     });
-  };
-
-  // Handle group toggle in panel
-  const handleGroupToggle = (groupId) => {
-    const group = groups.find((g) => g.id === groupId);
-    if (!group) return;
-
-    const groupTypeIds = group.types.map((t) => t.id);
-    const allInGroupSelected = groupTypeIds.every((id) => tempSelections.includes(id));
-
-    if (allInGroupSelected) {
-      // Deselect all in this group
-      setTempSelections((prev) => prev.filter((id) => !groupTypeIds.includes(id)));
-    } else {
-      // Check if we're in full group mode for another group
-      const fullGroupId = isFullGroupSelected(tempSelections, groups);
-      if (fullGroupId && fullGroupId !== groupId) {
-        return;
-      }
-      // Select all in this group (replaces current selections)
-      setTempSelections(groupTypeIds);
-    }
   };
 
   // Handle save
@@ -689,12 +927,15 @@ export default function NavBar3() {
           paddingRight: "var(--padding-navbar1-right)",
         }}
       >
-        {/* Left side: Assistance button and chips */}
-        <div className="flex items-center flex-1 min-w-0">
+        {/* Left side: Assistance button → chips → Address chip.
+            The Address chip sits after the last assistance chip with the
+            same gap as the button→first-chip gap so the whole row reads as
+            one cluster. */}
+        <div className="flex items-center min-w-0">
           {/* Assistance button container */}
           <div
             ref={containerRef}
-            className="relative"
+            className="relative flex-shrink-0"
           >
             <AssistanceButton
               hasSelections={savedSelections.length > 0}
@@ -707,7 +948,6 @@ export default function NavBar3() {
               groups={groups}
               selectedIds={tempSelections}
               onTypeToggle={handleTypeToggle}
-              onGroupToggle={handleGroupToggle}
               onSave={handleSave}
               onClear={handleClear}
               panelRef={panelRef}
@@ -717,7 +957,7 @@ export default function NavBar3() {
           {/* Chips - use smaller font/icons when 6+ selections to prevent wrapping */}
           {savedSelections.length > 0 && (
             <div
-              className="flex items-center"
+              className="flex items-center flex-shrink-0"
               style={{
                 marginLeft: "var(--gap-navbar3-button-chips)",
                 gap: savedSelections.length >= 6 ? "8px" : "var(--gap-navbar3-chips)",
@@ -740,20 +980,40 @@ export default function NavBar3() {
               })}
             </div>
           )}
+
+          {/* Address chip — same gap from the previous element as
+              button→first-chip, so it reads as the next item in the cluster. */}
+          <div style={{ marginLeft: "var(--gap-navbar3-button-chips)", flexShrink: 0 }}>
+            <AddressChipButton
+              isActive={!!clientCoordinates}
+              defaultCoordinates={addressDefaultCoordinates}
+              clientAddress={clientAddress}
+              clientCoordinates={clientCoordinates}
+              onCoordinatesChange={handleAddressChange}
+              disabled={addressDisabled}
+              tooltipText={addressTooltip}
+            />
+          </div>
         </div>
 
-        {/* Right side: Logged-in user */}
-        <span
-          className="font-handlee flex-shrink-0 ml-4"
+        {/* Right: logged-in org / Guest name. min-width:0 + overflow:hidden
+            lets long names truncate at narrow viewports instead of forcing
+            the left cluster off-screen. */}
+        <div
+          className="font-handlee"
           style={{
             color: "var(--color-navbar3-user-text, #FFFFFF)",
             fontSize: "var(--font-size-navbar3-user)",
             letterSpacing: ".05em",
             whiteSpace: "nowrap",
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            marginLeft: "16px",
           }}
         >
           {displayName}
-        </span>
+        </div>
       </div>
 
       {/* ========== MOBILE LAYOUT (<md) ========== */}
@@ -793,7 +1053,6 @@ export default function NavBar3() {
               groups={groups}
               selectedIds={tempSelections}
               onTypeToggle={handleTypeToggle}
-              onGroupToggle={handleGroupToggle}
               onSave={handleSave}
               onClear={handleClear}
               panelRef={panelRef}

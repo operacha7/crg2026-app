@@ -3,9 +3,7 @@
 // Frame 496 from Figma design
 
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { Car1Icon } from "../icons";
 import Tooltip from "../components/Tooltip";
-import DistancePanel from "../components/DistancePanel";
 import { useAppData } from "../Contexts/AppDataContext";
 import { logUsage } from "../services/usageService";
 import { searchWithLLM } from "../services/llmSearchService";
@@ -857,7 +855,8 @@ function NeighborhoodLink({ text = "Braeswood Place, Knollwood Village", zipLink
       >
         {text}
       </span>
-      {zipLink && (
+      {/* Hidden per user request — leave intact for easy reinstatement */}
+      {false && zipLink && (
         <Tooltip text="Zip code map and demographics">
           <a
             href={zipLink}
@@ -878,119 +877,22 @@ function NeighborhoodLink({ text = "Braeswood Place, Knollwood Village", zipLink
   );
 }
 
-// Distance icon button with panel
-function DistanceButtonWithPanel({
-  isActive = false,
-  defaultCoordinates = "",
-  onCoordinatesChange,
-  clientAddress = "",
-  clientCoordinates = "",
-  disabled = false,
-}) {
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const panelRef = useRef(null);
-  const buttonRef = useRef(null);
-
-  // Handle click outside to close panel
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (!isPanelOpen) return;
-
-      const isOutsidePanel = panelRef.current && !panelRef.current.contains(event.target);
-      const isOutsideButton = buttonRef.current && !buttonRef.current.contains(event.target);
-
-      if (isOutsidePanel && isOutsideButton) {
-        setIsPanelOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isPanelOpen]);
-
-  const handleToggle = () => {
-    if (disabled) return;
-    setIsPanelOpen(!isPanelOpen);
-  };
-
-  const handleCancel = () => {
-    setIsPanelOpen(false);
-  };
-
-  const handleSave = ({ address, coordinates }) => {
-    onCoordinatesChange?.(address, coordinates);
-    setIsPanelOpen(false);
-  };
-
-  const tooltipText = disabled
-    ? "Select one Assistance Type to enable driving distance"
-    : "Driving Distance from client";
-
-  return (
-    <div className="relative">
-      <Tooltip text={tooltipText}>
-        <button
-          ref={buttonRef}
-          onClick={handleToggle}
-          className={`
-            flex items-center justify-center transition-all duration-200
-            ${disabled
-              ? "opacity-30 cursor-not-allowed"
-              : isActive
-                ? "hover:brightness-125"
-                : "bg-transparent hover:bg-white/10"
-            }
-          `}
-          style={{
-            height: "auto",
-            width: "auto",
-            padding: "0px 6px",
-            borderRadius: "var(--radius-navbar2-btn)",
-            marginLeft: "15px",
-            flexShrink: 0,
-            ...(isActive && !disabled ? {
-              backgroundColor: "var(--color-navbar2-btn-active-bg)",
-              border: "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)",
-            } : {}),
-          }}
-        >
-          <Car1Icon size={22} active={isActive} />
-        </button>
-      </Tooltip>
-
-      <DistancePanel
-        isOpen={isPanelOpen}
-        onCancel={handleCancel}
-        onSave={handleSave}
-        panelRef={panelRef}
-        defaultCoordinates={defaultCoordinates}
-        currentAddress={clientAddress}
-        currentCoordinates={clientCoordinates}
-      />
-    </div>
-  );
-}
-
 // Filter content for each search mode
 function ZipCodeFilters({
   selectedZip,
   onZipChange,
   zipCodeOptions,
   selectedZipData,
-  clientAddress,
-  clientCoordinates,
-  onCoordinatesChange,
-  distanceDisabled,
 }) {
   // Get neighborhood text for selected zip
   const neighborhoodText = selectedZipData?.neighborhood || "";
-  // Get default coordinates (zip centroid)
-  const defaultCoordinates = selectedZipData?.coordinates || "";
 
   return (
-    <>
+    <Tooltip
+      text={selectedZip && neighborhoodText ? `Neighborhoods: ${neighborhoodText}` : ""}
+      position="bottom"
+      multiline
+    >
       <ZipCodeDropdown
         value={selectedZip}
         onChange={onZipChange}
@@ -999,16 +901,7 @@ function ZipCodeFilters({
         useDropdownStyle={true}
         usePromptingStyle={true}
       />
-      {selectedZip && neighborhoodText && <NeighborhoodLink text={neighborhoodText} zipLink={selectedZipData?.zip_link} />}
-      <DistanceButtonWithPanel
-        isActive={!!clientCoordinates}
-        defaultCoordinates={defaultCoordinates}
-        clientAddress={clientAddress}
-        clientCoordinates={clientCoordinates}
-        onCoordinatesChange={onCoordinatesChange}
-        disabled={distanceDisabled}
-      />
-    </>
+    </Tooltip>
   );
 }
 
@@ -1019,10 +912,6 @@ function OrganizationFilters({
   setSelectedParent,
   selectedChild,
   setSelectedChild,
-  clientAddress,
-  clientCoordinates,
-  onCoordinatesChange,
-  distanceDisabled,
 }) {
   // Filter child orgs based on selected parent
   const childOrgOptions = useMemo(() => {
@@ -1053,13 +942,6 @@ function OrganizationFilters({
         onChange={setSelectedChild}
         allowReset={true}
       />
-      <DistanceButtonWithPanel
-        isActive={!!clientCoordinates}
-        clientAddress={clientAddress}
-        clientCoordinates={clientCoordinates}
-        onCoordinatesChange={onCoordinatesChange}
-        disabled={distanceDisabled}
-      />
     </>
   );
 }
@@ -1075,10 +957,6 @@ function LocationFilters({
   setSelectedCity,
   selectedNeighborhood,
   setSelectedNeighborhood,
-  clientAddress,
-  clientCoordinates,
-  onCoordinatesChange,
-  distanceDisabled,
 }) {
 
   // Get unique counties
@@ -1132,10 +1010,6 @@ function LocationFilters({
     return neighborhoods.sort();
   }, [directory, selectedLocationZip, selectedCity, selectedCounty]);
 
-  // Get data for selected zip (for coordinates)
-  const selectedZipData = zipCodes.find(z => z.zip_code === selectedLocationZip);
-  const defaultCoordinates = selectedZipData?.coordinates || "";
-
   return (
     <>
       <FilterDropdown
@@ -1178,14 +1052,6 @@ function LocationFilters({
         onChange={setSelectedNeighborhood}
         allowReset={true}
       />
-      <DistanceButtonWithPanel
-        isActive={!!clientCoordinates}
-        defaultCoordinates={defaultCoordinates}
-        clientAddress={clientAddress}
-        clientCoordinates={clientCoordinates}
-        onCoordinatesChange={onCoordinatesChange}
-        disabled={distanceDisabled}
-      />
     </>
   );
 }
@@ -1198,10 +1064,6 @@ function LLMFilters({
   isLoading,
   interpretation,
   error,
-  clientAddress,
-  clientCoordinates,
-  onCoordinatesChange,
-  distanceDisabled,
 }) {
   return (
     <>
@@ -1213,14 +1075,6 @@ function LLMFilters({
         isLoading={isLoading}
         interpretation={interpretation}
         error={error}
-      />
-      <DistanceButtonWithPanel
-        isActive={!!clientCoordinates}
-        defaultCoordinates=""
-        clientAddress={clientAddress}
-        clientCoordinates={clientCoordinates}
-        onCoordinatesChange={onCoordinatesChange}
-        disabled={distanceDisabled}
       />
     </>
   );
@@ -1248,13 +1102,11 @@ export default function NavBar2() {
     setSelectedLocationCity,
     selectedLocationNeighborhood,
     setSelectedLocationNeighborhood,
-    activeAssistanceChips,
     setActiveAssistanceChips,
     directory,
-    // Client coordinates from context (shared with ZipCodePage for distance calc)
-    clientAddress,
+    // Client coordinates from context — Address chip lives in NavBar3 now, but
+    // we still clear these here when the search mode changes.
     setClientAddress,
-    clientCoordinates,
     setClientCoordinates,
     // LLM Search state
     assistance,
@@ -1315,12 +1167,6 @@ export default function NavBar2() {
     setPendingLlmAutoSearch(false);
     handleLLMSearchRef.current?.(llmSearchQuery);
   }, [pendingLlmAutoSearch, assistance, zipCodes, llmSearchQuery, setPendingLlmAutoSearch]);
-
-  // Handler for coordinates change from Distance panel
-  const handleCoordinatesChange = (address, coordinates) => {
-    setClientAddress(address);
-    setClientCoordinates(coordinates);
-  };
 
   // Handler to switch modes - clears all filter state including client coordinates
   const handleModeChange = (newMode) => {
@@ -1533,9 +1379,6 @@ export default function NavBar2() {
     [organizations]
   );
 
-  // Distance button requires exactly 1 active assistance type to prevent large API calls
-  const distanceDisabled = activeAssistanceChips.size !== 1;
-
   // Render the appropriate filters based on active mode
   const renderFilters = () => {
     switch (activeSearchMode) {
@@ -1546,10 +1389,6 @@ export default function NavBar2() {
             onZipChange={handleZipCodeChange}
             zipCodeOptions={zipCodeOptions}
             selectedZipData={selectedZipData}
-            clientAddress={clientAddress}
-            clientCoordinates={clientCoordinates}
-            onCoordinatesChange={handleCoordinatesChange}
-            distanceDisabled={distanceDisabled}
           />
         );
       case SEARCH_MODES.ORGANIZATION:
@@ -1561,10 +1400,6 @@ export default function NavBar2() {
             setSelectedParent={handleParentOrgChange}
             selectedChild={selectedChildOrg}
             setSelectedChild={handleChildOrgChange}
-            clientAddress={clientAddress}
-            clientCoordinates={clientCoordinates}
-            onCoordinatesChange={handleCoordinatesChange}
-            distanceDisabled={distanceDisabled}
           />
         );
       case SEARCH_MODES.LOCATION:
@@ -1580,10 +1415,6 @@ export default function NavBar2() {
             setSelectedCity={handleCityChange}
             selectedNeighborhood={selectedLocationNeighborhood}
             setSelectedNeighborhood={handleNeighborhoodChange}
-            clientAddress={clientAddress}
-            clientCoordinates={clientCoordinates}
-            onCoordinatesChange={handleCoordinatesChange}
-            distanceDisabled={distanceDisabled}
           />
         );
       case SEARCH_MODES.LLM:
@@ -1602,10 +1433,6 @@ export default function NavBar2() {
             isLoading={llmSearchLoading}
             interpretation={llmSearchInterpretation}
             error={llmSearchError}
-            clientAddress={clientAddress}
-            clientCoordinates={clientCoordinates}
-            onCoordinatesChange={handleCoordinatesChange}
-            distanceDisabled={distanceDisabled}
           />
         );
       default:

@@ -168,8 +168,6 @@ export default function FilterRow({
         )}
       </div>
 
-      {/* Zip column - empty */}
-      <div />
     </div>
   );
 }

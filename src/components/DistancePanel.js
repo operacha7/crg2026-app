@@ -371,7 +371,7 @@ export default function DistancePanel({
             marginTop: "4px"
           }}
         >
-          Enter an address to calculate driving distances for filtered results.
+          To calculate distances and use as origin for Bus Route.
         </p>
       </div>
     </DropPanel>

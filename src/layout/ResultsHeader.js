@@ -8,7 +8,7 @@ import { FunnelIcon } from "../icons";
 import SortIcon from "../icons/SortIcons";
 
 // Shared grid column definition - must match ResultRow.js
-const GRID_COLUMNS = "4% 3% 25% 6% 17% 6% 6.5% 29% 3%";
+const GRID_COLUMNS = "4% 3% 25% 6% 17% 6% 6.5% 32.5%";
 
 // Columns with sort capability
 const SORTABLE = new Set(["miles", "organization"]);
@@ -24,7 +24,6 @@ const columns = [
   { id: "status", label: "Status", gapBefore: 40 },
   { id: "telephone", label: "Telephone", gapBefore: 20 },
   { id: "requirements", label: "Requirements", gapBefore: 20 },
-  { id: "zip", label: "Zip" },
 ];
 
 export default function ResultsHeader({

@@ -2,7 +2,7 @@
 // Instant CSS tooltip component - appears on hover with no delay
 // Replaces native browser title attribute which has ~750ms delay
 
-export default function Tooltip({ children, text, position = "top" }) {
+export default function Tooltip({ children, text, position = "top", multiline = false }) {
   if (!text) return children;
 
   // Position classes for the tooltip
@@ -22,7 +22,7 @@ export default function Tooltip({ children, text, position = "top" }) {
     <span className="relative inline-flex group">
       {children}
       <span
-        className={`absolute ${positionClasses[position] || positionClasses.top} px-2 py-1 rounded whitespace-nowrap
+        className={`absolute ${positionClasses[position] || positionClasses.top} px-2 py-1 rounded ${multiline ? "" : "whitespace-nowrap"}
                    opacity-0 group-hover:opacity-100 transition-opacity duration-100
                    pointer-events-none`}
         style={{
@@ -30,6 +30,7 @@ export default function Tooltip({ children, text, position = "top" }) {
           color: "var(--color-tooltip-text)",
           fontSize: "var(--font-size-tooltip)",
           zIndex: 9999,
+          ...(multiline ? { maxWidth: "320px", whiteSpace: "normal", lineHeight: 1.4 } : {}),
         }}
       >
         {text}

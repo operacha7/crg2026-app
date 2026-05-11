@@ -14,6 +14,7 @@ import {
   PrivacyPolicyIcon,
   ContactSupportIcon,
   Car1Icon,
+  HomeMarkerIcon,
   TransitIcon,
   ChevronDownIcon,
   QuickTipsIcon,
@@ -39,10 +40,10 @@ const QUICK_TIPS_TOPICS = [
     content: CountersTip,
   },
   {
-    id: "distance",
-    title: "Distance",
-    titleIcon: Car1Icon,
-    content: DistanceTip,
+    id: "address",
+    title: "Address",
+    titleIcon: HomeMarkerIcon,
+    content: AddressTip,
   },
   {
     id: "email-pdf",
@@ -390,27 +391,45 @@ function CountersTip() {
   );
 }
 
-function DistanceTip() {
+function AddressTip() {
   return (
     <div className="space-y-4">
       <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
-        By default, distances are calculated from the zip code center.
+        By default, distances are measured from the center of the selected zip code.
       </p>
 
       <div className="flex items-center gap-3">
         <span
-          className="inline-flex items-center justify-center rounded p-1"
-          style={{ backgroundColor: "var(--color-navbar2-bg)" }}
+          className="inline-flex items-center rounded-full"
+          style={{
+            gap: "6px",
+            padding: "4px 8px",
+            border: "2px solid var(--color-results-transit-icon)",
+            color: "var(--color-results-transit-icon)",
+            backgroundColor: "transparent",
+            fontSize: "12px",
+            fontWeight: 600,
+            letterSpacing: "0.02em",
+            lineHeight: 1,
+            whiteSpace: "nowrap",
+          }}
         >
-          <Car1Icon size={24} />
+          <HomeMarkerIcon size={18} />
+          <span>Address</span>
         </span>
         <span style={{ color: "var(--color-quicktips-section-body-text)", fontSize: "var(--font-size-quicktips-body)" }}>
-          Click to enter a client address for more accurate distances
+          Click to enter a specific address to use as the origin
         </span>
       </div>
 
       <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
-        Results will be sorted by distance from that address.
+        Distances recalculate from that address and results are sorted by distance.
+        The same address is used as the origin for the <strong>Bus Route</strong> link on each result.
+      </p>
+
+      <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
+        The chip becomes available once you've made a selection in the search filter <em>and</em> picked one assistance type. (In <strong>Ask a Question</strong> mode,
+        submitting a question is enough — no assistance type required.)
       </p>
     </div>
   );
@@ -449,7 +468,7 @@ function BusRouteTip() {
       </div>
 
       <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
-        If you've entered a client address in the <strong>Distance</strong> panel,
+        If you've entered a client address via the <strong>Address</strong> chip,
         that address is used as the starting point. Otherwise Google Maps prompts
         the rider for an origin.
       </p>

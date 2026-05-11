@@ -71,7 +71,7 @@
 
   /* NavBar 3 */
   --color-navbar3-bg: #948979;
-  --color-navbar3-user-text: #222831;
+  --color-navbar3-user-text: #FFF94F;
   --color-navbar3-chip-active-bg: #2D5A27;
   --color-navbar3-chip-active-text: #FFFFFF;
   --color-navbar3-chip-active-border: #000000;
@@ -117,9 +117,9 @@
   --color-results-status-limited-bg: #e7d93e;
   --color-results-status-inactive-bg: #e7923e;
   --color-results-status-closed-bg: #E74C3E;
-  --color-results-assistance-icon: #b400f0;
+  --color-results-assistance-icon: #222831;
   --color-results-assistance-icon-secondary: #2D5A27;
-  --color-results-transit-icon: #FF0000;
+  --color-results-transit-icon: #B8001F;
   --color-results-expand-chevron: #FF0004;
   --color-results-distance-label: #666666;
   --color-results-checkbox-checked: #8FBC8F;
@@ -131,10 +131,10 @@
 
   /* Assistance Panel Group Colors (unselected state) */
   --color-assistance-group1: #E5E292;
-  --color-assistance-group2: #B592E5;
+  --color-assistance-group2: #92DEE5;
   --color-assistance-group3: #E592A6;
   --color-assistance-group4: #C2E592;
-  --color-assistance-group5: #92DEE5;
+  --color-assistance-group5: #B592E5;
   --color-assistance-group6: #E5C392;
   --color-assistance-selected-bg: #FDF6E3;
   --color-assistance-selected-border: #000000;
@@ -174,7 +174,7 @@
   --font-size-navbar1-title: clamp(16px, 1.8vw, 28px);
   --font-weight-navbar1-title: 600; /* Semibold */
   --letter-spacing-navbar1-title: 0.1em; /* 10% */
-  --font-size-navbar1-counter: 29px;
+  --font-size-navbar1-counter: clamp(18px, 1.9vw, 29px);
   --font-weight-navbar1-counter: 400; /* Regular */
   --font-size-navbar1-btn: clamp(14px, 1.4vw, 22px);
   --font-weight-navbar1-btn: 400; /* Regular */
@@ -202,11 +202,13 @@
   --letter-spacing-panel-btn: 0.02em; /* 2% */
 
   /* Assistance Chip Typography */
-  --font-size-assistance-chip: 14px;
+  --font-size-assistance-chip: clamp(11px, 1.1vw, 14px);
   --letter-spacing-assistance-chip: 0.02em; /* 2% */
 
-  /* NavBar 3 User Display Typography */
-  --font-size-navbar3-user: 22px;
+  /* NavBar 3 User Display Typography — clamps with viewport so long org names
+   * (e.g. "Christian Community Service Center (Central)") still fit at narrower
+   * widths instead of forcing the right cluster wider. */
+  --font-size-navbar3-user: clamp(14px, 1.4vw, 22px);
 
   /* Results Header Typography */
   --font-size-results-header: 14px;
@@ -240,12 +242,16 @@
   --padding-navbar1-left: clamp(10px, 2.5vw, 40px);
   --padding-navbar1-right: clamp(10px, 2.5vw, 40px);
   --gap-navbar1-logo-title: 12px;
-  --gap-navbar1-counters: clamp(10px, 2vw, 35px);
-  --gap-navbar1-buttons: clamp(5px, 1vw, 15px);
-  --gap-navbar1-counters-buttons: clamp(15px, 6vw, 100px);
+  /* Gap tokens reference the NavBar3 cluster pattern: the "tight" gap (20px max)
+   * matches chip→chip spacing; the "loose" gap (80px max = 2 × the NavBar3
+   * button→first-chip gap) sets the counters→action-buttons divider so the
+   * action group reads as a distinct cluster from the counters. */
+  --gap-navbar1-counters: clamp(8px, 1.5vw, 20px);
+  --gap-navbar1-buttons: clamp(8px, 1.5vw, 20px);
+  --gap-navbar1-counters-buttons: clamp(20px, 5vw, 80px);
   --size-navbar1-logo: 40px;
-  --size-navbar1-counter: 60px;
-  --width-navbar1-btn: 150px;
+  --size-navbar1-counter: clamp(40px, 4vw, 60px);
+  --width-navbar1-btn: clamp(80px, 8.5vw, 150px);
   --height-navbar1-btn: 38px;
 
   /* NavBar 2 */
@@ -255,15 +261,20 @@
   --height-navbar2-btn: 38px;
   --padding-navbar2-btn-x: clamp(8px, 1.3vw, 20px);
   --radius-navbar2-btn: 10px;
-  --gap-navbar2-mode-buttons: clamp(8px, 3vw, 50px);
+  /* Mode-button gap maxes at 40 to match the NavBar3 button→first-chip gap. */
+  --gap-navbar2-mode-buttons: clamp(14px, 2.5vw, 40px);
   --gap-navbar2-filters: clamp(8px, 2vw, 30px);
 
   /* NavBar 3 */
   --height-navbar3: 60px;
   --padding-navbar3-left: clamp(10px, 2.5vw, 40px);
   --min-width-choose-btn: 270px;
-  --gap-navbar3-button-chips: 40px;
-  --gap-navbar3-chips: 15px;
+  /* Gap between Change-Assistance button and the first chip — also reused
+   * between the last assistance chip and the Address chip so the chip group
+   * reads as a single visual unit. Clamped so narrow viewports don't waste
+   * a 40px gap on each side of the chip group. */
+  --gap-navbar3-button-chips: clamp(14px, 2vw, 40px);
+  --gap-navbar3-chips: clamp(8px, 1vw, 15px);
   --height-navbar3-btn: 35px;
 
   /* NavBar 3 Reports */

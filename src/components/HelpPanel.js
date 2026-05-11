@@ -13,7 +13,7 @@ import {
   AnnouncementsIcon,
   PrivacyPolicyIcon,
   ContactSupportIcon,
-  Car1Icon,
+  HomeMarkerIcon,
   FoodPantriesIcon,
   RentIcon,
   UtilitiesIcon,
@@ -75,10 +75,46 @@ const ICON_MAP = {
     <span className="inline-block px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "var(--color-navbar2-btn-inactive-bg)", color: "var(--color-navbar2-btn-inactive-text)" }}>What are you looking for today?</span>
   ),
 
-  // Distance icon
+  // Address chip (replaces the old standalone Distance/Car icon)
+  "[[ADDRESS_CHIP]]": (
+    <span
+      className="inline-flex items-center rounded-full"
+      style={{
+        gap: "6px",
+        padding: "4px 8px",
+        border: "2px solid var(--color-results-transit-icon)",
+        color: "var(--color-results-transit-icon)",
+        backgroundColor: "transparent",
+        fontSize: "12px",
+        fontWeight: 600,
+        letterSpacing: "0.02em",
+        lineHeight: 1,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <HomeMarkerIcon size={18} />
+      <span>Address</span>
+    </span>
+  ),
+  // Back-compat alias — older cached prompts/responses may still reference the old token
   "[[DISTANCE_ICON]]": (
-    <span className="inline-flex items-center justify-center rounded" style={{ backgroundColor: "var(--color-navbar2-bg)", padding: "2px 4px" }}>
-      <Car1Icon size={20} />
+    <span
+      className="inline-flex items-center rounded-full"
+      style={{
+        gap: "6px",
+        padding: "4px 8px",
+        border: "2px solid var(--color-results-transit-icon)",
+        color: "var(--color-results-transit-icon)",
+        backgroundColor: "transparent",
+        fontSize: "12px",
+        fontWeight: 600,
+        letterSpacing: "0.02em",
+        lineHeight: 1,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <HomeMarkerIcon size={18} />
+      <span>Address</span>
     </span>
   ),
 
@@ -361,7 +397,7 @@ export default function HelpPanel({ isOpen, onClose, resetKey }) {
                   {[
                     "How do I email resources to a client?",
                     "How do I filter by assistance type?",
-                    "What does the distance icon do?",
+                    "What does the Address chip do?",
                     "How do I use Ask a Question?",
                   ].map((suggestion) => (
                     <button

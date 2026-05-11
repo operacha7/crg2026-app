@@ -40,7 +40,7 @@ function formatStatusDate(dateStr) {
 // Select(4%) + Miles(3%) + Org(20%) + Assistance(8%) + Hours(17%) + Status(6%) + Phone(6%) + Requirements(33%) + Zip(3%)
 // Note: Address column removed (combined with Organization), old Address 12% redistributed: 8% to Assistance, 4% to Requirements
 // Gaps: 20px before Org, 30px before Hours, 40px before Status, 20px before Phone (applied as paddingLeft)
-const GRID_COLUMNS = "4% 3% 25% 6% 17% 7% 7% 28% 3%";
+const GRID_COLUMNS = "4% 3% 25% 6% 17% 7% 7% 31%";
 
 // Double chevron icon for expand/collapse - uses token color
 function DoubleChevronIcon({ expanded }) {
@@ -141,25 +141,19 @@ function ResultRow({
   clientCoordinates = null,
 }) {
   const [requirementsExpanded, setRequirementsExpanded] = useState(false);
-  const [zipExpanded, setZipExpanded] = useState(false);
   const [statusExpanded, setStatusExpanded] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState(false);
 
   // Refs for measuring content overflow
   const requirementsRef = useRef(null);
-  const zipRef = useRef(null);
   const [requirementsOverflows, setRequirementsOverflows] = useState(false);
-  const [zipOverflows, setZipOverflows] = useState(false);
 
   // Detect if content overflows the max height
   useEffect(() => {
     if (requirementsRef.current) {
       setRequirementsOverflows(requirementsRef.current.scrollHeight > COLLAPSED_MAX_HEIGHT);
     }
-    if (zipRef.current) {
-      setZipOverflows(zipRef.current.scrollHeight > COLLAPSED_MAX_HEIGHT);
-    }
-  }, [record.requirements, record.client_zip_codes]);
+  }, [record.requirements]);
 
   // Get the icon component(s) for the primary assistance type
   // Can be a single component or array of components for comma-separated icons
@@ -176,15 +170,6 @@ function ResultRow({
       ? record.requirements.split(/[\n]/).map((r) => r.trim()).filter(Boolean)
       : []
   ), [record.requirements]);
-
-  // Parse zip codes into array
-  const zipCodes = useMemo(() => (
-    record.client_zip_codes
-      ? (Array.isArray(record.client_zip_codes)
-          ? record.client_zip_codes
-          : record.client_zip_codes.split(/[,\n]/).map((z) => z.trim()).filter(Boolean))
-      : []
-  ), [record.client_zip_codes]);
 
   // Get all assistance types this org provides (from lookup map, for Assistance column icons)
   // orgAssistanceMap[orgName] = array of assist_ids (e.g., ["11", "12", "65"])
@@ -272,6 +257,34 @@ function ResultRow({
                 </div>
               )
             )}
+            {/* Bus Route pill — same deep link as desktop, sized slightly
+                smaller for mobile. Placed under the address since they're
+                logically grouped ("how do I get to this address?"). No
+                marginRight (unlike desktop) because there's no Assistance
+                icons column to clear on this layout. */}
+            <a
+              href={buildTransitDirectionsUrl(record, clientCoordinates)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center rounded-full shrink-0 mt-2 hover:brightness-125"
+              style={{
+                gap: "5px",
+                padding: "3px 8px",
+                border: "2px solid var(--color-results-transit-icon)",
+                color: "var(--color-results-transit-icon)",
+                backgroundColor: "transparent",
+                fontSize: "11px",
+                fontWeight: 600,
+                letterSpacing: "0.02em",
+                textDecoration: "none",
+                lineHeight: 1,
+                whiteSpace: "nowrap",
+              }}
+            >
+              <TransitIcon size={16} />
+              <span>Bus Route</span>
+            </a>
           </div>
           <div className="flex flex-col items-end flex-shrink-0">
             {record.distance != null && (
@@ -396,25 +409,6 @@ function ResultRow({
               </div>
             )}
 
-            {/* Zip codes served */}
-            {zipCodes.length > 0 && (
-              <div>
-                <div className="font-semibold text-xs text-gray-500 mb-1">SERVES ZIP CODES</div>
-                <div className="flex flex-wrap gap-1">
-                  {zipCodes.slice(0, zipExpanded ? undefined : 10).map((zip, idx) => (
-                    <span key={idx} className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">{zip}</span>
-                  ))}
-                  {zipCodes.length > 10 && !zipExpanded && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setZipExpanded(true); }}
-                      className="text-xs text-blue-600"
-                    >
-                      +{zipCodes.length - 10} more
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -646,10 +640,10 @@ function ResultRow({
             
             {/* Hours display - consistent two-frame layout */}
             {(formattedHours.rows?.length > 0 || formattedHours.special?.length > 0) && (
-              <div 
-                style={{ 
+              <div
+                style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr 15px 1fr",
+                  gridTemplateColumns: "auto 10px 1fr",
                   alignItems: "start"
                 }}
               >
@@ -684,10 +678,10 @@ function ResultRow({
                 {formattedHours.labeled.map((item, idx) => (
                   <div key={idx} style={{ marginTop: idx > 0 ? "4px" : "0" }}>
                     <div className="font-semibold">{item.label}:</div>
-                    <div 
-                      style={{ 
+                    <div
+                      style={{
                         display: "grid",
-                        gridTemplateColumns: "1fr 10px 1fr",
+                        gridTemplateColumns: "auto 10px 1fr",
                         alignItems: "start"
                       }}
                     >
@@ -849,48 +843,6 @@ function ResultRow({
         )}
       </div>
 
-      {/* Zip Column - centered chevron, align height with requirements */}
-      <div
-        className="flex flex-col items-center"
-        style={{
-          fontSize: "var(--font-size-results-zip)",
-          letterSpacing: "var(--letter-spacing-results-default)",
-        }}
-      >
-        {zipCodes.length > 0 ? (
-          <>
-            {/* Content area - constrained height when collapsed for uniform rows */}
-            <div
-              ref={zipRef}
-              className="flex-1 flex flex-col"
-              style={zipExpanded ? {} : {
-                maxHeight: `${COLLAPSED_MAX_HEIGHT}px`,
-                overflow: "hidden",
-              }}
-            >
-              {zipCodes.map((zip, idx) => (
-                <div key={idx}>{zip}</div>
-              ))}
-            </div>
-            {/* Chevron - only show when content overflows */}
-            {(zipOverflows || zipExpanded) && (
-              <div className="flex justify-center mt-1">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setZipExpanded(!zipExpanded);
-                  }}
-                  className="flex items-center justify-center hover:opacity-80 transition-opacity"
-                >
-                  <DoubleChevronIcon expanded={zipExpanded} />
-                </button>
-              </div>
-            )}
-          </>
-        ) : (
-          ""
-        )}
-      </div>
       </div>
     </>
   );
