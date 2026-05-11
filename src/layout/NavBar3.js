@@ -673,7 +673,7 @@ export default function NavBar3() {
 
   let addressTooltip;
   if (!addressDisabled) {
-    addressTooltip = "Enter Address for distances & Bus Routes";
+    addressTooltip = "Enter Address for driving distances";
   } else if (activeSearchMode === SEARCH_MODES.LLM) {
     addressTooltip = "Ask a question to enable address entry";
   } else if (!hasFilterSelection && !hasOneAssistance) {

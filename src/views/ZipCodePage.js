@@ -34,6 +34,12 @@ export default function ZipCodePage({
     activeAssistanceChips,
     // Client coordinates override for distance calculations
     clientCoordinates,
+    // Address setters — used to clear the client's address after sending
+    // email/PDF/SMS so the next client's send-cycle starts fresh. This is
+    // the privacy guardrail: a successful send marks "done with this client",
+    // and the address is wiped so it can't be carried into the next email.
+    setClientAddress,
+    setClientCoordinates,
     // Driving distances (when user enters custom address)
     drivingDistances,
     setDrivingDistances,
@@ -318,11 +324,23 @@ export default function ZipCodePage({
     llmQuery: llmSearchQuery,
   });
 
+  // Clears the client's address after any successful send (email/PDF/SMS).
+  // Privacy guardrail: a successful send marks "done with this client", so
+  // the address is wiped to prevent it from carrying into the next client's
+  // workflow. The org re-enters the address if they need driving distances
+  // for the next lookup. See AddressChipButton + decoupling discussion.
+  const clearClientAddressAfterSend = () => {
+    setClientAddress("");
+    setClientCoordinates("");
+  };
+
   // Email success handler - called from NavBar1 panel
   const handleEmailSuccess = async (recipient, language) => {
     const dataToSend = selectedRows?.map((i) => displayDirectory[i]).filter(Boolean);
 
-    // Send the email using the service
+    // Send the email using the service. clientCoordinates is intentionally
+    // not passed — Bus Route is no longer rendered in outgoing emails, so
+    // the address never leaves the org's session.
     await sendEmail({
       recipient,
       selectedData: dataToSend,
@@ -330,11 +348,11 @@ export default function ZipCodePage({
       loggedInUser,
       orgPhone,
       language,
-      clientCoordinates,
     });
 
     // Reset selections and show toast
     setSelectedRows([]);
+    clearClientAddressAfterSend();
     showAnimatedToast("✅ Email sent successfully.", "success");
 
     // Log to database
@@ -345,18 +363,19 @@ export default function ZipCodePage({
   const handlePdfSuccess = async (language) => {
     const dataToSend = selectedRows?.map((i) => displayDirectory[i]).filter(Boolean);
 
-    // Create the PDF using the service
+    // Create the PDF using the service. Same reasoning as sendEmail above —
+    // clientCoordinates is no longer needed since PDFs don't embed Bus Route.
     await createPdf({
       selectedData: dataToSend,
       searchContext: buildSearchContext(),
       loggedInUser,
       orgPhone,
       language,
-      clientCoordinates,
     });
 
     // Reset selections and show toast
     setSelectedRows([]);
+    clearClientAddressAfterSend();
     showAnimatedToast("✅ PDF created successfully in your Download Folder.", "success");
 
     // Log to database
@@ -436,8 +455,13 @@ export default function ZipCodePage({
 
   // Fires on any Send Text handoff action (Messages, copy, QR). Logs usage; the
   // "Opened in Messages..." toast is triggered from the Messages-specific handler.
+  // Also clears the client's address — same "done with this client" semantics
+  // as email/PDF send. Note: the SMS body itself never contains the address
+  // (it's just a deep link to a filtered CRG view), so this is belt-and-
+  // suspenders rather than fixing a leak.
   const handleSmsInitiated = () => {
     logDeliveryAction('sms');
+    clearClientAddressAfterSend();
   };
 
   // Fires only when the user clicks "Open in Messages App" (the handoff that actually

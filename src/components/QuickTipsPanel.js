@@ -424,7 +424,9 @@ function AddressTip() {
 
       <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
         Distances recalculate from that address and results are sorted by distance.
-        The same address is used as the origin for the <strong>Bus Route</strong> link on each result.
+        The address is used only inside the app — it is never embedded in emails,
+        PDFs, or text messages sent to clients. CRG also clears the address
+        automatically after each successful send so the next lookup starts fresh.
       </p>
 
       <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
@@ -468,13 +470,10 @@ function BusRouteTip() {
       </div>
 
       <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
-        If you've entered a client address via the <strong>Address</strong> chip,
-        that address is used as the starting point. Otherwise Google Maps prompts
-        the rider for an origin.
-      </p>
-
-      <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
-        The same Bus Route link is included in emails and PDFs sent from the app.
+        Google Maps prompts the rider for an origin (or uses location services
+        on their phone). The Bus Route link only appears inside the app — it is
+        intentionally not included in emails or PDFs. Recipients of those open
+        Google Maps by tapping the address link instead.
       </p>
     </div>
   );

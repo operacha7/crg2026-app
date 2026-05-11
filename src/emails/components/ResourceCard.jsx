@@ -3,7 +3,6 @@
 
 import { Section, Text, Link } from '@react-email/components';
 import { HoursTable, HoursNotes } from './HoursTable';
-import { buildTransitDirectionsUrl } from '../../utils/transitUrl';
 
 /**
  * Displays a single resource with all its details
@@ -17,6 +16,14 @@ import { buildTransitDirectionsUrl } from '../../utils/transitUrl';
  * 5. Phone number
  * 6. [8px gap]
  * 7. Hours, requirements
+ *
+ * Note: The Bus Route pill is intentionally NOT rendered in emails (it lives
+ * only in the in-app result rows). Embedding a transit URL with the org's
+ * `clientCoordinates` baked in as origin would risk leaking one client's
+ * address into another client's email when an org user looks up multiple
+ * clients in a single session. The address hyperlink on each row gives the
+ * recipient a one-tap path into Google Maps, which then handles mode and
+ * origin selection itself.
  */
 export function ResourceCard({
   resource,
@@ -25,7 +32,6 @@ export function ResourceCard({
   addressLines,
   requirements,
   distanceText,
-  clientCoordinates,
 }) {
 
   return (
@@ -53,20 +59,6 @@ export function ResourceCard({
         {distanceText && (
           <span style={styles.distance}>&nbsp;&nbsp;&nbsp;{distanceText}</span>
         )}
-      </Text>
-
-      {/* Bus Route pill - opens Google Maps with travelmode=transit. If the email
-          client strips the border/padding, the underlying <a> remains a clickable
-          red "Bus Route" hyperlink. */}
-      <Text style={styles.busRouteWrapper}>
-        <Link
-          href={buildTransitDirectionsUrl(resource, clientCoordinates)}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={styles.busRoutePill}
-        >
-          Bus Route
-        </Link>
       </Text>
 
       {/* Phone number - 8px gap above */}
@@ -127,25 +119,6 @@ const styles = {
   distance: {
     fontStyle: 'italic',
     color: '#666666',
-  },
-  busRouteWrapper: {
-    margin: '6px 0 0 0',
-    paddingLeft: '24px',
-    fontSize: '12px',
-  },
-  busRoutePill: {
-    display: 'inline-block',
-    padding: '2px 12px',
-    border: '1px solid #FF0000',
-    borderRadius: '999px',
-    color: '#FF0000',
-    backgroundColor: 'transparent',
-    fontSize: '12px',
-    fontWeight: 500,
-    lineHeight: 1,
-    letterSpacing: '0.02em',
-    textDecoration: 'none',
-    whiteSpace: 'nowrap',
   },
   phone: {
     fontSize: '16px',

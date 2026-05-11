@@ -22,9 +22,12 @@ export async function onRequest({ request, env }) {
     });
   }
 
-  // Initialize Supabase client
-  const supabaseUrl = env.SUPABASE_URL;
-  const supabaseKey = env.SUPABASE_SECRET_KEY;
+  // Initialize Supabase client. Fallback to VITE_-prefixed names so local
+  // dev (.dev.vars) and production (Cloudflare dashboard env) both work
+  // without renaming. Matches the pattern in functions/llm-search.js and
+  // functions/help.js.
+  const supabaseUrl = env.VITE_SUPABASE_URL || env.SUPABASE_URL;
+  const supabaseKey = env.VITE_SUPABASE_SECRET_KEY || env.SUPABASE_SECRET_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
     return new Response(

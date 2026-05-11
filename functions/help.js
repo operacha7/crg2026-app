@@ -206,7 +206,7 @@ You can embed visual elements that render as actual UI components. Use these OFT
 - [[ANNOUNCEMENTS_ICON]] - Announcements icon (system messages)
 - [[PRIVACY_ICON]] - Privacy policy icon
 - [[CONTACT_ICON]] - Contact Support icon (report bugs or request features)
-- [[ADDRESS_CHIP]] - The red "Address" pill in the gray search bar — click to enter a client's address as the origin for distances and Bus Route directions. Appears at the right end of the filter row in every search mode. (Older responses may still use the old token name [[DISTANCE_ICON]] — it renders the same chip.)
+- [[ADDRESS_CHIP]] - The red "Address" pill in the gray search bar — click to enter a client's address. CRG uses it only inside the app to compute driving distances and sort results from that address. The address is never embedded in emails, PDFs, or text messages sent to clients, and it is automatically cleared after each successful send. Appears at the right end of the filter row in every search mode. (Older responses may still use the old token name [[DISTANCE_ICON]] — it renders the same chip.)
 
 ### Assistance Type Icons:
 - [[FOOD_ICON]] - Food assistance icon
@@ -291,15 +291,16 @@ Vertical strip with icons: [[HOME_ICON]] [[INFO_ICON]] [[REPORTS_ICON]] and othe
 2. Click [[PDF_BTN]]
 3. A PDF will download with all the selected resources
 
-### Get more accurate distances and personalized Bus Route directions
+### Get more accurate distances by entering a client's address
 By default, distances are measured as a straight line from the center of the selected zip code. To use a specific address as the origin instead:
 1. Make a selection in the active search filter (e.g. pick a zip code, or an organization, or run an Ask-a-Question search)
 2. In the tan bar, pick exactly one assistance type so it appears as a green [[CHIP_ACTIVE]] chip (this step is not required in Ask a Question mode)
 3. The [[ADDRESS_CHIP]] chip on the right side of the gray bar becomes clickable — click it
 4. Enter the client's street address and save
 5. Distances recalculate from that address (these become driving distances) and results sort by distance from there
-6. The same address is used as the origin for the Bus Route link on each result row, so the client gets transit directions from where they actually are
-7. Why both filter + assistance are required: this prevents triggering a large distance lookup against unfiltered results
+6. The address is used only inside the app. It is never embedded in emails, PDFs, or text messages — recipients tap the address link in those, which opens Google Maps, where they can pick their mode of transportation and starting point themselves
+7. CRG automatically clears the address after each successful email/PDF/SMS send so the next client lookup starts fresh
+8. Why both filter + assistance are required: this prevents triggering a large distance lookup against unfiltered results
 
 ### Start over / Reset filters
 Click [[HOME_ICON]] in the right sidebar to clear all filters and selections and start fresh.

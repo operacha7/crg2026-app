@@ -94,7 +94,6 @@ export function ResourceEmail({
   headerText = 'Resources',
   orgPhone = '713-664-5350',
   previewText = 'Your requested community resources',
-  clientCoordinates = null,
 }) {
   const hasNonActive = resources.some((r) => (r.status_id ?? 1) !== 1);
   const grouped = hasNonActive ? null : groupByAssistance(resources);
@@ -110,29 +109,35 @@ export function ResourceEmail({
             <strong>{headerText}</strong>
           </Text>
 
-          {/* Intro paragraph */}
+          {/* Disclaimer paragraph — accuracy caveat + invitation to visit the
+              website. Kept neutral in tone so it works in both email and PDF
+              (this same copy appears in formatPdfResourcesHtml). */}
           <Text style={styles.intro}>
-            Thank you for reaching out to us. Here is the information that you
-            requested. Please note while we strive to ensure that our information
-            is current and accurate, funding levels and eligibility requirements
-            can change at any time. This is an automated message and is
-            unmonitored, please{' '}
-            <span style={{ color: 'red', fontStyle: 'italic' }}>do not reply</span>.
-          </Text>
-
-          {/* Website link — italicized invitation, with the hyperlink itself in
-              regular (non-italic) bold so it visually pops as the actionable element. */}
-          <Text style={styles.websiteLink}>
-            For the most up-to-date listings and to explore even more resources on
-            your own, please feel free to visit us at{' '}
+            We strive for accuracy, but funding and eligibility requirements
+            can change without notice. Please contact the organization directly
+            for their latest requirements. For the most up-to-date listings or
+            to explore more resources, visit{' '}
             <Link
               href="https://crghouston.org?utm_source=email&utm_medium=email&utm_campaign=resource_list"
               target="_blank"
-              style={styles.linkBoldNonItalic}
+              style={styles.link}
             >
               crghouston.org
             </Link>
             .
+          </Text>
+
+          {/* "Note:" paragraph — surfaces what's tappable + the do-not-reply
+              warning. The do-not-reply sentence is email-only; the PDF
+              variant omits it because it doesn't make sense on a deliverable
+              that's not interactive. */}
+          <Text style={styles.note}>
+            <strong>Note:</strong>{' '}
+            Click the organization&rsquo;s name to visit their website. Click
+            the address to view it in Google Maps.{' '}
+            <span style={styles.doNotReply}>
+              Please do not reply to this automated and unmonitored email.
+            </span>
           </Text>
 
           {/* Resource sections grouped by assistance type (all Active) */}
@@ -153,7 +158,6 @@ export function ResourceEmail({
                   addressLines={formatAddress(resource)}
                   requirements={parseRequirements(resource.requirements)}
                   distanceText={formatDistance(resource.distance)}
-                  clientCoordinates={clientCoordinates}
                 />
               ))}
             </Section>
@@ -236,11 +240,15 @@ const styles = {
   intro: {
     fontSize: '14px',
     lineHeight: '1.6',
-    marginBottom: '20px',
+    marginBottom: '16px',
   },
-  websiteLink: {
+  note: {
     fontSize: '14px',
+    lineHeight: '1.6',
     marginBottom: '24px',
+  },
+  doNotReply: {
+    color: 'red',
     fontStyle: 'italic',
   },
   link: {

@@ -1,7 +1,8 @@
 // src/components/AddressChipButton.js
 // Pill-shaped "Address" chip that opens the DistancePanel to let the user
-// set a custom origin address. Origin is used for both distance calculations
-// and as the Bus Route starting point.
+// set a custom origin address. Used purely for in-app distance calculations
+// and result sorting — the address never leaves the org's session (it's
+// intentionally not embedded in outgoing email/PDF/SMS content).
 //
 // Visual states (all in --color-results-transit-icon red):
 //   disabled            → outlined, 30% opacity
@@ -20,7 +21,7 @@ export default function AddressChipButton({
   clientAddress = "",
   clientCoordinates = "",
   disabled = false,
-  tooltipText = "Enter Address for distances & Bus Routes",
+  tooltipText = "Enter Address for driving distances",
 }) {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const panelRef = useRef(null);
@@ -66,9 +67,9 @@ export default function AddressChipButton({
             border: "2px solid var(--color-results-transit-icon)",
             backgroundColor: isActive
               ? "var(--color-results-transit-icon)"
-              : "var(--color-navbar2-btn-inactive-bg)",
+              : "#FFFFFF",
             color: isActive
-              ? "var(--color-navbar2-btn-inactive-bg)"
+              ? "#FFFFFF"
               : "var(--color-results-transit-icon)",
             fontSize: "12px",
             fontWeight: 600,
@@ -76,6 +77,11 @@ export default function AddressChipButton({
             lineHeight: 1,
             whiteSpace: "nowrap",
             cursor: disabled ? "not-allowed" : "pointer",
+            // Three visual states: disabled (faded), enabled-inactive (full
+            // opacity outlined), enabled-active (filled). 0.6 keeps the chip
+            // legible against the tan NavBar3 background while still reading
+            // as "not yet available" — softer than the original 0.3.
+            opacity: disabled ? 0.70 : 1,
           }}
         >
           <HomeMarkerIcon size={18} />
