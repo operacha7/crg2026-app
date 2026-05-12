@@ -3,7 +3,7 @@
 // Extracted from EmailDialog.js for reuse
 
 import { render } from "@react-email/components";
-import { LOGO_URL_Email } from "../data/constants";
+import { LOGO_URL_Email, BUS_ICON_URL } from "../data/constants";
 import { supabase } from "../supabaseClient";
 import {
   formatAddress,
@@ -11,6 +11,7 @@ import {
   formatDistance,
   parseRequirements,
 } from "../utils/formatters";
+import { buildTransitDirectionsUrl } from "../utils/transitUrl";
 import { ResourceEmail } from "../emails";
 
 // Default callback phone number if org doesn't have one configured
@@ -185,9 +186,9 @@ ${inner}`;
   return renderAssistanceGroupsHtml(selectedData, includeAssistanceHeaders, () => ++runningIndex);
 }
 
-// Bus Route deep links are intentionally NOT rendered in PDFs — same reason
-// as the email (see ResourceCard.jsx). Address-as-hyperlink already routes
-// the recipient into Google Maps, where they can pick mode and origin.
+// Bus Route pill is rendered without clientCoordinates so the sender's
+// local address is never embedded in outgoing PDFs — Google Maps prompts
+// the recipient for their own origin.
 function renderAssistanceGroupsHtml(items, includeAssistanceHeaders, nextIndex) {
   const sortedData = getSortedData(items);
 
@@ -222,6 +223,8 @@ function renderAssistanceGroupsHtml(items, includeAssistanceHeaders, nextIndex) 
           const hoursNotesHtml = e.hours_notes
             ? `<div style="color: #e74c3c; font-style: italic; text-align: right; margin-top: 6px; font-size: 12px;">${e.hours_notes}</div>`
             : "";
+          const transitUrl = buildTransitDirectionsUrl(e);
+          const busRouteHtml = `<div style="padding-left: 20px; margin-top: 6px;"><a href="${transitUrl}" target="_blank" style="display: inline-block; border: 2px solid #B8001F; border-radius: 999px; padding: 3px 10px; color: #B8001F; font-size: 12px; font-weight: bold; letter-spacing: 0.02em; text-decoration: none; line-height: 1; white-space: nowrap;"><img src="${BUS_ICON_URL}" alt="" width="16" height="16" style="vertical-align: middle; margin-right: 5px; border: 0;" /><span>Bus Route</span></a></div>`;
 
           return `
 <div style="font-family: Arial, sans-serif; margin-bottom: 20px; page-break-inside: avoid;">
@@ -236,6 +239,7 @@ function renderAssistanceGroupsHtml(items, includeAssistanceHeaders, nextIndex) 
         <div style="font-size: 12px; padding-left: 20px;">
           <a href="${e.googlemaps || "#"}" target="_blank" style="color: #0066cc; text-decoration: underline;">${addressHtml}</a>${distanceText ? `<span style="font-style: italic; color: #666; padding-left: 10px;">${distanceText}</span>` : ""}
         </div>
+        ${busRouteHtml}
       </td>
       <!-- Right column: Phone, hours, hours notes -->
       <td style="vertical-align: top; width: 45%; text-align: right;">

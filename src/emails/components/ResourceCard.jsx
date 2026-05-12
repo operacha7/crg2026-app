@@ -3,28 +3,13 @@
 
 import { Section, Text, Link } from '@react-email/components';
 import { HoursTable, HoursNotes } from './HoursTable';
+import { BUS_ICON_URL } from '../../data/constants';
+import { buildTransitDirectionsUrl } from '../../utils/transitUrl';
 
-/**
- * Displays a single resource with all its details
- * Used within ResourceEmail for each selected resource
- *
- * Layout (matching PDF format):
- * 1. Organization name (link)
- * 2. Street address (link)
- * 3. City, State Zip + distance (italic)
- * 4. [8px gap]
- * 5. Phone number
- * 6. [8px gap]
- * 7. Hours, requirements
- *
- * Note: The Bus Route pill is intentionally NOT rendered in emails (it lives
- * only in the in-app result rows). Embedding a transit URL with the org's
- * `clientCoordinates` baked in as origin would risk leaking one client's
- * address into another client's email when an org user looks up multiple
- * clients in a single session. The address hyperlink on each row gives the
- * recipient a one-tap path into Google Maps, which then handles mode and
- * origin selection itself.
- */
+// Bus Route pill links to Google Maps in transit mode. We intentionally call
+// buildTransitDirectionsUrl WITHOUT clientCoordinates so the sender's local
+// address is never embedded in outgoing email — Google Maps prompts the
+// recipient for their own origin.
 export function ResourceCard({
   resource,
   index,
@@ -33,6 +18,7 @@ export function ResourceCard({
   requirements,
   distanceText,
 }) {
+  const transitUrl = buildTransitDirectionsUrl(resource);
 
   return (
     <Section style={styles.card}>
@@ -59,6 +45,22 @@ export function ResourceCard({
         {distanceText && (
           <span style={styles.distance}>&nbsp;&nbsp;&nbsp;{distanceText}</span>
         )}
+      </Text>
+
+      {/* Bus Route pill — outlined red, opens Google Maps in transit mode.
+          All inline styles so it survives email clients that strip CSS;
+          falls back to a plain red link if borders are dropped. */}
+      <Text style={styles.busRouteWrapper}>
+        <Link href={transitUrl} target="_blank" style={styles.busRoutePill}>
+          <img
+            src={BUS_ICON_URL}
+            alt=""
+            width="16"
+            height="16"
+            style={styles.busRouteIcon}
+          />
+          <span>Bus Route</span>
+        </Link>
       </Text>
 
       {/* Phone number - 8px gap above */}
@@ -119,6 +121,29 @@ const styles = {
   distance: {
     fontStyle: 'italic',
     color: '#666666',
+  },
+  busRouteWrapper: {
+    marginTop: '6px',
+    marginBottom: '0',
+    paddingLeft: '24px',
+  },
+  busRoutePill: {
+    display: 'inline-block',
+    border: '2px solid #B8001F',
+    borderRadius: '999px',
+    padding: '3px 10px',
+    color: '#B8001F',
+    fontSize: '12px',
+    fontWeight: 'bold',
+    letterSpacing: '0.02em',
+    textDecoration: 'none',
+    lineHeight: '1',
+    whiteSpace: 'nowrap',
+  },
+  busRouteIcon: {
+    verticalAlign: 'middle',
+    marginRight: '5px',
+    border: '0',
   },
   phone: {
     fontSize: '16px',
