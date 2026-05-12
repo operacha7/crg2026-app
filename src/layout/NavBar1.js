@@ -197,8 +197,8 @@ export default function NavBar1({
     setShowSmsWarning(false);
   };
 
-  // Handle email send (language passed from EmailPanel)
-  const handleEmailSend = async (recipient, language) => {
+  // Handle email send (language and optional note passed from EmailPanel)
+  const handleEmailSend = async (recipient, language, note = "") => {
     if (!recipient) {
       setStatusMessage("Please enter a recipient email");
       return;
@@ -210,7 +210,7 @@ export default function NavBar1({
     try {
       // Call the email success handler which triggers the actual send
       if (onEmailSuccess) {
-        await onEmailSuccess(recipient, language);
+        await onEmailSuccess(recipient, language, note);
       }
       setShowEmailPanel(false);
     } catch (err) {
@@ -220,14 +220,14 @@ export default function NavBar1({
     }
   };
 
-  // Handle PDF create (language passed from EmailPanel)
-  const handlePdfCreate = async (recipient, language) => {
+  // Handle PDF create (language and optional note passed from EmailPanel)
+  const handlePdfCreate = async (recipient, language, note = "") => {
     setIsSending(true);
     setStatusMessage("");
 
     try {
       if (onPdfSuccess) {
-        await onPdfSuccess(language);
+        await onPdfSuccess(language, note);
       }
       setShowPdfPanel(false);
     } catch (err) {

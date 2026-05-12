@@ -335,7 +335,7 @@ export default function ZipCodePage({
   };
 
   // Email success handler - called from NavBar1 panel
-  const handleEmailSuccess = async (recipient, language) => {
+  const handleEmailSuccess = async (recipient, language, note = "") => {
     const dataToSend = selectedRows?.map((i) => displayDirectory[i]).filter(Boolean);
 
     // Send the email using the service. clientCoordinates is intentionally
@@ -348,6 +348,7 @@ export default function ZipCodePage({
       loggedInUser,
       orgPhone,
       language,
+      note,
     });
 
     // Reset selections and show toast
@@ -360,7 +361,7 @@ export default function ZipCodePage({
   };
 
   // PDF success handler - called from NavBar1 panel
-  const handlePdfSuccess = async (language) => {
+  const handlePdfSuccess = async (language, note = "") => {
     const dataToSend = selectedRows?.map((i) => displayDirectory[i]).filter(Boolean);
 
     // Create the PDF using the service. Same reasoning as sendEmail above —
@@ -371,6 +372,7 @@ export default function ZipCodePage({
       loggedInUser,
       orgPhone,
       language,
+      note,
     });
 
     // Reset selections and show toast

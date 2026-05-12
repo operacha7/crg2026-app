@@ -51,8 +51,17 @@ export default function EmailPanel({
   const [isTranslatingPreview, setIsTranslatingPreview] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [translationError, setTranslationError] = useState("");
+  const [note, setNote] = useState("");
+  const [showNoteInput, setShowNoteInput] = useState(false);
 
-  // Generate email preview HTML when panel opens (email mode only)
+  const NOTE_MAX = 200;
+  const noteCharsRemaining = NOTE_MAX - note.length;
+
+  // Generate email preview HTML when panel opens (email mode only).
+  // Also re-renders when `note` changes so the user can see their note in
+  // the preview as they type. The render is local and synchronous-ish,
+  // not an API call. (Translation of the resulting HTML is debounced
+  // separately below to avoid hammering Google Translate.)
   useEffect(() => {
     if (isOpen && !isPdfMode && selectedData.length > 0) {
       const generatePreview = async () => {
@@ -62,6 +71,7 @@ export default function EmailPanel({
               resources: selectedData,
               headerText: headerText,
               orgPhone: orgPhone,
+              note: note,
             })
           );
           setPreviewHtml(html);
@@ -73,7 +83,7 @@ export default function EmailPanel({
       };
       generatePreview();
     }
-  }, [isOpen, isPdfMode, selectedData, headerText, orgPhone]);
+  }, [isOpen, isPdfMode, selectedData, headerText, orgPhone, note]);
 
   // Translate preview when language changes
   useEffect(() => {
@@ -89,7 +99,8 @@ export default function EmailPanel({
     // Clear previous translation error
     setTranslationError("");
 
-    // Translate the preview HTML
+    // Translate the preview HTML. Debounced 500ms so typing a note doesn't
+    // fire a translation API call on every keystroke (each call costs $).
     let cancelled = false;
     const translatePreview = async () => {
       setIsTranslatingPreview(true);
@@ -125,8 +136,11 @@ export default function EmailPanel({
       }
     };
 
-    translatePreview();
-    return () => { cancelled = true; };
+    const debounceHandle = setTimeout(translatePreview, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(debounceHandle);
+    };
   }, [language, previewHtml, isPdfMode]);
 
   // Reset state when panel opens
@@ -136,6 +150,8 @@ export default function EmailPanel({
       setLanguage("en");
       setShowPreview(false);
       setTranslationError("");
+      setNote("");
+      setShowNoteInput(false);
       // Show warning first if there are inactive resources
       setCurrentView(hasInactiveResources ? "warning" : "input");
     }
@@ -151,10 +167,72 @@ export default function EmailPanel({
     onCancel();
   };
 
-  // Handle OK/Send - pass language along with recipient
+  // Handle OK/Send - pass language and trimmed note along with recipient
   const handleSend = () => {
-    onSend(recipient, language);
+    onSend(recipient, language, note.trim());
   };
+
+  // Optional personal note. The "Add Note" toggle mirrors the "Show Preview"
+  // pattern. Hard-capped at 200 chars — enough for a brief personal message
+  // without bloating the email. Note is sent verbatim (not translated), so a
+  // Spanish-speaking sender writing a Spanish note keeps their exact wording
+  // when language=es.
+  const renderNoteSection = () => (
+    <>
+      <button
+        type="button"
+        onClick={() => setShowNoteInput(!showNoteInput)}
+        disabled={isSending}
+        className="font-opensans transition-all duration-200 hover:brightness-110"
+        style={{
+          backgroundColor: showNoteInput ? "#666" : "#DB9D47",
+          color: "#FFFFFF",
+          height: "var(--height-panel-btn)",
+          borderRadius: "var(--radius-panel-btn)",
+          fontSize: "var(--font-size-panel-btn)",
+          letterSpacing: "var(--letter-spacing-panel-btn)",
+          border: "none",
+          cursor: isSending ? "not-allowed" : "pointer",
+          opacity: isSending ? 0.7 : 1,
+        }}
+      >
+        {showNoteInput ? "Hide Note" : "Add Note"}
+      </button>
+
+      {showNoteInput && (
+        <div className="flex flex-col gap-1">
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={NOTE_MAX}
+            disabled={isSending}
+            rows={3}
+            placeholder="Optional personal note to the recipient"
+            className="font-opensans w-full"
+            style={{
+              backgroundColor: "white",
+              color: "black",
+              padding: "10px 12px",
+              borderRadius: "var(--radius-panel-btn)",
+              fontSize: "14px",
+              border: "none",
+              outline: "none",
+              resize: "vertical",
+              opacity: isSending ? 0.7 : 1,
+            }}
+          />
+          <div className="flex items-center justify-between font-opensans" style={{ fontSize: "11px" }}>
+            <span style={{ color: "#D7D5D1", fontStyle: "italic" }}>
+              Note is sent as typed — not translated.
+            </span>
+            <span style={{ color: noteCharsRemaining <= 20 ? "#FF6B6B" : "#D7D5D1" }}>
+              {noteCharsRemaining} chars remaining
+            </span>
+          </div>
+        </div>
+      )}
+    </>
+  );
 
   if (!isOpen) return null;
 
@@ -300,8 +378,8 @@ export default function EmailPanel({
             onChange={(e) => setLanguage(e.target.value)}
             className="font-opensans"
             style={{
-              backgroundColor: "#005C72",
-              color: "#FFFFFF",
+              backgroundColor: "#5AA9E6",
+              color: "#ffffff",
               padding: "8px 12px",
               borderRadius: "4px",
               fontSize: "14px",
@@ -337,12 +415,14 @@ export default function EmailPanel({
               }}
             />
 
+            {renderNoteSection()}
+
             {/* Preview toggle button */}
             <button
               onClick={() => setShowPreview(!showPreview)}
               className="font-opensans transition-all duration-200 hover:brightness-110"
               style={{
-                backgroundColor: showPreview ? "#666" : "#007ab8",
+                backgroundColor: showPreview ? "#666" : "#DB9D47",
                 color: "#FFFFFF",
                 height: "var(--height-panel-btn)",
                 borderRadius: "var(--radius-panel-btn)",
@@ -402,15 +482,18 @@ export default function EmailPanel({
 
         {/* PDF mode - just confirmation text */}
         {isPdfMode && (
-          <p
-            className="font-opensans text-center"
-            style={{
-              color: "#FFFFFF",
-              fontSize: "16px",
-            }}
-          >
-            Click OK to create your PDF.
-          </p>
+          <>
+            <p
+              className="font-opensans text-center"
+              style={{
+                color: "#FFFFFF",
+                fontSize: "16px",
+              }}
+            >
+              Click OK to create your PDF.
+            </p>
+            {renderNoteSection()}
+          </>
         )}
 
         {/* Sending indicator */}

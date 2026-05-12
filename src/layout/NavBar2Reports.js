@@ -800,8 +800,8 @@ export default function NavBar2Reports({
     if (assistId) filtered = filtered.filter(r => r.assist_id === assistId);
     filtered = filtered.filter(r => orgServesArea(r, coverageCounty, coverageZipCode));
     if (coverageChildOrg) filtered = filtered.filter(r => r.organization === coverageChildOrg);
-    return buildParentDropdownOptions(filtered);
-  }, [directory, statusId, assistId, coverageCounty, coverageZipCode, coverageChildOrg, orgServesArea]);
+    return buildParentDropdownOptions(filtered, coverageParentOrg);
+  }, [directory, statusId, assistId, coverageCounty, coverageZipCode, coverageChildOrg, coverageParentOrg, orgServesArea]);
 
   // Child org options: mutually filtered by all OTHER filters
   const childOrgOptions = useMemo(() => {
@@ -981,8 +981,8 @@ export default function NavBar2Reports({
     if (map2AssistId) filtered = filtered.filter(r => r.assist_id === map2AssistId);
     filtered = filtered.filter(r => orgServesArea(r, map2County, map2ZipCode));
     if (map2Organization) filtered = filtered.filter(r => r.organization === map2Organization);
-    return buildParentDropdownOptions(filtered);
-  }, [directory, map2County, map2ZipCode, map2AssistId, map2Organization, orgServesArea]);
+    return buildParentDropdownOptions(filtered, map2ParentOrg);
+  }, [directory, map2County, map2ZipCode, map2AssistId, map2Organization, map2ParentOrg, orgServesArea]);
 
   // Organization options - filtered by all OTHER filters (county, zip, assistance, parent)
   const map2OrgOptions = useMemo(() => {
@@ -1066,8 +1066,8 @@ export default function NavBar2Reports({
   const zcdParentOrgOptions = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === 1 && finAssistIds.has(r.assist_id));
     if (zcdOrganization instanceof Set && zcdOrganization.size > 0) filtered = filtered.filter(r => zcdOrganization.has(r.organization));
-    return buildParentDropdownOptions(filtered);
-  }, [directory, zcdOrganization, finAssistIds]);
+    return buildParentDropdownOptions(filtered, zcdParentOrg);
+  }, [directory, zcdOrganization, zcdParentOrg, finAssistIds]);
 
   const zcdOrgOptions = useMemo(() => {
     let filtered = directory.filter(r => r.status_id === 1 && finAssistIds.has(r.assist_id));

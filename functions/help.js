@@ -284,12 +284,24 @@ Vertical strip with icons: [[HOME_ICON]] [[INFO_ICON]] [[REPORTS_ICON]] and othe
 3. The [[BLUE_CIRCLE]] counter shows how many you've selected
 4. Click [[EMAIL_BTN]]
 5. Enter your client's email address
-6. Click Send
+6. Optional: click "Add Note" to include a brief personal message (see "Add a personal note to email or PDF" below)
+7. Click Send
 
 ### Create a PDF handout
 1. Select resources by checking their boxes
 2. Click [[PDF_BTN]]
-3. A PDF will download with all the selected resources
+3. Optional: click "Add Note" to include a brief personal message (see "Add a personal note to email or PDF" below)
+4. Click OK — a PDF will download with all the selected resources
+
+### Add a personal note to email or PDF
+Both the Send Email and Create PDF panels include an "Add Note" button. Click it to open a small text box where you can type a brief personal message — for example, "Hi Maria, here's the list we talked about" or "Call them today, they close at 5." The note appears in the email or PDF as an indigo italic paragraph with a vertical bar on the left, set apart from the standard content so the recipient can tell it's from you personally.
+
+Key behaviors to know:
+- **Limit:** 200 characters. A counter under the box shows how many you have left and turns red when only 20 or fewer remain.
+- **Not translated:** the note is sent exactly as you type it, even when the language is set to Español. This is intentional so that a Spanish-speaking case worker can write a Spanish note that reaches the client in Spanish. If you're writing in English but sending the resources in Spanish, you'll need to translate the note yourself (e.g., using Google Translate) before pasting it in.
+- **Ephemeral:** the note is not saved anywhere. The text box clears every time you reopen the panel, so each client gets a fresh start.
+- **Preview:** in email mode, click "Show Preview" after typing the note to see exactly how it will look to the recipient.
+- **Not available for text messages.** SMS has no "Add Note" option, because once you send a text it lands in your own messaging app (Google Voice, Messages, etc.) — you can simply type any follow-up note directly in that conversation before or after sending the resources link.
 
 ### Get more accurate distances by entering a client's address
 By default, distances are measured as a straight line from the center of the selected zip code. To use a specific address as the origin instead:

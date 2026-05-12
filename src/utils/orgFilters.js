@@ -5,10 +5,15 @@
 // Build the parent dropdown options as [{value, label}, ...].
 // Parents appear alphabetically; their subgroups (if any) follow immediately,
 // sorted by trailing number when present, with a "— " indent prefix on the label.
-// Parents and subgroups with only a single child are excluded as redundant.
+// Parents and subgroups with only a single child are excluded as redundant,
+// EXCEPT for `preserveValue` — the currently-selected parent or subgroup is
+// always retained so cross-filter narrowing doesn't silently drop the active
+// filter. (Without this, e.g. picking BakerRipley + an assistance type that
+// only one center offers would collapse the parent out of options, triggering
+// the auto-clear effect.)
 //
 // Accepts records with at least { organization, org_parent, subgroup }.
-export function buildParentDropdownOptions(records) {
+export function buildParentDropdownOptions(records, preserveValue = null) {
   const parentChildren = new Map();   // parent -> Set of child org names
   const parentSubgroups = new Map();  // parent -> Map<subgroup, Set of child org names>
 
@@ -26,7 +31,7 @@ export function buildParentDropdownOptions(records) {
   });
 
   const parents = [...parentChildren.entries()]
-    .filter(([, kids]) => kids.size > 1)
+    .filter(([p, kids]) => kids.size > 1 || p === preserveValue)
     .map(([p]) => p)
     .sort((a, b) => a.localeCompare(b));
 
@@ -37,7 +42,7 @@ export function buildParentDropdownOptions(records) {
     const subMap = parentSubgroups.get(parent);
     if (!subMap) return;
     const subs = [...subMap.entries()]
-      .filter(([, kids]) => kids.size > 1)
+      .filter(([sg, kids]) => kids.size > 1 || sg === preserveValue)
       .map(([sg]) => sg)
       .sort((a, b) => {
         const numA = parseInt(a.match(/\d+$/)?.[0] ?? "", 10);

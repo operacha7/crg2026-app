@@ -322,6 +322,7 @@ export async function sendEmail({
   loggedInUser,
   orgPhone,
   language = "en",
+  note = "",
   // Legacy prop - still supported for backwards compatibility
   selectedZip,
 }) {
@@ -339,6 +340,7 @@ export async function sendEmail({
       resources: selectedData,
       headerText: headerText,
       orgPhone: orgPhone || DEFAULT_ORG_PHONE,
+      note: note,
     })
   );
 
@@ -397,6 +399,7 @@ export async function createPdf({
   searchContext,
   loggedInUser,
   language = "en",
+  note = "",
   // Legacy prop - still supported for backwards compatibility
   selectedZip,
 }) {
@@ -411,6 +414,17 @@ export async function createPdf({
 
   // Use PDF-specific formatting (3-column layout)
   const htmlContent = formatPdfResourcesHtml(selectedData, true);
+
+  // Build optional user-note pull-quote. `translate="no"` keeps the sender's
+  // exact wording when the rest of the PDF is translated to Spanish.
+  const trimmedNote = (note || "").trim();
+  const noteHtml = trimmedNote
+    ? `<p translate="no" class="notranslate" style="color: #283593; font-style: italic; font-size: 13px; line-height: 1.5; border-left: 4px solid #283593; padding-left: 12px; margin: 0 0 20px 0;"><strong>Note:</strong> ${trimmedNote
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll("\n", "<br/>")}</p>`
+    : "";
 
   const getCurrentDate = () => {
     const today = new Date();
@@ -453,8 +467,9 @@ body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 0; }
 We strive for accuracy, but funding and eligibility requirements can change without notice. Please contact the organization directly for their latest requirements. For the most up-to-date listings or to explore more resources, visit <a href="https://crghouston.org" style="color: #0066cc; text-decoration: underline;">crghouston.org</a>.
 </p>
 <p style="font-size: 12px; line-height: 1.6; margin: 0 0 24px 0;">
-<strong>Note:</strong> Click the organization's name to visit their website. Click the address to view it in Google Maps.
+Click the organization's name to visit their website. Click the address to view it in Google Maps.
 </p>
+${noteHtml}
 <div>
 ${htmlContent}
 </div>

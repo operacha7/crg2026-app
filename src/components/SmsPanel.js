@@ -70,6 +70,13 @@ export default function SmsPanel({
     }
   }, [isOpen, canUseGvAuto]);
 
+  // No "Add Note" feature in the SMS flow. Rationale: email/PDF are sent by
+  // CRG, so an in-app note is the only way to personalize them. SMS, by
+  // contrast, is sent by the user in their own messaging client (GV,
+  // Messages, etc.) — they can type any follow-up note directly in that
+  // thread after the auto-fill. The 160-char SMS limit also makes a useful
+  // note effectively impossible once org name + share URL are accounted for.
+
   const digits = phoneNumber.replace(/\D/g, "");
   const isValidPhone = digits.length === 10;
   const e164 = isValidPhone ? `+1${digits}` : "";

@@ -2,6 +2,7 @@
 // Main React Email template for resource list emails
 // Converts the formatResourcesHtml() approach to React components
 
+import { Fragment } from 'react';
 import {
   Html,
   Head,
@@ -88,13 +89,16 @@ function groupByStatusThenAssistance(data) {
  * @param {string} props.headerText - Dynamic header (e.g., "Resources for Zip Code: 77025")
  * @param {string} props.orgPhone - Callback phone number
  * @param {string} props.previewText - Email preview text (shown in inbox)
+ * @param {string} props.note - Optional personal note from sender (verbatim, not translated)
  */
 export function ResourceEmail({
   resources = [],
   headerText = 'Resources',
   orgPhone = '713-664-5350',
   previewText = 'Your requested community resources',
+  note = '',
 }) {
+  const trimmedNote = (note || '').trim();
   const hasNonActive = resources.some((r) => (r.status_id ?? 1) !== 1);
   const grouped = hasNonActive ? null : groupByAssistance(resources);
   const statusGrouped = hasNonActive ? groupByStatusThenAssistance(resources) : null;
@@ -127,18 +131,37 @@ export function ResourceEmail({
             .
           </Text>
 
-          {/* "Note:" paragraph — surfaces what's tappable + the do-not-reply
-              warning. The do-not-reply sentence is email-only; the PDF
-              variant omits it because it doesn't make sense on a deliverable
-              that's not interactive. */}
+          {/* Instructional paragraph — surfaces what's tappable + the
+              do-not-reply warning. The "Note:" label has been moved to the
+              user's optional personal note block below, so this paragraph
+              now reads as a plain instruction. The do-not-reply sentence is
+              email-only; the PDF variant omits it because it doesn't make
+              sense on a deliverable that's not interactive. */}
           <Text style={styles.note}>
-            <strong>Note:</strong>{' '}
             Click the organization&rsquo;s name to visit their website. Click
             the address to view it in Google Maps.{' '}
             <span style={styles.doNotReply}>
               Please do not reply to this automated and unmonitored email.
             </span>
           </Text>
+
+          {/* Optional personal note from sender. Wrapped in translate="no"
+              so Google Translate keeps the sender's exact wording when the
+              rest of the email is translated to Spanish. */}
+          {trimmedNote && (
+            <Text style={styles.userNote}>
+              <span className="notranslate" translate="no">
+                <strong>Note:</strong>{' '}
+                {trimmedNote.split('\n').map((line, i, arr) => (
+                  // eslint-disable-next-line react/no-array-index-key -- static split of a single string; lines never reorder
+                  <Fragment key={i}>
+                    {line}
+                    {i < arr.length - 1 && <br />}
+                  </Fragment>
+                ))}
+              </span>
+            </Text>
+          )}
 
           {/* Resource sections grouped by assistance type (all Active) */}
           {!hasNonActive && Object.values(grouped).map((group, groupIdx) => (
@@ -246,6 +269,15 @@ const styles = {
     fontSize: '14px',
     lineHeight: '1.6',
     marginBottom: '24px',
+  },
+  userNote: {
+    color: '#283593',
+    fontStyle: 'italic',
+    fontSize: '15px',
+    lineHeight: '1.5',
+    borderLeft: '4px solid #283593',
+    paddingLeft: '12px',
+    margin: '0 0 24px 0',
   },
   doNotReply: {
     color: 'red',
