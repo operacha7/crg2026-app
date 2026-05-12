@@ -378,7 +378,7 @@ export default function EmailPanel({
             onChange={(e) => setLanguage(e.target.value)}
             className="font-opensans"
             style={{
-              backgroundColor: "#5AA9E6",
+              backgroundColor: "#AA7BC3",
               color: "#ffffff",
               padding: "8px 12px",
               borderRadius: "4px",
