@@ -1,0 +1,21 @@
+# Cloudflare Pages security headers
+# Applied to all routes. Cloudflare Pages reads this file at the output root.
+# https://developers.cloudflare.com/pages/configuration/headers/
+#
+# CSP note: 'unsafe-inline' is allowed for script-src because index.html contains
+# inline JSON-LD blocks and the gtag bootstrap. To tighten further, replace with
+# SHA-256 hashes of each inline block (`sha256-...`). Skipping for now to avoid
+# breakage on every index.html edit.
+#
+# HSTS note: 'preload' is intentionally omitted. Adding it requires submission
+# to hstspreload.org and is effectively irreversible — add only after the
+# config has been stable in production for weeks.
+
+/*
+  Strict-Transport-Security: max-age=63072000; includeSubDomains
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), midi=(), accelerometer=(), gyroscope=(), magnetometer=()
+  Cross-Origin-Opener-Policy: same-origin
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://res.cloudinary.com; connect-src 'self' https://oxlhrpjmudyklffbbdva.supabase.co https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com; frame-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests
