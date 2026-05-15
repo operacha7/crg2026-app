@@ -1,0 +1,7 @@
+# Security policy for Community Resources Guide Houston (crghouston.org)
+# RFC 9116 — https://www.rfc-editor.org/rfc/rfc9116
+
+Contact: mailto:info@crghouston.org
+Expires: 2027-05-15T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://crghouston.org/.well-known/security.txt
