@@ -4,7 +4,9 @@
 import { supabase } from '../supabaseClient';
 
 /**
- * Get current date in Central Time as YYYY-MM-DD string
+ * Get current date in Central Time as YYYY-MM-DD string.
+ * Used by fetchDailyUsage's date-range query. logUsage no longer needs
+ * this — the server stamps log_date itself to prevent backdating.
  */
 function getCentralDate() {
   return new Date().toLocaleDateString('en-CA', {
@@ -13,7 +15,18 @@ function getCentralDate() {
 }
 
 /**
- * Log a usage event to app_usage_logs
+ * Log a usage event to app_usage_logs.
+ *
+ * Routes through /log-usage (an auth-aware Cloudflare Function) instead of
+ * inserting into Supabase directly from the browser. The old direct insert
+ * required an anon-writable INSERT policy on app_usage_logs, which let
+ * anyone spam the table — that policy is being dropped. The Function uses
+ * the session cookie to authoritatively set reg_organization (registered
+ * orgs can't spoof each other's logs); guest writes are still allowed but
+ * must claim "Guest" exactly.
+ *
+ * Server stamps log_date in Central Time so a malicious caller can't
+ * backdate rows.
  *
  * @param {Object} params
  * @param {string} params.reg_organization - Organization name or "Guest"
@@ -29,19 +42,27 @@ export async function logUsage({
   assistance_type = null,
   search_value = null
 }) {
-  const { error } = await supabase
-    .from('app_usage_logs')
-    .insert({
-      log_date: getCentralDate(),
-      reg_organization: reg_organization || 'Guest',
-      action_type,
-      search_mode,
-      assistance_type,
-      search_value
+  try {
+    const res = await fetch('/log-usage', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reg_organization: reg_organization || 'Guest',
+        action_type,
+        search_mode,
+        assistance_type,
+        search_value,
+      }),
     });
-
-  if (error) {
-    console.error('Usage log error:', error);
+    if (!res.ok) {
+      // Non-2xx — surface to the console but don't break the user's flow.
+      // Logging is fire-and-forget UX-wise; we don't want a logging failure
+      // to make a search appear broken.
+      console.error('Usage log error: HTTP', res.status);
+    }
+  } catch (err) {
+    console.error('Usage log error:', err);
   }
 }
 
