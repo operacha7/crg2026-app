@@ -1,7 +1,13 @@
 const { google } = require('googleapis');
 const { createClient } = require('@supabase/supabase-js');
+const { webcrypto } = require('crypto');
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
+// Bind Node's Web Crypto to globalThis so the same PBKDF2 routine used by
+// the Cloudflare login function and by scripts/hash-passcodes.js works here
+// unmodified. Node 18+ exposes Web Crypto under crypto.webcrypto.
+if (!globalThis.crypto) globalThis.crypto = webcrypto;
 
 // Configuration
 const SPREADSHEET_ID = '1m3-OHykdj7S_9fGdyJmFkgjNMQ9FA4BAmuyf4khMm7w';
@@ -11,7 +17,7 @@ const TABLES = [
   { sheetName: 'zip_codes', supabaseTable: 'zip_codes' },
   { sheetName: 'assistance', supabaseTable: 'assistance' },
   { sheetName: 'organizations', supabaseTable: 'organizations' },
-  { sheetName: 'registered_organizations', supabaseTable: 'registered_organizations', primaryKey: 'account_id' },
+  { sheetName: 'registered_organizations', supabaseTable: 'registered_organizations', primaryKey: 'account_id', transform: transformRegisteredOrg },
   { sheetName: 'announcements', supabaseTable: 'announcements', transform: transformAnnouncement },
   { sheetName: 'zip_code_data', supabaseTable: 'zip_code_data', transform: transformZipCodeData, primaryKey: 'id' },
   { sheetName: 'header_config', supabaseTable: 'header_config', transform: transformHeaderConfig },
@@ -33,6 +39,62 @@ function passthroughTransform(row, skipKeys = []) {
 }
 
 function transformZipCodeData(row) { return passthroughTransform(row, ['id']); }
+
+// ─── Passcode hashing for registered_organizations ──────────────────────────
+// The org_passcode column is intentionally stored as a PBKDF2 hash in
+// Supabase so a database leak doesn't reveal anyone's passcode. Plaintext
+// passcodes typed into Google Sheets get hashed here on the way through —
+// only the hash ever leaves this script. Already-hashed values pass through
+// unchanged, so re-running sync is safe.
+//
+// Hash format and parameters MUST match functions/_lib/session.js so the
+// /login function's verifyPassword can recognize and validate hashes
+// produced here.
+const PBKDF2_ALGO = 'pbkdf2-sha256';
+const PBKDF2_ITERATIONS = 100_000;
+const PBKDF2_KEY_BITS = 256;
+const SALT_BYTES = 16;
+const _enc = new TextEncoder();
+
+function _bytesToB64Url(bytes) {
+  return Buffer.from(bytes)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+async function _hashPassword(plaintext) {
+  const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    _enc.encode(plaintext),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
+    keyMaterial,
+    PBKDF2_KEY_BITS
+  );
+  return `${PBKDF2_ALGO}$${PBKDF2_ITERATIONS}$${_bytesToB64Url(salt)}$${_bytesToB64Url(new Uint8Array(bits))}`;
+}
+
+function _isAlreadyHashed(value) {
+  return typeof value === 'string' && value.startsWith(`${PBKDF2_ALGO}$`);
+}
+
+async function transformRegisteredOrg(row) {
+  // Pass everything through; only org_passcode needs special handling.
+  const result = passthroughTransform(row);
+  const passcode = result.org_passcode;
+  if (passcode && !_isAlreadyHashed(passcode)) {
+    result.org_passcode = await _hashPassword(passcode);
+    console.log(`  hashed passcode for ${row.reg_organization || row.account_id}`);
+  }
+  return result;
+}
 
 function transformFinFundingData(row) { return passthroughTransform(row, ['id']); }
 
@@ -424,9 +486,11 @@ async function syncAll() {
     console.log(`Syncing ${table.sheetName}...`);
     let data = await fetchSheetData(sheets, table.sheetName);
 
-    // Apply transform if provided (used for announcements)
+    // Apply transform if provided. Promise.all handles both sync transforms
+    // (their non-promise return values pass through unchanged) and async ones
+    // like transformRegisteredOrg, which awaits PBKDF2 hashing per row.
     if (table.transform && data.length > 0) {
-      data = data.map(table.transform);
+      data = await Promise.all(data.map(table.transform));
     }
 
     const count = await uploadToSupabase(table.supabaseTable, data, table.primaryKey);
