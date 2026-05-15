@@ -32,9 +32,11 @@ const GUEST_USER = {
 };
 
 // Paths under MainApp that should be reachable without an account. Visitors
-// hitting these get an auto-created guest user. /reports and /announcements
-// stay auth-gated.
-const PUBLIC_MAIN_PATH_PREFIXES = ['/assistance/', '/support', '/find'];
+// hitting these get an auto-created guest user. /reports stays auth-gated
+// (org-level usage analytics). /announcements is reachable by guests:
+// AnnouncementService filters server-side to audience_code=1 (All CRG Users)
+// for guest viewers, matching the popup behavior on first load.
+const PUBLIC_MAIN_PATH_PREFIXES = ['/assistance/', '/support', '/find', '/announcements'];
 
 const isPublicMainPath = (pathname) =>
   PUBLIC_MAIN_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
