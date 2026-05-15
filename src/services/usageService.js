@@ -224,18 +224,28 @@ export async function fetchMonthlyUsage({
 }
 
 /**
- * Fetch list of registered organizations for dropdown
+ * Fetch list of registered organizations for Reports dropdowns and color
+ * mapping. Routes through /list-org-colors (an auth-gated Cloudflare
+ * Function) instead of selecting registered_organizations directly from
+ * the browser — that table no longer has a public read policy. Falls back
+ * to an empty array on any error so Reports degrades gracefully (charts
+ * just render with default colors and the dropdown shows only "All").
  */
 export async function fetchOrganizations() {
-  const { data, error } = await supabase
-    .from('registered_organizations')
-    .select('reg_organization, org_color')
-    .order('reg_organization', { ascending: true });
-
-  if (error) {
-    console.error('Fetch orgs error:', error);
+  try {
+    const res = await fetch('/list-org-colors', { credentials: 'include' });
+    if (!res.ok) {
+      console.error('Fetch orgs error: HTTP', res.status);
+      return [];
+    }
+    const data = await res.json();
+    if (!data?.success || !Array.isArray(data.orgs)) {
+      console.error('Fetch orgs error: malformed response', data);
+      return [];
+    }
+    return data.orgs;
+  } catch (err) {
+    console.error('Fetch orgs error:', err);
     return [];
   }
-
-  return data || [];
 }

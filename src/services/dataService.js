@@ -1,6 +1,9 @@
 // src/services/dataService.js
 // Data service for CRG 2026 - connects to Supabase tables
-// Tables: directory, assistance, organizations, zip_codes, registered_organizations
+// Tables: directory, assistance, organizations, zip_codes
+// (registered_organizations is read only by Cloudflare Functions — see
+// functions/login.js, functions/whoami.js, functions/list-orgs.js. The
+// browser never reads that table directly, so passcode hashes can't leak.)
 
 import { supabase } from "../supabaseClient";
 
@@ -193,33 +196,6 @@ export const dataService = {
     return data;
   },
 
-  // ======= REGISTERED ORGANIZATIONS (auth - implement last) =======
-  async getRegisteredOrganizations() {
-    const { data, error } = await supabase
-      .from('registered_organizations')
-      .select('*')
-      .order('reg_organization', { ascending: true });
-
-    if (error) {
-      console.error("Error fetching registered organizations:", error);
-      return [];
-    }
-    return data;
-  },
-
-  async getRegisteredOrgByPasscode(passcode) {
-    const { data, error } = await supabase
-      .from('registered_organizations')
-      .select('*')
-      .eq('org_passcode', passcode)
-      .single();
-
-    if (error) {
-      console.error("Error fetching registered org by passcode:", error);
-      return null;
-    }
-    return data;
-  },
 };
 
 // Export helper functions for use elsewhere if needed

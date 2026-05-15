@@ -27,7 +27,6 @@ import { ResourceEmail } from "../emails";
  * @param {string} statusMessage - Error or status message to display
  * @param {Array} selectedData - Resources to include in email (for preview)
  * @param {string} headerText - Header text for email (e.g., "Resources for Zip Code: 77025")
- * @param {string} orgPhone - Callback phone number for email
  */
 export default function EmailPanel({
   isOpen,
@@ -40,7 +39,6 @@ export default function EmailPanel({
   statusMessage = "",
   selectedData = [],
   headerText = "Resources",
-  orgPhone = "713-664-5350",
 }) {
   // Track which view to show: "warning" or "input"
   const [currentView, setCurrentView] = useState("input");
@@ -70,7 +68,6 @@ export default function EmailPanel({
             ResourceEmail({
               resources: selectedData,
               headerText: headerText,
-              orgPhone: orgPhone,
               note: note,
             })
           );
@@ -83,7 +80,7 @@ export default function EmailPanel({
       };
       generatePreview();
     }
-  }, [isOpen, isPdfMode, selectedData, headerText, orgPhone, note]);
+  }, [isOpen, isPdfMode, selectedData, headerText, note]);
 
   // Translate preview when language changes
   useEffect(() => {

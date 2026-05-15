@@ -37,7 +37,6 @@ export async function sendEmail({
   selectedData,
   searchContext,
   loggedInUser,
-  orgPhone,
 }) {
   const headerText = generateSearchHeader(searchContext);
 
@@ -46,7 +45,6 @@ export async function sendEmail({
     <ResourceEmail
       resources={selectedData}
       headerText={headerText}
-      orgPhone={orgPhone}
     />
   );
 

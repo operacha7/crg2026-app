@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { calculateDistance, parseCoordinates } from "../services/dataService";
 import { useAppData } from "../Contexts/AppDataContext";
-import { sendEmail, createPdf, buildSmsBody, fetchOrgPhone, generateSearchHeader } from "../services/emailService";
+import { sendEmail, createPdf, buildSmsBody, generateSearchHeader } from "../services/emailService";
 import { getDrivingDistances } from "../services/geocodeService";
 import { logUsage } from "../services/usageService";
 import { applyLLMFilters } from "../services/llmSearchService";
@@ -52,7 +52,6 @@ export default function ZipCodePage({
 
   // State management
   const [selectedRows, setSelectedRows] = useState([]);
-  const [orgPhone, setOrgPhone] = useState("");
   const [inlineFilteredCount, setInlineFilteredCount] = useState(null);
 
   // Search key for auto-resetting inline filters when search params change
@@ -64,17 +63,6 @@ export default function ZipCodePage({
   const handleFilteredCountChange = useCallback((count) => {
     setInlineFilteredCount(count);
   }, []);
-
-  // Fetch org phone on mount
-  useEffect(() => {
-    const loadOrgPhone = async () => {
-      if (loggedInUser?.reg_organization) {
-        const phone = await fetchOrgPhone(loggedInUser.reg_organization);
-        setOrgPhone(phone);
-      }
-    };
-    loadOrgPhone();
-  }, [loggedInUser]);
 
   // Filter directory based on active search mode and filters
   const filteredDirectory = useMemo(() => {
@@ -347,7 +335,6 @@ export default function ZipCodePage({
       selectedData: dataToSend,
       searchContext: buildSearchContext(),
       loggedInUser,
-      orgPhone,
       language,
       note,
     });
@@ -371,7 +358,6 @@ export default function ZipCodePage({
       selectedData: dataToSend,
       searchContext: buildSearchContext(),
       loggedInUser,
-      orgPhone,
       language,
       note,
     });

@@ -4,43 +4,13 @@
 
 import { render } from "@react-email/components";
 import { LOGO_URL_Email, BUS_ICON_URL } from "../data/constants";
-import { supabase } from "../supabaseClient";
 import {
   formatAddress,
   formatHoursFromJson,
-  formatDistance,
   parseRequirements,
 } from "../utils/formatters";
 import { buildTransitDirectionsUrl } from "../utils/transitUrl";
 import { ResourceEmail } from "../emails";
-
-// Default callback phone number if org doesn't have one configured
-const DEFAULT_ORG_PHONE = "713-664-5350";
-
-/**
- * Fetch organization phone number from registered_organizations table
- * Returns the default phone number if org_phone is null/empty
- */
-export async function fetchOrgPhone(orgName) {
-  if (!orgName) return DEFAULT_ORG_PHONE;
-
-  try {
-    const { data, error } = await supabase
-      .from("registered_organizations")
-      .select("org_phone")
-      .eq("reg_organization", orgName)
-      .single();
-
-    if (error) {
-      console.error("Error fetching org_phone:", error);
-      return DEFAULT_ORG_PHONE;
-    }
-    return data?.org_phone || DEFAULT_ORG_PHONE;
-  } catch (err) {
-    console.error("Error in fetchOrgPhone:", err);
-    return DEFAULT_ORG_PHONE;
-  }
-}
 
 /**
  * Sort data by assist_id then distance
@@ -325,7 +295,6 @@ export async function sendEmail({
   selectedData,
   searchContext,
   loggedInUser,
-  orgPhone,
   language = "en",
   note = "",
   // Legacy prop - still supported for backwards compatibility
@@ -344,7 +313,6 @@ export async function sendEmail({
     ResourceEmail({
       resources: selectedData,
       headerText: headerText,
-      orgPhone: orgPhone || DEFAULT_ORG_PHONE,
       note: note,
     })
   );

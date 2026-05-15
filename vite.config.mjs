@@ -42,6 +42,7 @@ export default defineConfig({
       '/logout': 'http://localhost:8788',
       '/whoami': 'http://localhost:8788',
       '/list-orgs': 'http://localhost:8788',
+      '/list-org-colors': 'http://localhost:8788',
     },
   },
   build: {

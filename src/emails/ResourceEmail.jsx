@@ -87,14 +87,12 @@ function groupByStatusThenAssistance(data) {
  * @param {Object} props
  * @param {Array} props.resources - Selected resource data
  * @param {string} props.headerText - Dynamic header (e.g., "Resources for Zip Code: 77025")
- * @param {string} props.orgPhone - Callback phone number
  * @param {string} props.previewText - Email preview text (shown in inbox)
  * @param {string} props.note - Optional personal note from sender (verbatim, not translated)
  */
 export function ResourceEmail({
   resources = [],
   headerText = 'Resources',
-  orgPhone = '713-664-5350',
   previewText = 'Your requested community resources',
   note = '',
 }) {
@@ -213,13 +211,6 @@ export function ResourceEmail({
             </Section>
           ))}
 
-          {/* Closing message */}
-          <Text style={styles.closing}>
-            We hope this information helps you secure the assistance you need.
-            Please call us back at {orgPhone} if we can provide any other
-            resources.
-          </Text>
-
           {/* Footer with logo */}
           <Hr style={styles.hr} />
           <Section style={styles.footer}>
@@ -308,11 +299,6 @@ const styles = {
     marginBottom: '16px',
     fontSize: '16px',
     fontWeight: 'bold',
-  },
-  closing: {
-    fontSize: '14px',
-    marginTop: '30px',
-    lineHeight: '1.6',
   },
   hr: {
     borderTop: '1px solid #ccc',
