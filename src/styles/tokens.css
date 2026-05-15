@@ -174,7 +174,7 @@
   --font-size-navbar1-title: clamp(16px, 1.8vw, 28px);
   --font-weight-navbar1-title: 600; /* Semibold */
   --letter-spacing-navbar1-title: 0.1em; /* 10% */
-  --font-size-navbar1-counter: clamp(18px, 1.9vw, 29px);
+  --font-size-navbar1-counter: clamp(18px, 1.9vw, 22px);
   --font-weight-navbar1-counter: 400; /* Regular */
   --font-size-navbar1-btn: clamp(14px, 1.4vw, 22px);
   --font-weight-navbar1-btn: 400; /* Regular */
@@ -315,15 +315,15 @@
   --height-results-header: 30px;
 
   /* Filter Row */
-  --color-filter-row-bg: #FDF6E3;
-  --color-filter-input-bg: #005C72;
-  --color-filter-input-text: #FFFFFF;
-  --color-filter-input-placeholder: #999999;
-  --height-filter-row: 35px;
+  --color-filter-row-bg: #43747D;          /* matches the secondary footer band */
+  --color-filter-input-bg: #FFFFFF;
+  --color-filter-input-text: #222831;       /* matches NavBar1 bg color */
+  --color-filter-input-placeholder: #222831;
+  --height-filter-row: 44px;               /* extra vertical breathing room around the inputs */
   --height-filter-input: 26px;
-  --font-size-filter-input: 13px;
-  --color-filter-funnel-active: #FFC857;
-  --color-filter-funnel-inactive: #FFFFFF;
+  --font-size-filter-input: 15px;
+  --color-filter-funnel-active: #FFFFFF;
+  --color-filter-funnel-inactive: #FFFFFF;  /* both states white; filled vs outline carries the active signal */
   --color-filter-reset-text: #FF0004;
 
   /* Results Row */

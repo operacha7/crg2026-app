@@ -3,7 +3,15 @@
 // Organization (text), Hours (day dropdown), Requirements (text)
 // Uses same GRID_COLUMNS as ResultsHeader for alignment
 
+import { useEffect } from "react";
 import { GRID_COLUMNS } from "../layout/ResultsHeader";
+import { useAppData } from "../Contexts/AppDataContext";
+import { logUsage } from "../services/usageService";
+
+// Debounce window for text-input filters. Long enough that mid-typing
+// keystrokes don't log ("c" → "ca" → "cat" gets one log line for "cat"),
+// short enough that a real filter intent gets recorded promptly.
+const TEXT_FILTER_DEBOUNCE_MS = 1500;
 
 // Map dropdown display names to 2-letter day codes used in org_hours JSON
 const DAY_OPTIONS = [
@@ -49,7 +57,9 @@ function ClearButton({ onClick }) {
       onClick={onClick}
       style={{
         position: "absolute",
-        right: "4px",
+        // Wrapper has paddingRight 8px, so the X needs to sit at least that
+        // far in to fall inside the input rather than in the gutter beside it.
+        right: "9px",
         top: "50%",
         transform: "translateY(-50%)",
         background: "none",
@@ -78,6 +88,75 @@ export default function FilterRow({
   onFilterRequirementsChange,
   onClearFilter,
 }) {
+  // Filter usage is logged so Reports can show whether the column-header
+  // filters are actually getting used. Server-side /log-usage stamps the
+  // org from the session cookie when present, so reg_organization here is
+  // the guest-fallback path; logged-in callers' value gets overridden.
+  const { loggedInUser } = useAppData();
+  const regOrgName = loggedInUser?.reg_organization || "Guest";
+
+  // Status dropdown — log immediately on change. Skip the "all" default so
+  // we only record the user actively narrowing.
+  useEffect(() => {
+    if (filterStatus && filterStatus !== "all") {
+      logUsage({
+        reg_organization: regOrgName,
+        action_type: "filter",
+        search_mode: "status",
+        search_value: filterStatus,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterStatus]);
+
+  // Hours day dropdown — log immediately on change. Skip the "" (Any Day)
+  // default; same reasoning as status.
+  useEffect(() => {
+    if (filterDay) {
+      logUsage({
+        reg_organization: regOrgName,
+        action_type: "filter",
+        search_mode: "hours",
+        search_value: filterDay,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterDay]);
+
+  // Organization text input — debounce so we log the settled value rather
+  // than every keystroke. Effect cleanup cancels the pending log if the
+  // user types again within the debounce window.
+  useEffect(() => {
+    const trimmed = filterOrganization.trim();
+    if (!trimmed) return undefined;
+    const timer = setTimeout(() => {
+      logUsage({
+        reg_organization: regOrgName,
+        action_type: "filter",
+        search_mode: "organization",
+        search_value: trimmed,
+      });
+    }, TEXT_FILTER_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterOrganization]);
+
+  // Requirements text input — same pattern as Organization.
+  useEffect(() => {
+    const trimmed = filterRequirements.trim();
+    if (!trimmed) return undefined;
+    const timer = setTimeout(() => {
+      logUsage({
+        reg_organization: regOrgName,
+        action_type: "filter",
+        search_mode: "requirements",
+        search_value: trimmed,
+      });
+    }, TEXT_FILTER_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterRequirements]);
+
   return (
     <div
       className="hidden lg:grid items-center font-opensans"

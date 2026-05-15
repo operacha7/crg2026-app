@@ -11,7 +11,7 @@ const REPORT_OPTIONS = [
   { id: 'emails-sent', label: 'Emails Chart' },
   { id: 'pdfs-created', label: 'PDFs Chart' },
   { id: 'reports-chart', label: 'Reports Chart' },
-  { id: 'usage-tables', label: 'Usage Data Tables' },
+  { id: 'usage-tables', label: 'Usage Data Table' },
   { id: 'coverage', label: 'The Matt Report', color: '#f79184' },
   { id: 'map2', label: 'Zip Code Maps', color: '#9df784' },
   { id: 'consolidated', label: 'Zip Code Data', color: '#84d4f7' },

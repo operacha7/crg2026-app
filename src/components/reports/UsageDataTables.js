@@ -1,9 +1,9 @@
 // src/components/reports/UsageDataTables.js
-// Usage Data Tables report
-// Three sections: Communications, Search, Assistance
+// Usage Data Table report
+// Sections: Communications, Reports, Search, Assistance
 // Columns: dates + Da/Mo + Mo/Yr percentages
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { fetchDailyUsage, fetchMonthlyUsage } from "../../services/usageService";
 import VerticalLineIcon from "../../icons/VerticalLineIcon";
 import { useAppData } from "../../Contexts/AppDataContext";
@@ -22,6 +22,7 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
   const { assistance } = useAppData();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const scrollContainerRef = useRef(null);
 
   // Get assistance type names from the assistance table, sorted by assist_id
   const assistanceTypes = useMemo(() => {
@@ -56,6 +57,18 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
     }
     loadData();
   }, [selectedOrg, viewMode]);
+
+  // Auto-scroll the wide table all the way right whenever the date columns
+  // change (initial load and daily↔monthly toggle), so the most recent
+  // date and the Current/Total summary columns are visible without the
+  // user having to scroll. Runs after data is set so scrollWidth reflects
+  // the full rendered width.
+  useEffect(() => {
+    if (loading) return;
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    el.scrollLeft = el.scrollWidth;
+  }, [loading, viewMode, data]);
 
   // Get date columns
   const dateColumns = useMemo(() => {
@@ -201,6 +214,22 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
       rowData._total = total;
       return rowData;
     });
+
+    // Header Filter row: aggregates every column-header filter event
+    // regardless of which column was filtered (status / hours / organization
+    // / requirements). Per-column breakdown lives in app_usage_logs.search_mode
+    // if needed later; the report just shows total filter activity.
+    const filterRow = { metric: "Header Filter" };
+    let filterTotal = 0;
+    dateColumns.forEach(date => {
+      const count = data
+        .filter(row => row[dateKey] === date && row.action_type === "filter")
+        .reduce((sum, row) => sum + row.count, 0);
+      filterRow[date] = count;
+      filterTotal += count;
+    });
+    filterRow._total = filterTotal;
+    rows.push(filterRow);
 
     // Calculate totals row
     const totalsRow = { metric: "Total", _isTotal: true };
@@ -356,7 +385,7 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
   }
 
   return (
-    <div className="w-full h-full overflow-auto">
+    <div ref={scrollContainerRef} className="w-full h-full overflow-auto">
       <table className="w-full border-collapse">
         {/* Single header row - red background, white text, sticky */}
         <thead className="sticky top-0 z-10">

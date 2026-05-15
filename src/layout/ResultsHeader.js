@@ -76,13 +76,13 @@ export default function ResultsHeader({
                   title={`Sort by ${col.label}`}
                 >
                   {col.label}
-                  <SortIcon active={isActiveSort} direction={sortDirection} />
+                  <SortIcon active={isActiveSort} direction={sortDirection} size={15} color="#FFFFFF" />
                 </span>
               ) : (
                 <span>{col.label}</span>
               )}
 
-              {/* Funnel icon for filterable columns — outline when inactive, solid when active */}
+              {/* Funnel icon for filterable columns — outline when inactive, solid when active. */}
               {isFilterable && (
                 <button
                   onClick={onToggleFilterRow}
@@ -98,7 +98,7 @@ export default function ResultsHeader({
                     alignItems: "center",
                   }}
                 >
-                  <FunnelIcon size={12} color="#FFFFFF" filled={isFunnelActive} />
+                  <FunnelIcon size={15} color="#FFFFFF" filled={isFunnelActive} />
                 </button>
               )}
             </div>
