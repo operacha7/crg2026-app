@@ -35,6 +35,13 @@ export default defineConfig({
       '/createPdf': 'http://localhost:8788',
       '/log-usage': 'http://localhost:8788',
       '/sendSupportEmail': 'http://localhost:8788',
+      // Auth endpoints (Set-Cookie / Cookie pass through fine; default
+      // proxy preserves them, and we don't set Domain on the cookie so the
+      // browser ties it to the request origin — localhost:3000 in dev).
+      '/login': 'http://localhost:8788',
+      '/logout': 'http://localhost:8788',
+      '/whoami': 'http://localhost:8788',
+      '/list-orgs': 'http://localhost:8788',
     },
   },
   build: {

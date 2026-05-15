@@ -5,6 +5,12 @@
 import { createClient } from "@supabase/supabase-js";
 import { LLM_MODEL } from "./config.js";
 
+// Inbound payload caps. Per-IP rate limiting is enforced separately at the
+// Cloudflare dashboard via Rate Limiting Rules on the /help path.
+const MAX_QUESTION_LENGTH = 1000;
+const MAX_HISTORY_MESSAGES = 6;
+const MAX_HISTORY_MSG_CHARS = 2000;
+
 // Generate a simple anonymous session ID (not tied to user identity)
 function generateSessionId() {
   return `help_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
@@ -93,11 +99,40 @@ export async function onRequest(context) {
       );
     }
 
+    // Hard caps on inbound payload to keep the LLM bill bounded if a client
+    // (or attacker) tries to push a giant question or fabricated history. The
+    // help UI sends short questions and ~6 messages of history, so these
+    // ceilings are well above legitimate use.
+    if (question.length > MAX_QUESTION_LENGTH) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: `Question is too long (max ${MAX_QUESTION_LENGTH} characters).`,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     console.log("📦 Question:", question);
+
+    // Trim history to the most recent N exchanges and clamp each message's
+    // content length. Defensive against a client that bypasses the UI cap.
+    const trimmedHistory = (Array.isArray(conversationHistory) ? conversationHistory : [])
+      .slice(-MAX_HISTORY_MESSAGES)
+      .map((m) => ({
+        role: m?.role,
+        content:
+          typeof m?.content === "string" && m.content.length > MAX_HISTORY_MSG_CHARS
+            ? m.content.slice(0, MAX_HISTORY_MSG_CHARS)
+            : m?.content,
+      }));
 
     // Build messages array with conversation history
     const messages = [
-      ...conversationHistory,
+      ...trimmedHistory,
       {
         role: "user",
         content: question,
@@ -278,20 +313,30 @@ Vertical strip with icons: [[HOME_ICON]] [[INFO_ICON]] [[REPORTS_ICON]] and othe
 5. Selected types appear as chips in the tan bar
 6. Click a chip to toggle it: [[CHIP_ACTIVE]] = filtering, [[CHIP_INACTIVE]] = not filtering
 
+### Sending resources to a client (Email, PDF, or Text)
+**You must be signed in with a registered organization account to email, create a PDF, or send a text. Guests can browse and view resources but can't send.** If you're browsing as a guest, sign out and sign back in with your organization's Account ID and passcode to enable these actions. (If you don't have one, ask your organization's CRG contact, or use the Contact Support icon in the right sidebar.)
+
 ### Email resources to a client
 1. First, find resources using the search and filters
 2. Check the boxes next to the resources you want to send
 3. The [[BLUE_CIRCLE]] counter shows how many you've selected
-4. Click [[EMAIL_BTN]]
+4. Click [[EMAIL_BTN]] (requires being signed in with a registered organization account)
 5. Enter your client's email address
 6. Optional: click "Add Note" to include a brief personal message (see "Add a personal note to email or PDF" below)
 7. Click Send
 
 ### Create a PDF handout
 1. Select resources by checking their boxes
-2. Click [[PDF_BTN]]
+2. Click [[PDF_BTN]] (requires being signed in with a registered organization account)
 3. Optional: click "Add Note" to include a brief personal message (see "Add a personal note to email or PDF" below)
 4. Click OK — a PDF will download with all the selected resources
+
+### Text (SMS) resources to a client
+1. Select the resources you want to send by checking their boxes
+2. Click the green "Send Text" button in the top header bar (requires being signed in with a registered organization account)
+3. Enter the client's phone number, choose how you want to send it (your default Messages app, Google Voice, etc.), and proceed
+4. The text contains a short link the recipient taps to open the same filtered view of the resources you selected
+5. Texts don't support the "Add Note" feature — once the message lands in your messaging app you can type a personal note directly in that conversation before or after sending
 
 ### Add a personal note to email or PDF
 Both the Send Email and Create PDF panels include an "Add Note" button. Click it to open a small text box where you can type a brief personal message — for example, "Hi Maria, here's the list we talked about" or "Call them today, they close at 5." The note appears in the email or PDF as an indigo italic paragraph with a vertical bar on the left, set apart from the standard content so the recipient can tell it's from you personally.
@@ -333,7 +378,7 @@ Click [[PRIVACY_ICON]] in the right sidebar to read the privacy policy.
 - The [[ORANGE_CIRCLE]] shows filtered results; [[BLUE_CIRCLE]] shows your selections
 - Check the "Status" column: Active is good, Limited may have restrictions, Inactive is temporarily unavailable
 - Type in dropdowns to quickly jump to what you need (e.g., type "770" in zip dropdown)
-- Guest users can browse but need to log in to email or create PDFs
+- Guest users can browse and view resources, but Email, Create PDF, and Send Text all require signing in with a registered organization account
 
 ## ASSISTANCE TYPES (6 Groups)
 - **Group 1 (Yellow)**: Rent, Utilities, Food, Clothing

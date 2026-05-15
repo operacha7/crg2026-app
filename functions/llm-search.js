@@ -5,6 +5,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { LLM_MODEL } from "./config.js";
 
+// Inbound payload cap. Per-IP rate limiting is enforced separately at the
+// Cloudflare dashboard via Rate Limiting Rules on the /llm-search path.
+const MAX_QUERY_LENGTH = 500;
+
 const FILTER_TOOL = {
   name: "apply_filters",
   description:
@@ -167,6 +171,19 @@ export async function onRequest(context) {
         JSON.stringify({
           success: false,
           message: "Search query is required",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (query.length > MAX_QUERY_LENGTH) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: `Search query is too long (max ${MAX_QUERY_LENGTH} characters).`,
         }),
         {
           status: 400,

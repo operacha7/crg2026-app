@@ -533,6 +533,10 @@ function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select 
                     fontSize: "var(--font-size-navbar2-dropdown-option)",
                     color: "var(--color-dropdown-text)",
                     backgroundColor: hoveredOption === opt.value ? "var(--color-dropdown-hover-bg)" : (value === opt.value ? "var(--color-dropdown-active-bg)" : "transparent"),
+                    // Keep "ZIP — Cityname" labels on a single line; the panel
+                    // (only minWidth-constrained, no maxWidth) auto-expands to
+                    // fit the widest option.
+                    whiteSpace: "nowrap",
                   }}
                 >
                   {opt.label}
@@ -947,7 +951,6 @@ function OrganizationFilters({
 }
 
 function LocationFilters({
-  zipCodes = [],
   directory = [],
   selectedLocationZip,
   setSelectedLocationZip,
@@ -959,41 +962,53 @@ function LocationFilters({
   setSelectedNeighborhood,
 }) {
 
-  // Get unique counties
+  // Location dropdowns are sourced from the directory itself (org_county /
+  // org_city / org_zip_code), not from the canonical zip_codes table. This
+  // hides counties/cities/zips that have no organizations physically located
+  // in them — so users can't pick a Location that's guaranteed to return zero
+  // results.
   const countyOptions = useMemo(() => {
-    const counties = [...new Set(zipCodes.map(z => z.county).filter(Boolean))];
+    const counties = [...new Set(directory.map(d => d.org_county).filter(Boolean))];
     return counties.sort();
-  }, [zipCodes]);
+  }, [directory]);
 
-  // Get cities filtered by county
+  // Cities scoped to directory orgs in the selected county
   const cityOptions = useMemo(() => {
-    let filtered = zipCodes;
+    let filtered = directory;
     if (selectedCounty) {
-      filtered = filtered.filter(z => z.county === selectedCounty);
+      filtered = filtered.filter(d => d.org_county === selectedCounty);
     }
-    const cities = [...new Set(filtered.map(z => z.city).filter(Boolean))];
+    const cities = [...new Set(filtered.map(d => d.org_city).filter(Boolean))];
     return cities.sort();
-  }, [zipCodes, selectedCounty]);
+  }, [directory, selectedCounty]);
 
-  // Get zips filtered by county and city. Each option carries the city in its
-  // label ("77002 — Houston") so the closed dropdown and the open list both
-  // show the city. The selected value remains the bare zip code.
+  // Zips scoped to directory orgs in the selected county and city. Label
+  // carries the city ("77002 — Houston") so both closed and open dropdown
+  // show context; the stored value is the bare zip code.
   const zipOptions = useMemo(() => {
-    let filtered = zipCodes;
+    let filtered = directory;
     if (selectedCounty) {
-      filtered = filtered.filter(z => z.county === selectedCounty);
+      filtered = filtered.filter(d => d.org_county === selectedCounty);
     }
     if (selectedCity) {
-      filtered = filtered.filter(z => z.city === selectedCity);
+      filtered = filtered.filter(d => d.org_city === selectedCity);
     }
-    return filtered
-      .filter(z => z.zip_code)
-      .sort((a, b) => a.zip_code.localeCompare(b.zip_code))
-      .map(z => ({
-        value: z.zip_code,
-        label: z.city ? `${z.zip_code} — ${z.city}` : z.zip_code,
+    // De-dupe (zip, city) pairs so each zip appears once even when multiple
+    // orgs share it.
+    const seen = new Map();
+    for (const d of filtered) {
+      if (!d.org_zip_code) continue;
+      if (!seen.has(d.org_zip_code)) {
+        seen.set(d.org_zip_code, d.org_city || "");
+      }
+    }
+    return Array.from(seen.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([zip, city]) => ({
+        value: zip,
+        label: city ? `${zip} — ${city}` : zip,
       }));
-  }, [zipCodes, selectedCounty, selectedCity]);
+  }, [directory, selectedCounty, selectedCity]);
 
   // Get neighborhoods from directory.org_neighborhood, filtered by selected zip
   // If no zip selected, show all neighborhoods
@@ -1405,7 +1420,6 @@ export default function NavBar2() {
       case SEARCH_MODES.LOCATION:
         return (
           <LocationFilters
-            zipCodes={zipCodes}
             directory={directory}
             selectedLocationZip={selectedLocationZip}
             setSelectedLocationZip={handleLocationZipChange}

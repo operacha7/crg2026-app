@@ -17,10 +17,12 @@ const DAY_OPTIONS = [
   { label: "Sunday", value: "Su" },
 ];
 
-// Status filter options — default hides Inactive and Closed
+// Status filter options — default is "All" so users see every record
+// (Active + Limited + Inactive + Closed). Showing everything by default
+// makes "missing" truly mean "not in CRG"; users can narrow from there.
 const STATUS_OPTIONS = [
-  { label: "Active + Limited", value: "active-limited" },
   { label: "All", value: "all" },
+  { label: "Active + Limited", value: "active-limited" },
   { label: "Active only", value: "active" },
   { label: "Limited only", value: "limited" },
   { label: "Inactive only", value: "inactive" },

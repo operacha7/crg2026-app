@@ -11,7 +11,7 @@ const TABLES = [
   { sheetName: 'zip_codes', supabaseTable: 'zip_codes' },
   { sheetName: 'assistance', supabaseTable: 'assistance' },
   { sheetName: 'organizations', supabaseTable: 'organizations' },
-  { sheetName: 'registered_organizations', supabaseTable: 'registered_organizations' },
+  { sheetName: 'registered_organizations', supabaseTable: 'registered_organizations', primaryKey: 'account_id' },
   { sheetName: 'announcements', supabaseTable: 'announcements', transform: transformAnnouncement },
   { sheetName: 'zip_code_data', supabaseTable: 'zip_code_data', transform: transformZipCodeData, primaryKey: 'id' },
   { sheetName: 'header_config', supabaseTable: 'header_config', transform: transformHeaderConfig },

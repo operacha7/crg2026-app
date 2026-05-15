@@ -4,7 +4,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { getIconByName, getIconNames } from "../icons/iconMap";
-import { Car11Icon, TransitIcon } from "../icons";
+import { HomeMarkerIcon, TransitIcon } from "../icons";
 import {
   formatHoursFromJson,
   formatAddress,
@@ -290,8 +290,11 @@ function ResultRow({
             {record.distance != null && (
               <div className="flex items-center gap-1">
                 {isDrivingDistance && (
-                  <div className="flex items-center justify-center">
-                    <Car11Icon size={14} active />
+                  <div
+                    className="flex items-center justify-center"
+                    style={{ color: "var(--color-results-transit-icon)" }}
+                  >
+                    <HomeMarkerIcon size={14} />
                   </div>
                 )}
                 <span className="text-sm font-medium">{record.distance.toFixed(1)} mi</span>
@@ -466,7 +469,7 @@ function ResultRow({
         </div>
       </div>
 
-      {/* Miles Column - with car icon for driving distances, "mi" underneath */}
+      {/* Miles Column - red address-marker shown when distances come from a custom origin address (driving distances), "mi" underneath */}
       <div
         className="flex flex-col items-center justify-start"
         style={{
@@ -475,8 +478,11 @@ function ResultRow({
         }}
       >
         {isDrivingDistance && record.distance != null && (
-          <div className="flex items-center justify-center mb-1">
-            <Car11Icon size={18} active />
+          <div
+            className="flex items-center justify-center mb-1"
+            style={{ color: "var(--color-results-transit-icon)" }}
+          >
+            <HomeMarkerIcon size={18} />
           </div>
         )}
         <span>{record.distance != null ? record.distance.toFixed(1) : ""}</span>

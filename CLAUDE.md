@@ -281,9 +281,9 @@ src/
 │   │                    # Uses orgAssistanceMap for Assistance column icons
 │   ├── ResultsList.js   # Container for ResultRows, handles sorting
 │   ├── Tooltip.js       # Instant CSS tooltip
-│   ├── DropPanel.js     # Reusable dropdown panel (used by Distance, Email, PDF panels)
+│   ├── DropPanel.js     # Reusable dropdown panel (used by Address, Email, PDF panels)
 │   ├── EmailPanel.js    # Email/PDF entry panel with inactive warning
-│   ├── DistancePanel.js # Distance override panel (address entry)
+│   ├── AddressPanel.js  # Address override panel — entered address overrides zip centroid for distance calc
 │   ├── HelpPanel.js     # LLM-powered help chat (opens from VerticalNavBar)
 │   ├── QuickTipsPanel.js # Visual reference guide sidebar (accordion sections)
 │   ├── AnnouncementPopup.js  # Modal popup for announcements
@@ -407,13 +407,13 @@ The app calculates distances from a reference point (zip centroid or user-entere
 - No visual indicator in results - just distance number
 
 **Custom address behavior (Google Distance Matrix):**
-- User clicks Car icon (cream colored when inactive) → enters address in DistancePanel
+- User clicks the red "Address" chip (in NavBar2 / below NavBar3) → enters address in AddressPanel
 - Address geocoded via Geocodio API (`/geocode` endpoint)
 - Driving distances fetched via Google Distance Matrix API (`/distance` endpoint)
 - Results update with actual driving distances
-- **Visual indicator:** Gold car icon with dark background (`#4A4F56`) appears in Miles column
-- Car icon in NavBar2 turns gold when active
-- **Clear button:** Immediately reverts to Haversine from centroid, car icon returns to cream
+- **Visual indicator:** Red address-marker icon (matches the Address chip) appears in the Miles column for each row
+- The Address chip itself fills in (red bg / white text) when an address is active
+- **Clear button:** Immediately reverts to Haversine from centroid; the Miles-column markers and chip fill state revert
 
 **Batching for large result sets:**
 - Google Distance Matrix API allows max 25 destinations per request
@@ -431,8 +431,8 @@ The app calculates distances from a reference point (zip centroid or user-entere
 - `src/services/geocodeService.js` - `getDrivingDistances()` function with caching and batching
 - `src/views/ZipCodePage.js` - useEffect fetches driving distances when `clientCoordinates` is set
 - `src/Contexts/AppDataContext.js` - `drivingDistances` state (Map of record id → miles)
-- `src/components/DistancePanel.js` - Address entry panel with Clear button
-- `src/icons/Car1Icon.jsx` - Car icon used in NavBar2 and ResultRow
+- `src/components/AddressPanel.js` - Address entry panel with Clear button
+- `src/icons/HomeMarkerIcon.jsx` - Map-pin teardrop used by the Address chip and the Miles-column driving-distance indicator
 
 **Google Distance Matrix API:**
 - Pricing: $5 per 1,000 elements ($200/month free = ~40,000 elements)

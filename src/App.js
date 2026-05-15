@@ -43,20 +43,6 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Treat a browser reload on /find as a session reset — drop the user back
-  // on the homepage instead of letting them resume on a guest ZipCodePage.
-  // Only triggers on actual reload (F5 / Cmd-R / browser refresh button); the
-  // Navigation Timing API distinguishes that from in-app navigate() calls, so
-  // the Organization Login modal flow (which uses navigate()) is unaffected.
-  useEffect(() => {
-    const entries = performance.getEntriesByType("navigation");
-    const isReload = entries.length > 0 && entries[0].type === "reload";
-    if (isReload && location.pathname === "/find") {
-      navigate("/", { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Check for ?guest=1 deep link (SMS share links auto-login as guest)
   const searchParams = new URLSearchParams(location.search);
   const isDeepLink = searchParams.get("guest") === "1";
@@ -68,6 +54,29 @@ export default function App() {
     if (isDeepLink) return GUEST_USER;
     return null;
   });
+
+  // Restore user from the session cookie on app load. The cookie is
+  // httpOnly so JS can't read it directly — /whoami validates the JWT
+  // server-side and returns the user payload. This is what makes refresh
+  // (and direct deep-links into auth-gated paths) keep the user signed in
+  // until the 2 AM scheduled reload clears the cookie.
+  useEffect(() => {
+    if (DEV_BYPASS_LOGIN || isDeepLink) return;
+    let cancelled = false;
+    fetch("/whoami", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (data?.success && data.user) {
+          setUser(data.user);
+        }
+      })
+      .catch((err) => console.error("App: /whoami failed", err));
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Effective user: real user if logged in; guest if visiting a public MainApp
   // route without an account; otherwise null (route will redirect to home with
@@ -90,9 +99,14 @@ export default function App() {
   // Logout: drop everyone (registered users AND guests) back on the
   // marketing homepage. The vertical nav (where the logout icon lives)
   // doesn't render on /, so the icon disappears as soon as it's used.
+  // Also fire-and-forget /logout so the server-side session cookie is
+  // cleared in lockstep with the React state. We don't await — the user
+  // shouldn't wait on a network round-trip to leave the page; if the
+  // request fails the cookie just expires at the next 2 AM reset.
   const handleLogout = () => {
     setLogoutInProgress(true);
     setUser(null);
+    fetch("/logout", { method: "POST", credentials: "include" }).catch(() => {});
     navigate("/", { replace: true });
   };
 

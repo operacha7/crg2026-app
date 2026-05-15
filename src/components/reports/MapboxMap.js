@@ -287,7 +287,7 @@ function DraggableInfoBox({ info, onClose }) {
         transform: `translate(${position.x}px, ${position.y}px)`,
         width: "320px",
         backgroundColor: "rgba(34, 40, 49, 0.95)",
-        fontFamily: "Lexend, sans-serif",
+        fontFamily: "'Open Sans', sans-serif",
         userSelect: "none",
       }}
     >
@@ -608,7 +608,7 @@ function DraggableDistressTable({ data, zipCode, neighborhood, houstonMedians, r
         transform: `translate(${position.x}px, ${position.y}px)`,
         width: "400px",
         backgroundColor: hasKeyData ? "rgba(34, 40, 49, 0.95)" : "rgba(105, 105, 118, 0.95)",
-        fontFamily: "Lexend, sans-serif",
+        fontFamily: "'Open Sans', sans-serif",
         userSelect: "none",
       }}
     >
@@ -850,7 +850,7 @@ function DraggableWorkingPoorTable({ data, zipCode, neighborhood, houstonMedians
         transform: `translate(${position.x}px, ${position.y}px)`,
         width: "400px",
         backgroundColor: hasKeyData ? "rgba(34, 40, 49, 0.95)" : "rgba(105, 105, 118, 0.95)",
-        fontFamily: "Lexend, sans-serif",
+        fontFamily: "'Open Sans', sans-serif",
         userSelect: "none",
       }}
     >
@@ -1089,7 +1089,7 @@ function DraggableEvictionsTable({ data, zipCode, neighborhood, houstonMedians, 
         transform: `translate(${position.x}px, ${position.y}px)`,
         width: "420px",
         backgroundColor: hasKeyData ? "rgba(34, 40, 49, 0.95)" : "rgba(105, 105, 118, 0.95)",
-        fontFamily: "Lexend, sans-serif",
+        fontFamily: "'Open Sans', sans-serif",
         userSelect: "none",
       }}
     >
@@ -1328,7 +1328,7 @@ function DraggableFamilyVulnerabilityTable({ data, zipCode, neighborhood, family
         transform: `translate(${position.x}px, ${position.y}px)`,
         width: "400px",
         backgroundColor: hasKeyData ? "rgba(34, 40, 49, 0.95)" : "rgba(105, 105, 118, 0.95)",
-        fontFamily: "Lexend, sans-serif",
+        fontFamily: "'Open Sans', sans-serif",
         userSelect: "none",
       }}
     >
@@ -1551,7 +1551,7 @@ function DraggableFundingTable({ data, zipCode, neighborhood, onClose }) {
         transform: `translate(${position.x}px, ${position.y}px)`,
         width: "280px",
         backgroundColor: "rgba(34, 40, 49, 0.95)",
-        fontFamily: "Lexend, sans-serif",
+        fontFamily: "'Open Sans', sans-serif",
         userSelect: "none",
       }}
     >
@@ -1676,7 +1676,7 @@ function DraggableEfficiencyTable({ data, zipCode, neighborhood, onClose }) {
         transform: `translate(${position.x}px, ${position.y}px)`,
         width: "300px",
         backgroundColor: "rgba(34, 40, 49, 0.95)",
-        fontFamily: "Lexend, sans-serif",
+        fontFamily: "'Open Sans', sans-serif",
         userSelect: "none",
       }}
     >
@@ -1829,7 +1829,7 @@ function DraggableBivariateTable({ data, zipCode, neighborhood, onClose }) {
         transform: `translate(${position.x}px, ${position.y}px)`,
         width: "300px",
         backgroundColor: "rgba(34, 40, 49, 0.95)",
-        fontFamily: "Lexend, sans-serif",
+        fontFamily: "'Open Sans', sans-serif",
         userSelect: "none",
       }}
     >
@@ -1977,7 +1977,7 @@ function DraggableFamilyBivariateTable({ data, zipCode, neighborhood, onClose })
         transform: `translate(${position.x}px, ${position.y}px)`,
         width: "300px",
         backgroundColor: "rgba(34, 40, 49, 0.95)",
-        fontFamily: "Lexend, sans-serif",
+        fontFamily: "'Open Sans', sans-serif",
         userSelect: "none",
       }}
     >
@@ -2264,7 +2264,7 @@ function ParentCoverageLegend({ parentOrgName, assistanceLabel, orgCount, county
       style={{
         backgroundColor: "rgba(255,255,255,0.95)",
         padding: "12px 16px",
-        fontFamily: "Lexend, sans-serif",
+        fontFamily: "'Open Sans', sans-serif",
         fontSize: "12px",
         maxWidth: "260px",
       }}
@@ -2703,7 +2703,7 @@ function BaseLegend({ viewMode }) {
       style={{
         backgroundColor: "rgba(255,255,255,0.95)",
         padding: "12px 16px",
-        fontFamily: "Lexend, sans-serif",
+        fontFamily: "'Open Sans', sans-serif",
         fontSize: "12px",
         maxWidth: "240px",
       }}
@@ -2722,7 +2722,7 @@ function SimpleLegend({ assistanceLabel, orgCount, county, outOfAreaOrgs, onOutO
       style={{
         backgroundColor: "rgba(255,255,255,0.95)",
         padding: "12px 16px",
-        fontFamily: "Lexend, sans-serif",
+        fontFamily: "'Open Sans', sans-serif",
         fontSize: "12px",
         maxWidth: "240px",
       }}
@@ -4227,7 +4227,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.arc(x + pad + 6, cy + 8, 5, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.font = "600 14px Lexend, sans-serif";
+    ctx.font = "600 14px 'Open Sans', sans-serif";
     ctx.fillStyle = "#FFFFFF";
     ctx.fillText(truncateText(ctx, info.organization, maxTextW), x + pad + 20, cy);
     cy += 26;
@@ -4243,28 +4243,28 @@ const MapboxMap = forwardRef(function MapboxMap({
 
     // Parent org (if different)
     if (info.orgParent !== info.organization) {
-      ctx.font = "400 11px Lexend, sans-serif";
+      ctx.font = "400 11px 'Open Sans', sans-serif";
       ctx.fillStyle = "#AAAAAA";
       ctx.fillText(truncateText(ctx, info.orgParent, w - pad * 2), x + pad, cy);
       cy += 16;
     }
 
     // Assistance type
-    ctx.font = "500 12px Lexend, sans-serif";
+    ctx.font = "500 12px 'Open Sans', sans-serif";
     ctx.fillStyle = "#FFC857";
     ctx.fillText(info.assistance, x + pad, cy);
     cy += 16;
 
     // Phone
     if (info.telephone) {
-      ctx.font = "600 13px Lexend, sans-serif";
+      ctx.font = "600 13px 'Open Sans', sans-serif";
       ctx.fillStyle = "#FFFFFF";
       ctx.fillText(info.telephone, x + pad, cy);
       cy += 16;
     }
 
     // Address
-    ctx.font = "400 11px Lexend, sans-serif";
+    ctx.font = "400 11px 'Open Sans', sans-serif";
     ctx.fillStyle = "#CCCCCC";
     ctx.fillText(truncateText(ctx, info.address, w - pad * 2), x + pad, cy);
     cy += 20;
@@ -4278,12 +4278,12 @@ const MapboxMap = forwardRef(function MapboxMap({
     cy += 10;
 
     // Zip count
-    ctx.font = "500 12px Lexend, sans-serif";
+    ctx.font = "500 12px 'Open Sans', sans-serif";
     ctx.fillStyle = "#00A8A8";
     const zipText = `Serves ${info.zipCount} zip code${info.zipCount !== 1 ? "s" : ""}`;
     ctx.fillText(zipText, x + pad, cy);
     const tw = ctx.measureText(zipText).width;
-    ctx.font = "400 12px Lexend, sans-serif";
+    ctx.font = "400 12px 'Open Sans', sans-serif";
     ctx.fillStyle = "#888888";
     ctx.fillText(" (highlighted on map)", x + pad + tw, cy);
   };
@@ -4311,14 +4311,14 @@ const MapboxMap = forwardRef(function MapboxMap({
     let cy = y + 10;
 
     // Header: "Zip Code XXXXX"
-    ctx.font = "600 15px Lexend, sans-serif";
+    ctx.font = "600 15px 'Open Sans', sans-serif";
     ctx.fillStyle = "#FFC857";
     ctx.fillText(`Zip Code ${zipCode}`, x + pad, cy);
     cy += 20;
 
     // County (if present)
     if (data.county) {
-      ctx.font = "400 11px Lexend, sans-serif";
+      ctx.font = "400 11px 'Open Sans', sans-serif";
       ctx.fillStyle = "#CCCCCC";
       ctx.fillText(`${data.county} County`, x + pad, cy);
       cy += 14;
@@ -4326,7 +4326,7 @@ const MapboxMap = forwardRef(function MapboxMap({
 
     // Neighborhood (if present)
     if (neighborhood) {
-      ctx.font = "400 10px Lexend, sans-serif";
+      ctx.font = "400 10px 'Open Sans', sans-serif";
       ctx.fillStyle = "#8FB6FF";
       ctx.fillText(truncateText(ctx, neighborhood, w - pad * 2), x + pad, cy);
       cy += 14;
@@ -4342,11 +4342,11 @@ const MapboxMap = forwardRef(function MapboxMap({
       ctx.lineTo(x + w, cy + 30);
       ctx.stroke();
       cy += 6;
-      ctx.font = "500 10px Lexend, sans-serif";
+      ctx.font = "500 10px 'Open Sans', sans-serif";
       ctx.fillStyle = "#FFB302";
       ctx.fillText("Distress score not available — data shown for reference only", x + pad, cy);
       cy += 13;
-      ctx.font = "italic 9px Lexend, sans-serif";
+      ctx.font = "italic 9px 'Open Sans', sans-serif";
       ctx.fillStyle = "#999999";
       ctx.fillText("Not scored or ranked. Excluded from Greater Houston statistics.", x + pad, cy);
       cy += 15;
@@ -4367,7 +4367,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     const colHoustonX = x + w - pad - colHoustonW;
     const col2024X = colHoustonX - col2024W;
 
-    ctx.font = "600 9px Lexend, sans-serif";
+    ctx.font = "600 9px 'Open Sans', sans-serif";
     ctx.textAlign = "right";
     ctx.fillStyle = "#FFFFFF";
     ctx.fillText("Value", col2024X + col2024W, cy);
@@ -4392,7 +4392,7 @@ const MapboxMap = forwardRef(function MapboxMap({
       cy += rowPadY;
 
       // Label
-      ctx.font = highlight ? "600 12px Lexend, sans-serif" : "400 11px Lexend, sans-serif";
+      ctx.font = highlight ? "600 12px 'Open Sans', sans-serif" : "400 11px 'Open Sans', sans-serif";
       ctx.fillStyle = highlight ? "#FFC857" : "#CCCCCC";
       ctx.textAlign = "left";
       ctx.fillText(label, x + pad, cy);
@@ -4407,14 +4407,14 @@ const MapboxMap = forwardRef(function MapboxMap({
         ctx.arc(circleX, cy + 6, 6, 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.font = highlight ? "700 14px Lexend, sans-serif" : "500 12px Lexend, sans-serif";
+      ctx.font = highlight ? "700 14px 'Open Sans', sans-serif" : "500 12px 'Open Sans', sans-serif";
       ctx.fillStyle = "#FFFFFF";
       ctx.fillText(formattedVal, col2024X + col2024W, cy);
 
       // Houston median value
       const medianVal = medians?.[key];
       if (showMedian && medianVal != null) {
-        ctx.font = "400 11px Lexend, sans-serif";
+        ctx.font = "400 11px 'Open Sans', sans-serif";
         ctx.fillStyle = "#8FB6FF";
         const fmtMedian = medianFormat ? medianFormat(medianVal) : medianVal.toLocaleString();
         ctx.fillText(fmtMedian, colHoustonX + colHoustonW, cy);
@@ -4443,7 +4443,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.stroke();
     cy += 8;
 
-    ctx.font = "italic 9px Lexend, sans-serif";
+    ctx.font = "italic 9px 'Open Sans', sans-serif";
     ctx.fillStyle = "#888888";
     ctx.fillText(`Source: ${CENSUS_SOURCE}`, x + pad, cy);
     cy += 12;
@@ -4475,14 +4475,14 @@ const MapboxMap = forwardRef(function MapboxMap({
     let cy = y + 10;
 
     // Header: "Zip Code XXXXX"
-    ctx.font = "600 15px Lexend, sans-serif";
+    ctx.font = "600 15px 'Open Sans', sans-serif";
     ctx.fillStyle = "#FFC857";
     ctx.fillText(`Zip Code ${zipCode}`, x + pad, cy);
     cy += 20;
 
     // County (if present)
     if (data.county) {
-      ctx.font = "400 11px Lexend, sans-serif";
+      ctx.font = "400 11px 'Open Sans', sans-serif";
       ctx.fillStyle = "#CCCCCC";
       ctx.fillText(`${data.county} County`, x + pad, cy);
       cy += 14;
@@ -4490,7 +4490,7 @@ const MapboxMap = forwardRef(function MapboxMap({
 
     // Neighborhood (if present)
     if (neighborhood) {
-      ctx.font = "400 10px Lexend, sans-serif";
+      ctx.font = "400 10px 'Open Sans', sans-serif";
       ctx.fillStyle = "#8FB6FF";
       ctx.fillText(truncateText(ctx, neighborhood, w - pad * 2), x + pad, cy);
       cy += 14;
@@ -4506,11 +4506,11 @@ const MapboxMap = forwardRef(function MapboxMap({
       ctx.lineTo(x + w, cy + 30);
       ctx.stroke();
       cy += 6;
-      ctx.font = "500 10px Lexend, sans-serif";
+      ctx.font = "500 10px 'Open Sans', sans-serif";
       ctx.fillStyle = "#FFB302";
       ctx.fillText("Working Poor score not available — data shown for reference only", x + pad, cy);
       cy += 13;
-      ctx.font = "italic 9px Lexend, sans-serif";
+      ctx.font = "italic 9px 'Open Sans', sans-serif";
       ctx.fillStyle = "#999999";
       ctx.fillText("Not scored or ranked. Excluded from Greater Houston statistics.", x + pad, cy);
       cy += 15;
@@ -4531,7 +4531,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     const colHoustonX = x + w - pad - colHoustonW;
     const col2024X = colHoustonX - col2024W;
 
-    ctx.font = "600 9px Lexend, sans-serif";
+    ctx.font = "600 9px 'Open Sans', sans-serif";
     ctx.textAlign = "right";
     ctx.fillStyle = "#FFFFFF";
     ctx.fillText("Value", col2024X + col2024W, cy);
@@ -4556,7 +4556,7 @@ const MapboxMap = forwardRef(function MapboxMap({
       cy += rowPadY;
 
       // Label
-      ctx.font = highlight ? "600 12px Lexend, sans-serif" : "400 11px Lexend, sans-serif";
+      ctx.font = highlight ? "600 12px 'Open Sans', sans-serif" : "400 11px 'Open Sans', sans-serif";
       ctx.fillStyle = highlight ? "#FFC857" : "#CCCCCC";
       ctx.textAlign = "left";
       ctx.fillText(label, x + pad, cy);
@@ -4571,14 +4571,14 @@ const MapboxMap = forwardRef(function MapboxMap({
         ctx.arc(circleX, cy + 6, 6, 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.font = highlight ? "700 14px Lexend, sans-serif" : "500 12px Lexend, sans-serif";
+      ctx.font = highlight ? "700 14px 'Open Sans', sans-serif" : "500 12px 'Open Sans', sans-serif";
       ctx.fillStyle = "#FFFFFF";
       ctx.fillText(formattedVal, col2024X + col2024W, cy);
 
       // Houston median value
       const medianVal = medians?.[key];
       if (showMedian && medianVal != null) {
-        ctx.font = "400 11px Lexend, sans-serif";
+        ctx.font = "400 11px 'Open Sans', sans-serif";
         ctx.fillStyle = "#8FB6FF";
         const fmtMedian = medianFormat ? medianFormat(medianVal) : medianVal.toLocaleString();
         ctx.fillText(fmtMedian, colHoustonX + colHoustonW, cy);
@@ -4607,7 +4607,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.stroke();
     cy += 8;
 
-    ctx.font = "italic 9px Lexend, sans-serif";
+    ctx.font = "italic 9px 'Open Sans', sans-serif";
     ctx.fillStyle = "#888888";
     ctx.fillText(`Source: ${CENSUS_SOURCE}`, x + pad, cy);
     cy += 12;
@@ -4637,20 +4637,20 @@ const MapboxMap = forwardRef(function MapboxMap({
 
     let cy = y + 10;
 
-    ctx.font = "600 15px Lexend, sans-serif";
+    ctx.font = "600 15px 'Open Sans', sans-serif";
     ctx.fillStyle = "#FFC857";
     ctx.fillText(`Zip Code ${zipCode}`, x + pad, cy);
     cy += 20;
 
     if (data.county) {
-      ctx.font = "400 11px Lexend, sans-serif";
+      ctx.font = "400 11px 'Open Sans', sans-serif";
       ctx.fillStyle = "#CCCCCC";
       ctx.fillText(`${data.county} County`, x + pad, cy);
       cy += 14;
     }
 
     if (neighborhood) {
-      ctx.font = "400 10px Lexend, sans-serif";
+      ctx.font = "400 10px 'Open Sans', sans-serif";
       ctx.fillStyle = "#8FB6FF";
       ctx.fillText(truncateText(ctx, neighborhood, w - pad * 2), x + pad, cy);
       cy += 14;
@@ -4662,11 +4662,11 @@ const MapboxMap = forwardRef(function MapboxMap({
       ctx.fillRect(x, cy, w, 30);
       ctx.strokeStyle = "rgba(255, 179, 2, 0.25)";
       ctx.beginPath(); ctx.moveTo(x, cy + 30); ctx.lineTo(x + w, cy + 30); ctx.stroke();
-      ctx.font = "500 10px Lexend, sans-serif";
+      ctx.font = "500 10px 'Open Sans', sans-serif";
       ctx.fillStyle = "#FFB302";
       ctx.textAlign = "left";
       ctx.fillText("Evictions score not available — data shown for reference only", x + pad, cy + 6);
-      ctx.font = "italic 9px Lexend, sans-serif";
+      ctx.font = "italic 9px 'Open Sans', sans-serif";
       ctx.fillStyle = "#999999";
       ctx.fillText("Not scored or ranked. Excluded from Greater Houston statistics.", x + pad, cy + 18);
       cy += 34;
@@ -4684,7 +4684,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     const valCol1X = x + w - pad - valColW * 2;
     const valCol2X = x + w - pad - valColW;
 
-    ctx.font = "600 9px Lexend, sans-serif";
+    ctx.font = "600 9px 'Open Sans', sans-serif";
     ctx.fillStyle = "#FFFFFF";
     ctx.textAlign = "right";
     ctx.fillText("2024", valCol1X + valColW, cy);
@@ -4706,7 +4706,7 @@ const MapboxMap = forwardRef(function MapboxMap({
       const rowPadY = highlight ? 6 : 3;
       cy += rowPadY;
 
-      ctx.font = highlight ? "600 12px Lexend, sans-serif" : "400 11px Lexend, sans-serif";
+      ctx.font = highlight ? "600 12px 'Open Sans', sans-serif" : "400 11px 'Open Sans', sans-serif";
       ctx.fillStyle = highlight ? "#FFC857" : "#CCCCCC";
       ctx.textAlign = "left";
       ctx.fillText(label, x + pad, cy);
@@ -4720,13 +4720,13 @@ const MapboxMap = forwardRef(function MapboxMap({
         ctx.arc(circleX, cy + 6, 6, 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.font = highlight ? "700 14px Lexend, sans-serif" : "500 12px Lexend, sans-serif";
+      ctx.font = highlight ? "700 14px 'Open Sans', sans-serif" : "500 12px 'Open Sans', sans-serif";
       ctx.fillStyle = "#FFFFFF";
       ctx.fillText(formattedVal, valCol1X + valColW, cy);
 
       const medianVal = medians?.[key];
       if (showMedian && medianVal != null) {
-        ctx.font = "400 11px Lexend, sans-serif";
+        ctx.font = "400 11px 'Open Sans', sans-serif";
         ctx.fillStyle = "#8FB6FF";
         const fmtMedian = medianFormat ? medianFormat(medianVal) : medianVal.toLocaleString();
         ctx.fillText(fmtMedian, valCol2X + valColW, cy);
@@ -4753,7 +4753,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.stroke();
     cy += 8;
 
-    ctx.font = "italic 9px Lexend, sans-serif";
+    ctx.font = "italic 9px 'Open Sans', sans-serif";
     ctx.fillStyle = "#888888";
     ctx.fillText("Source: Harris County Justice of the Peace Courts", x + pad, cy);
     cy += 12;
@@ -4783,19 +4783,19 @@ const MapboxMap = forwardRef(function MapboxMap({
 
     let cy = y + 10;
 
-    ctx.font = "600 15px Lexend, sans-serif";
+    ctx.font = "600 15px 'Open Sans', sans-serif";
     ctx.fillStyle = "#FFC857";
     ctx.fillText(`Zip Code ${zipCode}`, x + pad, cy);
     cy += 20;
 
     if (data.county) {
-      ctx.font = "400 11px Lexend, sans-serif";
+      ctx.font = "400 11px 'Open Sans', sans-serif";
       ctx.fillStyle = "#CCCCCC";
       ctx.fillText(`${data.county} County`, x + pad, cy);
       cy += 14;
     }
     if (neighborhood) {
-      ctx.font = "400 10px Lexend, sans-serif";
+      ctx.font = "400 10px 'Open Sans', sans-serif";
       ctx.fillStyle = "#8FB6FF";
       ctx.fillText(truncateText(ctx, neighborhood, w - pad * 2), x + pad, cy);
       cy += 14;
@@ -4810,11 +4810,11 @@ const MapboxMap = forwardRef(function MapboxMap({
       ctx.lineTo(x + w, cy + 30);
       ctx.stroke();
       cy += 6;
-      ctx.font = "500 10px Lexend, sans-serif";
+      ctx.font = "500 10px 'Open Sans', sans-serif";
       ctx.fillStyle = "#FFB302";
       ctx.fillText("Family Vulnerability Index not available — data shown for reference only", x + pad, cy);
       cy += 13;
-      ctx.font = "italic 9px Lexend, sans-serif";
+      ctx.font = "italic 9px 'Open Sans', sans-serif";
       ctx.fillStyle = "#999999";
       ctx.fillText("Not scored or ranked. Excluded from Greater Houston statistics.", x + pad, cy);
       cy += 15;
@@ -4833,7 +4833,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     const colHoustonX = x + w - pad - colHoustonW;
     const colValX = colHoustonX - colValW;
 
-    ctx.font = "600 9px Lexend, sans-serif";
+    ctx.font = "600 9px 'Open Sans', sans-serif";
     ctx.textAlign = "right";
     ctx.fillStyle = "#FFFFFF";
     ctx.fillText("Value", colValX + colValW, cy);
@@ -4854,7 +4854,7 @@ const MapboxMap = forwardRef(function MapboxMap({
       const rowPadY = highlight ? 6 : 3;
       cy += rowPadY;
 
-      ctx.font = highlight ? "600 12px Lexend, sans-serif" : "400 11px Lexend, sans-serif";
+      ctx.font = highlight ? "600 12px 'Open Sans', sans-serif" : "400 11px 'Open Sans', sans-serif";
       ctx.fillStyle = highlight ? "#FFC857" : "#CCCCCC";
       ctx.textAlign = "left";
       ctx.fillText(label, x + pad, cy);
@@ -4868,13 +4868,13 @@ const MapboxMap = forwardRef(function MapboxMap({
         ctx.arc(circleX, cy + 6, 6, 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.font = highlight ? "700 14px Lexend, sans-serif" : "500 12px Lexend, sans-serif";
+      ctx.font = highlight ? "700 14px 'Open Sans', sans-serif" : "500 12px 'Open Sans', sans-serif";
       ctx.fillStyle = "#FFFFFF";
       ctx.fillText(formattedVal, colValX + colValW, cy);
 
       const medianVal = medians?.[key];
       if (showMedian && medianVal != null) {
-        ctx.font = "400 11px Lexend, sans-serif";
+        ctx.font = "400 11px 'Open Sans', sans-serif";
         ctx.fillStyle = "#8FB6FF";
         const fmtMedian = medianFormat ? medianFormat(medianVal) : medianVal.toLocaleString();
         ctx.fillText(fmtMedian, colHoustonX + colHoustonW, cy);
@@ -4887,7 +4887,7 @@ const MapboxMap = forwardRef(function MapboxMap({
         // Per-quintile interpretation label for the FVI score.
         const quintileLabel = getFviQuintileLabel(data.family_vulnerability_index);
         if (quintileLabel) {
-          ctx.font = "italic 10px Lexend, sans-serif";
+          ctx.font = "italic 10px 'Open Sans', sans-serif";
           ctx.fillStyle = "#DDDDDD";
           ctx.textAlign = "left";
           const labelLines = wrapText(ctx, quintileLabel, w - pad * 2);
@@ -4914,7 +4914,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.stroke();
     cy += 8;
 
-    ctx.font = "italic 9px Lexend, sans-serif";
+    ctx.font = "italic 9px 'Open Sans', sans-serif";
     ctx.fillStyle = "#888888";
     ctx.fillText(`Source: ${CENSUS_SOURCE}`, x + pad, cy);
     cy += 12;
@@ -4941,19 +4941,19 @@ const MapboxMap = forwardRef(function MapboxMap({
 
     let cy = y + 10;
 
-    ctx.font = "600 15px Lexend, sans-serif";
+    ctx.font = "600 15px 'Open Sans', sans-serif";
     ctx.fillStyle = "#FFC857";
     ctx.fillText(`Zip Code ${zipCode}`, x + pad, cy);
     cy += 20;
 
     if (data.county) {
-      ctx.font = "400 11px Lexend, sans-serif";
+      ctx.font = "400 11px 'Open Sans', sans-serif";
       ctx.fillStyle = "#CCCCCC";
       ctx.fillText(`${data.county} County`, x + pad, cy);
       cy += 14;
     }
     if (neighborhood) {
-      ctx.font = "400 10px Lexend, sans-serif";
+      ctx.font = "400 10px 'Open Sans', sans-serif";
       ctx.fillStyle = "#8FB6FF";
       ctx.fillText(truncateText(ctx, neighborhood, w - pad * 2), x + pad, cy);
       cy += 14;
@@ -4975,10 +4975,10 @@ const MapboxMap = forwardRef(function MapboxMap({
     // Cell swatch + label + code
     const swatchSize = 24;
     drawRoundedRect(ctx, x + pad, cy, swatchSize, swatchSize, 4, codeColor);
-    ctx.font = "600 14px Lexend, sans-serif";
+    ctx.font = "600 14px 'Open Sans', sans-serif";
     ctx.fillStyle = "#FFFFFF";
     ctx.fillText(truncateText(ctx, codeLabel, w - pad * 2 - swatchSize - 10), x + pad + swatchSize + 10, cy + 2);
-    ctx.font = "400 10px Lexend, sans-serif";
+    ctx.font = "400 10px 'Open Sans', sans-serif";
     ctx.fillStyle = "#999999";
     ctx.fillText(`Code: ${mapCode || "—"}`, x + pad + swatchSize + 10, cy + 18);
     cy += swatchSize + 10;
@@ -4997,11 +4997,11 @@ const MapboxMap = forwardRef(function MapboxMap({
       ["Households", data.households != null ? Math.round(Number(data.households)).toLocaleString() : "—"],
     ];
     rows.forEach(([label, val]) => {
-      ctx.font = "500 13px Lexend, sans-serif";
+      ctx.font = "500 13px 'Open Sans', sans-serif";
       ctx.fillStyle = "#CCCCCC";
       ctx.textAlign = "left";
       ctx.fillText(label, x + pad, cy);
-      ctx.font = "500 14px Lexend, sans-serif";
+      ctx.font = "500 14px 'Open Sans', sans-serif";
       ctx.fillStyle = "#FFFFFF";
       ctx.textAlign = "right";
       ctx.fillText(val, x + w - pad, cy);
@@ -5047,19 +5047,19 @@ const MapboxMap = forwardRef(function MapboxMap({
 
     let cy = y + 10;
 
-    ctx.font = "600 15px Lexend, sans-serif";
+    ctx.font = "600 15px 'Open Sans', sans-serif";
     ctx.fillStyle = "#FFC857";
     ctx.fillText(`Zip Code ${zipCode}`, x + pad, cy);
     cy += 20;
 
     if (data.county) {
-      ctx.font = "400 11px Lexend, sans-serif";
+      ctx.font = "400 11px 'Open Sans', sans-serif";
       ctx.fillStyle = "#CCCCCC";
       ctx.fillText(`${data.county} County`, x + pad, cy);
       cy += 14;
     }
     if (neighborhood) {
-      ctx.font = "400 10px Lexend, sans-serif";
+      ctx.font = "400 10px 'Open Sans', sans-serif";
       ctx.fillStyle = "#8FB6FF";
       ctx.fillText(truncateText(ctx, neighborhood, w - pad * 2), x + pad, cy);
       cy += 14;
@@ -5084,11 +5084,11 @@ const MapboxMap = forwardRef(function MapboxMap({
       : "—";
 
     // Efficiency Score (bold)
-    ctx.font = "500 13px Lexend, sans-serif";
+    ctx.font = "500 13px 'Open Sans', sans-serif";
     ctx.fillStyle = "#CCCCCC";
     ctx.textAlign = "left";
     ctx.fillText("Efficiency Score", x + pad, cy);
-    ctx.font = "600 16px Lexend, sans-serif";
+    ctx.font = "600 16px 'Open Sans', sans-serif";
     ctx.fillStyle = "#FFFFFF";
     ctx.textAlign = "right";
     ctx.fillText(efficiencyScore, x + w - pad, cy);
@@ -5096,7 +5096,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     cy += 22;
 
     // Explainer (italic, gray, wraps to 2 lines if needed)
-    ctx.font = "italic 10px Lexend, sans-serif";
+    ctx.font = "italic 10px 'Open Sans', sans-serif";
     ctx.fillStyle = "#999999";
     const explainerLines = wrapText(
       ctx,
@@ -5111,11 +5111,11 @@ const MapboxMap = forwardRef(function MapboxMap({
       ["Funding Level", fundingAmount],
       ["Population", populationVal],
     ].forEach(([label, val]) => {
-      ctx.font = "500 13px Lexend, sans-serif";
+      ctx.font = "500 13px 'Open Sans', sans-serif";
       ctx.fillStyle = "#CCCCCC";
       ctx.textAlign = "left";
       ctx.fillText(label, x + pad, cy);
-      ctx.font = "500 14px Lexend, sans-serif";
+      ctx.font = "500 14px 'Open Sans', sans-serif";
       ctx.fillStyle = "#FFFFFF";
       ctx.textAlign = "right";
       ctx.fillText(val, x + w - pad, cy);
@@ -5143,19 +5143,19 @@ const MapboxMap = forwardRef(function MapboxMap({
 
     let cy = y + 10;
 
-    ctx.font = "600 15px Lexend, sans-serif";
+    ctx.font = "600 15px 'Open Sans', sans-serif";
     ctx.fillStyle = "#FFC857";
     ctx.fillText(`Zip Code ${zipCode}`, x + pad, cy);
     cy += 20;
 
     if (data.county) {
-      ctx.font = "400 11px Lexend, sans-serif";
+      ctx.font = "400 11px 'Open Sans', sans-serif";
       ctx.fillStyle = "#CCCCCC";
       ctx.fillText(`${data.county} County`, x + pad, cy);
       cy += 14;
     }
     if (neighborhood) {
-      ctx.font = "400 10px Lexend, sans-serif";
+      ctx.font = "400 10px 'Open Sans', sans-serif";
       ctx.fillStyle = "#8FB6FF";
       ctx.fillText(truncateText(ctx, neighborhood, w - pad * 2), x + pad, cy);
       cy += 14;
@@ -5175,10 +5175,10 @@ const MapboxMap = forwardRef(function MapboxMap({
     // Swatch + label + code
     const swatchSize = 24;
     drawRoundedRect(ctx, x + pad, cy, swatchSize, swatchSize, 4, codeColor);
-    ctx.font = "600 14px Lexend, sans-serif";
+    ctx.font = "600 14px 'Open Sans', sans-serif";
     ctx.fillStyle = "#FFFFFF";
     ctx.fillText(truncateText(ctx, codeLabel, w - pad * 2 - swatchSize - 10), x + pad + swatchSize + 10, cy + 2);
-    ctx.font = "400 10px Lexend, sans-serif";
+    ctx.font = "400 10px 'Open Sans', sans-serif";
     ctx.fillStyle = "#999999";
     ctx.fillText(`Code: ${mapCode || "—"}`, x + pad + swatchSize + 10, cy + 18);
     cy += swatchSize + 10;
@@ -5195,11 +5195,11 @@ const MapboxMap = forwardRef(function MapboxMap({
       ["Funding Level", data.zip_fin_funding != null ? `$${Math.round(Number(data.zip_fin_funding)).toLocaleString()}` : "—"],
       ["Population", data.population != null ? Math.round(Number(data.population)).toLocaleString() : "—"],
     ].forEach(([label, val]) => {
-      ctx.font = "500 13px Lexend, sans-serif";
+      ctx.font = "500 13px 'Open Sans', sans-serif";
       ctx.fillStyle = "#CCCCCC";
       ctx.textAlign = "left";
       ctx.fillText(label, x + pad, cy);
-      ctx.font = "500 14px Lexend, sans-serif";
+      ctx.font = "500 14px 'Open Sans', sans-serif";
       ctx.fillStyle = "#FFFFFF";
       ctx.textAlign = "right";
       ctx.fillText(val, x + w - pad, cy);
@@ -5227,7 +5227,7 @@ const MapboxMap = forwardRef(function MapboxMap({
 
     // Assistance label
     if (label) {
-      ctx.font = "600 13px Lexend, sans-serif";
+      ctx.font = "600 13px 'Open Sans', sans-serif";
       ctx.fillStyle = "#222831";
       ctx.fillText(label, x + pad, cy);
       cy += 22;
@@ -5238,7 +5238,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.beginPath();
     ctx.arc(x + pad + 5, cy + 6, 4, 0, Math.PI * 2);
     ctx.fill();
-    ctx.font = "400 12px Lexend, sans-serif";
+    ctx.font = "400 12px 'Open Sans', sans-serif";
     ctx.fillStyle = "#444444";
     ctx.fillText("Organization location", x + pad + 18, cy);
     cy += 20;
@@ -5260,7 +5260,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     cy += 22;
 
     // Org count
-    ctx.font = "400 11px Lexend, sans-serif";
+    ctx.font = "400 11px 'Open Sans', sans-serif";
     ctx.fillStyle = "#888888";
     let countText = `${count} organization${count !== 1 ? "s" : ""} shown`;
     if (countyName && countyName !== "All Counties") {
@@ -5292,7 +5292,7 @@ const MapboxMap = forwardRef(function MapboxMap({
 
     // Assistance label
     if (label) {
-      ctx.font = "600 13px Lexend, sans-serif";
+      ctx.font = "600 13px 'Open Sans', sans-serif";
       ctx.fillStyle = "#222831";
       ctx.fillText(label, x + pad, cy);
       cy += 18;
@@ -5300,7 +5300,7 @@ const MapboxMap = forwardRef(function MapboxMap({
 
     // Parent org
     if (parentName) {
-      ctx.font = "500 12px Lexend, sans-serif";
+      ctx.font = "500 12px 'Open Sans', sans-serif";
       ctx.fillStyle = "#652C57";
       ctx.fillText(truncateText(ctx, `${parentName} — ${count} child${count !== 1 ? "ren" : ""}`, w - pad * 2), x + pad, cy);
       cy += 22;
@@ -5309,7 +5309,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     // Purple swatch + "Parent coverage area"
     ctx.fillStyle = PARENT_COVERAGE_COLOR;
     ctx.fillRect(x + pad + 1, cy + 2, 10, 10);
-    ctx.font = "400 12px Lexend, sans-serif";
+    ctx.font = "400 12px 'Open Sans', sans-serif";
     ctx.fillStyle = "#444444";
     ctx.fillText("Parent coverage area", x + pad + 18, cy);
     cy += 22;
@@ -5328,7 +5328,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.beginPath();
     ctx.arc(x + pad + 5, cy + 6, 4, 0, Math.PI * 2);
     ctx.fill();
-    ctx.font = "400 12px Lexend, sans-serif";
+    ctx.font = "400 12px 'Open Sans', sans-serif";
     ctx.fillStyle = "#444444";
     ctx.fillText("Organization location", x + pad + 18, cy);
     cy += 20;
@@ -5351,7 +5351,7 @@ const MapboxMap = forwardRef(function MapboxMap({
 
     // County
     if (countyName && countyName !== "All Counties") {
-      ctx.font = "400 11px Lexend, sans-serif";
+      ctx.font = "400 11px 'Open Sans', sans-serif";
       ctx.fillStyle = "#888888";
       ctx.fillText(`${countyName} County`, x + pad, cy);
       cy += 16;
@@ -5381,7 +5381,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     }
 
     // Label
-    ctx.font = "500 11px Lexend, sans-serif";
+    ctx.font = "500 11px 'Open Sans', sans-serif";
     ctx.fillStyle = "#444444";
     const labels = {
       distress: "Distress Score",
@@ -5421,7 +5421,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     cy += barH + 4;
 
     // Scale labels
-    ctx.font = "400 9px Lexend, sans-serif";
+    ctx.font = "400 9px 'Open Sans', sans-serif";
     ctx.fillStyle = "#666666";
     if (mode === "distress" || mode === "working_poor" || mode === "evictions" || mode === "family_vulnerability" || mode === "efficiency_ratio") {
       const scaleValues = ["0", "20", "40", "60", "80", "100"];
@@ -5456,7 +5456,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     ];
 
     // Title
-    ctx.font = "500 11px Lexend, sans-serif";
+    ctx.font = "500 11px 'Open Sans', sans-serif";
     ctx.fillStyle = "#444444";
     ctx.textBaseline = "top";
     ctx.textAlign = "left";
@@ -5479,7 +5479,7 @@ const MapboxMap = forwardRef(function MapboxMap({
         ctx.fillRect(cx, cy2, cellSize, cellSize);
         // Draw code label centered in cell
         const code = gridCodes[ri][ci];
-        ctx.font = "500 8px Lexend, sans-serif";
+        ctx.font = "500 8px 'Open Sans', sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillStyle = darkCells.has(code) ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.4)";
@@ -5489,7 +5489,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     ctx.textBaseline = "top"; // reset
 
     // Axis labels
-    ctx.font = "400 8px Lexend, sans-serif";
+    ctx.font = "400 8px 'Open Sans', sans-serif";
     ctx.fillStyle = "#666666";
     ctx.textAlign = "center";
     ctx.fillText("Funding Gap →", gridX + cellSize * 1.5, gridY + cellSize * 3 + 4);
@@ -5533,7 +5533,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     // Draw the metric bar inside the box (skip the divider by starting below top padding)
     const labels = { distress: "Distress Score", working_poor: "Working Poor Score", evictions: "Evictions Score", population: "Population", funding_level: "Funding Level Score", efficiency_ratio: "Efficiency Ratio Score" };
     let cy = y + 10;
-    ctx.font = "500 11px Lexend, sans-serif";
+    ctx.font = "500 11px 'Open Sans', sans-serif";
     ctx.fillStyle = "#444444";
     ctx.textBaseline = "top";
     ctx.textAlign = "left";
@@ -5566,7 +5566,7 @@ const MapboxMap = forwardRef(function MapboxMap({
     cy += barH + 4;
 
     // Scale labels
-    ctx.font = "400 9px Lexend, sans-serif";
+    ctx.font = "400 9px 'Open Sans', sans-serif";
     ctx.fillStyle = "#666666";
     if (mode === "distress" || mode === "working_poor" || mode === "evictions" || mode === "family_vulnerability" || mode === "efficiency_ratio") {
       const scaleValues = ["0", "20", "40", "60", "80", "100"];
@@ -5657,7 +5657,7 @@ const MapboxMap = forwardRef(function MapboxMap({
 
         // Step 2b: Draw org labels on canvas when toggle is active
         if (showOrgLabels) {
-          ctx.font = "500 10px Lexend, sans-serif";
+          ctx.font = "500 10px 'Open Sans', sans-serif";
           ctx.textBaseline = "middle";
           orgPins.forEach((org) => {
             const point = map.project([org.lng, org.lat]);
@@ -5920,7 +5920,7 @@ const MapboxMap = forwardRef(function MapboxMap({
                       backgroundColor: "rgba(34, 40, 49, 0.92)",
                       color: "#FFFFFF",
                       fontSize: "11px",
-                      fontFamily: "Lexend, sans-serif",
+                      fontFamily: "'Open Sans', sans-serif",
                       fontWeight: 500,
                       padding: "4px 8px",
                       borderRadius: "4px",
@@ -5946,7 +5946,7 @@ const MapboxMap = forwardRef(function MapboxMap({
                       backgroundColor: "rgba(255, 255, 255, 0.88)",
                       color: "#222831",
                       fontSize: "10px",
-                      fontFamily: "Lexend, sans-serif",
+                      fontFamily: "'Open Sans', sans-serif",
                       fontWeight: 500,
                       padding: "2px 5px",
                       borderRadius: "3px",

@@ -1,6 +1,6 @@
 // src/MainApp.js
-import React, { lazy, Suspense, useEffect } from "react";
-import { useLocation, useParams, useSearchParams, Navigate, Route, Routes } from "react-router-dom";
+import React, { lazy, Suspense, useEffect, useRef } from "react";
+import { useLocation, useParams, useSearchParams, useNavigate, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { Helmet } from "react-helmet-async";
 // Import Announcement components
@@ -156,12 +156,21 @@ function AppContent({ loggedInUser }) {
 function AssistanceSlugPage({ loggedInUser }) {
   const { slug } = useParams();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const {
     assistance,
+    activeAssistanceChips,
     setActiveAssistanceChips,
     setSelectedZipCode,
     setActiveSearchMode,
   } = useAppData();
+
+  // Tracks whether the entry effect has run at least once. The chip→URL
+  // sync effect skips until this flips true so it doesn't navigate based
+  // on stale-from-previous-route chip state during the brief window before
+  // the entry effect populates chips from the slug.
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
     if (!assistance || assistance.length === 0) return;
@@ -174,15 +183,50 @@ function AssistanceSlugPage({ loggedInUser }) {
       setSelectedZipCode(zip);
       setActiveSearchMode("zipcode");
     }
+    hasInitialized.current = true;
     // We only want to apply the slug/zip on entry. Re-running when the user
     // toggles chips inside the app would clobber their selections.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, assistance.length]);
 
+  // Sync URL ↔ chip selection (Option A from the SEO discussion):
+  //   - 1 chip with a slug → navigate to /assistance/<that-slug>
+  //   - 0 chips, multi-select, or a chip with no slug → navigate to /find
+  // Uses replace:true so rapid chip toggling doesn't pollute browser history.
+  // Preserves any ?zip= query when staying on /assistance/* routes.
+  useEffect(() => {
+    if (!hasInitialized.current) return;
+    if (!assistance || assistance.length === 0) return;
+    if (!activeAssistanceChips) return;
+
+    const chipIds = Array.from(activeAssistanceChips);
+    let targetPath;
+    if (chipIds.length === 1) {
+      const matchingType = assistance.find((a) => String(a.assist_id) === chipIds[0]);
+      targetPath = matchingType?.url_slug
+        ? `/assistance/${matchingType.url_slug}`
+        : "/find";
+    } else {
+      targetPath = "/find";
+    }
+
+    if (targetPath === location.pathname) return;
+
+    const target = targetPath.startsWith("/assistance/")
+      ? targetPath + location.search
+      : targetPath;
+    navigate(target, { replace: true });
+  }, [activeAssistanceChips, assistance, location.pathname, location.search, navigate]);
+
   // Canonical drops the ?zip= param so Google consolidates all zip variants
   // (29 slugs × 269 zips = ~7,800 potential URLs) into the bare slug URL.
   const seo = getAssistanceSeo(slug);
   const canonical = `https://crghouston.org/assistance/${slug}`;
+
+  // Visible page heading. seo.title is "<Topic> | Community Resources Guide";
+  // we strip the suffix so the on-page H1 reads as a clean topic heading
+  // ("Free Rent Assistance in Houston") rather than echoing the site name.
+  const pageH1 = seo.title.split(" | ")[0];
 
   return (
     <>
@@ -196,7 +240,7 @@ function AssistanceSlugPage({ loggedInUser }) {
         <meta name="twitter:title" content={seo.title} />
         <meta name="twitter:description" content={seo.description} />
       </Helmet>
-      <ZipCodePage loggedInUser={loggedInUser} />
+      <ZipCodePage loggedInUser={loggedInUser} pageH1={pageH1} />
     </>
   );
 }

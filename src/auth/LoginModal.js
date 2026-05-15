@@ -23,7 +23,6 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { dataService } from "../services/dataService";
 
 export default function LoginModal({ onLoginSuccess }) {
   const navigate = useNavigate();
@@ -35,27 +34,27 @@ export default function LoginModal({ onLoginSuccess }) {
   const isOpen = searchParams.get("login") === "1";
 
   const [orgList, setOrgList] = useState([]);
-  const [orgData, setOrgData] = useState([]);
   const [org, setOrg] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const passcodeRef = useRef(null);
   const dropdownRef = useRef(null);
 
-  // Fetch registered orgs once on mount. Cheap (single small table); pre-fetch
-  // so the dropdown is populated by the time the user clicks the footer link.
+  // Fetch the dropdown labels once on mount via the server-side /list-orgs
+  // endpoint. The previous implementation called dataService directly, which
+  // returned the full registered_organizations row including org_passcode —
+  // that fetch leaked every org's passcode to the browser's Network tab.
   useEffect(() => {
     let cancelled = false;
-    dataService
-      .getRegisteredOrganizations()
+    fetch("/list-orgs", { credentials: "include" })
+      .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
-        const unique = [
-          ...new Set(data.map((d) => d.reg_organization)),
-        ].sort((a, b) => a.localeCompare(b));
-        setOrgList(unique);
-        setOrgData(data);
+        if (data?.success && Array.isArray(data.orgs)) {
+          setOrgList(data.orgs);
+        }
       })
-      .catch((err) => console.error("LoginModal: org fetch failed", err));
+      .catch((err) => console.error("LoginModal: org list fetch failed", err));
     return () => {
       cancelled = true;
     };
@@ -112,17 +111,29 @@ export default function LoginModal({ onLoginSuccess }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, location.pathname, location.search]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     if (e) e.preventDefault();
+    if (submitting) return;
     const enteredPasscode = passcodeRef.current?.value || "";
-    const matched = orgData.find(
-      (entry) =>
-        entry.reg_organization === org &&
-        entry.org_passcode === enteredPasscode
-    );
-    if (matched) {
-      setError("");
-      onLoginSuccess(matched);
+    if (!org || !enteredPasscode) {
+      setError("Invalid organization or passcode.");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    try {
+      const res = await fetch("/login", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reg_organization: org, passcode: enteredPasscode }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success || !data?.user) {
+        setError(data?.message || "Invalid organization or passcode.");
+        return;
+      }
+      onLoginSuccess(data.user);
       // Logging in from the homepage forwards into the working app; logging
       // in from anywhere else (including in-app re-login to switch orgs)
       // leaves the user where they were.
@@ -131,8 +142,11 @@ export default function LoginModal({ onLoginSuccess }) {
       } else {
         close();
       }
-    } else {
-      setError("Invalid organization or passcode.");
+    } catch (err) {
+      console.error("LoginModal: /login request failed", err);
+      setError("Login service unavailable. Try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 

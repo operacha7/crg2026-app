@@ -73,8 +73,12 @@ const AnnouncementPopup = ({ announcement, onClose, currentIndex, totalCount }) 
               }}
             />
 
-            {/* "memo" title - large, blue */}
-            <h1
+            {/* "memo" title - large, blue. Decorative; not a heading
+                (the page-level h1 lives elsewhere). aria-hidden so screen
+                readers skip the visual flourish and announce the actual
+                memo subject from the Subject row below. */}
+            <div
+              aria-hidden="true"
               style={{
                 fontSize: 'var(--font-size-memo-title)',
                 fontWeight: 'var(--font-weight-memo-title)',
@@ -85,7 +89,7 @@ const AnnouncementPopup = ({ announcement, onClose, currentIndex, totalCount }) 
               }}
             >
               memo
-            </h1>
+            </div>
 
             {/* Memo fields: Date, To, Subject */}
             <div

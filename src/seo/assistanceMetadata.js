@@ -16,7 +16,7 @@ const ASSISTANCE_SEO = {
       "Find emergency rent help, deposit assistance, and eviction prevention from local nonprofits across the Greater Houston Area. Search by zip code for hours and eligibility.",
   },
   utilities: {
-    title: "Free Utility Assistance in Houston | Community Resources Guide",
+    title: "Free Utilities Assistance in Houston | Community Resources Guide",
     description:
       "Find help paying electric, gas, and water bills from local nonprofits across the Greater Houston Area. Search by zip code for eligibility and contact info.",
   },

@@ -7,6 +7,8 @@
 // removed because the function was never created in Supabase and the
 // counts are derived from app_usage_logs by the Reports page.
 
+import { requireSession } from "./_lib/auth.js";
+
 export async function onRequest({ request, env }) {
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -28,6 +30,12 @@ export async function onRequest({ request, env }) {
       }
     );
   }
+
+  // Gate: only signed-in registered orgs can create PDFs. The React UI
+  // already hides Create PDF from guests; this stops a direct caller from
+  // bypassing the UI gate by hitting the endpoint.
+  const auth = await requireSession(request, env);
+  if (!auth.ok) return auth.response;
 
   try {
     const { htmlBody, header, headerHtml, footer, filename, margin, landscape, organization } =

@@ -1,6 +1,9 @@
-// src/components/DistancePanel.js
-// Panel for entering client address to override zip code centroid for distance calculations
-// Uses DropPanel for consistent styling
+// src/components/AddressPanel.js
+// Panel for entering a client address to override the zip-code centroid used
+// for distance calculations and to enable driving-distance sort.
+// (Previously called DistancePanel; renamed to match the user-facing "Address"
+// chip and to make its purpose clearer.)
+// Uses DropPanel for consistent styling.
 
 import { useState, useEffect } from "react";
 import DropPanel from "./DropPanel";
@@ -65,8 +68,8 @@ function normalizeCoordinates(coordString) {
 }
 
 /**
- * DistancePanel - Panel for entering client location
- * 
+ * AddressPanel - Panel for entering client location
+ *
  * @param {boolean} isOpen - Whether panel is visible
  * @param {function} onCancel - Cancel handler (reverts to previous state)
  * @param {function} onSave - Save handler (applies new coordinates)
@@ -75,7 +78,7 @@ function normalizeCoordinates(coordString) {
  * @param {string} currentAddress - Currently saved address (if any)
  * @param {string} currentCoordinates - Currently saved coordinates (if any)
  */
-export default function DistancePanel({
+export default function AddressPanel({
   isOpen,
   onCancel,
   onSave,

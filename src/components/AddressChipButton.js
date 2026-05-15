@@ -1,5 +1,5 @@
 // src/components/AddressChipButton.js
-// Pill-shaped "Address" chip that opens the DistancePanel to let the user
+// Pill-shaped "Address" chip that opens the AddressPanel to let the user
 // set a custom origin address. Used purely for in-app distance calculations
 // and result sorting — the address never leaves the org's session (it's
 // intentionally not embedded in outgoing email/PDF/SMS content).
@@ -11,7 +11,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Tooltip from "./Tooltip";
-import DistancePanel from "./DistancePanel";
+import AddressPanel from "./AddressPanel";
 import { HomeMarkerIcon } from "../icons";
 
 export default function AddressChipButton({
@@ -89,7 +89,7 @@ export default function AddressChipButton({
         </button>
       </Tooltip>
 
-      <DistancePanel
+      <AddressPanel
         isOpen={isPanelOpen}
         onCancel={handleCancel}
         onSave={handleSave}

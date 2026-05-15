@@ -13,7 +13,7 @@ import { parseHoursJson } from "../utils/formatters";
 
 // ============ SORT/FILTER REDUCER ============
 
-const STATUS_FILTER_DEFAULT = "active-limited";
+const STATUS_FILTER_DEFAULT = "all";
 
 const initialState = {
   sortColumn: null,        // null = default, "organization", "miles"
@@ -115,7 +115,7 @@ function getAllowedStatusIds(filterStatus) {
     case "limited":        return new Set([2]);
     case "inactive":       return new Set([3]);
     case "closed":         return new Set([4]);
-    default:               return new Set([1, 2]);
+    default:               return new Set([1, 2, 3, 4]);
   }
 }
 
@@ -225,7 +225,7 @@ export default function ResultsList({
   }, [searchKey]);
 
   // Determine if any filter or sort is active (for Reset button and funnel color)
-  // Status filter only counts as "active" when it differs from the default (active-limited)
+  // Status filter only counts as "active" when it differs from the default ("all")
   const isStatusFilterChanged = state.filterStatus !== STATUS_FILTER_DEFAULT;
 
   const hasActiveState = state.sortColumn !== null ||

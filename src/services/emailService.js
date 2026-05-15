@@ -289,13 +289,14 @@ async function translateHtml(htmlBody, subject, language) {
     return { htmlBody, subject };
   }
 
-  const translateUrl =
-    window.location.hostname === "localhost"
-      ? "http://localhost:8788/translate"
-      : "/translate";
-
-  const res = await fetch(translateUrl, {
+  // Relative URL → same-origin from the browser. In dev, Vite proxies it to
+  // Wrangler on :8788; in prod, Cloudflare Pages serves both the app and the
+  // function from the same origin. Matters for cookie-based auth: an absolute
+  // localhost:8788 URL is cross-origin and the session cookie wouldn't be
+  // attached.
+  const res = await fetch("/translate", {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       htmlBody,
@@ -375,13 +376,12 @@ export async function sendEmail({
     },
   };
 
-  const emailServiceUrl =
-    window.location.hostname === "localhost"
-      ? "http://localhost:8788/sendEmail"
-      : "/sendEmail";
-
-  const res = await fetch(emailServiceUrl, {
+  // Relative URL → same-origin from the browser. In dev, Vite proxies it to
+  // Wrangler on :8788; in prod, Cloudflare Pages serves both. credentials:
+  // "include" attaches the auth cookie so /sendEmail's session check passes.
+  const res = await fetch("/sendEmail", {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
@@ -510,13 +510,12 @@ ${htmlContent}
     },
   };
 
-  const pdfServiceUrl =
-    window.location.hostname === "localhost"
-      ? "http://localhost:8788/createPdf"
-      : "/createPdf";
-
-  const res = await fetch(pdfServiceUrl, {
+  // Relative URL → same-origin from the browser. In dev, Vite proxies it to
+  // Wrangler on :8788; in prod, Cloudflare Pages serves both. credentials:
+  // "include" attaches the auth cookie so /createPdf's session check passes.
+  const res = await fetch("/createPdf", {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(pdfPayload),
   });

@@ -50,7 +50,7 @@
   --color-navbar1-btn-email-text: #222831;
   --color-navbar1-btn-pdf-bg: #8FAFFB;
   --color-navbar1-btn-pdf-text: #222831;
-  --color-navbar1-btn-sms-bg: #20FC8F;
+  --color-navbar1-btn-sms-bg: #C57B57;
   --color-navbar1-btn-sms-text: #222831;
 
   /* NavBar 2 */
@@ -130,12 +130,12 @@
   --font-size-tooltip: 12px;
 
   /* Assistance Panel Group Colors (unselected state) */
-  --color-assistance-group1: #E5E292;
-  --color-assistance-group2: #92DEE5;
+  --color-assistance-group1: #E5D492;
+  --color-assistance-group2: #92BEE5;
   --color-assistance-group3: #E592A6;
-  --color-assistance-group4: #C2E592;
+  --color-assistance-group4: #9BD3A1;
   --color-assistance-group5: #B592E5;
-  --color-assistance-group6: #E5C392;
+  --color-assistance-group6: #E5B292;
   --color-assistance-selected-bg: #FDF6E3;
   --color-assistance-selected-border: #000000;
   --color-assistance-text: #000000;

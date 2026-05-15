@@ -14,6 +14,7 @@ import { matchesParentOrSubgroup } from "../utils/orgFilters";
 
 export default function ZipCodePage({
   loggedInUser,
+  pageH1,
 }) {
   // Get real data and filter state from AppDataContext
   const {
@@ -509,15 +510,12 @@ export default function ZipCodePage({
   // Generate header text for email/PDF preview based on search mode
   const headerText = generateSearchHeader(buildSearchContext());
 
-  // Orange counter reflects only Active (status_id 1) and Limited
-  // (status_id 2) records — the same set users actually see in the table
-  // (ResultsList's default status filter is "active-limited"). Excluding
-  // Inactive (3) and Closed (4) keeps the counter honest about how many
-  // records are currently surfaced.
-  const isActiveOrLimited = (r) => r.status_id === 1 || r.status_id === 2;
+  // Orange counter reflects what's actually surfaced in the table.
+  // ResultsList's default status filter is "all", so when no inline filter
+  // row is engaged we count every record in displayDirectory.
   const visibleFilteredCount = inlineFilteredCount !== null
     ? inlineFilteredCount
-    : displayDirectory.filter(isActiveOrLimited).length;
+    : displayDirectory.length;
 
   return (
     <PageLayout
@@ -537,6 +535,15 @@ export default function ZipCodePage({
       onGvAutoSent={handleGvAutoSent}
     >
       <div className="flex flex-col flex-1 overflow-hidden">
+        {/* Per-slug screen-reader-only H1. Set on /assistance/:slug routes
+            so indexable landing pages have a real on-page heading element
+            for Googlebot and screen readers (not just a <title> meta tag).
+            Hidden via Tailwind's sr-only so it doesn't take any visual
+            space — Google explicitly counts hidden h1s for ranking, so
+            keeping it off-screen here gets the SEO benefit without pushing
+            the results down. Unset on the homepage and other routes. */}
+        {pageH1 && <h1 className="sr-only">{pageH1}</h1>}
+
         {/* Legacy controls removed - now handled by NavBar1 (counters), NavBar2 (zip dropdown), NavBar3 (assistance) */}
 
         {/* Results list with filtered Supabase data */}
