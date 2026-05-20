@@ -121,6 +121,27 @@ export default function App() {
     }
   }, [logoutInProgress, location.pathname]);
 
+  // One log row per browser tab when a guest is active — feeds the Sessions
+  // Chart in Reports. sessionStorage dedupes so a refresh in the same tab
+  // doesn't double-count; closing and reopening the tab = a new session,
+  // which is the closest analog to the registered-user case (where the
+  // session cookie expires nightly at 2 AM and the next login is logged).
+  // Fire-and-forget — a logging failure must never block the user's flow.
+  useEffect(() => {
+    if (effectiveUser?.isGuest !== true) return;
+    if (sessionStorage.getItem("guest_session_logged") === "1") return;
+    sessionStorage.setItem("guest_session_logged", "1");
+    fetch("/log-usage", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        reg_organization: "Guest",
+        action_type: "login",
+      }),
+    }).catch((err) => console.error("App: guest session log failed", err));
+  }, [effectiveUser]);
+
   // When an auth-gated MainApp path (e.g. /reports, /announcements) is hit
   // without a user, send them to /find with the login modal open. /find is
   // the public URL for ZipCodePage so the modal stacks over the working app

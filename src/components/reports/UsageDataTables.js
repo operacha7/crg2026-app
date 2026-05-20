@@ -38,7 +38,7 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
       setLoading(true);
 
       const params = {
-        reg_organization: selectedOrg === "All Registered Organizations" ? null : selectedOrg,
+        reg_organization: selectedOrg === "All Users" ? null : selectedOrg,
       };
 
       let result;

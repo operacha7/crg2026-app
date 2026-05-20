@@ -9,6 +9,7 @@ import NavBar3Reports from "../layout/NavBar3Reports";
 import Footer from "../layout/Footer";
 import VerticalNavBar from "../layout/VerticalNavBar";
 import ZipCodeReport from "../components/reports/ZipCodeReport";
+import SessionsReport from "../components/reports/SessionsReport";
 import EmailsReport from "../components/reports/EmailsReport";
 import PdfsReport from "../components/reports/PdfsReport";
 import ReportsReport from "../components/reports/ReportsReport";
@@ -22,7 +23,7 @@ export default function ReportsPage() {
   const [selectedReport, setSelectedReport] = useState("zip-code");
 
   // State for organization filter (used by chart reports)
-  const [selectedOrg, setSelectedOrg] = useState("All Registered Organizations");
+  const [selectedOrg, setSelectedOrg] = useState("All Users");
 
   // State for daily/monthly toggle
   const [viewMode, setViewMode] = useState("daily");
@@ -192,6 +193,8 @@ export default function ReportsPage() {
         );
       case "zip-code":
         return <ZipCodeReport {...commonProps} />;
+      case "sessions":
+        return <SessionsReport {...commonProps} />;
       case "emails-sent":
         return <EmailsReport {...commonProps} />;
       case "pdfs-created":

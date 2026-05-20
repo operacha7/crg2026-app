@@ -4,7 +4,7 @@
 // Coverage report: clickable stats to filter table + unique org count + download button
 
 import { useState, useEffect } from "react";
-import { fetchLiveStats } from "../services/usageService";
+import { fetchLiveStats, fetchDailyUsage } from "../services/usageService";
 import { DownloadIcon } from "../icons/DownloadIcon";
 
 // NavBar2 button blue - used for active filter highlight
@@ -110,17 +110,57 @@ export default function NavBar3Reports({
   coverageFilters,
 }) {
   const [stats, setStats] = useState(null);
+  const [sessionTopOrg, setSessionTopOrg] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Sessions Chart needs a different ticker — Top Zip / Top Assistance are
+  // meaningless for logins, and "Top Organization" needs to count logins,
+  // not searches. So branch the fetch: sessions → aggregate the last 30
+  // days of login rows client-side; everything else → existing v_live_stats.
+  // (30 days mirrors the daily Sessions chart below; the existing v_live_stats
+  // tickers are already a different time window from their chart, so this is
+  // no worse than the status quo for the other reports.)
   useEffect(() => {
+    let cancelled = false;
     async function loadStats() {
       setLoading(true);
-      const data = await fetchLiveStats();
-      setStats(data);
+
+      if (selectedReport === "sessions") {
+        const rows = await fetchDailyUsage({ action_type: "login", days: 30 });
+        if (cancelled) return;
+        const totals = {};
+        rows
+          .filter((r) => r.reg_organization !== "Administrator")
+          .forEach((r) => {
+            totals[r.reg_organization] = (totals[r.reg_organization] || 0) + r.count;
+          });
+        const total = Object.values(totals).reduce((s, n) => s + n, 0);
+        const top = Object.entries(totals).sort((a, b) => b[1] - a[1])[0];
+        setSessionTopOrg(
+          top && total > 0
+            ? {
+                value: top[0],
+                count: top[1],
+                total,
+                percentage: Math.round((top[1] / total) * 100),
+              }
+            : { value: "N/A", count: 0, total: 0, percentage: 0 }
+        );
+        setStats(null);
+      } else {
+        const data = await fetchLiveStats();
+        if (cancelled) return;
+        setStats(data);
+        setSessionTopOrg(null);
+      }
+
       setLoading(false);
     }
     loadStats();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedReport]);
 
   // Click stat to toggle filter - click again to remove
   const handleDisplayFilterClick = (filterType) => {
@@ -260,6 +300,69 @@ export default function NavBar3Reports({
   }
 
   // Other reports: stat cards at full height
+  const renderStatsContent = () => {
+    if (loading) {
+      return (
+        <span className="text-white font-opensans" style={{ fontSize: "14px" }}>
+          Loading stats...
+        </span>
+      );
+    }
+
+    if (selectedReport === "sessions") {
+      if (!sessionTopOrg) {
+        return (
+          <span className="text-white font-opensans" style={{ fontSize: "14px" }}>
+            No data available
+          </span>
+        );
+      }
+      return (
+        <div
+          className="flex items-center justify-center"
+          style={{ gap: "var(--gap-navbar3-reports-cards)" }}
+        >
+          <StatCard
+            heading="Top Organization"
+            value={sessionTopOrg.value}
+            percentage={sessionTopOrg.percentage}
+          />
+        </div>
+      );
+    }
+
+    if (!stats) {
+      return (
+        <span className="text-white font-opensans" style={{ fontSize: "14px" }}>
+          No data available
+        </span>
+      );
+    }
+
+    return (
+      <div
+        className="flex items-center justify-center"
+        style={{ gap: "var(--gap-navbar3-reports-cards)" }}
+      >
+        <StatCard
+          heading="Top Zip Code"
+          value={stats.topZip.value}
+          percentage={stats.topZip.percentage}
+        />
+        <StatCard
+          heading="Top Assistance"
+          value={stats.topAssistance.value}
+          percentage={stats.topAssistance.percentage}
+        />
+        <StatCard
+          heading="Top Organization"
+          value={stats.topRegOrg.value}
+          percentage={stats.topRegOrg.percentage}
+        />
+      </div>
+    );
+  };
+
   return (
     <nav
       className="bg-navbar3-bg flex items-center justify-center"
@@ -269,36 +372,7 @@ export default function NavBar3Reports({
         paddingRight: "20px",
       }}
     >
-      {loading ? (
-        <span className="text-white font-opensans" style={{ fontSize: "14px" }}>
-          Loading stats...
-        </span>
-      ) : stats ? (
-        <div
-          className="flex items-center justify-center"
-          style={{ gap: "var(--gap-navbar3-reports-cards)" }}
-        >
-          <StatCard
-            heading="Top Zip Code"
-            value={stats.topZip.value}
-            percentage={stats.topZip.percentage}
-          />
-          <StatCard
-            heading="Top Assistance"
-            value={stats.topAssistance.value}
-            percentage={stats.topAssistance.percentage}
-          />
-          <StatCard
-            heading="Top Organization"
-            value={stats.topRegOrg.value}
-            percentage={stats.topRegOrg.percentage}
-          />
-        </div>
-      ) : (
-        <span className="text-white font-opensans" style={{ fontSize: "14px" }}>
-          No data available
-        </span>
-      )}
+      {renderStatsContent()}
     </nav>
   );
 }

@@ -75,7 +75,7 @@ function SlideToggle({ leftLabel, rightLabel, isRight, onToggle }) {
 }
 
 // Click dropdown component - opens on click, closes on click outside
-function HoverDropdown({ value, options, onChange, placeholder, inactiveValue = "All Registered Organizations", format1 = false }) {
+function HoverDropdown({ value, options, onChange, placeholder, inactiveValue = "All Users", format1 = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredOption, setHoveredOption] = useState(null);
   const containerRef = useRef(null);
@@ -582,13 +582,18 @@ export default function NavBar2Reports({
     loadOrgs();
   }, []);
 
-  // Build dropdown options for default reports
-  const orgOptions = useMemo(() => [
-    "All Registered Organizations",
-    ...registeredOrgs
+  // Build dropdown options for default reports.
+  // Guest is included so admins can filter the Search and Sessions charts to
+  // unauthenticated visitors. Inserted idempotently in case registered_organizations
+  // ever gains a "Guest" row, so we don't show it twice.
+  const orgOptions = useMemo(() => {
+    const orgs = registeredOrgs
       .filter(o => o.reg_organization !== "Administrator")
-      .map(o => o.reg_organization),
-  ], [registeredOrgs]);
+      .map(o => o.reg_organization);
+    if (!orgs.includes("Guest")) orgs.push("Guest");
+    orgs.sort((a, b) => a.localeCompare(b));
+    return ["All Users", ...orgs];
+  }, [registeredOrgs]);
 
   // === Shared geographic helpers (used by both Coverage and Map 2) ===
 
@@ -1531,7 +1536,7 @@ export default function NavBar2Reports({
             value={selectedOrg}
             options={orgOptions}
             onChange={onOrgChange}
-            placeholder="All Registered Organizations"
+            placeholder="All Users"
           />
           <SlideToggle
             leftLabel="Daily"

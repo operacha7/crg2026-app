@@ -8,6 +8,7 @@ import { logUsage } from "../services/usageService";
 
 const REPORT_OPTIONS = [
   { id: 'zip-code', label: 'Search Chart' },
+  { id: 'sessions', label: 'Sessions Chart' },
   { id: 'emails-sent', label: 'Emails Chart' },
   { id: 'pdfs-created', label: 'PDFs Chart' },
   { id: 'reports-chart', label: 'Reports Chart' },

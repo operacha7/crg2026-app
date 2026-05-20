@@ -18,6 +18,14 @@ import {
 
 const MAX_FIELD_LENGTH = 200;
 
+// YYYY-MM-DD in Central Time, matching the helper in log-usage.js so login
+// rows stamp the same way regular activity does.
+function getCentralDate() {
+  return new Date().toLocaleDateString("en-CA", {
+    timeZone: "America/Chicago",
+  });
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const headers = { "Content-Type": "application/json" };
@@ -90,6 +98,26 @@ export async function onRequest(context) {
 
   const valid = await verifyPassword(passcode, row.org_passcode);
   if (!valid) return genericFail;
+
+  // Fire-and-forget login row for the Sessions Chart in Reports.
+  // Skip Administrator to match the Reports filter (Administrator activity is
+  // testing noise and excluded everywhere else). Not awaited — a logging
+  // failure must never block a successful login.
+  if (row.reg_organization !== "Administrator") {
+    supabase
+      .from("app_usage_logs")
+      .insert({
+        log_date: getCentralDate(),
+        reg_organization: row.reg_organization,
+        action_type: "login",
+        search_mode: null,
+        assistance_type: null,
+        search_value: null,
+      })
+      .then(({ error: logErr }) => {
+        if (logErr) console.error("login: usage log insert failed", logErr);
+      });
+  }
 
   const exp = next2amCentralUnix();
   const token = await signSession(

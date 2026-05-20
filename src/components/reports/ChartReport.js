@@ -25,7 +25,7 @@ const DEFAULT_COLORS = [
 ];
 
 // Color for organizations no longer in registered_organizations table (removed/historical)
-const INACTIVE_ORG_COLOR = "#FFE156";
+const INACTIVE_ORG_COLOR = "#FFE0B5";
 
 // Get today's date in Central Time
 function getCentralDate() {
@@ -72,7 +72,7 @@ export default function ChartReport({
       setLoading(true);
 
       const params = {
-        reg_organization: selectedOrg === "All Registered Organizations" ? null : selectedOrg,
+        reg_organization: selectedOrg === "All Users" ? null : selectedOrg,
         ...fetchParams,
       };
 
