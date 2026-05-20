@@ -54,6 +54,16 @@ export default function ZipCodePage({
   const [selectedRows, setSelectedRows] = useState([]);
   const [inlineFilteredCount, setInlineFilteredCount] = useState(null);
 
+  // When the user switches search mode, NavBar2.handleModeChange already
+  // wipes all in-context selections (zip / org / location / assistance / LLM
+  // state / client address) and ResultsList auto-resets its inline filters
+  // via searchKey. The one thing those don't touch is the row selection,
+  // which lives here. Clear it so the Email/PDF chips and counters reset to
+  // 0 immediately on mode switch — matches "all filters and selections cleared".
+  useEffect(() => {
+    setSelectedRows([]);
+  }, [activeSearchMode]);
+
   // Search key for auto-resetting inline filters when search params change
   const searchKey = useMemo(() =>
     `${activeSearchMode}:${selectedZipCode}:${selectedParentOrg}:${selectedChildOrg}:${selectedLocationZip}:${selectedLocationCity}:${selectedLocationCounty}:${selectedLocationNeighborhood}:${[...activeAssistanceChips].sort().join(',')}:${llmSearchQuery}`,
@@ -396,6 +406,13 @@ export default function ZipCodePage({
 
   // Returns an error message if the current search-mode filters aren't ready for SMS,
   // or null if the mode is valid. Split out to keep validateSmsSelection readable.
+  // Same rules also drive the Send-Text button's active state in NavBar1 (via
+  // canSendText below) so the button can't be clickable when the validator
+  // would reject the send.
+  // Per-mode anchors only — assistance is required in zipcode mode (where it
+  // also narrows the dataset meaningfully) but is *not* required in org or
+  // location modes, since picking an org or a location is itself sufficient
+  // narrowing. LLM mode only needs a query.
   const getSmsModeError = () => {
     const missingAssistance = activeAssistanceChips.size === 0;
 
@@ -503,10 +520,34 @@ export default function ZipCodePage({
     ? inlineFilteredCount
     : displayDirectory.length;
 
+  // Two distinct signals for the Send-Text button. The user wants the
+  // filtered-count chip to appear as soon as *any* filter is engaged (early
+  // feedback) but the label/icon to stay grayed and the button unclickable
+  // until the per-mode SMS rule is met (zip+assist / org+assist / loc+assist /
+  // question).
+  //   isAnyFilterActive → drives chip visibility (low bar: anything narrows).
+  //   canSendText       → drives label/icon color + clickability (matches the
+  //                       SMS validator exactly so the two can't drift).
+  const isAnyFilterActive = !!(
+    selectedZipCode ||
+    selectedParentOrg ||
+    selectedChildOrg ||
+    selectedLocationZip ||
+    selectedLocationCity ||
+    selectedLocationCounty ||
+    selectedLocationNeighborhood ||
+    llmSearchQuery ||
+    activeAssistanceChips.size > 0 ||
+    inlineFilteredCount !== null
+  );
+  const canSendText = getSmsModeError() === null && displayDirectory.length > 0;
+
   return (
     <PageLayout
       filteredCount={visibleFilteredCount}
       selectedCount={selectedRows.length}
+      isAnyFilterActive={isAnyFilterActive}
+      canSendText={canSendText}
       onSendEmail={validateEmailSelection}
       onCreatePdf={validatePdfSelection}
       onSendSms={validateSmsSelection}

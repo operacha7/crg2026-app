@@ -16,7 +16,7 @@ export default function SmsWarningModal({ isOpen, onProceed, onCancel }) {
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center"
-      style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}
+      style={{ backgroundColor: "var(--color-panel-scrim-bg)" }}
       onClick={onCancel}
     >
       <div
@@ -67,9 +67,9 @@ export default function SmsWarningModal({ isOpen, onProceed, onCancel }) {
           </p>
 
           <p style={{ margin: "0 0 14px 0" }}>
-            CRG only hands off the message — the phone number and app are whichever
-            you pick. On your own device, that's your personal number. On a shared
-            computer, it's whatever app is set up there.
+            CRG only facilitates the sending of the message.  It is sent 
+            from a device, messaging app and/or phone number
+            of your choosing.
           </p>
 
           <p
@@ -92,7 +92,7 @@ export default function SmsWarningModal({ isOpen, onProceed, onCancel }) {
             }}
           >
             <strong>The key takeaway — </strong>
-            Be aware which phone number your text is coming from.
+            Be aware which phone number your text is being sent from.
           </p>
         </div>
 

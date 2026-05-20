@@ -98,25 +98,76 @@ export default function DropPanel({
         </h3>
       </div>
 
-      {/* Body */}
+      {/* Body — form content lives here on the cream backdrop. The footer
+          is its own sibling band below, so this section just needs to host
+          children without worrying about button layout. */}
       <div
         style={{
           backgroundColor: "var(--color-panel-body-bg)",
           padding: "20px",
         }}
       >
-        {/* Content area */}
-        <div className="mb-8">
-          {children}
-        </div>
+        {children}
+      </div>
 
-        {/* Footer with buttons */}
-        <div className={`flex items-center ${hideOkButton && !onClear ? "justify-end" : "justify-between"}`}>
+      {/* Footer band — visually separates the action row from the form.
+          Distinct bg + hairline top border match the Assistance panel
+          pattern so every panel reads as a three-section card. */}
+      <div
+        style={{
+          backgroundColor: "var(--color-panel-footer-bg)",
+          borderTop: "1px solid var(--color-panel-footer-border-top)",
+          padding: "16px 20px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent:
+            hideOkButton && !onClear ? "flex-end" : "space-between",
+          gap: "16px",
+        }}
+      >
+        <button
+          onClick={onCancel}
+          className="font-opensans transition-all duration-200 hover:brightness-110"
+          style={{
+            backgroundColor: "var(--color-panel-btn-cancel-bg)",
+            color: "var(--color-panel-btn-text)",
+            minWidth: "var(--width-panel-btn)",
+            height: "var(--height-panel-btn)",
+            padding: "0 12px",
+            borderRadius: "var(--radius-panel-btn)",
+            fontSize: "var(--font-size-panel-btn)",
+            letterSpacing: "var(--letter-spacing-panel-btn)",
+          }}
+        >
+          {cancelButtonText}
+        </button>
+
+        {/* Optional Clear button in the middle */}
+        {onClear && (
           <button
-            onClick={onCancel}
+            onClick={onClear}
             className="font-opensans transition-all duration-200 hover:brightness-110"
             style={{
-              backgroundColor: "var(--color-panel-btn-cancel-bg)",
+              backgroundColor: clearButtonBgColor,
+              color: clearButtonTextColor,
+              width: "var(--width-panel-btn)",
+              height: "var(--height-panel-btn)",
+              borderRadius: "var(--radius-panel-btn)",
+              fontSize: "var(--font-size-panel-btn)",
+              letterSpacing: "var(--letter-spacing-panel-btn)",
+            }}
+          >
+            {clearButtonText}
+          </button>
+        )}
+
+        {!hideOkButton && (
+          <button
+            onClick={onSave}
+            disabled={okDisabled}
+            className="font-opensans transition-all duration-200 hover:brightness-110"
+            style={{
+              backgroundColor: "var(--color-panel-btn-ok-bg)",
               color: "var(--color-panel-btn-text)",
               minWidth: "var(--width-panel-btn)",
               height: "var(--height-panel-btn)",
@@ -124,51 +175,12 @@ export default function DropPanel({
               borderRadius: "var(--radius-panel-btn)",
               fontSize: "var(--font-size-panel-btn)",
               letterSpacing: "var(--letter-spacing-panel-btn)",
+              whiteSpace: "nowrap",
             }}
           >
-            {cancelButtonText}
+            {okButtonText}
           </button>
-
-          {/* Optional Clear button in the middle */}
-          {onClear && (
-            <button
-              onClick={onClear}
-              className="font-opensans transition-all duration-200 hover:brightness-110"
-              style={{
-                backgroundColor: clearButtonBgColor,
-                color: clearButtonTextColor,
-                width: "var(--width-panel-btn)",
-                height: "var(--height-panel-btn)",
-                borderRadius: "var(--radius-panel-btn)",
-                fontSize: "var(--font-size-panel-btn)",
-                letterSpacing: "var(--letter-spacing-panel-btn)",
-              }}
-            >
-              {clearButtonText}
-            </button>
-          )}
-
-          {!hideOkButton && (
-            <button
-              onClick={onSave}
-              disabled={okDisabled}
-              className="font-opensans transition-all duration-200 hover:brightness-110"
-              style={{
-                backgroundColor: "var(--color-panel-btn-ok-bg)",
-                color: "var(--color-panel-btn-text)",
-                minWidth: "var(--width-panel-btn)",
-                height: "var(--height-panel-btn)",
-                padding: "0 12px",
-                borderRadius: "var(--radius-panel-btn)",
-                fontSize: "var(--font-size-panel-btn)",
-                letterSpacing: "var(--letter-spacing-panel-btn)",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {okButtonText}
-            </button>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

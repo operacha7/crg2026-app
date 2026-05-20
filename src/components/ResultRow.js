@@ -589,8 +589,8 @@ function ResultRow({
             className="inline-flex items-center rounded-full shrink-0 hover:brightness-125"
             style={{
               gap: "6px",
-              padding: "4px 8px",
-              border: `2px solid var(--color-results-transit-icon)`,
+              padding: "2px 8px",
+              border: `1px solid var(--color-results-transit-icon)`,
               color: "var(--color-results-transit-icon)",
               backgroundColor: "transparent",
               fontSize: "12px",
@@ -602,7 +602,7 @@ function ResultRow({
               marginRight: "100px",
             }}
           >
-            <TransitIcon size={18} />
+            <TransitIcon size={17} />
             <span>Bus Route</span>
           </a>
         </div>

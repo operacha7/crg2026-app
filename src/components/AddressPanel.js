@@ -7,6 +7,7 @@
 
 import { useState, useEffect } from "react";
 import DropPanel from "./DropPanel";
+import PanelScrim from "./PanelScrim";
 import { geocodeAddress } from "../services/geocodeService";
 
 /**
@@ -247,6 +248,8 @@ export default function AddressPanel({
   };
 
   return (
+    <>
+      <PanelScrim isOpen={isOpen} onClose={handleCancel} zIndex={49} />
     <DropPanel
       title="Enter Start Address"
       isOpen={isOpen}
@@ -378,5 +381,6 @@ export default function AddressPanel({
         </p>
       </div>
     </DropPanel>
+    </>
   );
 }

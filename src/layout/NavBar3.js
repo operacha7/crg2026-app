@@ -9,6 +9,7 @@ import { getIconByName } from "../icons/iconMap";
 import { useAppData } from "../Contexts/AppDataContext";
 import { logUsage } from "../services/usageService";
 import AddressChipButton from "../components/AddressChipButton";
+import PanelScrim from "../components/PanelScrim";
 
 // Search-mode constants — must match the values used in AppDataContext / NavBar2
 const SEARCH_MODES = {
@@ -460,22 +461,15 @@ function AssistancePanel({
         </p>
       </div>
 
-      {/* Body */}
+      {/* Body — chip columns. Uniform cream background (--color-panel-body-bg).
+          Group labels are plain teal uppercase text (no pill), not chip-colored,
+          so the columns read as a clean grid against the cream backdrop. */}
       <div
         style={{
           backgroundColor: "var(--color-panel-body-bg)",
-          // 20px uniform padding — halved from the prior 40px horizontal so
-          // chip columns sit closer to the panel edge. The extra horizontal
-          // room is reclaimed via the column gap below.
-          padding: "20px",
+          padding: "28px 20px 32px 20px",
         }}
       >
-        {/* Category columns — mirrors HomePage grouping. Each column is
-            sized to fit its widest chip via `width: max-content`, so chip
-            labels are never truncated. The 1fr inner grid makes every chip
-            in a column the same width (= the column width). Heading pill
-            stretches to the column width via width:100%. flex-wrap means
-            narrow viewports reflow columns onto multiple rows. */}
         <div
           className="flex flex-wrap justify-center"
           style={{ gap: "20px" }}
@@ -487,20 +481,15 @@ function AssistancePanel({
               style={{ width: "max-content" }}
             >
               <div
-                className="font-opensans flex items-center justify-center"
+                className="font-opensans"
                 style={{
-                  backgroundColor: group.color,
-                  color: "var(--color-assistance-text)",
-                  width: "100%",
-                  height: "var(--height-assistance-group-btn)",
-                  // Horizontal padding so the heading text doesn't touch the
-                  // pill edge when a category has only short chips (e.g. Basic
-                  // Needs) and the heading itself drives the column width.
-                  padding: "0 16px",
-                  borderRadius: "var(--radius-assistance-chip)",
-                  fontSize: "var(--font-size-assistance-chip)",
-                  letterSpacing: "var(--letter-spacing-assistance-chip)",
-                  fontWeight: "500",
+                  color: "var(--color-panel-label-text)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  paddingLeft: "16px",
+                  marginBottom: "16px",
                 }}
               >
                 {group.name}
@@ -510,12 +499,10 @@ function AssistancePanel({
                   display: "grid",
                   gridTemplateColumns: "1fr",
                   gap: "20px",
-                  marginTop: "20px",
                 }}
               >
                 {group.types.map((type) => {
                   const isSelected = selectedIds.includes(type.id);
-                  // Already-selected types can always be toggled off; otherwise gate on the cap.
                   const isDisabled = !isSelected && atLimit;
                   return (
                     <PanelTypeButton
@@ -533,41 +520,56 @@ function AssistancePanel({
             </div>
           ))}
         </div>
+      </div>
 
-        {/* Footer with buttons - closer together on mobile */}
-        <div className="flex justify-center items-center gap-8 md:gap-36 mt-8 md:mt-16">
-          <button
-            onClick={onClear}
-            className="font-opensans transition-all duration-200 hover:brightness-110"
-            style={{
-              backgroundColor: "var(--color-panel-btn-cancel-bg)",
-              color: "var(--color-panel-btn-text)",
-              width: "var(--width-panel-btn)",
-              height: "var(--height-panel-btn)",
-              borderRadius: "var(--radius-panel-btn)",
-              fontSize: "var(--font-size-panel-btn)",
-              letterSpacing: "var(--letter-spacing-panel-btn)",
-            }}
-          >
-            Clear
-          </button>
+      {/* Footer — distinct band with its own bg + hairline top border so the
+          action row reads as separate from the body even when the body is short.
+          Clear is outlined (transparent bg, deep-green text + border); OK is the
+          standard green filled button. No Cancel button — closing the panel
+          via click-outside auto-saves the current selections. */}
+      <div
+        style={{
+          backgroundColor: "var(--color-panel-footer-bg)",
+          borderTop: "1px solid var(--color-panel-footer-border-top)",
+          padding: "16px 20px",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: "64px",
+        }}
+      >
+        <button
+          onClick={onClear}
+          className="font-opensans transition-all duration-200 hover:brightness-110"
+          style={{
+            backgroundColor: "transparent",
+            color: "var(--color-panel-btn-clear-text)",
+            border: "1.5px solid var(--color-panel-btn-clear-border)",
+            width: "var(--width-panel-btn)",
+            height: "var(--height-panel-btn)",
+            borderRadius: "var(--radius-panel-btn)",
+            fontSize: "var(--font-size-panel-btn)",
+            letterSpacing: "var(--letter-spacing-panel-btn)",
+          }}
+        >
+          Clear
+        </button>
 
-          <button
-            onClick={onSave}
-            className="font-opensans transition-all duration-200 hover:brightness-110"
-            style={{
-              backgroundColor: "var(--color-panel-btn-ok-bg)",
-              color: "var(--color-panel-btn-text)",
-              width: "var(--width-panel-btn)",
-              height: "var(--height-panel-btn)",
-              borderRadius: "var(--radius-panel-btn)",
-              fontSize: "var(--font-size-panel-btn)",
-              letterSpacing: "var(--letter-spacing-panel-btn)",
-            }}
-          >
-            OK
-          </button>
-        </div>
+        <button
+          onClick={onSave}
+          className="font-opensans transition-all duration-200 hover:brightness-110"
+          style={{
+            backgroundColor: "var(--color-panel-btn-ok-bg)",
+            color: "var(--color-panel-btn-text)",
+            width: "var(--width-panel-btn)",
+            height: "var(--height-panel-btn)",
+            borderRadius: "var(--radius-panel-btn)",
+            fontSize: "var(--font-size-panel-btn)",
+            letterSpacing: "var(--letter-spacing-panel-btn)",
+          }}
+        >
+          OK
+        </button>
       </div>
 
       {/* Bottom scroll hint — visible whenever content extends below the
@@ -627,12 +629,6 @@ export default function NavBar3() {
     setClientCoordinates,
     // Zip data — used to pre-fill the centroid in the Distance panel for Zip mode
     zipCodes,
-    // Quick Tips state for auto-opening on first multi-selection
-    setQuickTipsOpen,
-    setQuickTipsExpandedSection,
-    quickTipsShownThisSession,
-    setQuickTipsShownThisSession,
-    setQuickTipsHighlightChipToggle,
   } = useAppData();
 
   // ---- Address chip gating ----
@@ -853,15 +849,6 @@ export default function NavBar3() {
 
     // Log each selected assistance type
     logAssistanceSelections(tempSelections, assistanceData);
-
-    // Auto-open Quick Tips to Assistance section on first multi-selection of session
-    // Highlight the chip toggle section to draw attention to the toggling feature
-    if (tempSelections.length > 1 && !quickTipsShownThisSession) {
-      setQuickTipsOpen(true);
-      setQuickTipsExpandedSection("assistance");
-      setQuickTipsHighlightChipToggle(true);
-      setQuickTipsShownThisSession(true);
-    }
   };
 
   // Handle clear - clears all selections but keeps panel open
@@ -906,7 +893,7 @@ export default function NavBar3() {
           paddingLeft: "var(--padding-navbar3-left)",
         }}
       >
-        <span className="text-white font-opensans">Loading...</span>
+        <span className="font-opensans" style={{ color: "var(--color-navbar3-user-text)" }}>Loading...</span>
       </nav>
     );
   }
@@ -918,6 +905,12 @@ export default function NavBar3() {
 
   return (
     <nav className="bg-navbar3-bg relative">
+      {/* Scrim painted whenever the Assistance picker is open. Rendered via
+          portal at body level so it covers the whole viewport. Click on the
+          scrim closes the panel — the existing click-outside listener
+          (mousedown) fires first and auto-saves current selections, matching
+          the existing "click anywhere outside = save" behavior. */}
+      <PanelScrim isOpen={isPanelOpen} onClose={() => setIsPanelOpen(false)} zIndex={49} />
       {/* ========== DESKTOP LAYOUT (md+) ========== */}
       <div
         className="hidden lg:flex items-center justify-between"

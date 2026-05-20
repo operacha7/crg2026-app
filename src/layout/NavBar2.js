@@ -19,29 +19,37 @@ const SEARCH_MODES = {
   LLM: "llm",
 };
 
-// Mode button component
+// Mode button — borderless text label with hover/click → gold and a gold
+// underline when active. Mirrors NavBar1's action-group color states so the
+// two navbars feel like one system. Active = the selected search mode; the
+// underline disambiguates "selected mode" from "I'm just hovering."
 function ModeButton({ label, isActive, onClick }) {
+  // Color states:
+  //   inactive default → D8D9DB (near-white gray)
+  //   inactive hover   → accent gold
+  //   active           → accent gold + gold border-bottom (sticky)
+  // The underline is always rendered; its color flips between transparent and
+  // gold to avoid layout shift when toggling modes.
+  const colorClass = isActive
+    ? "text-[var(--color-accent-gold)]"
+    : "text-[var(--color-navbar2-mode-inactive-text)] hover:text-[var(--color-accent-gold)]";
+
   return (
     <button
       onClick={onClick}
-      className="font-opensans transition-all duration-200 hover:brightness-125"
+      className={`font-opensans transition-all duration-150 bg-transparent active:text-[var(--color-accent-gold)] active:scale-[0.97] ${colorClass}`}
       style={{
         height: "var(--height-navbar2-btn)",
         paddingLeft: "var(--padding-navbar2-btn-x)",
         paddingRight: "var(--padding-navbar2-btn-x)",
-        borderRadius: "var(--radius-navbar2-btn)",
         fontSize: "var(--font-size-navbar2-btn)",
         fontWeight: "var(--font-weight-navbar2-btn)",
         letterSpacing: "var(--letter-spacing-navbar2-btn)",
-        backgroundColor: isActive
-          ? "var(--color-navbar2-btn-active-bg)"
-          : "var(--color-navbar2-btn-inactive-bg)",
-        color: isActive
-          ? "var(--color-navbar2-btn-active-text)"
-          : "var(--color-navbar2-btn-inactive-text)",
-        border: isActive
-          ? "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)"
-          : "var(--border-width-btn) solid var(--color-navbar2-btn-inactive-border)",
+        border: "none",
+        borderBottom: `var(--width-navbar2-mode-underline) solid ${
+          isActive ? "var(--color-accent-gold)" : "transparent"
+        }`,
+        borderRadius: 0,
         whiteSpace: "nowrap",
       }}
     >
@@ -451,16 +459,15 @@ function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select 
           whiteSpace: "nowrap",
           ...(usePromptingStyle
             ? {
+                // Single visual state — hasValue and !hasValue render
+                // identically (white text, transparent bg, blue border) so
+                // selecting a zip doesn't reshape the trigger. Only min-width
+                // varies: forced when empty so "Choose Zip Code" fits, free to
+                // shrink once a shorter "77002 — Houston" replaces it.
                 minWidth: hasValue ? undefined : "var(--min-width-choose-btn)",
-                backgroundColor: hasValue
-                  ? "var(--color-navbar2-dropdown-bg)"
-                  : "var(--color-navbar2-dropdown-prompting-bg)",
-                color: hasValue
-                  ? "var(--color-navbar2-dropdown-text)"
-                  : "var(--color-navbar2-dropdown-prompting-text)",
-                border: hasValue
-                  ? "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)"
-                  : "var(--border-width-btn) solid var(--color-navbar2-dropdown-prompting-border)",
+                backgroundColor: "var(--color-navbar2-dropdown-prompting-bg)",
+                color: "var(--color-navbar2-dropdown-prompting-text)",
+                border: "var(--border-width-btn) solid var(--color-navbar2-dropdown-prompting-border)",
               }
             : {
                 backgroundColor: hasValue
@@ -744,9 +751,20 @@ function LLMSearchDropdown({
 
           {/* Panel body */}
           <div className="p-4">
-            {/* Search input label */}
-            <p className="text-lg mb-2" style={{ color: "#FFFFFF", fontFamily: "'Open Sans', sans-serif" }}>
-              Describe what you're looking for in plain language:
+            {/* Input label — matches the uppercase teal label pattern used
+                by Email/PDF/SMS panels. */}
+            <p
+              className="font-opensans"
+              style={{
+                color: "var(--color-panel-label-text)",
+                fontSize: "var(--font-size-panel-label)",
+                fontWeight: 600,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                margin: "0 0 8px 0",
+              }}
+            >
+              Describe what you're looking for in plain language
             </p>
 
             {/* Search input - 50% taller (80px -> 120px) */}
@@ -761,14 +779,14 @@ function LLMSearchDropdown({
                 height: "120px",
                 fontSize: "16px",
                 color: "var(--color-text-primary)",
-                backgroundColor: "#FFFFFF",
-                border: "1px solid #ccc",
+                backgroundColor: "var(--color-panel-input-bg)",
+                border: "1px solid var(--color-panel-input-border)",
                 fontFamily: "'Open Sans', sans-serif",
               }}
               disabled={isLoading}
             />
 
-            {/* Action buttons - Cancel, Clear, Search */}
+            {/* Action row: Cancel on the left, Clear + Ask grouped on the right. */}
             <div className="flex items-center justify-between mt-6">
               <button
                 onClick={() => {
@@ -789,39 +807,41 @@ function LLMSearchDropdown({
                 Cancel
               </button>
 
-              {/* Clear button in the middle */}
-              <button
-                onClick={handleClearClick}
-                className="transition-all duration-200 hover:brightness-110 font-opensans"
-                style={{
-                  backgroundColor: "#007ab8",
-                  color: "#FFFFFF",
-                  width: "var(--width-panel-btn)",
-                  height: "var(--height-panel-btn)",
-                  borderRadius: "var(--radius-panel-btn)",
-                  fontSize: "var(--font-size-panel-btn)",
-                  letterSpacing: "var(--letter-spacing-panel-btn)",
-                }}
-              >
-                Clear
-              </button>
+              <div className="flex items-center" style={{ gap: "20px" }}>
+                <button
+                  onClick={handleClearClick}
+                  className="transition-all duration-200 hover:brightness-110 font-opensans"
+                  style={{
+                    backgroundColor: "transparent",
+                    color: "var(--color-panel-btn-clear-text)",
+                    border: "1.5px solid var(--color-panel-btn-clear-border)",
+                    width: "var(--width-panel-btn)",
+                    height: "var(--height-panel-btn)",
+                    borderRadius: "var(--radius-panel-btn)",
+                    fontSize: "var(--font-size-panel-btn)",
+                    letterSpacing: "var(--letter-spacing-panel-btn)",
+                  }}
+                >
+                  Clear
+                </button>
 
-              <button
-                onClick={handleSearchClick}
-                disabled={isLoading || !localValue.trim()}
-                className="transition-all duration-200 hover:brightness-110 font-opensans"
-                style={{
-                  backgroundColor: "var(--color-panel-btn-ok-bg)",
-                  color: "var(--color-panel-btn-text)",
-                  width: "var(--width-panel-btn)",
-                  height: "var(--height-panel-btn)",
-                  borderRadius: "var(--radius-panel-btn)",
-                  fontSize: "var(--font-size-panel-btn)",
-                  letterSpacing: "var(--letter-spacing-panel-btn)",
-                }}
-              >
-                {isLoading ? "Searching..." : "Search"}
-              </button>
+                <button
+                  onClick={handleSearchClick}
+                  disabled={isLoading || !localValue.trim()}
+                  className="transition-all duration-200 hover:brightness-110 font-opensans"
+                  style={{
+                    backgroundColor: "var(--color-panel-btn-ok-bg)",
+                    color: "var(--color-panel-btn-text)",
+                    width: "var(--width-panel-btn)",
+                    height: "var(--height-panel-btn)",
+                    borderRadius: "var(--radius-panel-btn)",
+                    fontSize: "var(--font-size-panel-btn)",
+                    letterSpacing: "var(--letter-spacing-panel-btn)",
+                  }}
+                >
+                  {isLoading ? "Asking..." : "Ask"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -892,10 +912,14 @@ function ZipCodeFilters({
   const neighborhoodText = selectedZipData?.neighborhood || "";
 
   return (
+    // Right-positioned tooltip with a wider cap so the neighborhood list
+    // wraps to ~2–3 lines and stays within NavBar2's 70px height instead of
+    // dropping below the trigger and obscuring the open zip dropdown.
     <Tooltip
       text={selectedZip && neighborhoodText ? `Neighborhoods: ${neighborhoodText}` : ""}
-      position="bottom"
+      position="right"
       multiline
+      maxWidth="600px"
     >
       <ZipCodeDropdown
         value={selectedZip}

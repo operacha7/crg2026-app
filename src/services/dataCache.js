@@ -15,7 +15,7 @@
 // fetch — limits how out-of-date data can get if Supabase has been down or
 // if the user hasn't visited in a while.
 
-const CACHE_KEY = "crg-phase1-v1";
+const CACHE_KEY = "crg-phase1-v2";
 const TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function readPhase1Cache() {

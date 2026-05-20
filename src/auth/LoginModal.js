@@ -2,10 +2,7 @@
 // Site-wide login modal that opens whenever the URL carries `?login=1`.
 // Triggered from Footer / MobileMenu / HomeNavBar via a relative `?login=1`
 // link, so the modal pops up on whatever page the user clicked from rather
-// than redirecting to /find first. Replaces the standalone /login page from
-// the pre-2026 design — all extra chrome (guest button, scrolling org list,
-// background art, contact-support fallback) is gone. Per the redesign brief:
-// only an organization dropdown, a passcode input, and Login / Cancel.
+// than redirecting to /find first.
 //
 // Post-login navigation:
 //   - From the homepage (/) → forward to /find so the user lands inside the
@@ -14,15 +11,43 @@
 //     the page they were viewing; cancelling leaves them on /about, /find,
 //     /privacy, etc. with no disruption.
 //
-// Visual: white panel with a 5px maroon-teal (#43747D) border and 20px radius.
-// Title and labels are #660000 (semibold). Inputs are cream (#F3EED9) with
-// black text. Buttons reuse the standard panel button tokens (red Cancel,
-// green Login) so they match the Assistance panel etc. The full-screen wrapper
-// has a transparent background — the page underneath stays visible so the
-// login feels like an inline panel rather than a context-switching takeover.
+// Visual (2026 panel redesign): two-section card. Left side is a maroon
+// welcome panel (logo + "Welcome back" + body + brand title); right side is
+// the cream form (title in maroon, capitalized teal labels, white inputs with
+// beige borders, standard Cancel/Login buttons). Outer panel has a 3px white
+// border with a 10px radius. All non-login-specific styling pulls from the
+// shared panel-* tokens so this stays in sync with the other panels.
 
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+
+// Caret SVG (chevron down) embedded as a data URI so the <select> can show
+// a custom dropdown indicator after appearance:none strips the native one.
+// Color matches --color-panel-label-text (#43747D) for visual coherence with
+// the labels above the inputs.
+const CARET_BG =
+  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%2343747D' d='M0 0l6 8 6-8z'/></svg>\")";
+
+const labelStyle = {
+  color: "var(--color-panel-label-text)",
+  fontSize: "var(--font-size-panel-label)",
+  fontWeight: 600,
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+  marginBottom: 6,
+  display: "block",
+};
+
+const inputBaseStyle = {
+  width: "100%",
+  background: "var(--color-panel-input-bg)",
+  color: "#222831",
+  border: "1px solid var(--color-panel-input-border)",
+  borderRadius: "var(--radius-login-input)",
+  padding: "10px 12px",
+  fontSize: 14,
+  outline: "none",
+};
 
 export default function LoginModal({ onLoginSuccess }) {
   const navigate = useNavigate();
@@ -63,10 +88,7 @@ export default function LoginModal({ onLoginSuccess }) {
   // Prefetch the MainApp chunk while the user is typing their passcode. A
   // successful login forwards into MainApp (→ /find from the homepage, or
   // stay-in-place from any other page that already mounts MainApp), so we
-  // start the chunk download as soon as the modal opens. Covers entry
-  // points that didn't flow through HomePage (clicking Organization Login
-  // from /about, /privacy, /terms). .catch() prevents an unhandled
-  // rejection if the network drops — lazy() will retry on demand.
+  // start the chunk download as soon as the modal opens.
   useEffect(() => {
     if (isOpen) {
       import("../MainApp").catch(() => {});
@@ -155,7 +177,7 @@ export default function LoginModal({ onLoginSuccess }) {
   return (
     <div
       className="fixed inset-0 flex items-center justify-center"
-      style={{ background: "transparent", zIndex: 1000 }}
+      style={{ background: "var(--color-panel-scrim-bg)", zIndex: 1000 }}
       onClick={close}
       role="dialog"
       aria-modal="true"
@@ -163,11 +185,11 @@ export default function LoginModal({ onLoginSuccess }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        className="flex flex-col md:flex-row"
         style={{
           width: "100%",
-          maxWidth: 440,
+          maxWidth: 760,
           margin: "0 16px",
-          background: "var(--color-login-panel-bg)",
           borderRadius: "var(--radius-login-panel)",
           overflow: "hidden",
           border:
@@ -175,185 +197,239 @@ export default function LoginModal({ onLoginSuccess }) {
           boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
         }}
       >
-        {/* key={org} forces React to remount the form whenever the selected
-            organization changes. The fresh-DOM passcode input causes Chrome's
-            password manager to re-run autofill against the new "username"
-            (the hidden field below), filling in the saved passcode for the
-            newly-selected org instead of leaving the previous org's passcode
-            in place. */}
-        <form
-          key={org || "no-org"}
-          onSubmit={handleSubmit}
-          autoComplete="on"
-          style={{ padding: "24px 28px" }}
+        {/* ---------- LEFT SECTION (maroon welcome panel) ---------- */}
+        <div
+          className="flex flex-col"
+          style={{
+            background: "var(--color-login-left-bg)",
+            padding: "24px 22px",
+            width: "100%",
+            // md+ : fixed share of the panel so the right side has room for
+            // the form; stacks above the form on narrow screens.
+            flex: "0 0 38%",
+            minHeight: 240,
+          }}
         >
-          {/* Title */}
+          {/* CRG logo */}
+          <img
+            src="/images/CRG Logo 2025.webp"
+            alt="CRG"
+            style={{ width: 32, height: 32, objectFit: "contain", marginBottom: 16 }}
+          />
+
+          {/* Welcome header */}
           <div
-            id="login-modal-title"
             className="font-opensans"
             style={{
-              textAlign: "center",
-              color: "var(--color-login-label)",
-              fontSize: "var(--font-size-login-title)",
-              fontWeight: "var(--font-weight-login)",
-              marginBottom: 20,
+              color: "var(--color-login-welcome-text)",
+              fontSize: "var(--font-size-login-welcome)",
+              fontWeight: 700,
+              letterSpacing: "0.02em",
+              marginBottom: 8,
             }}
           >
-            Organization Login
+            Welcome back
           </div>
 
-          {/* Hidden username field so password managers attach the saved
-              credential to the right org. */}
-          <input
-            type="text"
-            name="username"
-            autoComplete="username"
-            value={org}
-            onChange={() => {}}
-            style={{ display: "none" }}
-            tabIndex={-1}
-          />
-
-          <label
-            htmlFor="login-org"
-            className="font-opensans block"
+          {/* Body paragraph */}
+          <p
+            className="font-opensans"
             style={{
-              color: "var(--color-login-label)",
-              fontSize: "var(--font-size-login-label)",
-              fontWeight: "var(--font-weight-login)",
-              marginBottom: 6,
+              color: "var(--color-login-body-text)",
+              fontSize: "var(--font-size-login-body)",
+              lineHeight: 1.45,
+              margin: 0,
             }}
           >
-            Select Organization
-          </label>
-          <select
-            id="login-org"
-            ref={dropdownRef}
-            value={org}
-            onChange={(e) => setOrg(e.target.value)}
-            className="font-opensans w-full"
+            Sign in to your organization&rsquo;s account to email or text referrals,
+            create PDFs or review reports and maps.
+          </p>
+
+          {/* Brand title — pinned to the bottom of the maroon section via
+              mt-auto so it sits below the body regardless of how short the
+              right-side form is. Comfortaa to match the title treatment in
+              the NavBar1 / HomeNavBar header. */}
+          <div
+            className="font-comfortaa mt-auto"
             style={{
-              background: "var(--color-login-input-bg)",
-              color: "var(--color-login-input-text)",
-              borderRadius: "var(--radius-login-input)",
-              fontSize: "var(--font-size-login-input-org)",
-              fontWeight: "var(--font-weight-login)",
-              padding: "8px 12px",
-              border: "none",
-              marginBottom: 16,
-              appearance: "none",
-              cursor: "pointer",
+              color: "var(--color-login-brand-text)",
+              fontSize: "var(--font-size-login-brand)",
+              letterSpacing: "0.05em",
+              paddingTop: 24,
             }}
           >
-            <option value="">— Select —</option>
-            {orgList.map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </select>
+            Community Resources Guide Houston
+          </div>
+        </div>
 
-          <label
-            htmlFor="login-passcode"
-            className="font-opensans block"
-            style={{
-              color: "var(--color-login-label)",
-              fontSize: "var(--font-size-login-label)",
-              fontWeight: "var(--font-weight-login)",
-              marginBottom: 6,
-            }}
+        {/* ---------- RIGHT SECTION (cream form) ---------- */}
+        <div
+          style={{
+            background: "var(--color-login-panel-bg)",
+            flex: "1 1 auto",
+            padding: "28px 32px",
+          }}
+        >
+          {/* key={org} forces React to remount the form whenever the selected
+              organization changes. The fresh-DOM passcode input causes
+              Chrome's password manager to re-run autofill against the new
+              "username" (the hidden field below), filling in the saved
+              passcode for the newly-selected org instead of leaving the
+              previous org's passcode in place. */}
+          <form
+            key={org || "no-org"}
+            onSubmit={handleSubmit}
+            autoComplete="on"
           >
-            Passcode
-          </label>
-          {/* Chrome autofill override — keep the cream input bg + black text
-              the rest of the panel uses. */}
-          <style>
-            {`
-              .login-modal-passcode:-webkit-autofill,
-              .login-modal-passcode:-webkit-autofill:hover,
-              .login-modal-passcode:-webkit-autofill:focus,
-              .login-modal-passcode:-webkit-autofill:active {
-                -webkit-box-shadow: 0 0 0 30px var(--color-login-input-bg) inset !important;
-                -webkit-text-fill-color: var(--color-login-input-text) !important;
-                caret-color: var(--color-login-input-text) !important;
-                transition: background-color 5000s ease-in-out 0s;
-              }
-            `}
-          </style>
-          <input
-            id="login-passcode"
-            ref={passcodeRef}
-            type="password"
-            autoComplete="current-password"
-            placeholder="Enter Passcode"
-            className="login-modal-passcode font-opensans w-full"
-            style={{
-              background: "var(--color-login-input-bg)",
-              color: "var(--color-login-input-text)",
-              borderRadius: "var(--radius-login-input)",
-              fontSize: "var(--font-size-login-input-passcode)",
-              fontWeight: "var(--font-weight-login)",
-              padding: "8px 12px",
-              border: "none",
-              marginBottom: 16,
-            }}
-          />
-
-          {error && (
+            {/* Title */}
             <div
+              id="login-modal-title"
               className="font-opensans"
               style={{
-                color: "#FFFFFF",
-                background: "#B8001F",
-                padding: "8px 10px",
-                borderRadius: 4,
-                fontSize: 13,
-                marginBottom: 12,
-                textAlign: "center",
+                color: "var(--color-login-title-text)",
+                fontSize: "var(--font-size-login-title)",
+                fontWeight: "var(--font-weight-login)",
+                marginBottom: 24,
               }}
             >
-              {error}
+              Organization Login
             </div>
-          )}
 
-          <div className="flex justify-between" style={{ marginTop: 8 }}>
-            <button
-              type="button"
-              onClick={close}
-              className="font-opensans hover:brightness-110"
+            {/* Hidden username field so password managers attach the saved
+                credential to the right org. */}
+            <input
+              type="text"
+              name="username"
+              autoComplete="username"
+              value={org}
+              onChange={() => {}}
+              style={{ display: "none" }}
+              tabIndex={-1}
+            />
+
+            {/* Organization (dropdown — caret rendered via background SVG
+                after appearance:none strips the native control's arrow). */}
+            <label htmlFor="login-org" className="font-opensans" style={labelStyle}>
+              Organization
+            </label>
+            <select
+              id="login-org"
+              ref={dropdownRef}
+              value={org}
+              onChange={(e) => setOrg(e.target.value)}
+              className="font-opensans"
               style={{
-                background: "var(--color-panel-btn-cancel-bg)",
-                color: "var(--color-panel-btn-text)",
-                border: "none",
-                width: "var(--width-panel-btn)",
-                height: "var(--height-panel-btn)",
-                borderRadius: "var(--radius-panel-btn)",
-                fontSize: "var(--font-size-panel-btn)",
-                letterSpacing: "var(--letter-spacing-panel-btn)",
+                ...inputBaseStyle,
+                // Override the shared inputBaseStyle 14px specifically for
+                // the Organization picker — applies to both the closed-state
+                // displayed name and the open option list. Leaves the
+                // Passcode input below at the smaller default.
+                fontSize: 16,
+                appearance: "none",
+                WebkitAppearance: "none",
+                MozAppearance: "none",
                 cursor: "pointer",
+                paddingRight: 32,
+                backgroundImage: CARET_BG,
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right 12px center",
+                marginBottom: 16,
               }}
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="font-opensans hover:brightness-110"
-              style={{
-                background: "var(--color-panel-btn-ok-bg)",
-                color: "var(--color-panel-btn-text)",
-                border: "none",
-                width: "var(--width-panel-btn)",
-                height: "var(--height-panel-btn)",
-                borderRadius: "var(--radius-panel-btn)",
-                fontSize: "var(--font-size-panel-btn)",
-                letterSpacing: "var(--letter-spacing-panel-btn)",
-                cursor: "pointer",
-              }}
-            >
-              Login
-            </button>
-          </div>
-        </form>
+              <option value=""></option>
+              {orgList.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+
+            {/* Passcode. */}
+            <label htmlFor="login-passcode" className="font-opensans" style={labelStyle}>
+              Passcode
+            </label>
+            {/* Chrome autofill override — keep the white input bg + dark text
+                the rest of the panel uses instead of the browser's pale yellow. */}
+            <style>
+              {`
+                .login-modal-passcode:-webkit-autofill,
+                .login-modal-passcode:-webkit-autofill:hover,
+                .login-modal-passcode:-webkit-autofill:focus,
+                .login-modal-passcode:-webkit-autofill:active {
+                  -webkit-box-shadow: 0 0 0 30px var(--color-panel-input-bg) inset !important;
+                  -webkit-text-fill-color: #222831 !important;
+                  caret-color: #222831 !important;
+                  transition: background-color 5000s ease-in-out 0s;
+                }
+              `}
+            </style>
+            <input
+              id="login-passcode"
+              ref={passcodeRef}
+              type="password"
+              autoComplete="current-password"
+              className="login-modal-passcode font-opensans"
+              style={{ ...inputBaseStyle, marginBottom: 20 }}
+            />
+
+            {error && (
+              <div
+                className="font-opensans"
+                style={{
+                  color: "#FFFFFF",
+                  background: "#B71C1C",
+                  padding: "8px 10px",
+                  borderRadius: 4,
+                  fontSize: 13,
+                  marginBottom: 12,
+                  textAlign: "center",
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+            {/* Cancel / Login. Uses the shared panel button tokens — same
+                styling as every other panel's Cancel / OK pair. */}
+            <div className="flex justify-between" style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                onClick={close}
+                className="font-opensans hover:brightness-110"
+                style={{
+                  background: "var(--color-panel-btn-cancel-bg)",
+                  color: "var(--color-panel-btn-text)",
+                  border: "none",
+                  width: "var(--width-panel-btn)",
+                  height: "var(--height-panel-btn)",
+                  borderRadius: "var(--radius-panel-btn)",
+                  fontSize: "var(--font-size-panel-btn)",
+                  letterSpacing: "var(--letter-spacing-panel-btn)",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="font-opensans hover:brightness-110"
+                style={{
+                  background: "var(--color-panel-btn-ok-bg)",
+                  color: "var(--color-panel-btn-text)",
+                  border: "none",
+                  width: "var(--width-panel-btn)",
+                  height: "var(--height-panel-btn)",
+                  borderRadius: "var(--radius-panel-btn)",
+                  fontSize: "var(--font-size-panel-btn)",
+                  letterSpacing: "var(--letter-spacing-panel-btn)",
+                  cursor: "pointer",
+                }}
+              >
+                Login
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

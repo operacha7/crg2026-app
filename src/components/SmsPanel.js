@@ -11,6 +11,7 @@ import { useState, useEffect } from "react";
 import { Copy } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import DropPanel from "./DropPanel";
+import PanelScrim from "./PanelScrim";
 import {
   isGvExtensionInstalled,
   sendToGvExtension,
@@ -226,6 +227,8 @@ export default function SmsPanel({
   }
 
   return (
+    <>
+      <PanelScrim isOpen onClose={onCancel} zIndex={49} />
     <DropPanel
       title="Text Resources Link"
       isOpen={true}
@@ -240,22 +243,20 @@ export default function SmsPanel({
       cancelButtonText="Close"
     >
       <div className="flex flex-col gap-4">
-        {/* Subtitle */}
-        <p
-          className="font-opensans text-center"
-          style={{ color: "#FFFFFF", fontSize: "13px", margin: 0, lineHeight: "1.3" }}
-        >
-          Sent from your phone number. CRG does not send.
-        </p>
-
         {/* Phone input */}
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5">
           <label
             htmlFor="sms-phone-input"
             className="font-opensans"
-            style={{ color: "#FFFFFF", fontSize: "12px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}
+            style={{
+              color: "var(--color-panel-label-text)",
+              fontSize: "var(--font-size-panel-label)",
+              fontWeight: 600,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
           >
-            To
+            Recipient Phone Number
           </label>
           <div className="relative">
             <input
@@ -297,9 +298,9 @@ export default function SmsPanel({
         {isValidPhone && (
           <p
             className="font-opensans"
-            style={{ color: "#FFFFFF", fontSize: "12px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", margin: 0, marginBottom: "-12px" }}
+            style={{ color: "var(--color-panel-label-text)", fontSize: "12px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", margin: 0, marginBottom: "-12px" }}
           >
-            How do you want to send the text?
+            How do you want the text sent?
           </p>
         )}
 
@@ -506,12 +507,13 @@ export default function SmsPanel({
         {feedback && (
           <p
             className="font-opensans text-center"
-            style={{ color: "#FFC857", fontSize: "13px", margin: 0 }}
+            style={{ color: "#4A4F56", fontSize: "13px", margin: 0 }}
           >
             {feedback}
           </p>
         )}
       </div>
     </DropPanel>
+    </>
   );
 }

@@ -5,6 +5,7 @@
 // Static color icons (colors baked in)
 export { SendEmailIcon } from './SendEmailIcon';
 export { CreatePdfIcon } from './CreatePdfIcon';
+export { SendTextIcon } from './SendTextIcon';
 export { USFlagIcon } from './USFlagIcon';
 export { InformationIcon } from './InformationIcon';
 export { ReportsIcon } from './ReportsIcon';

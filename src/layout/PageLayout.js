@@ -14,6 +14,8 @@ export default function PageLayout({
   onSendSms,
   filteredCount = 0,
   selectedCount = 0,
+  isAnyFilterActive = false,
+  canSendText = false,
   // Props for email/PDF/SMS panels
   selectedData = [],
   loggedInUser,
@@ -42,6 +44,8 @@ export default function PageLayout({
           <NavBar1
             filteredCount={filteredCount}
             selectedCount={selectedCount}
+            isAnyFilterActive={isAnyFilterActive}
+            canSendText={canSendText}
             onSendEmail={onSendEmail}
             onCreatePdf={onCreatePdf}
             onSendSms={onSendSms}

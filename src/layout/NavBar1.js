@@ -10,13 +10,121 @@ import SmsPanel from "../components/SmsPanel";
 import SmsWarningModal from "../components/SmsWarningModal";
 import AnimatedCounter from "../components/AnimatedCounter";
 import MobileMenu from "../components/MobileMenu";
+import { SendEmailIcon, CreatePdfIcon, SendTextIcon } from "../icons";
 
 // sessionStorage key to track whether the SMS warning has been acknowledged this session
 const SMS_WARNING_ACK_KEY = "crg_sms_warning_acknowledged";
 
+// One button inside the gold action-group pill (Email / PDF / Text).
+// Renders icon + label and an optional count chip. When `isActive` is false
+// the icon and label render in the muted gray and the button is truly disabled
+// (no click, no hover). When `isActive` is true the icon and label flip to
+// white and a hover brighten + active press is applied. The chip is rendered
+// only when `chipShown` is true; the parent decides when to flip that.
+// Inner radius = group radius (10) − group border (2) = 8px.
+// Used to round the first/last buttons' outer corners so the gold hover fill
+// follows the group's curve instead of bleeding into the square inner corner.
+const OUTER_BTN_RADIUS = "8px";
+const POSITION_RADIUS = {
+  first: `${OUTER_BTN_RADIUS} 0 0 ${OUTER_BTN_RADIUS}`,
+  middle: "0",
+  last: `0 ${OUTER_BTN_RADIUS} ${OUTER_BTN_RADIUS} 0`,
+};
+
+function ActionButton({
+  icon: Icon,
+  label,
+  chipShown,
+  chipValue,
+  chipVariant, // 'gold' for Email/PDF, 'teal' for Text
+  isActive,
+  onClick,
+  guestDisabled,
+  buttonRef,
+  position = "middle", // 'first' | 'middle' | 'last' — for outer corner rounding
+  isPanelOpen = false, // sticky-gold while the button's dropdown panel is open
+}) {
+  const interactive = isActive && !guestDisabled;
+
+  const chipStyle = chipVariant === "teal"
+    ? {
+        backgroundColor: "transparent",
+        color: "var(--color-navbar1-action-chip-text-color)",
+        border: `var(--width-navbar1-action-chip-border) solid var(--color-navbar1-action-chip-text-color)`,
+      }
+    : {
+        backgroundColor: "var(--color-navbar1-action-chip-emailpdf-bg)",
+        color: "var(--color-navbar1-action-chip-emailpdf-text)",
+        border: "none",
+      };
+
+  // Color states (icon inherits via currentColor):
+  //   default active → white   (--color-navbar1-action-icon-active)
+  //   hover          → gold    (--color-navbar1-action-hover-fg)
+  //   panel open     → gold, sticky (driven by isPanelOpen; survives mouseout)
+  //   press          → gold + scale-96 (Tailwind active: only while held)
+  //   disabled       → gray    (--color-navbar1-action-icon-inactive)
+  // While the panel is open the button is "locked" gold by swapping the base
+  // text-color class — Tailwind's hover: would otherwise revert to white the
+  // moment the user moves the cursor away from the trigger.
+  const interactiveClasses = isPanelOpen
+    ? "cursor-pointer text-[var(--color-navbar1-action-hover-fg)] active:scale-[0.96]"
+    : "cursor-pointer text-[var(--color-navbar1-action-icon-active)] hover:text-[var(--color-navbar1-action-hover-fg)] active:text-[var(--color-navbar1-action-hover-fg)] active:scale-[0.96]";
+
+  return (
+    <button
+      ref={buttonRef}
+      onClick={interactive ? onClick : undefined}
+      disabled={!interactive}
+      aria-disabled={!interactive}
+      className={`font-opensans flex items-center bg-transparent transition-all duration-150 ${
+        interactive
+          ? interactiveClasses
+          : "cursor-not-allowed text-[var(--color-navbar1-action-icon-inactive)]"
+      }`}
+      style={{
+        border: "none",
+        height: "100%",
+        padding: `0 var(--padding-navbar1-action-x)`,
+        gap: "var(--gap-navbar1-action-internal)",
+        borderRadius: POSITION_RADIUS[position],
+        fontSize: "var(--font-size-navbar1-action-label)",
+        fontWeight: "var(--font-weight-navbar1-action-label)",
+        letterSpacing: "var(--letter-spacing-navbar1-action-label)",
+      }}
+    >
+      {/* Icon size 18 mirrors --size-navbar1-action-icon (the icon takes a
+          numeric prop, so the token value lives here as a literal). The
+          icon inherits text color via the default `color="currentColor"`
+          so the hover color shift on the button propagates into the SVG. */}
+      <Icon size={18} />
+      <span>{label}</span>
+      {chipShown && (
+        <span
+          className="inline-flex items-center justify-center font-opensans"
+          style={{
+            height: "var(--height-navbar1-action-chip)",
+            minWidth: "var(--min-width-navbar1-action-chip)",
+            padding: `0 var(--padding-navbar1-action-chip-x)`,
+            borderRadius: "var(--radius-navbar1-action-chip)",
+            fontSize: "var(--font-size-navbar1-action-chip)",
+            fontWeight: "var(--font-weight-navbar1-action-chip)",
+            lineHeight: 1,
+            ...chipStyle,
+          }}
+        >
+          {chipValue}
+        </span>
+      )}
+    </button>
+  );
+}
+
 export default function NavBar1({
   filteredCount = 0,
   selectedCount = 0,
+  isAnyFilterActive = false,
+  canSendText = false,
   onSendEmail,
   onCreatePdf,
   onSendSms,
@@ -37,6 +145,16 @@ export default function NavBar1({
   // there was a `filteredCount > 0 ? filteredCount : totalCount` fallback
   // because "no filter" meant filteredCount=0; that's no longer the case.)
   const displayFilteredCount = filteredCount;
+
+  // Action-button states. Email + PDF share a single signal: the chip shows
+  // and the label activates together based on selectedCount. Send Text splits
+  // them by design — the chip is allowed to appear as soon as ANY filter is
+  // engaged (early feedback so the user can see the dataset shrinking) but
+  // the label/icon only activate (and the button only becomes clickable)
+  // once the per-mode SMS rule is met. Counts of 0 hide their chip entirely.
+  const emailPdfActive = selectedCount > 0;
+  const textChipShown = isAnyFilterActive && filteredCount > 0;
+  const textLabelActive = canSendText && filteredCount > 0;
 
   // Panel state
   const [showEmailPanel, setShowEmailPanel] = useState(false);
@@ -291,164 +409,108 @@ export default function NavBar1({
           </h1>
         </div>
 
-        {/* Right side - Counters and Buttons */}
+        {/* Right side — three action buttons grouped inside one gold pill.
+            The pre-2026 orange/blue counters are gone; their counts are now
+            surfaced as conditional chips on the relevant buttons (selected →
+            Email/PDF, filtered → Text). Each button's relative wrapper still
+            anchors its dropdown panel below. */}
         <div
-          className="flex items-center"
-          style={{ gap: 'var(--gap-navbar1-counters-buttons)' }}
+          role="group"
+          aria-label="Send Email, Create PDF, Send Text"
+          className="flex items-stretch"
+          style={{
+            height: 'var(--height-navbar1-action-group)',
+            border: 'var(--width-navbar1-action-border) solid var(--color-navbar1-action-border)',
+            borderRadius: 'var(--radius-navbar1-action-group)',
+            backgroundColor: 'var(--color-navbar1-action-bg)',
+          }}
         >
-          {/* Counters */}
-          <div
-            className="flex items-center"
-            style={{ gap: 'var(--gap-navbar1-counters)' }}
-          >
-            {/* Filtered count */}
-            <Tooltip text="Filtered records" position="bottom-left">
-              <AnimatedCounter
-                value={displayFilteredCount}
-                duration={1000}
-                glowColor="rgba(229, 186, 102, 0.85)"
-                className="bg-navbar1-counter-filtered text-navbar1-counter-text-filtered rounded-full flex items-center justify-center font-opensans"
-                style={{
-                  width: 'var(--size-navbar1-counter)',
-                  height: 'var(--size-navbar1-counter)',
-                  fontSize: 'var(--font-size-navbar1-counter)',
-                  fontWeight: 'var(--font-weight-navbar1-counter)',
-                }}
+          {/* Send Email */}
+          <div className="relative flex">
+            <Tooltip text={isGuest ? "You need an account. Contact Support." : ""} position="bottom">
+              <ActionButton
+                icon={SendEmailIcon}
+                label="Send Email"
+                chipShown={selectedCount > 0}
+                chipValue={selectedCount}
+                chipVariant="gold"
+                isActive={emailPdfActive}
+                onClick={handleEmailButtonClick}
+                guestDisabled={isGuest}
+                buttonRef={emailButtonRef}
+                position="first"
+                isPanelOpen={showEmailPanel}
               />
             </Tooltip>
-
-            {/* Selected count */}
-            <Tooltip text="Selected records" position="bottom-left">
-              <AnimatedCounter
-                value={selectedCount}
-                duration={600}
-                glowColor="rgba(229, 186, 102, 0.85)"
-                className="bg-navbar1-counter-selected text-navbar1-counter-text-selected rounded-full flex items-center justify-center font-opensans"
-                style={{
-                  width: 'var(--size-navbar1-counter)',
-                  height: 'var(--size-navbar1-counter)',
-                  fontSize: 'var(--font-size-navbar1-counter)',
-                  fontWeight: 'var(--font-weight-navbar1-counter)',
-                }}
-              />
-            </Tooltip>
+            <EmailPanel
+              isOpen={showEmailPanel}
+              onCancel={handleEmailCancel}
+              onSend={handleEmailSend}
+              panelRef={emailPanelRef}
+              isPdfMode={false}
+              hasInactiveResources={hasInactiveResources}
+              isSending={isSending}
+              statusMessage={statusMessage}
+              selectedData={selectedData}
+              headerText={headerText}
+            />
           </div>
 
-          {/* Buttons */}
-          <div
-            className="flex items-center"
-            style={{ gap: 'var(--gap-navbar1-buttons)' }}
-          >
-            {/* Send Email button with dropdown panel */}
-            <div className="relative">
-              <Tooltip text={isGuest ? "You need an account. Contact Support." : ""} position="bottom">
-                <button
-                  ref={emailButtonRef}
-                  onClick={handleEmailButtonClick}
-                  className={`rounded font-opensans transition-all ${
-                    isGuest
-                      ? "bg-gray-400 text-gray-600 cursor-not-allowed"
-                      : "bg-navbar1-btn-email-bg text-navbar1-btn-email-text hover:brightness-125"
-                  }`}
-                  style={{
-                    width: 'var(--width-navbar1-btn)',
-                    height: 'var(--height-navbar1-btn)',
-                    fontSize: 'var(--font-size-navbar1-btn)',
-                    fontWeight: 'var(--font-weight-navbar1-btn)',
-                    letterSpacing: 'var(--letter-spacing-navbar1-btn)',
-                    opacity: isGuest ? 0.6 : 1,
-                  }}
-                >
-                  Send Email
-                </button>
-              </Tooltip>
-
-              {/* Email Panel */}
-              <EmailPanel
-                isOpen={showEmailPanel}
-                onCancel={handleEmailCancel}
-                onSend={handleEmailSend}
-                panelRef={emailPanelRef}
-                isPdfMode={false}
-                hasInactiveResources={hasInactiveResources}
-                isSending={isSending}
-                statusMessage={statusMessage}
-                selectedData={selectedData}
-                headerText={headerText}
+          {/* Create PDF */}
+          <div className="relative flex">
+            <Tooltip text={isGuest ? "You need an account. Contact Support." : ""} position="bottom">
+              <ActionButton
+                icon={CreatePdfIcon}
+                label="Create PDF"
+                chipShown={selectedCount > 0}
+                chipValue={selectedCount}
+                chipVariant="gold"
+                isActive={emailPdfActive}
+                onClick={handlePdfButtonClick}
+                guestDisabled={isGuest}
+                buttonRef={pdfButtonRef}
+                position="middle"
+                isPanelOpen={showPdfPanel}
               />
-            </div>
+            </Tooltip>
+            <EmailPanel
+              isOpen={showPdfPanel}
+              onCancel={handlePdfCancel}
+              onSend={handlePdfCreate}
+              panelRef={pdfPanelRef}
+              isPdfMode={true}
+              hasInactiveResources={hasInactiveResources}
+              isSending={isSending}
+              statusMessage={statusMessage}
+            />
+          </div>
 
-            {/* Create PDF button with dropdown panel */}
-            <div className="relative">
-              <Tooltip text={isGuest ? "You need an account. Contact Support." : ""} position="bottom">
-                <button
-                  ref={pdfButtonRef}
-                  onClick={handlePdfButtonClick}
-                  className={`rounded font-opensans transition-all ${
-                    isGuest
-                      ? "bg-gray-400 text-gray-600 cursor-not-allowed"
-                      : "bg-navbar1-btn-pdf-bg text-navbar1-btn-pdf-text hover:brightness-125"
-                  }`}
-                  style={{
-                    width: 'var(--width-navbar1-btn)',
-                    height: 'var(--height-navbar1-btn)',
-                    fontSize: 'var(--font-size-navbar1-btn)',
-                    fontWeight: 'var(--font-weight-navbar1-btn)',
-                    letterSpacing: 'var(--letter-spacing-navbar1-btn)',
-                    opacity: isGuest ? 0.6 : 1,
-                  }}
-                >
-                  Create Pdf
-                </button>
-              </Tooltip>
-
-              {/* PDF Panel */}
-              <EmailPanel
-                isOpen={showPdfPanel}
-                onCancel={handlePdfCancel}
-                onSend={handlePdfCreate}
-                panelRef={pdfPanelRef}
-                isPdfMode={true}
-                hasInactiveResources={hasInactiveResources}
-                isSending={isSending}
-                statusMessage={statusMessage}
+          {/* Send Text */}
+          <div className="relative flex">
+            <Tooltip text={isGuest ? "You need an account. Contact Support." : ""} position="bottom">
+              <ActionButton
+                icon={SendTextIcon}
+                label="Send Text"
+                chipShown={textChipShown}
+                chipValue={displayFilteredCount}
+                chipVariant="teal"
+                isActive={textLabelActive}
+                onClick={handleSmsButtonClick}
+                guestDisabled={isGuest}
+                buttonRef={smsButtonRef}
+                position="last"
+                isPanelOpen={showSmsPanel}
               />
-            </div>
-
-            {/* Send Text button with dropdown panel */}
-            <div className="relative">
-              <Tooltip text={isGuest ? "You need an account. Contact Support." : ""} position="bottom">
-                <button
-                  ref={smsButtonRef}
-                  onClick={handleSmsButtonClick}
-                  className={`rounded font-opensans transition-all ${
-                    isGuest
-                      ? "bg-gray-400 text-gray-600 cursor-not-allowed"
-                      : "bg-navbar1-btn-sms-bg text-navbar1-btn-sms-text hover:brightness-125"
-                  }`}
-                  style={{
-                    width: 'var(--width-navbar1-btn)',
-                    height: 'var(--height-navbar1-btn)',
-                    fontSize: 'var(--font-size-navbar1-btn)',
-                    fontWeight: 'var(--font-weight-navbar1-btn)',
-                    letterSpacing: 'var(--letter-spacing-navbar1-btn)',
-                    opacity: isGuest ? 0.6 : 1,
-                  }}
-                >
-                  Send Text
-                </button>
-              </Tooltip>
-
-              <SmsPanel
-                isOpen={showSmsPanel}
-                onCancel={handleSmsCancel}
-                panelRef={smsPanelRef}
-                composedBody={smsBody}
-                onInitiated={onSmsInitiated}
-                onMessagesHandoff={onMessagesHandoff}
-                onGvAutoSent={onGvAutoSent}
-              />
-            </div>
+            </Tooltip>
+            <SmsPanel
+              isOpen={showSmsPanel}
+              onCancel={handleSmsCancel}
+              panelRef={smsPanelRef}
+              composedBody={smsBody}
+              onInitiated={onSmsInitiated}
+              onMessagesHandoff={onMessagesHandoff}
+              onGvAutoSent={onGvAutoSent}
+            />
           </div>
         </div>
       </div>

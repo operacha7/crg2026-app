@@ -6,6 +6,7 @@
 import { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppData } from "../Contexts/AppDataContext";
+import PanelScrim from "./PanelScrim";
 import {
   HomeIcon,
   HelpBubbleIcon,
@@ -900,6 +901,8 @@ export default function QuickTipsPanel() {
   return (
     <AnimatePresence>
       {quickTipsOpen && (
+        <>
+        <PanelScrim isOpen onClose={() => setQuickTipsOpen(false)} zIndex={39} />
         <motion.div
           ref={panelRef}
           initial={{ x: "100%" }}
@@ -957,6 +960,7 @@ export default function QuickTipsPanel() {
             ))}
           </div>
         </motion.div>
+        </>
       )}
     </AnimatePresence>
   );

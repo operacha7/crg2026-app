@@ -1,11 +1,12 @@
 // src/components/HelpPanel.js
 // LLM-powered help panel with chat interface
 // Opens from the Information icon in VerticalNavBar
-// Draggable and non-modal - user can interact with app while open
+// Centered modal panel with a scrim backdrop.
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppData } from "../Contexts/AppDataContext";
+import PanelScrim from "./PanelScrim";
 import {
   HomeIcon,
   HelpBubbleIcon,
@@ -170,7 +171,6 @@ export default function HelpPanel({ isOpen, onClose, resetKey }) {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0]);
   const [error, setError] = useState(null);
-  const [position, setPosition] = useState({ x: 100, y: 100 });
   const [isMobile, setIsMobile] = useState(false);
 
   // Check for mobile on mount and resize
@@ -180,8 +180,6 @@ export default function HelpPanel({ isOpen, onClose, resetKey }) {
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const panelRef = useRef(null);
@@ -209,48 +207,10 @@ export default function HelpPanel({ isOpen, onClose, resetKey }) {
     setMessages([]);
     setQuestion("");
     setError(null);
-    // Position panel in top-left area, leaving room for nav bars
-    setPosition({ x: 50, y: 220 });
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [resetKey, isOpen]);
-
-  // Handle drag start
-  const handleMouseDown = (e) => {
-    if (e.target.closest('button') || e.target.closest('input')) return;
-    setIsDragging(true);
-    const rect = panelRef.current.getBoundingClientRect();
-    setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    });
-  };
-
-  // Handle drag move
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!isDragging) return;
-      setPosition({
-        x: e.clientX - dragOffset.x,
-        y: e.clientY - dragOffset.y,
-      });
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    if (isDragging) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-    }
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isDragging, dragOffset]);
 
   // Build conversation history for API (last 6 messages for context)
   const buildConversationHistory = () => {
@@ -313,6 +273,7 @@ export default function HelpPanel({ isOpen, onClose, resetKey }) {
 
   return (
     <AnimatePresence>
+      <PanelScrim isOpen onClose={onClose} zIndex={49} />
       <motion.div
         ref={panelRef}
         initial={{ opacity: 0, scale: 0.95 }}
@@ -320,11 +281,11 @@ export default function HelpPanel({ isOpen, onClose, resetKey }) {
         exit={{ opacity: 0, scale: 0.95 }}
         className="fixed z-50 flex flex-col overflow-hidden"
         style={{
-          // On mobile: full screen. On desktop: draggable with fixed size
-          left: isMobile ? 0 : position.x,
-          top: isMobile ? 0 : position.y,
-          right: isMobile ? 0 : "auto",
-          bottom: isMobile ? 0 : "auto",
+          // Mobile: fill the viewport. Desktop: centered via inset:0 +
+          // margin:auto so Framer's scale transform can still animate
+          // cleanly (no transform-based centering competing with it).
+          inset: 0,
+          margin: isMobile ? 0 : "auto",
           width: isMobile ? "100%" : "var(--width-help-panel)",
           height: isMobile ? "100%" : "var(--height-help-panel)",
           maxWidth: isMobile ? "100%" : "calc(100vw - 32px)",
@@ -332,18 +293,15 @@ export default function HelpPanel({ isOpen, onClose, resetKey }) {
           borderRadius: isMobile ? 0 : "var(--radius-panel)",
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
           border: isMobile ? "none" : "2px solid var(--color-panel-border, #000000)",
-          cursor: isDragging && !isMobile ? "grabbing" : "default",
         }}
       >
-          {/* Header - draggable, follows standard panel formatting */}
+          {/* Header */}
           <div
-            onMouseDown={handleMouseDown}
             className="flex flex-col items-center justify-center px-4 relative"
             style={{
               backgroundColor: "var(--color-panel-header-bg)",
               height: "var(--height-panel-header)",
               flexShrink: 0,
-              cursor: isMobile ? "default" : (isDragging ? "grabbing" : "grab"),
             }}
           >
             <h2
@@ -367,13 +325,7 @@ export default function HelpPanel({ isOpen, onClose, resetKey }) {
             >
               Ask me anything about using the CRG app!
             </p>
-            <div className="absolute right-4 flex items-center gap-3">
-              <span
-                className="font-opensans select-none"
-                style={{ color: "var(--color-help-drag-hint)", fontSize: "var(--font-size-help-drag-hint)" }}
-              >
-                drag to move
-              </span>
+            <div className="absolute right-4 flex items-center">
               <button
                 onClick={onClose}
                 className="text-white hover:brightness-125 transition-all"

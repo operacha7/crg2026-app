@@ -6,6 +6,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { render } from "@react-email/components";
 import DropPanel from "./DropPanel";
+import PanelScrim from "./PanelScrim";
 import { ResourceEmail } from "../emails";
 
 /**
@@ -169,6 +170,25 @@ export default function EmailPanel({
     onSend(recipient, language, note.trim());
   };
 
+  // Outlined amber action-button style — shared by Add Note + Show Preview.
+  // Transparent bg, #D18B3F text + border (--color-panel-action-btn-*).
+  // Full-width so the buttons span the panel body — they line up with the
+  // Recipient Email input above. Font size matches the input (16px) so all
+  // body controls read at the same weight.
+  const actionButtonStyle = {
+    backgroundColor: "transparent",
+    color: "var(--color-panel-action-btn-text)",
+    border: "1.5px solid var(--color-panel-action-btn-border)",
+    height: "var(--height-panel-btn)",
+    width: "100%",
+    padding: "0 18px",
+    borderRadius: "var(--radius-panel-btn)",
+    fontSize: "16px",
+    fontWeight: 500,
+    letterSpacing: "0.02em",
+    cursor: "pointer",
+  };
+
   // Optional personal note. The "Add Note" toggle mirrors the "Show Preview"
   // pattern. Hard-capped at 200 chars — enough for a brief personal message
   // without bloating the email. Note is sent verbatim (not translated), so a
@@ -182,13 +202,7 @@ export default function EmailPanel({
         disabled={isSending}
         className="font-opensans transition-all duration-200 hover:brightness-110"
         style={{
-          backgroundColor: showNoteInput ? "#666" : "#DB9D47",
-          color: "#FFFFFF",
-          height: "var(--height-panel-btn)",
-          borderRadius: "var(--radius-panel-btn)",
-          fontSize: "var(--font-size-panel-btn)",
-          letterSpacing: "var(--letter-spacing-panel-btn)",
-          border: "none",
+          ...actionButtonStyle,
           cursor: isSending ? "not-allowed" : "pointer",
           opacity: isSending ? 0.7 : 1,
         }}
@@ -207,22 +221,22 @@ export default function EmailPanel({
             placeholder="Optional personal note to the recipient"
             className="font-opensans w-full"
             style={{
-              backgroundColor: "white",
-              color: "black",
+              backgroundColor: "var(--color-panel-input-bg)",
+              color: "#222",
               padding: "10px 12px",
               borderRadius: "var(--radius-panel-btn)",
               fontSize: "14px",
-              border: "none",
+              border: "1px solid var(--color-panel-input-border)",
               outline: "none",
               resize: "vertical",
               opacity: isSending ? 0.7 : 1,
             }}
           />
           <div className="flex items-center justify-between font-opensans" style={{ fontSize: "11px" }}>
-            <span style={{ color: "#D7D5D1", fontStyle: "italic" }}>
+            <span style={{ color: "var(--color-panel-label-text)", fontStyle: "italic" }}>
               Note is sent as typed — not translated.
             </span>
-            <span style={{ color: noteCharsRemaining <= 20 ? "#FF6B6B" : "#D7D5D1" }}>
+            <span style={{ color: noteCharsRemaining <= 20 ? "#cc0000" : "var(--color-panel-label-text)" }}>
               {noteCharsRemaining} chars remaining
             </span>
           </div>
@@ -230,6 +244,40 @@ export default function EmailPanel({
       )}
     </>
   );
+
+  // Shared form-label style — uppercase, deep teal, small. Used for Language
+  // and Recipient Email above their respective controls.
+  const fieldLabelStyle = {
+    color: "var(--color-panel-label-text)",
+    fontSize: "var(--font-size-panel-label)",
+    fontWeight: 600,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+  };
+
+  // Custom caret for the Language select (in --color-panel-label-text). Used
+  // as a background-image so the native select arrow stays hidden via
+  // appearance:none and the visible caret stays on-brand.
+  const CARET_TEAL = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2343747D'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E")`;
+
+  const languageSelectStyle = {
+    backgroundColor: "transparent",
+    color: "var(--color-panel-select-btn-text)",
+    border: "1.5px solid var(--color-panel-select-btn-border)",
+    borderRadius: "var(--radius-panel-btn)",
+    padding: "8px 36px 8px 14px",
+    fontSize: "14px",
+    fontWeight: 500,
+    letterSpacing: "0.02em",
+    appearance: "none",
+    WebkitAppearance: "none",
+    MozAppearance: "none",
+    cursor: "pointer",
+    backgroundImage: CARET_TEAL,
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "right 10px center",
+    backgroundSize: "18px 18px",
+  };
 
   if (!isOpen) return null;
 
@@ -239,6 +287,8 @@ export default function EmailPanel({
   // Warning view for inactive resources
   if (currentView === "warning") {
     return (
+      <>
+        <PanelScrim isOpen onClose={onCancel} zIndex={49} />
       <div
         ref={panelRef}
         className="fixed md:absolute shadow-xl z-50 overflow-hidden left-2 right-2 md:left-auto md:right-auto"
@@ -288,7 +338,7 @@ export default function EmailPanel({
             <p
               className="font-opensans italic"
               style={{
-                color: "#FFFFFF",
+                color: "#4A4F56",
                 fontSize: "16px",
                 lineHeight: "1.6",
               }}
@@ -337,11 +387,14 @@ export default function EmailPanel({
           </div>
         </div>
       </div>
+      </>
     );
   }
 
   // Input view for email/PDF
   return (
+    <>
+      <PanelScrim isOpen onClose={handleCancel} zIndex={49} />
     <DropPanel
       title={isPdfMode ? "Create PDF" : "Email Selected Resources"}
       isOpen={true}
@@ -351,39 +404,25 @@ export default function EmailPanel({
       style={{
         top: "100%",
         right: "0",
-        minWidth: showPreview ? "700px" : "400px",
+        minWidth: showPreview ? "750px" : "450px",
       }}
       okButtonText={isPdfMode ? "OK" : "Send"}
       showHelpIcon={false}
       okDisabled={!isPdfMode && !recipient}
     >
       <div className="flex flex-col gap-4">
-        {/* Language selector - visible in both email and PDF modes */}
-        <div className="flex items-center gap-3">
-          <label
-            className="font-opensans"
-            style={{
-              color: "#FFFFFF",
-              fontSize: "14px",
-              fontWeight: "500",
-            }}
-          >
-            Language:
-          </label>
+        {/* Language — uppercase teal label above an outlined select styled
+            as a button-with-caret. Same #43747D for label, border, and text. */}
+        <div className="flex flex-col gap-1.5 self-start">
+          <span className="font-opensans" style={fieldLabelStyle}>
+            Language
+          </span>
           <select
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
-            className="font-opensans"
-            style={{
-              backgroundColor: "#AA7BC3",
-              color: "#ffffff",
-              padding: "8px 12px",
-              borderRadius: "4px",
-              fontSize: "14px",
-              fontWeight: "500",
-              border: "none",
-              cursor: "pointer",
-            }}
+            className="font-opensans hover:brightness-110 transition-all duration-200"
+            style={languageSelectStyle}
+            aria-label="Language"
           >
             <option value="en">English</option>
             <option value="es">Español</option>
@@ -393,41 +432,42 @@ export default function EmailPanel({
         {/* Email input - only for email mode */}
         {!isPdfMode && (
           <>
-            <input
-              type="email"
-              placeholder="Recipient Email"
-              value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
-              disabled={isSending}
-              className="font-opensans transition-all duration-200 w-full"
-              style={{
-                backgroundColor: "white",
-                color: "black",
-                padding: "12px 16px",
-                borderRadius: "var(--radius-panel-btn)",
-                fontSize: "16px",
-                border: "none",
-                outline: "none",
-                opacity: isSending ? 0.7 : 1,
-              }}
-            />
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="email-panel-recipient"
+                className="font-opensans"
+                style={fieldLabelStyle}
+              >
+                Recipient Email
+              </label>
+              <input
+                id="email-panel-recipient"
+                type="email"
+                placeholder="name@example.com"
+                value={recipient}
+                onChange={(e) => setRecipient(e.target.value)}
+                disabled={isSending}
+                className="font-opensans transition-all duration-200 w-full"
+                style={{
+                  backgroundColor: "var(--color-panel-input-bg)",
+                  color: "#222",
+                  padding: "12px 16px",
+                  borderRadius: "var(--radius-panel-btn)",
+                  fontSize: "16px",
+                  border: "1px solid var(--color-panel-input-border)",
+                  outline: "none",
+                  opacity: isSending ? 0.7 : 1,
+                }}
+              />
+            </div>
 
             {renderNoteSection()}
 
-            {/* Preview toggle button */}
+            {/* Preview toggle — outlined amber, matches Add Note */}
             <button
               onClick={() => setShowPreview(!showPreview)}
               className="font-opensans transition-all duration-200 hover:brightness-110"
-              style={{
-                backgroundColor: showPreview ? "#666" : "#DB9D47",
-                color: "#FFFFFF",
-                height: "var(--height-panel-btn)",
-                borderRadius: "var(--radius-panel-btn)",
-                fontSize: "var(--font-size-panel-btn)",
-                letterSpacing: "var(--letter-spacing-panel-btn)",
-                border: "none",
-                cursor: "pointer",
-              }}
+              style={actionButtonStyle}
             >
               {showPreview ? "Hide Preview" : "Show Preview"}
             </button>
@@ -483,7 +523,7 @@ export default function EmailPanel({
             <p
               className="font-opensans text-center"
               style={{
-                color: "#FFFFFF",
+                color: "#4A4F56",
                 fontSize: "16px",
               }}
             >
@@ -498,7 +538,7 @@ export default function EmailPanel({
           <p
             className="font-opensans text-center"
             style={{
-              color: "#FFFFFF",
+              color: "#4A4F56",
               fontSize: "14px",
             }}
           >
@@ -534,5 +574,6 @@ export default function EmailPanel({
         )}
       </div>
     </DropPanel>
+    </>
   );
 }

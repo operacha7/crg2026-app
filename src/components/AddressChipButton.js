@@ -58,12 +58,22 @@ export default function AddressChipButton({
         <button
           ref={buttonRef}
           onClick={handleToggle}
-          className={`inline-flex items-center rounded-full shrink-0 transition-all duration-200 ${
+          className={`inline-flex items-center justify-center shrink-0 transition-all duration-200 ${
             disabled ? "" : "hover:brightness-125"
           }`}
           style={{
-            gap: "6px",
-            padding: "4px 8px",
+            // Match AssistanceChip dimensions so the Address chip reads as
+            // the next item in the same row, not a smaller secondary control.
+            height: "var(--height-navbar3-btn)",
+            paddingLeft: "12px",
+            paddingRight: "12px",
+            gap: "8px",
+            borderRadius: "var(--radius-assistance-chip)",
+            fontSize: "var(--font-size-assistance-chip)",
+            letterSpacing: "var(--letter-spacing-assistance-chip)",
+            fontWeight: 500,
+            lineHeight: 1,
+            whiteSpace: "nowrap",
             border: "2px solid var(--color-results-transit-icon)",
             backgroundColor: isActive
               ? "var(--color-results-transit-icon)"
@@ -71,20 +81,15 @@ export default function AddressChipButton({
             color: isActive
               ? "#FFFFFF"
               : "var(--color-results-transit-icon)",
-            fontSize: "12px",
-            fontWeight: 600,
-            letterSpacing: "0.02em",
-            lineHeight: 1,
-            whiteSpace: "nowrap",
             cursor: disabled ? "not-allowed" : "pointer",
             // Three visual states: disabled (faded), enabled-inactive (full
-            // opacity outlined), enabled-active (filled). 0.6 keeps the chip
-            // legible against the tan NavBar3 background while still reading
+            // opacity outlined), enabled-active (filled). 0.7 keeps the chip
+            // legible against the cream NavBar3 background while still reading
             // as "not yet available" — softer than the original 0.3.
             opacity: disabled ? 0.70 : 1,
           }}
         >
-          <HomeMarkerIcon size={18} />
+          <HomeMarkerIcon size={22} />
           <span>Address</span>
         </button>
       </Tooltip>

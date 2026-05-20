@@ -2,7 +2,7 @@
 // Instant CSS tooltip component - appears on hover with no delay
 // Replaces native browser title attribute which has ~750ms delay
 
-export default function Tooltip({ children, text, position = "top", multiline = false }) {
+export default function Tooltip({ children, text, position = "top", multiline = false, maxWidth }) {
   if (!text) return children;
 
   // Position classes for the tooltip
@@ -18,6 +18,26 @@ export default function Tooltip({ children, text, position = "top", multiline = 
     "bottom-right": "top-full left-0 mt-2",
   };
 
+  // multiline=true triggers wrapping with a max-width cap. `maxWidth` overrides
+  // the default 320px so callers with side-positioned (left/right) tooltips
+  // can keep the bubble short enough to fit within a narrow host element's
+  // height (e.g. NavBar2's 70px row needs ~600px to limit to 2–3 lines).
+  //
+  // When the caller passes `maxWidth` we also set width: max-content so the
+  // bubble grows to its natural unwrapped width (capped by maxWidth) instead
+  // of shrink-to-fitting to the narrow trigger's width. Without this the
+  // tooltip would wrap at the trigger's width regardless of maxWidth, since
+  // it's absolutely positioned inside an `inline-flex` parent.
+  const effectiveMaxWidth = maxWidth || "320px";
+  const multilineStyle = multiline
+    ? {
+        maxWidth: effectiveMaxWidth,
+        whiteSpace: "normal",
+        lineHeight: 1.4,
+        ...(maxWidth ? { width: "max-content" } : {}),
+      }
+    : {};
+
   return (
     <span className="relative inline-flex group">
       {children}
@@ -30,7 +50,7 @@ export default function Tooltip({ children, text, position = "top", multiline = 
           color: "var(--color-tooltip-text)",
           fontSize: "var(--font-size-tooltip)",
           zIndex: 9999,
-          ...(multiline ? { maxWidth: "320px", whiteSpace: "normal", lineHeight: 1.4 } : {}),
+          ...multilineStyle,
         }}
       >
         {text}

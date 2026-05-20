@@ -21,7 +21,7 @@ const AnnouncementPopup = ({ announcement, onClose, currentIndex, totalCount }) 
   return (
     <motion.div
       className="fixed inset-0 flex items-center justify-center z-50"
-      style={{ backgroundColor: 'var(--color-memo-overlay-bg)' }}
+      style={{ backgroundColor: 'var(--color-panel-scrim-bg)' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}

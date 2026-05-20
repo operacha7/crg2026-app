@@ -9,6 +9,12 @@
    * COLORS
    * ========================================== */
 
+  /* Shared accents — referenced by multiple components. Keep these in sync
+   * across navbars and any other interactive element that uses the accent.
+   * Used by: NavBar1 action-group border + hover/click color; NavBar2 search-
+   * mode button hover/click color (planned). */
+  --color-accent-gold: #FFB302;
+
   /* Footer */
   --color-footer-bg: #B8001F;
   --color-footer-text: #FFFFFF;
@@ -53,6 +59,26 @@
   --color-navbar1-btn-sms-bg: #C57B57;
   --color-navbar1-btn-sms-text: #222831;
 
+  /* NavBar 1 — action group (single gold pill around Email / PDF / Text).
+   * Inactive: icon + label rendered in the muted gray below; chips hidden.
+   * Active: icon + label flip to white. Email/PDF chips appear once
+   * selectedCount > 0 (gold bg, black digits); the Text chip appears once
+   * any NavBar2/NavBar3 filter is engaged (teal outline, no bg). */
+  --color-navbar1-action-border: var(--color-accent-gold);
+  --color-navbar1-action-bg: transparent;
+  --color-navbar1-action-icon-active: #FFFFFF;
+  --color-navbar1-action-label-active: #FFFFFF;
+  --color-navbar1-action-icon-inactive: #6B7280;
+  --color-navbar1-action-label-inactive: #6B7280;
+  --color-navbar1-action-chip-emailpdf-bg: #D4A548;
+  --color-navbar1-action-chip-emailpdf-text: #000000;
+  --color-navbar1-action-chip-text-color: #7FB3BB;
+  /* Hover foreground: icon + label flip from white to gold, matching the
+   * group's border color. No background tint — the color change carries the
+   * entire hover signal. Click feedback is a small scale-down (no extra
+   * color shift) handled in NavBar1.js via active:scale-... */
+  --color-navbar1-action-hover-fg: var(--color-accent-gold);
+
   /* NavBar 2 */
   --color-navbar2-bg: #4A4F56;
   --color-navbar2-btn-inactive-bg: #FDF6E3;
@@ -64,14 +90,22 @@
   --border-width-btn: 2px;
   --color-navbar2-dropdown-bg: #2E5A88;
   --color-navbar2-dropdown-text: #FFFFFF;
-  --color-navbar2-dropdown-prompting-bg: #F9B233;
-  --color-navbar2-dropdown-prompting-text: #000000;
-  --color-navbar2-dropdown-prompting-border: #000000;
+  --color-navbar2-dropdown-prompting-bg: transparent;
+  --color-navbar2-dropdown-prompting-text: #FFFFFF;
+  --color-navbar2-dropdown-prompting-border: #1D68D6;
+
+  /* NavBar 2 mode buttons (right-side: Zip Code / Organization / Location / LLM)
+   * Borderless text labels. Inactive text is a near-white desaturated gray;
+   * active + hover/click flip to the shared accent gold (also used by NavBar1's
+   * action group). Active mode also gets a thin gold underline so the selected
+   * mode reads as clearly chosen even amid other gold-on-hover labels. */
+  --color-navbar2-mode-inactive-text: #D8D9DB;
+  --width-navbar2-mode-underline: 2px;
   --color-navbar2-link: #F0F8FF;
 
   /* NavBar 3 */
-  --color-navbar3-bg: #948979;
-  --color-navbar3-user-text: #FFF94F;
+  --color-navbar3-bg: #E8E2CD;
+  --color-navbar3-user-text: #43747D;
   --color-navbar3-chip-active-bg: #2D5A27;
   --color-navbar3-chip-active-text: #FFFFFF;
   --color-navbar3-chip-active-border: #000000;
@@ -80,21 +114,65 @@
   --color-navbar3-chip-inactive-border: #000000;
   --color-navbar3-btn-disabled-bg: #FDF6E3;
   --color-navbar3-btn-disabled-border: #000000;
-  --color-navbar3-btn-prompting-bg: #F9B233;
-  --color-navbar3-btn-prompting-text: #000000;
-  --color-navbar3-btn-prompting-border: #000000;
-  --color-navbar3-btn-active-bg: #2E5A88;
-  --color-navbar3-btn-active-text: #FFFFFF;
-  --color-navbar3-btn-active-border: #000000;
+  /* Choose/Change Assistance trigger — both states render identically (blue
+   * border, dark text, transparent bg) so the only thing flipping after a
+   * selection is the label text ("Choose" → "Change"). Mirrors the Choose
+   * Zip Code trigger in NavBar2 so the two cluster anchors feel like a set. */
+  --color-navbar3-btn-prompting-bg: transparent;
+  --color-navbar3-btn-prompting-text: #222831;
+  --color-navbar3-btn-prompting-border: #1D68D6;
+  --color-navbar3-btn-active-bg: transparent;
+  --color-navbar3-btn-active-text: #222831;
+  --color-navbar3-btn-active-border: #1D68D6;
 
-  /* Dropdown Panel / Modal (standard for all panels) */
+  /* Dropdown Panel / Modal (standard for all panels)
+   * Three sections:
+   *   1. Header  — keeps the dark charcoal (--color-panel-header-bg) with
+   *      the title in shared accent gold so it reads against the dark bg.
+   *   2. Body    — cream (#FAF3E3) so labeled inputs and chips sit on a
+   *      neutral background that matches the login form area.
+   *   3. Footer  — slightly darker cream (#F4EAD2) with a top hairline
+   *      (#DDD8C5) so the action row reads as a separate band even when
+   *      the body content is short. */
   --color-panel-header-bg: #4A4F56;
-  --color-panel-body-bg: #948979;
-  --color-panel-title: #FFC857;
+  --color-panel-body-bg: #FAF3E3;
+  --color-panel-footer-bg: #F4EAD2;
+  --color-panel-footer-border-top: #DDD8C5;
+  --color-panel-title: var(--color-accent-gold);
   --color-panel-subtitle: #D7D5D1;
-  --color-panel-btn-cancel-bg: #FF0000;
-  --color-panel-btn-ok-bg: #3DB800;
-  --color-panel-btn-text: #000000;
+  --color-panel-btn-cancel-bg: #B71C1C;
+  --color-panel-btn-ok-bg: #2E7D3A;
+  --color-panel-btn-text: #FFFFFF;
+  /* Clear button — outlined (transparent bg) variant used when the panel
+   * has Clear + OK only (no Cancel). Text + border share the deep green so
+   * the action reads as "reset" rather than "destructive cancel". */
+  --color-panel-btn-clear-text: #2D5A27;
+  --color-panel-btn-clear-border: #2D5A27;
+  /* Inline-action buttons that live inside the panel BODY (not the footer).
+   * Examples: Email panel's "Add Note" and "Show Preview" toggles. Outlined
+   * amber so they're visually distinct from the green primary OK button in
+   * the footer, signaling "secondary, in-body action". */
+  --color-panel-action-btn-text: #D18B3F;
+  --color-panel-action-btn-border: #D18B3F;
+  /* Outlined select/dropdown styled as a button — used for the Language
+   * picker in Email/PDF panel. Border + content match the panel label color
+   * so the control reads as form furniture rather than a primary action. */
+  --color-panel-select-btn-text: var(--color-panel-label-text);
+  --color-panel-select-btn-border: var(--color-panel-label-text);
+  /* Shared panel form-control tokens — used by Login + every other panel that
+   * has an input or labeled field. Inputs are a clean white with a soft beige
+   * border that picks up the panel/cream backgrounds without harsh contrast.
+   * Labels are the deep teal accent (matches the NavBar3 org-name color),
+   * always rendered uppercase and at a small size to keep them subordinate
+   * to the input contents. */
+  --color-panel-input-bg: #FFFFFF;
+  --color-panel-input-border: #E6DCC4;
+  --color-panel-label-text: #43747D;
+  --font-size-panel-label: 10px;
+  /* Scrim (backdrop) painted behind every open panel/modal so the underlying
+   * page recedes. Medium darkness — the page is clearly receded but still
+   * partly visible. */
+  --color-panel-scrim-bg: rgba(0, 0, 0, 0.5);
 
   /* Reports / Usage Table */
   /* Note: Reports use --color-results-row-hover-bg for row hover */
@@ -130,33 +208,42 @@
   --font-size-tooltip: 12px;
 
   /* Assistance Panel Group Colors (unselected state) */
-  --color-assistance-group1: #E5D492;
-  --color-assistance-group2: #92BEE5;
-  --color-assistance-group3: #E592A6;
-  --color-assistance-group4: #9BD3A1;
+  --color-assistance-group1: #98F193;
+  --color-assistance-group2: #8ECEE3;
+  --color-assistance-group3: #FD9AA3;
+  --color-assistance-group4: #FEFF9B;
   --color-assistance-group5: #B592E5;
-  --color-assistance-group6: #E5B292;
+  --color-assistance-group6: #FFD39C;
   --color-assistance-selected-bg: #FDF6E3;
   --color-assistance-selected-border: #000000;
   --color-assistance-text: #000000;
 
-  /* Login Panel
-   * Buttons use the standard panel button tokens (--color-panel-btn-cancel-bg,
-   * --color-panel-btn-ok-bg, --width-panel-btn, --height-panel-btn,
-   * --radius-panel-btn) — same look as the Assistance panel. */
-  --color-login-panel-bg: #FFFFFF;
-  --color-login-panel-border: #43747D;
-  --width-login-panel-border: 5px;
-  --radius-login-panel: 20px;
-  --color-login-label: #660000;
-  --font-size-login-title: 20px;
-  --font-size-login-label: 14px;
-  --font-weight-login: 600; /* Semibold — applies to title, labels, and inputs */
-  --color-login-input-bg: #F3EED9;
-  --color-login-input-text: #000000;
-  --font-size-login-input-org: 18px;
-  --font-size-login-input-passcode: 14px;
+  /* Login Panel — two-section layout. Left section is a maroon welcome panel
+   * (logo + "Welcome back" + body + brand title). Right section is the cream
+   * form area (title + labeled inputs + Cancel / Login). Outer panel has a
+   * white border so the whole thing reads as a single bordered card sitting
+   * above whatever page is underneath.
+   *
+   * Inputs, labels, and buttons all pull from the shared panel-* tokens above
+   * so any tweak to those propagates to every other panel; only login-
+   * specific values (left section, title color, panel border) live here. */
+  --color-login-panel-bg: #FDFAF2; /* right section / cream */
+  --color-login-panel-border: #FFFFFF;
+  --width-login-panel-border: 3px;
+  --radius-login-panel: 10px;
+  --color-login-title-text: #660000; /* right-section "Organization Login" */
+  --font-size-login-title: 22px;
+  --font-weight-login: 600;
   --radius-login-input: 5px;
+
+  /* Login left section (maroon welcome panel) */
+  --color-login-left-bg: #660000;
+  --color-login-welcome-text: #FFB302;
+  --font-size-login-welcome: 16px;
+  --color-login-body-text: #FFFFFF;
+  --font-size-login-body: 14px;
+  --color-login-brand-text: rgba(255, 255, 255, 0.6); /* 60% opacity per spec */
+  --font-size-login-brand: 11px;
 
   /* ==========================================
    * TYPOGRAPHY
@@ -198,7 +285,7 @@
   --font-size-panel-subtitle: 14px;
   --font-weight-panel-subtitle: 400; /* Regular */
   --letter-spacing-panel-subtitle: 0.02em; /* 2% */
-  --font-size-panel-btn: 20px;
+  --font-size-panel-btn: 16px; /* matches the 16px body controls (input, Add Note, Show Preview) */
   --letter-spacing-panel-btn: 0.02em; /* 2% */
 
   /* Assistance Chip Typography */
@@ -254,6 +341,27 @@
   --width-navbar1-btn: clamp(80px, 8.5vw, 150px);
   --height-navbar1-btn: 38px;
 
+  /* NavBar 1 — action group sizing
+   * Single rounded-rect border wraps all three buttons; internal layout
+   * uses generous horizontal padding to separate the buttons visually
+   * without inserting dividers. */
+  --height-navbar1-action-group: 44px;
+  --width-navbar1-action-border: 2px;
+  --radius-navbar1-action-group: 10px;
+  --padding-navbar1-action-x: clamp(10px, 1.4vw, 30px);
+  --gap-navbar1-action-internal: 15px; /* icon→label, label→chip within one button */
+  --size-navbar1-action-icon: 18px;
+  --font-size-navbar1-action-label: var(--font-size-navbar2-btn); /* match NavBar2/NavBar3 button label size */
+  --font-weight-navbar1-action-label: 500;
+  --letter-spacing-navbar1-action-label: 0.02em;
+  --height-navbar1-action-chip: 22px;
+  --min-width-navbar1-action-chip: 26px;
+  --padding-navbar1-action-chip-x: 8px;
+  --radius-navbar1-action-chip: 999px;
+  --font-size-navbar1-action-chip: 13px;
+  --font-weight-navbar1-action-chip: 600;
+  --width-navbar1-action-chip-border: 1.5px;
+
   /* NavBar 2 */
   --height-navbar2: 70px;
   --padding-navbar2-left: clamp(10px, 2.5vw, 40px);
@@ -292,12 +400,14 @@
 
   /* Dropdown Panel / Modal (standard for all panels) */
   --height-panel-header: 70px;
-  --radius-panel: 5px;
+  --radius-panel: 10px;
   --width-panel-btn: 100px;
   --height-panel-btn: 38px;
   --radius-panel-btn: 5px;
   --size-panel-help-icon: 40px;
-  --color-panel-border: #000000;
+  /* Border color is set to the body bg so the outer edge blends — the
+   * rounded corners + box-shadow carry the panel boundary visually. */
+  --color-panel-border: #FAF3E3;
   --width-panel-border: 2px;
 
   /* LLM Search Panel */
@@ -411,7 +521,7 @@
   --font-size-help-message: 14px;
   --font-size-help-suggestion: 14px;
   --font-size-help-empty: 14px;
-  --font-size-help-input: 14px;
+  --font-size-help-input: 16px; /* matches the other panel inputs (Email, SMS, Ask a Question) */
   --line-height-help-message: 1.6;
   --font-size-help-drag-hint: 11px;
   --color-help-drag-hint: #FFFFFF;
