@@ -7,7 +7,7 @@ import { useAppData } from "../Contexts/AppDataContext";
 import { logUsage } from "../services/usageService";
 
 const REPORT_OPTIONS = [
-  { id: 'zip-code', label: 'Zip Code Chart' },
+  { id: 'zip-code', label: 'Search Chart' },
   { id: 'emails-sent', label: 'Emails Chart' },
   { id: 'pdfs-created', label: 'PDFs Chart' },
   { id: 'reports-chart', label: 'Reports Chart' },

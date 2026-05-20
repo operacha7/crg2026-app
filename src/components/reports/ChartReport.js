@@ -25,7 +25,7 @@ const DEFAULT_COLORS = [
 ];
 
 // Color for organizations no longer in registered_organizations table (removed/historical)
-const INACTIVE_ORG_COLOR = "#808080";
+const INACTIVE_ORG_COLOR = "#FFE156";
 
 // Get today's date in Central Time
 function getCentralDate() {

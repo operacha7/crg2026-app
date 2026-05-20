@@ -168,7 +168,9 @@ export async function fetchDailyUsage({
   }
 
   if (action_type) {
-    query = query.eq('action_type', action_type);
+    query = Array.isArray(action_type)
+      ? query.in('action_type', action_type)
+      : query.eq('action_type', action_type);
   }
 
   if (search_mode) {
@@ -245,7 +247,9 @@ export async function fetchMonthlyUsage({
     }
 
     if (action_type) {
-      query = query.eq('action_type', action_type);
+      query = Array.isArray(action_type)
+        ? query.in('action_type', action_type)
+        : query.eq('action_type', action_type);
     }
 
     if (search_mode) {

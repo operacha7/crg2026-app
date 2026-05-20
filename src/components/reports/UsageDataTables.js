@@ -323,17 +323,23 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
     return [...rows, totalsRow];
   }, [data, dateColumns, viewMode, assistanceTypes]);
 
-  // Render section header row with vertical line icon
+  // Render section header row with vertical line icon.
+  // The heading lives in the first column only (which is sticky-left, matching
+  // the Metric data cells) so it stays pinned to the visible left edge as the
+  // table scrolls horizontally. The remaining columns render as empty cells.
+  // Using sticky directly on a colSpan'd <td> doesn't reliably work across
+  // browsers; pinning the first cell and letting the title visually overflow
+  // is the standard fix for this pattern.
   const renderSectionHeader = (title, isFirst = false) => (
     <tr className="bg-white">
       <td
-        colSpan={dateColumns.length + 3}
-        className="font-opensans font-bold"
+        className="sticky left-0 bg-white font-opensans font-bold"
         style={{
           color: "#222831",
           paddingLeft: "10px",
-          paddingTop: isFirst ? "8px" : "24px", // gap above heading
+          paddingTop: isFirst ? "8px" : "24px",
           fontSize: "15px",
+          whiteSpace: "nowrap",
         }}
       >
         <span className="inline-flex items-center">
@@ -341,6 +347,11 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
           {title}
         </span>
       </td>
+      {dateColumns.map(date => (
+        <td key={date} style={{ paddingTop: isFirst ? "8px" : "24px" }} />
+      ))}
+      <td style={{ paddingTop: isFirst ? "8px" : "24px" }} />
+      <td style={{ paddingTop: isFirst ? "8px" : "24px" }} />
     </tr>
   );
 
