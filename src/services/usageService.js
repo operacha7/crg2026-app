@@ -3,6 +3,25 @@
 
 import { supabase } from '../supabaseClient';
 
+// TODO: remove after 2027-06-01 — by then the trailing-12-month window has
+// fully rolled past the 2026-05 org rename and no legacy names remain in
+// app_usage_logs that fall inside any active report range. This was a
+// one-time structural change (org-level → parent-level login credentials);
+// not expected to recur.
+const LEGACY_ORG_RENAMES = {
+  "Christian Community Service Center (Central)": "Christian Community Service Center (CCSC)",
+  "Harris County Housing & Community Development": "Harris County",
+  "St Michael the Archangel (SVdP D3)": "Society of St Vincent de Paul",
+  "St Theresa (SVdP D2) Sugar Land": "Society of St Vincent de Paul",
+  "St Thomas More (SVdP D3)": "Society of St Vincent de Paul",
+  "St Vincent de Paul (SVdP D3)": "Society of St Vincent de Paul",
+};
+const canonicalOrg = (name) => LEGACY_ORG_RENAMES[name] || name;
+const legacyNamesFor = (currentName) =>
+  Object.keys(LEGACY_ORG_RENAMES).filter(k => LEGACY_ORG_RENAMES[k] === currentName);
+const remapRowsToCanonical = (rows) =>
+  (rows || []).map(row => ({ ...row, reg_organization: canonicalOrg(row.reg_organization) }));
+
 /**
  * Get current date in Central Time as YYYY-MM-DD string.
  * Used by fetchDailyUsage's date-range query. logUsage no longer needs
@@ -142,7 +161,10 @@ export async function fetchDailyUsage({
     .order('log_date', { ascending: true });
 
   if (reg_organization && reg_organization !== 'All' && reg_organization !== 'All Organizations') {
-    query = query.eq('reg_organization', reg_organization);
+    const aliases = legacyNamesFor(reg_organization);
+    query = aliases.length > 0
+      ? query.in('reg_organization', [reg_organization, ...aliases])
+      : query.eq('reg_organization', reg_organization);
   }
 
   if (action_type) {
@@ -161,7 +183,7 @@ export async function fetchDailyUsage({
   }
 
   console.log('fetchDailyUsage result:', data);
-  return data || [];
+  return remapRowsToCanonical(data);
 }
 
 /**
@@ -216,7 +238,10 @@ export async function fetchMonthlyUsage({
       .range(from, from + PAGE_SIZE - 1);
 
     if (reg_organization && reg_organization !== 'All' && reg_organization !== 'All Organizations') {
-      query = query.eq('reg_organization', reg_organization);
+      const aliases = legacyNamesFor(reg_organization);
+      query = aliases.length > 0
+        ? query.in('reg_organization', [reg_organization, ...aliases])
+        : query.eq('reg_organization', reg_organization);
     }
 
     if (action_type) {
@@ -231,7 +256,7 @@ export async function fetchMonthlyUsage({
 
     if (error) {
       console.error('Monthly usage error:', error);
-      return allData;
+      return remapRowsToCanonical(allData);
     }
 
     allData = allData.concat(data);
@@ -241,7 +266,7 @@ export async function fetchMonthlyUsage({
   }
 
   console.log('fetchMonthlyUsage result:', allData);
-  return allData;
+  return remapRowsToCanonical(allData);
 }
 
 /**

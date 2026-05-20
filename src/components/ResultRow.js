@@ -788,7 +788,15 @@ function ResultRow({
           paddingLeft: "20px",
         }}
       >
-        {record.telephone || ""}
+        {record.telephone ? (
+          <a
+            href={`tel:${record.telephone.replace(/\D/g, "")}`}
+            className="hover:underline"
+            style={{ color: "#0066cc", textDecoration: "none" }}
+          >
+            {record.telephone}
+          </a>
+        ) : ""}
       </div>
 
       {/* Requirements Column - flexible, bullet list, gap before (20px) */}
