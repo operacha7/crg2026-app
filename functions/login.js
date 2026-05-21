@@ -27,7 +27,7 @@ function getCentralDate() {
 }
 
 export async function onRequest(context) {
-  const { request, env } = context;
+  const { request, env, waitUntil } = context;
   const headers = { "Content-Type": "application/json" };
 
   if (request.method === "OPTIONS") return new Response("", { status: 200, headers });
@@ -101,22 +101,31 @@ export async function onRequest(context) {
 
   // Fire-and-forget login row for the Sessions Chart in Reports.
   // Skip Administrator to match the Reports filter (Administrator activity is
-  // testing noise and excluded everywhere else). Not awaited — a logging
-  // failure must never block a successful login.
+  // testing noise and excluded everywhere else). Wrapped in waitUntil so the
+  // Workers runtime keeps the request context alive until the insert
+  // completes — without it, the response returns immediately and the in-flight
+  // insert gets cancelled, which is why early Sessions Chart data only
+  // captured registered-org logins intermittently. Errors are caught inside
+  // the promise so a logging failure can't reject up and break login.
   if (row.reg_organization !== "Administrator") {
-    supabase
-      .from("app_usage_logs")
-      .insert({
-        log_date: getCentralDate(),
-        reg_organization: row.reg_organization,
-        action_type: "login",
-        search_mode: null,
-        assistance_type: null,
-        search_value: null,
-      })
-      .then(({ error: logErr }) => {
-        if (logErr) console.error("login: usage log insert failed", logErr);
-      });
+    waitUntil(
+      supabase
+        .from("app_usage_logs")
+        .insert({
+          log_date: getCentralDate(),
+          reg_organization: row.reg_organization,
+          action_type: "login",
+          search_mode: null,
+          assistance_type: null,
+          search_value: null,
+        })
+        .then(({ error: logErr }) => {
+          if (logErr) console.error("login: usage log insert failed", logErr);
+        })
+        .catch((err) => {
+          console.error("login: usage log insert threw", err);
+        })
+    );
   }
 
   const exp = next2amCentralUnix();
