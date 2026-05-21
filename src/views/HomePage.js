@@ -10,6 +10,7 @@ import { Helmet } from "react-helmet-async";
 import { dataService } from "../services/dataService";
 import HomeNavBar from "../layout/HomeNavBar";
 import Footer from "../layout/Footer";
+import AnimatedCounter from "../components/AnimatedCounter";
 
 // Category-to-border-color mapping. Indexed by the order categories first appear
 // in the assistance table (sorted by id_no). Skips the cyan group5 token per the
@@ -32,6 +33,11 @@ export default function HomePage() {
   // render the page chrome (navbar, artwork, maroon bg, footer) so the user
   // sees the layout instantly.
   const [loading, setLoading] = useState(true);
+  // Live directory row count for the H2 chip. Null until the count query
+  // resolves, at which point we swap the static "1,000+" fallback for the
+  // animated counter. Kept separate from the assistance/zips load gate so a
+  // slow count query can't block the panel from rendering.
+  const [directoryCount, setDirectoryCount] = useState(null);
 
   useEffect(() => {
     Promise.all([dataService.getAssistance(), dataService.getZipCodes()])
@@ -45,6 +51,15 @@ export default function HomePage() {
       .finally(() => {
         setLoading(false);
       });
+  }, []);
+
+  useEffect(() => {
+    dataService
+      .getDirectoryCount()
+      .then((c) => {
+        if (typeof c === "number") setDirectoryCount(c);
+      })
+      .catch((err) => console.error("HomePage count load error", err));
   }, []);
 
   // Prefetch the MainApp chunk in parallel with the homepage's own data
@@ -82,18 +97,18 @@ export default function HomePage() {
   return (
     <div className="min-h-dvh lg:h-dvh flex flex-col lg:overflow-hidden">
       <Helmet>
-        <title>CRG Houston — Free help across Greater Houston</title>
+        <title>CRG Houston — Free help &amp; community resources across the Houston region</title>
         <meta
           name="description"
-          content="Free online directory of 1,000+ community resources from 526 organizations across the Greater Houston Area. Find rent, utilities, food, clothing, and more."
+          content="Free directory of 1,000+ verified community assistance programs across 14 Southeast Texas counties — Harris, Fort Bend, Galveston, Montgomery, and more. Search by zip code and assistance type."
         />
         <link rel="canonical" href="https://crghouston.org/" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://crghouston.org/" />
-        <meta property="og:title" content="CRG Houston — Free help across Greater Houston" />
+        <meta property="og:title" content="CRG Houston — Free help &amp; community resources across the Houston region" />
         <meta
           property="og:description"
-          content="Free online directory of 1,000+ community resources from 526 organizations across the Greater Houston Area. Find rent, utilities, food, clothing, and more."
+          content="Free directory of 1,000+ verified community assistance programs across 14 Southeast Texas counties — Harris, Fort Bend, Galveston, Montgomery, and more. Search by zip code and assistance type."
         />
       </Helmet>
 
@@ -140,36 +155,108 @@ export default function HomePage() {
           <div
             style={{
               background: "var(--color-home-panel-bg)",
+              border: "6px solid #4A4F56",
               borderRadius: 14,
               padding: "24px 26px",
-              width: 580,
+              width: 620,
               maxWidth: "100%",
-              boxShadow: "0 6px 24px rgba(0, 0, 0, 0.18)",
             }}
           >
             <h1
               className="font-opensans"
               style={{
-                color: "var(--color-home-h1)",
-                fontSize: "clamp(22px, 2.4vw, 36px)",
+                color: "#1A1A1A",
+                fontSize: 28,
                 fontWeight: 700,
-                marginBottom: 10,
+                marginBottom: 30,
                 lineHeight: 1.2,
               }}
             >
-              Free help across<br />Greater Houston
+              Free help &amp; Community Resources Across the Houston Region
             </h1>
+
+            {/* H2: live directory-row count inside an orange chip.
+                Until the count query resolves we render a static "1,000+"
+                span so crawlers always see a concrete number in the rendered
+                HTML and there's no blank chip on first paint. */}
+            <h2
+              className="font-opensans"
+              style={{
+                color: "#4A4A4A",
+                fontSize: 20,
+                fontWeight: 600,
+                marginBottom: 18,
+                lineHeight: 1.3,
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <span>Connecting You to</span>
+              {typeof directoryCount === "number" ? (
+                <AnimatedCounter
+                  className="font-opensans"
+                  value={directoryCount}
+                  duration={1200}
+                  glowColor="rgba(235, 110, 31, 0.6)"
+                  style={{
+                    background: "#EB6E1F",
+                    color: "#FFFFFF",
+                    fontSize: 20,
+                    fontWeight: 500,
+                    padding: "2px 12px",
+                    borderRadius: 999,
+                    lineHeight: 1.3,
+                    minWidth: 60,
+                    textAlign: "center",
+                    letterSpacing: "0.07em",
+                  }}
+                />
+              ) : (
+                <span
+                  style={{
+                    background: "#EB6E1F",
+                    color: "#FFFFFF",
+                    fontSize: 20,
+                    fontWeight: 600,
+                    padding: "2px 12px",
+                    borderRadius: 999,
+                    lineHeight: 1.3,
+                    letterSpacing: "0.07em",
+                  }}
+                >
+                  1,000+
+                </span>
+              )}
+              <span>Verified Assistance Programs</span>
+            </h2>
+
             <p
               className="font-opensans"
               style={{
-                color: "var(--color-home-h1)",
-                fontSize: 18,
-                lineHeight: 1.5,
-                marginBottom: 18,
+                color: "#2D3D3D",
+                fontSize: 16,
+                lineHeight: 1.65,
+                marginBottom: 10,
               }}
             >
-              Quickly search through 1000+ resources to find help in your area.
-              Select a <em>zip code</em> and an <em>assistance type</em> from below.
+              <strong>Serving 14 Southeast Texas Counties:</strong>{" "}
+              Austin, Brazoria, Chambers, Fort Bend, Galveston, Grimes, Harris,
+              Liberty, Matagorda, Montgomery, Walker, Waller and Wharton
+            </p>
+
+            <p
+              className="font-opensans"
+              style={{
+                color: "#B8001F",
+                fontSize: 16,
+                fontStyle: "italic",
+                lineHeight: 1.5,
+                marginBottom: 10,
+              }}
+            >
+              Start by selecting a zip code and assistance from below:
             </p>
 
             {/* Zip code panel */}

@@ -68,6 +68,21 @@ export const dataService = {
     return allData;
   },
 
+  // Cheap row-count for the homepage chip. Uses `head: true` so Supabase
+  // returns no rows, just the count header — avoids dragging the full
+  // directory across the wire when all we need is the number.
+  async getDirectoryCount() {
+    const { count, error } = await supabase
+      .from('directory')
+      .select('*', { count: 'exact', head: true });
+
+    if (error) {
+      console.error("Error fetching directory count:", error);
+      return null;
+    }
+    return count;
+  },
+
   // Get directory with calculated distance from a reference point
   async getDirectoryWithDistance(referenceCoordinates) {
     try {
