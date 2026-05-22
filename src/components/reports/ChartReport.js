@@ -17,15 +17,11 @@ import {
 import { ResponsivePie } from "@nivo/pie";
 import { fetchDailyUsage, fetchMonthlyUsage, fetchOrganizations } from "../../services/usageService";
 
-// Fallback colors for registered orgs that don't have org_color set in database
-const DEFAULT_COLORS = [
-  "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7",
-  "#DDA0DD", "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E9",
-  "#F8B500", "#00CED1", "#FF6347", "#32CD32", "#FFD700",
-];
-
-// Color for organizations no longer in registered_organizations table (removed/historical)
-const INACTIVE_ORG_COLOR = "#FFE0B5";
+// Intentionally jarring color for any org name that shows up in app_usage_logs
+// but is no longer present in registered_organizations. Black stands out
+// against the rest of the palette so the admin notices and can decide whether
+// to re-add the org (with a real color) or remap the historical rows.
+const MISSING_ORG_COLOR = "#000000";
 
 // Get today's date in Central Time
 function getCentralDate() {
@@ -56,9 +52,8 @@ export default function ChartReport({
     async function loadOrgColors() {
       const orgs = await fetchOrganizations();
       const colors = {};
-      orgs.forEach((org, idx) => {
-        // Use org_color from database, fallback to default colors
-        colors[org.reg_organization] = org.org_color || DEFAULT_COLORS[idx % DEFAULT_COLORS.length];
+      orgs.forEach((org) => {
+        colors[org.reg_organization] = org.org_color;
       });
       setOrgColors(colors);
       setColorsLoaded(true);
@@ -91,10 +86,11 @@ export default function ChartReport({
     loadData();
   }, [selectedOrg, viewMode, fetchParams]);
 
-  // Get color for organization
-  // If org is not in registered_organizations (removed/historical), use gray
+  // Get color for organization. Any name that isn't in registered_organizations
+  // (or is there with org_color unset) falls through to black so the gap is
+  // obvious in the chart.
   const getOrgColor = (orgName) => {
-    return orgColors[orgName] || INACTIVE_ORG_COLOR;
+    return orgColors[orgName] || MISSING_ORG_COLOR;
   };
 
   // Calculate average (total / time period)

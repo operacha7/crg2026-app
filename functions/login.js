@@ -70,6 +70,17 @@ export async function onRequest(context) {
     );
   }
 
+  // "Guest" exists in registered_organizations only so its chart color is
+  // configurable from Supabase. It's filtered out of /list-orgs, but reject it
+  // here too in case a forged POST hits /login directly. Same generic error
+  // as a wrong passcode so the response is indistinguishable.
+  if (reg_organization === "Guest") {
+    return new Response(
+      JSON.stringify({ success: false, message: "Invalid organization or passcode." }),
+      { status: 401, headers }
+    );
+  }
+
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   const { data: row, error } = await supabase

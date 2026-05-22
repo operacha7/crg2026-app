@@ -42,9 +42,15 @@ export async function onRequest(context) {
     );
   }
 
+  // "Guest" lives in registered_organizations solely to make the Reports chart
+  // color for unauthenticated users configurable from Supabase. It must never
+  // appear in the login dropdown — there is no passcode anyone could enter to
+  // authenticate as Guest, and unauthenticated users are already flagged Guest
+  // automatically without selecting anything.
   const orgs = (data || [])
     .map((r) => r.reg_organization)
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((name) => name !== "Guest");
 
   return new Response(JSON.stringify({ success: true, orgs }), {
     status: 200,
