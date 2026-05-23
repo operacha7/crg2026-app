@@ -1,6 +1,6 @@
 // src/components/reports/UsageDataTables.js
 // Usage Data Table report
-// Sections: Communications, Reports, Search, Assistance
+// Sections (in order): Sessions, Search, Communications, Assistance, Reports
 // Columns: dates + Da/Mo + Mo/Yr percentages
 
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -99,6 +99,41 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
     const [, month, day] = parts.map(Number);
     return `${month}/${day}`;
   };
+
+  // Build data for Sessions section
+  // Sessions has a single action_type ('login'); the Total row mirrors the
+  // Login row so the section's visual structure matches every other section.
+  const sessionsData = useMemo(() => {
+    const dateKey = viewMode === "daily" ? "log_date" : "month";
+
+    const rowData = { metric: "Login" };
+    let total = 0;
+    dateColumns.forEach(date => {
+      const count = data
+        .filter(row => row[dateKey] === date && row.action_type === "login")
+        .reduce((sum, row) => sum + row.count, 0);
+      rowData[date] = count;
+      total += count;
+    });
+    rowData._total = total;
+
+    const totalsRow = { metric: "Total", _isTotal: true };
+    let grandTotal = 0;
+    dateColumns.forEach(date => {
+      totalsRow[date] = rowData[date] || 0;
+      grandTotal += totalsRow[date];
+    });
+    totalsRow._total = grandTotal;
+
+    const lastDate = dateColumns[dateColumns.length - 1];
+    const lastColumnTotal = totalsRow[lastDate] || 0;
+    rowData._daMo = lastColumnTotal > 0 ? Math.round((rowData[lastDate] / lastColumnTotal) * 100) : 0;
+    rowData._moYr = grandTotal > 0 ? Math.round((rowData._total / grandTotal) * 100) : 0;
+    totalsRow._daMo = 100;
+    totalsRow._moYr = 100;
+
+    return [rowData, totalsRow];
+  }, [data, dateColumns, viewMode]);
 
   // Build data for Communications section
   const communicationsData = useMemo(() => {
@@ -418,9 +453,21 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
           </tr>
         </thead>
         <tbody>
+          {/* Sessions Section */}
+          {renderSectionHeader("Sessions", true)}
+          {renderDataRows(sessionsData, 0)}
+
+          {/* Search Section */}
+          {renderSectionHeader("Search")}
+          {renderDataRows(searchData, 0)}
+
           {/* Communications Section */}
-          {renderSectionHeader("Communications", true)}
+          {renderSectionHeader("Communications")}
           {renderDataRows(communicationsData, 0)}
+
+          {/* Assistance Section */}
+          {renderSectionHeader("Assistance")}
+          {renderDataRows(assistanceData, 0)}
 
           {/* Reports Section */}
           {reportsData.length > 0 && (
@@ -429,14 +476,6 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
               {renderDataRows(reportsData, 0)}
             </>
           )}
-
-          {/* Search Section */}
-          {renderSectionHeader("Search")}
-          {renderDataRows(searchData, 0)}
-
-          {/* Assistance Section */}
-          {renderSectionHeader("Assistance")}
-          {renderDataRows(assistanceData, 0)}
         </tbody>
       </table>
     </div>

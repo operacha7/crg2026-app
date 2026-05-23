@@ -285,7 +285,7 @@ export default function ReportsPage() {
           onZcdToggleExpand={() => { zcdReportRef.current?.toggleAllExpanded(); setZcdAllExpanded(prev => !prev); }}
           zcdAllExpanded={zcdAllExpanded}
         />
-        {selectedReport !== "map2" && selectedReport !== "consolidated" && <NavBar3Reports
+        {selectedReport !== "map2" && selectedReport !== "consolidated" && selectedReport !== "usage-tables" && <NavBar3Reports
           selectedReport={selectedReport}
           coverageSummary={coverageSummary}
           coverageDisplayFilter={coverageDisplayFilter}

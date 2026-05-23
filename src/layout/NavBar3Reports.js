@@ -1,10 +1,11 @@
 // src/layout/NavBar3Reports.js
 // Live stats cards for Reports page
-// Shows: Top Zip Code | Top Assistance | Top Organization (all time)
+// Default: Top Zip Code | Top Assistance | Top Organization (all-time, search-based)
+// Sessions / Emails / PDFs / Reports: Top Organization by their action_type (all-time)
 // Coverage report: clickable stats to filter table + unique org count + download button
 
 import { useState, useEffect } from "react";
-import { fetchLiveStats, fetchDailyUsage } from "../services/usageService";
+import { fetchLiveStats, fetchMonthlyUsage } from "../services/usageService";
 import { DownloadIcon } from "../icons/DownloadIcon";
 
 // NavBar2 button blue - used for active filter highlight
@@ -83,7 +84,7 @@ function ClickableStat({ label, value, isActive, onClick, title }) {
     >
       <span className="font-opensans" style={{
         fontSize: "18px",
-        color: isActive ? FILTER_ACTIVE_COLOR : "#FDF6E3",
+        color: isActive ? FILTER_ACTIVE_COLOR : "#4A4F56",
         fontWeight: isActive ? 500 : 200,
         transition: "color 0.2s",
         textDecoration: isActive ? "underline" : "none",
@@ -97,7 +98,7 @@ function ClickableStat({ label, value, isActive, onClick, title }) {
 // Separator dot between stat groups
 function StatSeparator() {
   return (
-    <span style={{ color: "#FDF6E3", fontSize: "18px", opacity: 0.4 }}>|</span>
+    <span style={{ color: "#4A4F56", fontSize: "18px", opacity: 0.4 }}>|</span>
   );
 }
 
@@ -110,23 +111,34 @@ export default function NavBar3Reports({
   coverageFilters,
 }) {
   const [stats, setStats] = useState(null);
-  const [sessionTopOrg, setSessionTopOrg] = useState(null);
+  const [topOrg, setTopOrg] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Sessions Chart needs a different ticker — Top Zip / Top Assistance are
-  // meaningless for logins, and "Top Organization" needs to count logins,
-  // not searches. So branch the fetch: sessions → aggregate the last 30
-  // days of login rows client-side; everything else → existing v_live_stats.
-  // (30 days mirrors the daily Sessions chart below; the existing v_live_stats
-  // tickers are already a different time window from their chart, so this is
-  // no worse than the status quo for the other reports.)
+  // Sessions / Emails / PDFs share the same shape: aggregate one action_type
+  // from v_monthly_usage (which UNIONs current detail + historical summary),
+  // exclude Administrator, return the org with the highest count + %.
+  // STATS_WINDOW_MONTHS = 240 (~20 yr) is effectively "all time" given the
+  // dataset's lifetime. To switch any of these to last-12-months later, change
+  // the months value (or per-report if they should differ).
+  const STATS_WINDOW_MONTHS = 240;
+  const TOP_ORG_REPORTS = {
+    sessions: "login",
+    "emails-sent": "email",
+    "pdfs-created": "pdf",
+    "reports-chart": "reports",
+  };
+
   useEffect(() => {
     let cancelled = false;
     async function loadStats() {
       setLoading(true);
 
-      if (selectedReport === "sessions") {
-        const rows = await fetchDailyUsage({ action_type: "login", days: 30 });
+      const actionType = TOP_ORG_REPORTS[selectedReport];
+      if (actionType) {
+        const rows = await fetchMonthlyUsage({
+          action_type: actionType,
+          months: STATS_WINDOW_MONTHS,
+        });
         if (cancelled) return;
         const totals = {};
         rows
@@ -136,7 +148,7 @@ export default function NavBar3Reports({
           });
         const total = Object.values(totals).reduce((s, n) => s + n, 0);
         const top = Object.entries(totals).sort((a, b) => b[1] - a[1])[0];
-        setSessionTopOrg(
+        setTopOrg(
           top && total > 0
             ? {
                 value: top[0],
@@ -151,7 +163,7 @@ export default function NavBar3Reports({
         const data = await fetchLiveStats();
         if (cancelled) return;
         setStats(data);
-        setSessionTopOrg(null);
+        setTopOrg(null);
       }
 
       setLoading(false);
@@ -239,7 +251,7 @@ export default function NavBar3Reports({
         {coverageSummary ? (
           <div className="flex items-center gap-6">
             {/* Total Zip Codes - not clickable */}
-            <span className="font-opensans" style={{ fontSize: "18px", color: "#FDF6E3", fontWeight: 200 }}>
+            <span className="font-opensans" style={{ fontSize: "18px", color: "#4A4F56", fontWeight: 200 }}>
               Total Zip Codes: <strong>{coverageSummary.totalZips}</strong>
             </span>
 
@@ -264,12 +276,12 @@ export default function NavBar3Reports({
             <StatSeparator />
 
             {/* Unique organization count — reflects whatever filter is applied */}
-            <span className="font-opensans" style={{ fontSize: "18px", color: "#FDF6E3", fontWeight: 200, padding: "4px 12px" }}>
+            <span className="font-opensans" style={{ fontSize: "18px", color: "#4A4F56", fontWeight: 200, padding: "4px 12px" }}>
               Unique Organizations: <strong>{coverageSummary.uniqueOrgCount}</strong>
             </span>
           </div>
         ) : (
-          <span className="text-white/70 font-opensans" style={{ fontSize: "14px" }}>
+          <span className="font-opensans" style={{ fontSize: "14px", color: "#4A4F56", opacity: 0.7 }}>
             Select an Assistance Type to view coverage data
           </span>
         )}
@@ -303,16 +315,16 @@ export default function NavBar3Reports({
   const renderStatsContent = () => {
     if (loading) {
       return (
-        <span className="text-white font-opensans" style={{ fontSize: "14px" }}>
+        <span className="font-opensans" style={{ fontSize: "14px", color: "#4A4F56" }}>
           Loading stats...
         </span>
       );
     }
 
-    if (selectedReport === "sessions") {
-      if (!sessionTopOrg) {
+    if (TOP_ORG_REPORTS[selectedReport]) {
+      if (!topOrg) {
         return (
-          <span className="text-white font-opensans" style={{ fontSize: "14px" }}>
+          <span className="font-opensans" style={{ fontSize: "14px", color: "#4A4F56" }}>
             No data available
           </span>
         );
@@ -324,8 +336,8 @@ export default function NavBar3Reports({
         >
           <StatCard
             heading="Top Organization"
-            value={sessionTopOrg.value}
-            percentage={sessionTopOrg.percentage}
+            value={topOrg.value}
+            percentage={topOrg.percentage}
           />
         </div>
       );
@@ -333,7 +345,7 @@ export default function NavBar3Reports({
 
     if (!stats) {
       return (
-        <span className="text-white font-opensans" style={{ fontSize: "14px" }}>
+        <span className="font-opensans" style={{ fontSize: "14px", color: "#4A4F56" }}>
           No data available
         </span>
       );
