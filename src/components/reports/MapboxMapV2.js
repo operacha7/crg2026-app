@@ -5887,6 +5887,26 @@ const MapboxMapV2 = forwardRef(function MapboxMapV2({
     });
   };
 
+  // Height the metric bar will occupy when drawn on canvas. Mirrors the
+  // y-advances inside drawMetricBarOnCanvas — kept in lockstep so legend
+  // boxes are sized correctly up-front.
+  const getMetricBarCanvasHeight = (mode) => {
+    if (mode === "no_base_map") return 0;
+    if (mode === "bivariate" || isCoverageBivariate(mode)) return 10 + 110; // divider + grid
+    return 10 + 16 + 14 + 14; // divider + label + bar + scale
+  };
+
+  // Shift the legend up if its computed content height would push past the
+  // bottom of the canvas (happens with the tall bivariate legend on short
+  // maps). The DOM rect anchors the legend with `bottom-6 left-4`, so the
+  // top-left we read can land too low when the legend grows.
+  const fitLegendY = (naturalY, contentHeight, canvasHeight) => {
+    const bottomMargin = 8;
+    const topMargin = 8;
+    const maxY = canvasHeight - contentHeight - bottomMargin;
+    return Math.max(topMargin, Math.min(naturalY, maxY));
+  };
+
   // Draw a simple legend directly on canvas
   const drawSimpleLegendOnCanvas = (ctx, label, count, countyName, containerEl, mode) => {
     const el = containerEl.querySelector("[data-legend]");
@@ -5895,12 +5915,20 @@ const MapboxMapV2 = forwardRef(function MapboxMapV2({
     const cRect = containerEl.getBoundingClientRect();
     const eRect = el.getBoundingClientRect();
     const x = eRect.left - cRect.left;
-    const y = eRect.top - cRect.top;
     const w = eRect.width;
-    const h = eRect.height;
     const pad = 16;
 
-    drawRoundedRect(ctx, x, y, w, h, 8, "rgba(255, 255, 255, 0.95)");
+    // Predict total content height so we can size the box correctly and
+    // lift it above the canvas bottom if needed.
+    const contentHeight = 12 // top pad
+      + (label ? 22 : 0)
+      + 20 + 20 + 22 // 3 pin/swatch rows
+      + 16 // count line
+      + getMetricBarCanvasHeight(mode)
+      + 12; // bottom pad
+    const y = fitLegendY(eRect.top - cRect.top, contentHeight, cRect.height);
+
+    drawRoundedRect(ctx, x, y, w, contentHeight, 8, "rgba(255, 255, 255, 0.95)");
     ctx.textBaseline = "top";
     let cy = y + 12;
 
@@ -5961,12 +5989,24 @@ const MapboxMapV2 = forwardRef(function MapboxMapV2({
     const cRect = containerEl.getBoundingClientRect();
     const eRect = el.getBoundingClientRect();
     const x = eRect.left - cRect.left;
-    const y = eRect.top - cRect.top;
     const w = eRect.width;
-    const h = eRect.height;
     const pad = 16;
 
-    drawRoundedRect(ctx, x, y, w, h, 8, "rgba(255, 255, 255, 0.95)");
+    // Predict total content height so we can size the box correctly and
+    // lift it above the canvas bottom if needed (Compare mode's bivariate
+    // grid is what pushes this over the edge on shorter maps).
+    const showCounty = countyName && countyName !== "All Counties";
+    const contentHeight = 12 // top pad
+      + (label ? 18 : 0)
+      + (parentName ? 22 : 0)
+      + 22 // coverage swatch row
+      + 10 + 20 + 20 + 22 // divider + 3 pin/swatch rows
+      + (showCounty ? 16 : 0)
+      + getMetricBarCanvasHeight(mode)
+      + 12; // bottom pad
+    const y = fitLegendY(eRect.top - cRect.top, contentHeight, cRect.height);
+
+    drawRoundedRect(ctx, x, y, w, contentHeight, 8, "rgba(255, 255, 255, 0.95)");
     ctx.textBaseline = "top";
     let cy = y + 12;
 
@@ -6305,6 +6345,75 @@ const MapboxMapV2 = forwardRef(function MapboxMapV2({
     ctx.restore();
   };
 
+  // Draw a Filters panel at top-left (under the page title). Shows only the
+  // selections the user actually made in the v2 sidebar (mode + per-mode
+  // controls + non-default Where/Who); skips defaults like "All Counties"
+  // so the panel stays compact instead of restating the whole sidebar.
+  const drawFiltersOnCanvas = (ctx, containerEl, startY = 14) => {
+    const isCondMode = displayMetric === "distress" || displayMetric === "evictions";
+    const isCompare = isCoverageBivariate(displayMetric);
+    const isResources = displayMetric === "service_coverage" || displayMetric === "no_base_map";
+    const modeName = isCondMode ? "Conditions" : isCompare ? "Compare" : "Resources";
+
+    const rows = [];
+    rows.push({ label: "Mode", value: modeName });
+
+    if (isCondMode || isCompare) {
+      const isEvictions = displayMetric === "evictions" || displayMetric === "evictions_coverage_bivariate";
+      rows.push({ label: "Condition", value: isEvictions ? "Evictions" : "Distress" });
+    }
+    if ((isResources || isCompare) && assistanceLabel) {
+      rows.push({ label: "Assistance", value: assistanceLabel });
+    }
+    if (isResources) {
+      rows.push({ label: "View", value: displayMetric === "service_coverage" ? "Coverage" : "Locations" });
+    }
+    if (county && county !== "All Counties") {
+      rows.push({ label: "County", value: county });
+    }
+    if (parentOrg && parentOrg !== "All Parents") {
+      rows.push({ label: "Parent", value: parentOrg });
+    }
+    if (organization && organization !== "All Organizations") {
+      rows.push({ label: "Organization", value: organization });
+    }
+
+    if (rows.length === 0) return;
+
+    const padX = 14;
+    const padY = 12;
+    const rowH = 18;
+    const titleH = 22;
+    const panelW = 280;
+    const panelH = padY * 2 + titleH + rows.length * rowH;
+    const panelX = 20;
+    const panelY = startY;
+
+    drawRoundedRect(ctx, panelX, panelY, panelW, panelH, 8, "rgba(255, 255, 255, 0.95)");
+
+    ctx.textBaseline = "top";
+    ctx.textAlign = "left";
+
+    ctx.font = "600 13px 'Open Sans', sans-serif";
+    ctx.fillStyle = "#2E5A88";
+    ctx.fillText("Filters", panelX + padX, panelY + padY);
+
+    let ry = panelY + padY + titleH;
+    rows.forEach(({ label, value }) => {
+      ctx.font = "500 11px 'Open Sans', sans-serif";
+      ctx.fillStyle = "#666666";
+      const labelText = `${label}: `;
+      ctx.fillText(labelText, panelX + padX, ry);
+      const labelW = ctx.measureText(labelText).width;
+
+      ctx.font = "600 11px 'Open Sans', sans-serif";
+      ctx.fillStyle = "#222831";
+      const valueText = truncateText(ctx, value, panelW - padX * 2 - labelW);
+      ctx.fillText(valueText, panelX + padX + labelW, ry);
+      ry += rowH;
+    });
+  };
+
   // Download map as PNG image
   // Uses Mapbox's preserveDrawingBuffer to capture the WebGL canvas,
   // then draws pins directly on canvas for crisp output
@@ -6395,23 +6504,13 @@ const MapboxMapV2 = forwardRef(function MapboxMapV2({
         }
       }
 
-      // Step 3: Draw base map title on canvas (top left)
-      const baseMapLabels = { distress: "Distress Levels", working_poor: "Working Poor", evictions: "Evictions", population: "Population", funding_level: "Funding Level", efficiency_ratio: "Distress vs. Funding", bivariate: "Distress vs. Funding", no_base_map: "No Base Map" };
-      const baseMapTitle = `Base Map: ${baseMapLabels[displayMetric] || "Distress Levels"}`;
-      ctx.font = "700 16px 'Open Sans', sans-serif";
+      // Step 3: Draw page title on canvas (top left)
+      ctx.font = "700 18px 'Open Sans', sans-serif";
       ctx.fillStyle = "#2E5A88";
       ctx.textBaseline = "top";
-      ctx.fillText(baseMapTitle, 20, 14);
+      ctx.fillText("New Zip Code Maps", 20, 14);
 
-      let titleBottomY = 14 + 22; // baseline + line height
-
-      // Sub-heading for Distress vs. Funding maps
-      if (displayMetric === "efficiency_ratio" || displayMetric === "bivariate") {
-        ctx.font = "500 13px 'Open Sans', sans-serif";
-        ctx.fillStyle = "#555555";
-        ctx.fillText(displayMetric === "bivariate" ? "Bivariate Map" : "Efficiency Ratio Map", 20, 34);
-        titleBottomY = 34 + 18;
-      }
+      let titleBottomY = 14 + 24; // baseline + line height
 
       // Methodology blurb (under the title) for metrics that have one
       const blurbText = METRIC_INFO_BLURBS[displayMetric];
@@ -6425,7 +6524,12 @@ const MapboxMapV2 = forwardRef(function MapboxMapV2({
           ctx.fillText(line, 20, by);
           by += 14;
         }
+        titleBottomY = by;
       }
+
+      // Step 3b: Draw Filters panel directly below the title/blurb
+      // (top-left), so all chrome stays in the same corner.
+      drawFiltersOnCanvas(ctx, container, titleBottomY + 8);
 
       // Step 4: Draw info box / distress table and legend directly on canvas (avoids dom-to-image border artifacts)
       drawInfoBoxOnCanvas(ctx, infoBoxData, container);
@@ -6492,7 +6596,7 @@ const MapboxMapV2 = forwardRef(function MapboxMapV2({
     } finally {
       setIsDownloading(false);
     }
-  }, [isDownloading, assistanceLabel, hasAssistance, orgPins, selectedOrgKey, showOrgLabels, infoBoxData, isDensityMode, parentCoverage, parentOrg, county, displayMetric, isBaseView, distressTableZip, distressDataLookup, distressRankLookup, houstonMedians, workingPoorTableZip, workingPoorDataLookup, workingPoorRankLookup, workingPoorMedians, evictionsTableZip, evictionsDataLookup, evictionsMedians, fviTableZip, fviRankLookup, familyMedians, efficiencyTableZip, bivariateTableZip, fundingDataLookup, zipCodes]);
+  }, [isDownloading, assistanceLabel, hasAssistance, orgPins, selectedOrgKey, showOrgLabels, infoBoxData, isDensityMode, parentCoverage, parentOrg, organization, county, displayMetric, isBaseView, distressTableZip, distressDataLookup, distressRankLookup, houstonMedians, workingPoorTableZip, workingPoorDataLookup, workingPoorRankLookup, workingPoorMedians, evictionsTableZip, evictionsDataLookup, evictionsMedians, fviTableZip, fviRankLookup, familyMedians, efficiencyTableZip, bivariateTableZip, fundingDataLookup, zipCodes]);
 
   // Expose download + clearSelection to the parent. clearSelection drops the
   // cross-mode selected zip (used by Reset in the sidebar).
