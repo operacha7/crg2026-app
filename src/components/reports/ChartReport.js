@@ -21,7 +21,7 @@ import { fetchDailyUsage, fetchMonthlyUsage, fetchOrganizations } from "../../se
 // but is no longer present in registered_organizations. Black stands out
 // against the rest of the palette so the admin notices and can decide whether
 // to re-add the org (with a real color) or remap the historical rows.
-const MISSING_ORG_COLOR = "#000000";
+const MISSING_ORG_COLOR = "#9A9A9A";
 
 // Get today's date in Central Time
 function getCentralDate() {
@@ -386,8 +386,9 @@ export default function ChartReport({
             <Line
               type="monotone"
               dataKey="runningAverage"
-              stroke="#ff00ff"
+              stroke="#1a1a1a"
               strokeWidth={2}
+              strokeDasharray="5 5"
               name="Running Average"
               dot={false}
             />

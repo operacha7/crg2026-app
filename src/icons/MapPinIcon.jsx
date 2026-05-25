@@ -3,10 +3,17 @@
 // Supports two states: inactive (gold) and active/selected (green)
 // Based on Icons8 map pin design
 
-export const MapPinIcon = ({ size = 32, active = false, className = "" }) => {
-  // Green (inactive) vs Cyan (active/selected)
-  const headColor = active ? "#00FDFD" : "#00CC44";
-  const headColorEnd = active ? "#00BFBF" : "#009930";
+export const MapPinIcon = ({ size = 32, active = false, color, className = "" }) => {
+  // Default palette: Green (inactive) vs Cyan (active/selected).
+  // When `color` is provided it overrides both gradient stops, so callers can
+  // tint the pinhead per-org (used by Resources/Sites to color-coordinate
+  // pinheads with rows in the Sites info box).
+  let headColor = active ? "#00FDFD" : "#00CC44";
+  let headColorEnd = active ? "#00BFBF" : "#009930";
+  if (color) {
+    headColor = color;
+    headColorEnd = color;
+  }
 
   return (
     <svg

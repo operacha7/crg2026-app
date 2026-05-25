@@ -631,4 +631,31 @@
 
   /* Error/Status */
   --color-error-text: #cc0000;
+
+  /* ==========================================
+   * REPORTS — Zip Code Maps v2 (sidebar)
+   * ========================================== */
+  --width-reports-sidebar-v2: 310px;
+  /* Match NavBar2 surface so the sidebar + top bar read as one continuous
+     control rail. Controls below the Mode tabs use a transparent / outlined
+     treatment — light-gray border on the sidebar background, off-white text
+     when idle, gold when a selection is active. */
+  --color-reports-sidebar-v2-bg: #4A4F56;
+  --color-reports-sidebar-v2-text: #FDF6E3;
+  --color-reports-sidebar-v2-text-active: #FFB302;
+  --color-reports-sidebar-v2-section-label: #D7D5D1;
+  --color-reports-sidebar-v2-divider: #5A5F66;
+  --color-reports-sidebar-v2-outline-border: #9DA3AE;
+  /* Mode-tabs (underline pattern, mirrors NavBar2 Search mode buttons) */
+  --color-reports-sidebar-v2-mode-active-text: #FFB302;
+  --color-reports-sidebar-v2-mode-inactive-text: #FDF6E3;
+  /* SlideToggle (Condition / Views) — keeps Search Chart's Daily/Monthly
+     visual: dark navy track, blue active pill. */
+  --color-reports-sidebar-v2-toggle-track-bg: #222831;
+  --color-reports-sidebar-v2-toggle-pill-bg: #2E5A88;
+  /* Assistance buttons: outlined idle, gold-fill when active. */
+  --color-reports-sidebar-v2-assistance-active-bg: #FFB302;
+  --color-reports-sidebar-v2-assistance-active-text: #000000;
+  /* Action buttons (bottom rail) */
+  --color-reports-sidebar-v2-btn-download-bg: #660000;
 }

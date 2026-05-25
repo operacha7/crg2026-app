@@ -13,9 +13,10 @@ const REPORT_OPTIONS = [
   { id: 'pdfs-created', label: 'PDFs Chart' },
   { id: 'reports-chart', label: 'Reports Chart' },
   { id: 'usage-tables', label: 'Usage Data Table' },
-  { id: 'coverage', label: 'The Matt Report', color: '#f79184' },
+  { id: 'coverage', label: 'The Matt Report', color: '#f7f584' },
+  { id: 'map2-v2', label: 'New Zip Code Maps', color: '#de84f7' },
   { id: 'map2', label: 'Zip Code Maps', color: '#9df784' },
-  { id: 'consolidated', label: 'Zip Code Data', color: '#84d4f7' },
+  { id: 'consolidated', label: 'Zip Code Data', color: '#84f7f5' },
 ];
 
 const BASE_MAP_LABELS = {
@@ -175,7 +176,7 @@ export default function NavBar1Reports({ selectedReport, onReportChange, map2Vie
             className="absolute right-0 mt-2 rounded shadow-lg z-50"
             style={{
               backgroundColor: '#FDF6E3',
-              minWidth: '180px',
+              minWidth: '220px',
             }}
           >
             {REPORT_OPTIONS.map((option) => {
@@ -192,6 +193,7 @@ export default function NavBar1Reports({ selectedReport, onReportChange, map2Vie
                     color: fontColor,
                     backgroundColor: hoveredOption === option.id ? '#d4d0c7' : (selectedReport === option.id ? '#e0ddd4' : 'transparent'),
                     borderBottom: '1px solid #999999',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {option.label}

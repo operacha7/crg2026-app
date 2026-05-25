@@ -16,7 +16,15 @@ import ReportsReport from "../components/reports/ReportsReport";
 import UsageDataTables from "../components/reports/UsageDataTables";
 import CoverageReport from "../components/reports/CoverageReport";
 import MapboxMap from "../components/reports/MapboxMap";
+import MapboxMapV2 from "../components/reports/MapboxMapV2";
+import ReportsSidebarV2 from "../components/reports/ReportsSidebarV2";
 import ZipCodeDataReport from "../components/reports/ZipCodeDataReport";
+import { useAppData } from "../Contexts/AppDataContext";
+
+// Allowed assistance labels for the v2 (New Zip Code Maps) page. Default is
+// the entry with the smallest assist_id at runtime (so adding a label here
+// slots into the right order automatically once data loads).
+const V2_ASSISTANCE_ALLOWED = new Set(["Rent", "Utilities", "Food"]);
 
 export default function ReportsPage() {
   // State for report selection
@@ -169,6 +177,77 @@ export default function ReportsPage() {
     }
   }, [selectedReport, handleMap2Reset]);
 
+  // Zip Code Maps v2 state
+  const { assistance: v2AssistanceTable } = useAppData();
+
+  // Default assistance = the allowed entry with the smallest assist_id.
+  // Computed once the assistance table loads; stays empty until then.
+  const v2DefaultAssistance = useMemo(() => {
+    if (!v2AssistanceTable) return "";
+    const sorted = v2AssistanceTable
+      .filter((a) => a.assistance && V2_ASSISTANCE_ALLOWED.has(a.assistance))
+      .slice()
+      .sort((a, b) => Number(a.assist_id) - Number(b.assist_id));
+    return sorted.length > 0 ? sorted[0].assistance : "";
+  }, [v2AssistanceTable]);
+
+  const [v2Mode, setV2Mode] = useState("conditions"); // conditions | services | compare
+  const [v2BaseMap, setV2BaseMap] = useState("distress"); // distress | evictions
+  const [v2Assistance, setV2Assistance] = useState(""); // populated when table loads
+  const [v2ServicesView, setV2ServicesView] = useState("pins"); // pins | coverage
+  const [v2County, setV2County] = useState("All Counties");
+  // Who filter: cross-cutting overlay applied to every v2 mode. Parent
+  // narrows the Organization list (and vice versa via the helpers in
+  // utils/orgFilters); both "" means "Any".
+  const [v2ParentOrg, setV2ParentOrg] = useState("");
+  const [v2Organization, setV2Organization] = useState("");
+
+  // Hydrate the assistance default once the table arrives.
+  useEffect(() => {
+    if (!v2Assistance && v2DefaultAssistance) {
+      setV2Assistance(v2DefaultAssistance);
+    }
+  }, [v2Assistance, v2DefaultAssistance]);
+
+  const mapboxMapV2Ref = useRef(null);
+  const handleV2Reset = useCallback(() => {
+    setV2Mode("conditions");
+    setV2BaseMap("distress");
+    setV2Assistance(v2DefaultAssistance);
+    setV2ServicesView("pins");
+    setV2County("All Counties");
+    setV2ParentOrg("");
+    setV2Organization("");
+    mapboxMapV2Ref.current?.clearSelection?.();
+  }, [v2DefaultAssistance]);
+
+  const handleV2Download = useCallback(() => {
+    mapboxMapV2Ref.current?.download();
+  }, []);
+
+  // Reset v2 when navigating away
+  useEffect(() => {
+    if (selectedReport !== "map2-v2") {
+      handleV2Reset();
+    }
+  }, [selectedReport, handleV2Reset]);
+
+  // Derive effective viewMode for the v2 map from mode + sub-selections.
+  // The map already understands these metric strings; we just compose them here.
+  // v2BaseMap is shared between Conditions and Compare so the user's Distress
+  // vs Evictions choice persists when they flip between the two modes.
+  const v2ViewMode = useMemo(() => {
+    if (v2Mode === "compare") {
+      return v2BaseMap === "evictions"
+        ? "evictions_coverage_bivariate"
+        : "distress_coverage_bivariate";
+    }
+    if (v2Mode === "services") {
+      return v2ServicesView === "coverage" ? "service_coverage" : "service_pins";
+    }
+    return v2BaseMap; // conditions
+  }, [v2Mode, v2BaseMap, v2ServicesView]);
+
   // Render the selected report
   const renderReport = () => {
     const commonProps = {
@@ -217,6 +296,39 @@ export default function ReportsPage() {
             onViewModeChange={handleMap2ViewModeChange}
           />
         );
+      case "map2-v2":
+        return (
+          <div className="flex flex-row h-full w-full overflow-hidden">
+            <ReportsSidebarV2
+              mode={v2Mode}
+              onModeChange={setV2Mode}
+              baseMap={v2BaseMap}
+              onBaseMapChange={setV2BaseMap}
+              assistance={v2Assistance}
+              onAssistanceChange={setV2Assistance}
+              servicesView={v2ServicesView}
+              onServicesViewChange={setV2ServicesView}
+              county={v2County}
+              onCountyChange={setV2County}
+              parentOrg={v2ParentOrg}
+              onParentOrgChange={setV2ParentOrg}
+              organization={v2Organization}
+              onOrganizationChange={setV2Organization}
+              onReset={handleV2Reset}
+              onDownload={handleV2Download}
+            />
+            <div className="flex-1 relative overflow-hidden">
+              <MapboxMapV2
+                ref={mapboxMapV2Ref}
+                county={v2County}
+                assistanceType={v2Mode === "conditions" ? "" : v2Assistance}
+                parentOrg={v2ParentOrg}
+                organization={v2Organization}
+                viewMode={v2ViewMode}
+              />
+            </div>
+          </div>
+        );
       case "consolidated":
         return (
           <ZipCodeDataReport
@@ -241,7 +353,7 @@ export default function ReportsPage() {
           onReportChange={setSelectedReport}
           map2ViewMode={map2ViewMode}
         />
-        <NavBar2Reports
+        {selectedReport !== "map2-v2" && <NavBar2Reports
           selectedReport={selectedReport}
           selectedOrg={selectedOrg}
           onOrgChange={setSelectedOrg}
@@ -284,8 +396,8 @@ export default function ReportsPage() {
           onZcdPdfDownload={handleZcdPdfDownload}
           onZcdToggleExpand={() => { zcdReportRef.current?.toggleAllExpanded(); setZcdAllExpanded(prev => !prev); }}
           zcdAllExpanded={zcdAllExpanded}
-        />
-        {selectedReport !== "map2" && selectedReport !== "consolidated" && selectedReport !== "usage-tables" && <NavBar3Reports
+        />}
+        {selectedReport !== "map2" && selectedReport !== "map2-v2" && selectedReport !== "consolidated" && selectedReport !== "usage-tables" && <NavBar3Reports
           selectedReport={selectedReport}
           coverageSummary={coverageSummary}
           coverageDisplayFilter={coverageDisplayFilter}
@@ -295,7 +407,7 @@ export default function ReportsPage() {
         />}
 
         {/* Report content - UsageDataTables handles its own scroll for sticky header */}
-        <main className={`flex-1 bg-gray-50 ${selectedReport === "usage-tables" || selectedReport === "map" || selectedReport === "map2" || selectedReport === "consolidated" ? "overflow-hidden" : "overflow-auto"}`}>
+        <main className={`flex-1 bg-gray-50 ${selectedReport === "usage-tables" || selectedReport === "map" || selectedReport === "map2" || selectedReport === "map2-v2" || selectedReport === "consolidated" ? "overflow-hidden" : "overflow-auto"}`}>
           {renderReport()}
         </main>
 
