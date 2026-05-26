@@ -11,12 +11,12 @@ import { useState, useRef, useEffect } from "react";
 import { Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-// In-app default — matches the homepage hamburger except Home replaces About
-// (in-app users need a way back; the homepage IS home so it offers About
-// instead). NavBar1 and SupportPage both pick this up by calling
-// `<MobileMenu />` with no args.
+// In-app default — Home points to /find (the working search app), not /
+// (the marketing homepage), since in-app users want a way back to the app
+// they were just using. NavBar1 and SupportPage both pick this up by
+// calling `<MobileMenu />` with no args.
 const DEFAULT_ITEMS = [
-  { label: "Home", path: "/" },
+  { label: "Home", path: "/find" },
   { label: "Privacy Policy", path: "/privacy" },
   { label: "Terms of Service", path: "/terms" },
   { label: "Contact Support", path: "/support" },
@@ -28,11 +28,20 @@ const DEFAULT_ITEMS = [
 export default function MobileMenu({
   items = DEFAULT_ITEMS,
   iconColor = "var(--color-footer-bg)",
+  onLogout,
 }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
+
+  // Append Logout when the caller provides an onLogout handler. Kept here
+  // (rather than in the items list) so callers don't have to assemble it
+  // themselves, and so HomeNavBar (which passes its own items but has no
+  // logged-in session to drop) is naturally opted out by not providing it.
+  const allItems = onLogout
+    ? [...items, { label: "Logout", action: "logout" }]
+    : items;
 
   useEffect(() => {
     if (!open) return undefined;
@@ -85,12 +94,16 @@ export default function MobileMenu({
             overflow: "hidden",
           }}
         >
-          {items.map((item, idx) => (
+          {allItems.map((item, idx) => (
             <button
-              key={item.path}
+              key={item.path || item.action || item.label}
               onClick={() => {
                 setOpen(false);
-                navigate(item.path);
+                if (item.action === "logout") {
+                  onLogout?.();
+                } else {
+                  navigate(item.path);
+                }
               }}
               className="w-full text-left hover:brightness-95 transition-all"
               style={{
@@ -99,7 +112,7 @@ export default function MobileMenu({
                 color: "#222831",
                 backgroundColor: "#FFFFFF",
                 borderBottom:
-                  idx < items.length - 1 ? "1px solid #F0F0F0" : "none",
+                  idx < allItems.length - 1 ? "1px solid #F0F0F0" : "none",
               }}
             >
               {item.label}

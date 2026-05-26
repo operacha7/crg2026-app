@@ -1011,10 +1011,13 @@ export default function NavBar3() {
 
       {/* ========== MOBILE LAYOUT (<md) ========== */}
       <div className="lg:hidden py-2 px-3">
-        {/* Top row: Assistance button + user name */}
-        <div className="flex items-center justify-between mb-2">
+        {/* Top row: Assistance button (left) + logged-in org / Guest (right).
+            Chips are deliberately on a separate row below — they're allowed
+            to wrap; the org name is not. min-w-0 on the name lets ellipsis
+            kick in for long org names instead of pushing the button off-screen. */}
+        <div className="flex items-center justify-between gap-3 mb-2">
           <div
-            className="relative"
+            className="relative flex-shrink-0"
           >
             <button
               ref={buttonRef}
@@ -1052,7 +1055,24 @@ export default function NavBar3() {
             />
           </div>
 
-          {/* Logged-in org label — desktop only; mobile is streamlined */}
+          {/* Logged-in org / Guest — same handlee styling as desktop, shrunk
+              for mobile. Truncates with ellipsis rather than wrapping so the
+              chips row below stays on the second line as intended. */}
+          <div
+            className="font-handlee"
+            style={{
+              color: "var(--color-navbar3-user-text, #FFFFFF)",
+              fontSize: "14px",
+              letterSpacing: ".05em",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              minWidth: 0,
+              textAlign: "right",
+            }}
+          >
+            {displayName}
+          </div>
         </div>
 
         {/* Chips row - wrap on mobile, with icon + label */}

@@ -7,8 +7,10 @@ import { Helmet } from 'react-helmet-async';
 import VerticalNavBar from '../layout/VerticalNavBar';
 import Footer from '../layout/Footer';
 import MobileMenu from '../components/MobileMenu';
+import { useAppData } from '../Contexts/AppDataContext';
 
 const SupportPage = ({ loggedInUser }) => {
+  const { onLogout } = useAppData();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -183,7 +185,7 @@ const SupportPage = ({ loggedInUser }) => {
             Contact Support
           </span>
           <div className="lg:hidden">
-            <MobileMenu />
+            <MobileMenu onLogout={onLogout} />
           </div>
         </nav>
 

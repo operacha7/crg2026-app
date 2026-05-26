@@ -4,6 +4,7 @@
 // Responsive: Simplified action row on mobile (hamburger → Contact Support + Legal), full layout on desktop
 
 import { useState, useRef, useEffect } from "react";
+import { useAppData } from "../Contexts/AppDataContext";
 import Tooltip from "../components/Tooltip";
 import EmailPanel from "../components/EmailPanel";
 import SmsPanel from "../components/SmsPanel";
@@ -139,6 +140,11 @@ export default function NavBar1({
   onMessagesHandoff,
   onGvAutoSent,
 }) {
+  // Logout handler comes from the top-level App via AppDataContext —
+  // forwarded into the mobile hamburger so users can sign out from the
+  // mobile layout (the desktop logout lives in VerticalNavBar, which is
+  // hidden on mobile).
+  const { onLogout } = useAppData();
   // Orange counter always reflects the current filtered count. With the
   // show-all-by-default UX, this is the full directory count when nothing
   // is selected and the narrowed count once filters are applied. (Pre-2026
@@ -621,8 +627,8 @@ export default function NavBar1({
             </div>
           </div>
 
-          {/* Hamburger menu — Home / Contact Support / Privacy Policy */}
-          <MobileMenu />
+          {/* Hamburger menu — Home / Contact Support / Privacy Policy / Logout */}
+          <MobileMenu onLogout={onLogout} />
         </div>
       </div>
 
