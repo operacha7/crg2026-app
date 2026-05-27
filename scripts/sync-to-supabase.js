@@ -377,13 +377,17 @@ async function fetchSheetData(sheets, sheetName) {
       const cleanHeader = header.toLowerCase().replace(/\s+/g, '_');
       let value = row[index] || null;
       
-      // Parse JSON columns so they're stored as objects, not strings
+      // Parse JSON columns so they're stored as objects, not strings.
+      // Plain-string shorthands (e.g. "24/7") are kept as-is and stored as a JSON string.
       if (value && JSON_COLUMNS.includes(cleanHeader)) {
-        try {
-          value = JSON.parse(value);
-        } catch (e) {
-          console.warn(`  Warning: Row ${rowIndex + 2} - Could not parse JSON in "${cleanHeader}":`, value.substring(0, 50) + '...');
-          // Keep original value if parsing fails
+        const trimmed = typeof value === 'string' ? value.trim() : '';
+        const looksLikeJson = trimmed.startsWith('{') || trimmed.startsWith('[');
+        if (looksLikeJson) {
+          try {
+            value = JSON.parse(value);
+          } catch (e) {
+            console.warn(`  Warning: Row ${rowIndex + 2} - Could not parse JSON in "${cleanHeader}":`, value.substring(0, 50) + '...');
+          }
         }
       }
       

@@ -639,13 +639,8 @@ function ResultRow({
       >
         {formattedHours ? (
           <>
-            {/* Legacy format (non-JSON) */}
-            {formattedHours.legacy && (
-              <div className="whitespace-pre-line">{formattedHours.legacy}</div>
-            )}
-            
-            {/* Hours display - consistent two-frame layout */}
-            {(formattedHours.rows?.length > 0 || formattedHours.special?.length > 0) && (
+            {/* Hours display - consistent two-frame layout (legacy shorthands like "24/7" render in the right/hours frame) */}
+            {(formattedHours.rows?.length > 0 || formattedHours.special?.length > 0 || formattedHours.legacy) && (
               <div
                 style={{
                   display: "grid",
@@ -662,12 +657,15 @@ function ResultRow({
                     <div key={`spec-day-${idx}`}>{row.days}</div>
                   ))}
                 </div>
-                
+
                 {/* Gap - 15px spacer column */}
                 <div></div>
-                
+
                 {/* Right frame - times, right-aligned */}
                 <div className="flex flex-col" style={{ textAlign: "right" }}>
+                  {formattedHours.legacy && (
+                    <div className="whitespace-pre-line">{formattedHours.legacy}</div>
+                  )}
                   {formattedHours.rows?.map((row, idx) => (
                     <div key={`reg-time-${idx}`}>{row.hours}</div>
                   ))}
