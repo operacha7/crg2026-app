@@ -62,6 +62,7 @@ export default function LoginModal({ onLoginSuccess }) {
   const [org, setOrg] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showPasscode, setShowPasscode] = useState(false);
   const passcodeRef = useRef(null);
   const dropdownRef = useRef(null);
 
@@ -101,6 +102,7 @@ export default function LoginModal({ onLoginSuccess }) {
     if (isOpen) {
       setOrg("");
       setError("");
+      setShowPasscode(false);
       if (passcodeRef.current) passcodeRef.current.value = "";
       setTimeout(() => dropdownRef.current?.focus(), 0);
     }
@@ -363,14 +365,54 @@ export default function LoginModal({ onLoginSuccess }) {
                 }
               `}
             </style>
-            <input
-              id="login-passcode"
-              ref={passcodeRef}
-              type="password"
-              autoComplete="current-password"
-              className="login-modal-passcode font-opensans"
-              style={{ ...inputBaseStyle, marginBottom: 20 }}
-            />
+            <div style={{ position: "relative", marginBottom: 20 }}>
+              <input
+                id="login-passcode"
+                ref={passcodeRef}
+                type={showPasscode ? "text" : "password"}
+                autoComplete="current-password"
+                className="login-modal-passcode font-opensans"
+                style={{ ...inputBaseStyle, paddingRight: 40 }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPasscode((v) => !v)}
+                aria-label={showPasscode ? "Hide passcode" : "Show passcode"}
+                title={showPasscode ? "Hide passcode" : "Show passcode"}
+                tabIndex={-1}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  right: 0,
+                  height: "100%",
+                  width: 36,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--color-panel-label-text)",
+                  padding: 0,
+                }}
+              >
+                {showPasscode ? (
+                  // Eye-off
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a19.77 19.77 0 0 1 4.22-5.06" />
+                    <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a19.86 19.86 0 0 1-3.17 4.19" />
+                    <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                ) : (
+                  // Eye
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
+            </div>
 
             {error && (
               <div

@@ -1,10 +1,9 @@
 // src/components/SmsPanel.js
 // Panel for sending resource links via text message.
-// Four send methods presented as cards:
+// Three send methods presented as cards:
 //   1. Google Voice (auto) — Chrome extension auto-fills phone + message + sends
-//   2. Google Voice (manual) — Copies message to clipboard, opens GV compose
-//   3. Messaging App (auto) — Native sms: URI, auto-fills phone + message
-//   4. Text From Phone (auto) — QR code for scanning from phone
+//   2. Messaging App (auto) — Native sms: URI, auto-fills phone + message
+//   3. Text From Phone (auto) — QR code for scanning from phone
 // Extension detection adapts the GV auto card (installed vs required vs Chrome required).
 
 import { useState, useEffect } from "react";
@@ -170,23 +169,7 @@ export default function SmsPanel({
     }
   };
 
-  // --- Card 2: Google Voice (manual) — copy message + open GV ---
-  const handleGvManual = async () => {
-    if (!isValidPhone) return;
-    fireInitiated();
-    const ok = await copyToClipboard(composedBody);
-    showFeedback(
-      ok
-        ? `Message copied! Enter ${phoneNumber} in the To field, then paste.`
-        : "Unable to copy message"
-    );
-    window.open(
-      "https://voice.google.com/u/0/messages?itemId=draft",
-      "_blank"
-    );
-  };
-
-  // --- Card 3: Messaging App (auto) via sms: URI ---
+  // --- Card 2: Messaging App (auto) via sms: URI ---
   const handleMessagingApp = () => {
     if (!isValidPhone) return;
     fireInitiated();
@@ -196,7 +179,7 @@ export default function SmsPanel({
     window.location.href = smsHref;
   };
 
-  // --- Card 4: Text From Phone — show QR code ---
+  // --- Card 3: Text From Phone — show QR code ---
   const handleTextFromPhone = () => {
     if (!isValidPhone) return;
     fireInitiated();
@@ -400,44 +383,7 @@ export default function SmsPanel({
           </button>
         )}
 
-        {/* ---- CARD 2: Google Voice (manual) ---- */}
-        {isValidPhone && !showExtensionPrompt && (
-          <button
-            onClick={handleGvManual}
-            className="font-opensans text-left transition-all duration-200 hover:brightness-110 w-full"
-            style={{
-              backgroundColor: CARD_GREEN,
-              borderRadius: CARD_RADIUS,
-              padding: "14px 16px",
-              border: "none",
-            }}
-          >
-            <div className="flex items-center justify-between" style={{ marginBottom: "6px" }}>
-              <span style={{ color: "#FFFFFF", fontSize: "18px", fontWeight: 600 }}>
-                Google Voice (manual)
-              </span>
-              <span
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  color: CARD_BLUE,
-                  fontSize: "10px",
-                  fontWeight: 400,
-                  padding: "3px 8px",
-                  borderRadius: "10px",
-                  letterSpacing: "0.03em",
-                }}
-              >
-                COPY MESSAGE
-              </span>
-            </div>
-            <p style={{ color: "#FFFFFF", fontSize: "12px", margin: 0, lineHeight: "1.4" }}>
-              Requires a Google Voice Account. No Chrome extension required but phone number
-              has to be entered manually. Copy message and paste into the message field.
-            </p>
-          </button>
-        )}
-
-        {/* ---- CARD 3: Messaging App (auto) ---- */}
+        {/* ---- CARD 2: Messaging App (auto) ---- */}
         {isValidPhone && !showExtensionPrompt && (
           <button
             onClick={handleMessagingApp}
@@ -459,7 +405,7 @@ export default function SmsPanel({
           </button>
         )}
 
-        {/* ---- CARD 4: Text From Phone (auto) ---- */}
+        {/* ---- CARD 3: Text From Phone (auto) ---- */}
         {isValidPhone && !showExtensionPrompt && (
           <div>
             <button
