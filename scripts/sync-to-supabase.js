@@ -176,7 +176,7 @@ function parseDate(dateStr) {
 }
 
 // Convert format codes and paragraph text into HTML.
-// Paragraph-level codes (column): bold, italic, underline, bullet, boldfirst, center, 6-char hex color
+// Paragraph-level codes (column): bold, italic, underline, bullet, boldfirst, center, link, 6-char hex color
 // Inline tokens parsed inside text by parseInline(): **bold**, _italic_, ==highlight==, {#HEX}colored{/}
 function formatParagraph(text, formatCodes) {
   const codes = formatCodes
@@ -189,6 +189,7 @@ function formatParagraph(text, formatCodes) {
   const isBullet = codes.includes('bullet');
   const isBoldFirst = codes.includes('boldfirst');
   const isCenter = codes.includes('center');
+  const isLink = codes.includes('link');
 
   // Find hex color code (6 characters, with or without leading #)
   const hexColorRaw = codes.find(c => /^#?[0-9a-f]{6}$/i.test(c));
@@ -206,7 +207,34 @@ function formatParagraph(text, formatCodes) {
   // Center is block-level — applies to the wrapper (<p> or <ul>)
   const centerAttr = isCenter ? ` style="text-align: center"` : '';
 
-  if (isBullet && isBoldFirst) {
+  if (isLink) {
+    // Whole paragraph is a clickable hyperlink. Cell syntax: "Display text | URL".
+    // No pipe → the bare URL is used as both the link and the visible text.
+    const pipeIndex = text.indexOf('|');
+    let displayText, url;
+    if (pipeIndex !== -1) {
+      displayText = text.substring(0, pipeIndex).trim();
+      url = text.substring(pipeIndex + 1).trim();
+    } else {
+      url = text.trim();
+      displayText = url;
+    }
+    // Default to https:// when the user omits a scheme (so it's not treated as relative)
+    if (url && !/^(https?:|mailto:|tel:)/i.test(url)) {
+      url = `https://${url}`;
+    }
+
+    // Link looks like a link by default (blue + underline); hex color code overrides the color
+    const linkStyles = [];
+    if (isBold) linkStyles.push('font-weight: bold');
+    if (isItalic) linkStyles.push('font-style: italic');
+    linkStyles.push('text-decoration: underline');
+    linkStyles.push(`color: #${hexColor ? hexColor.toUpperCase() : '0066CC'}`);
+    const linkStyleAttr = ` style="${linkStyles.join('; ')}"`;
+
+    const anchor = `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer"${linkStyleAttr}>${parseInline(displayText)}</a>`;
+    return `<p${centerAttr}>${anchor}</p>`;
+  } else if (isBullet && isBoldFirst) {
     // Each line becomes a bullet point with first line of each bullet bolded
     const lines = text.split('\n').filter(line => line.trim());
     const firstStyles = ['font-weight: bold'];

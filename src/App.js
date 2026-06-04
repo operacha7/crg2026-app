@@ -7,6 +7,7 @@ import HomePage from "./views/HomePage";
 import AboutPage from "./views/AboutPage";
 import PrivacyPage from "./views/PrivacyPage";
 import TermsPage from "./views/TermsPage";
+import TrainingPage from "./views/TrainingPage";
 // MainApp (and everything it transitively imports — NavBars, ZipCodePage, email service,
 // Supabase client) is lazy-loaded so the homepage ships with a much smaller initial
 // bundle. Critical on mobile networks.
@@ -57,6 +58,14 @@ export default function App() {
     return null;
   });
 
+  // True once the cookie-based auth check has settled, so we know whether a
+  // null `user` means "really a guest" vs. "registered user we haven't
+  // restored yet". Dev-bypass and ?guest=1 deep links set `user` synchronously
+  // above (no /whoami call), so auth is already resolved for them. Without this
+  // gate, a registered org refreshing a public path would briefly fall back to
+  // GUEST_USER and log a spurious guest session before /whoami restored them.
+  const [authResolved, setAuthResolved] = useState(DEV_BYPASS_LOGIN || isDeepLink);
+
   // Restore user from the session cookie on app load. The cookie is
   // httpOnly so JS can't read it directly — /whoami validates the JWT
   // server-side and returns the user payload. This is what makes refresh
@@ -73,7 +82,13 @@ export default function App() {
           setUser(data.user);
         }
       })
-      .catch((err) => console.error("App: /whoami failed", err));
+      .catch((err) => console.error("App: /whoami failed", err))
+      .finally(() => {
+        // Resolved regardless of outcome: a failed/empty /whoami means we
+        // treat the visitor as unauthenticated (guest), which is the correct
+        // fallback. Guarded so we don't set state after unmount.
+        if (!cancelled) setAuthResolved(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -108,6 +123,21 @@ export default function App() {
   const handleLogout = () => {
     setLogoutInProgress(true);
     setUser(null);
+    // Reset the training "starting now" popup dedupe so a fresh login during a
+    // live session is re-prompted. Key must match SHOWN_STORAGE_KEY in
+    // src/components/TrainingSessionManager.js. Within a single visit (refresh /
+    // navigation, no logout) the flag persists, so the popup still shows only
+    // once per session.
+    try {
+      localStorage.removeItem("crg_training_popup_shown");
+      // Reset the guest-session dedupe so that if this browser re-enters the
+      // app as a guest after logging out, it counts as a new session. Without
+      // this the flag persists for the tab's lifetime and a post-logout
+      // re-entry wouldn't be re-counted in the Sessions Chart.
+      sessionStorage.removeItem("guest_session_logged");
+    } catch {
+      /* best-effort only */
+    }
     fetch("/logout", { method: "POST", credentials: "include" }).catch(() => {});
     navigate("/", { replace: true });
   };
@@ -128,6 +158,10 @@ export default function App() {
   // session cookie expires nightly at 2 AM and the next login is logged).
   // Fire-and-forget — a logging failure must never block the user's flow.
   useEffect(() => {
+    // Wait for the cookie-based auth check to settle. Logging before this
+    // would attribute a registered org's page refresh to "Guest" during the
+    // brief window before /whoami restores them.
+    if (!authResolved) return;
     if (effectiveUser?.isGuest !== true) return;
     if (sessionStorage.getItem("guest_session_logged") === "1") return;
     sessionStorage.setItem("guest_session_logged", "1");
@@ -140,7 +174,7 @@ export default function App() {
         action_type: "login",
       }),
     }).catch((err) => console.error("App: guest session log failed", err));
-  }, [effectiveUser]);
+  }, [authResolved, effectiveUser]);
 
   // When an auth-gated MainApp path (e.g. /reports, /announcements) is hit
   // without a user, send them to /find with the login modal open. /find is
@@ -189,6 +223,9 @@ export default function App() {
           {/* Public legal pages */}
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
+
+          {/* Public training schedule — reachable by everyone, incl. guests */}
+          <Route path="/training" element={<TrainingPage />} />
 
           {/* Backward-compat: any remaining /login links (old bookmarks,
               external referrals) bounce to /find with the modal open. */}

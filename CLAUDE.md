@@ -977,6 +977,7 @@ Announcements are managed in Google Sheets (same spreadsheet as directory data) 
 | `italic` | Italic text |
 | `underline` | Underlined text |
 | `bullet` | Each line becomes a bullet point |
+| `link` | Whole paragraph becomes a clickable hyperlink (para cell uses `Display text \| URL`; no pipe → bare URL is the link text). Opens in a new tab. |
 | 6-char hex (e.g., `B8001F`) | Text color |
 
 **Examples:**
@@ -984,6 +985,8 @@ Announcements are managed in Google Sheets (same spreadsheet as directory data) 
 - `bullet` → Bulleted list
 - `B8001F` → Red text
 - `bold, B8001F` → Bold red text
+- `link` with para `Register here | https://example.com` → "Register here" clickable link
+- `link, bold` with para `https://example.com` → bold link, URL shown as the text
 - (blank) → Default styling (regular weight, black)
 
 **Audience Codes:**

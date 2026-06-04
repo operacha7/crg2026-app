@@ -5,11 +5,13 @@ import { Toaster } from "react-hot-toast";
 import { Helmet } from "react-helmet-async";
 // Import Announcement components
 import AnnouncementManager from './components/AnnouncementManager';
+import TrainingSessionManager from './components/TrainingSessionManager';
 import ScheduledReload from './components/ScheduledReload';
 
 import { AppDataProvider, useAppData } from "./Contexts/AppDataContext";
 import { supabase } from "./supabaseClient";
 import { getAssistanceSeo } from "./seo/assistanceMetadata";
+import { logUsage } from "./services/usageService";
 // ZipCodePage is the landing route — keep it eagerly imported so mobile users see content immediately.
 import ZipCodePage from "./views/ZipCodePage";
 // Secondary routes are desktop-only and unreachable from mobile (no hamburger/vertical nav).
@@ -18,6 +20,13 @@ import ZipCodePage from "./views/ZipCodePage";
 const ReportsPage = lazy(() => import("./views/ReportsPage"));
 const SupportPage = lazy(() => import("./views/SupportPage"));
 const AnnouncementsPage = lazy(() => import("./views/AnnouncementsPage"));
+
+// MUTED for interim production testing of the Training page (the /training
+// footer link is also pulled). Flip to true to re-enable. NOTE: a redesign is
+// planned before re-enabling — reuse the Training info panel as the popup,
+// fire 15 min before → 15 min after start, and add a "Not Now" action that
+// minimizes it to a small "Join" chip in a screen corner for that same window.
+const TRAINING_POPUP_ENABLED = false;
 
 export default function MainApp({ loggedInUser, onLogout }) {
   const location = useLocation();
@@ -56,6 +65,10 @@ useEffect(() => {
       <ScheduledReload />
       {/* Add AnnouncementManager */}
       {loggedInUser && <AnnouncementManager loggedInUser={loggedInUser} />}
+      {/* Training "starting now" popup — fires for anyone in the app (guests
+          included), wherever they are, when a session goes live. Muted during
+          interim production testing (see TRAINING_POPUP_ENABLED above). */}
+      {TRAINING_POPUP_ENABLED && <TrainingSessionManager />}
       <AppContent loggedInUser={loggedInUser} />
     </AppDataProvider>
   );
@@ -174,6 +187,10 @@ function AssistanceSlugPage({ loggedInUser }) {
 
   useEffect(() => {
     if (!assistance || assistance.length === 0) return;
+    // True only on the genuine first landing of this mount (homepage chip,
+    // SMS ?guest=1 deep link, or a direct /assistance/<slug> URL). Captured
+    // before hasInitialized flips so we can log exactly one search per entry.
+    const isFirstLanding = !hasInitialized.current;
     const match = assistance.find((a) => a.url_slug === slug);
     if (match?.assist_id) {
       setActiveAssistanceChips(new Set([String(match.assist_id)]));
@@ -182,6 +199,21 @@ function AssistanceSlugPage({ loggedInUser }) {
     if (zip) {
       setSelectedZipCode(zip);
       setActiveSearchMode("zipcode");
+    }
+    // A chip landing is a zip + assistance selection that bypasses the NavBar
+    // handlers (we set context directly above), so it would otherwise never be
+    // counted in the Search chart. Log one search per landing. Guarded to the
+    // first run of this mount: in-app chip toggles change `slug` and re-run
+    // this effect, but those are already logged by NavBar3's own handler, so
+    // re-logging here would double-count.
+    if (isFirstLanding) {
+      logUsage({
+        reg_organization: loggedInUser?.reg_organization || "Guest",
+        action_type: "search",
+        search_mode: zip ? "Zip Code" : null,
+        assistance_type: match?.assistance || null,
+        search_value: zip || null,
+      });
     }
     hasInitialized.current = true;
     // We only want to apply the slug/zip on entry. Re-running when the user

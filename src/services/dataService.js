@@ -211,6 +211,26 @@ export const dataService = {
     return data;
   },
 
+  // ======= TRAINING SESSIONS (online onboarding sessions) =======
+  // Only active rows, ordered for display. `calendar_adds` (anonymous "added
+  // to calendar" count) rides along via select('*'); it's written server-side
+  // by functions/track-calendar-add.js, never from the browser.
+  async getTrainingSessions() {
+    const { data, error } = await supabase
+      .from('training_sessions')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true, nullsFirst: false })
+      .order('session_date', { ascending: true })
+      .order('start_time', { ascending: true });
+
+    if (error) {
+      console.error("Error fetching training sessions:", error);
+      return [];
+    }
+    return data;
+  },
+
 };
 
 // Export helper functions for use elsewhere if needed

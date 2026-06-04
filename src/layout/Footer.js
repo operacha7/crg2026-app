@@ -13,6 +13,9 @@ import { USFlagIcon } from "../icons";
 // /find first. The site-wide LoginModal in App.js listens for ?login=1 and
 // opens. After a successful login from the homepage the modal forwards the
 // user to /find; from anywhere else it leaves them where they were.
+// NOTE: "Training" link intentionally removed during interim production testing
+// of the /training page — testers reach it via the direct crghouston.org/training
+// URL. Re-add `{ label: "Training", to: "/training" }` when the page goes live.
 const SECONDARY_LINKS = [
   { label: "About", to: "/about" },
   { label: "Privacy Policy", to: "/privacy" },

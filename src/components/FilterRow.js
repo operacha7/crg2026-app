@@ -123,9 +123,15 @@ export default function FilterRow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterDay]);
 
-  // Organization text input — debounce so we log the settled value rather
-  // than every keystroke. Effect cleanup cancels the pending log if the
-  // user types again within the debounce window.
+  // Organization text input — debounce so we log the settled filter event
+  // rather than every keystroke. Effect cleanup cancels the pending log if
+  // the user types again within the debounce window.
+  // search_value is intentionally NOT logged here: the typed string is
+  // redundant with the known org list and the debounce can still emit
+  // mid-typing fragments, so it adds noise without analytic value. The
+  // event itself is still logged (counts under Header Filter in Reports).
+  // (Status/Hours come from dropdowns and Requirements is a genuine demand
+  // signal, so those three keep their search_value.)
   useEffect(() => {
     const trimmed = filterOrganization.trim();
     if (!trimmed) return undefined;
@@ -134,7 +140,6 @@ export default function FilterRow({
         reg_organization: regOrgName,
         action_type: "filter",
         search_mode: "organization",
-        search_value: trimmed,
       });
     }, TEXT_FILTER_DEBOUNCE_MS);
     return () => clearTimeout(timer);

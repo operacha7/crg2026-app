@@ -696,32 +696,25 @@ export default function NavBar3() {
   // Get organization name for logging
   const regOrgName = loggedInUser?.reg_organization || 'Guest';
 
-  // Map search mode to display name for logging
-  const getSearchModeDisplay = () => {
-    switch (activeSearchMode) {
-      case 'zipcode': return 'Zip Code';
-      case 'organization': return 'Organization';
-      case 'location': return 'Location';
-      case 'llm': return 'Ask a Question';
-      default: return 'Zip Code';
-    }
-  };
-
   // Log assistance type selections to app_usage_logs
   const logAssistanceSelections = useCallback((selections, assistData) => {
     selections.forEach((typeId) => {
       const item = assistData.find((a) => a.assist_id === typeId);
       if (item) {
+        // Logged as 'assistance', NOT 'search': picking an assistance type is
+        // not a search in the usage model. The Reports "Assistance" section
+        // keys off assistance_type (ignoring action_type), so it still counts
+        // these; the "Search" section/chart filter on action_type and so
+        // correctly exclude them. search_mode is intentionally omitted.
         logUsage({
           reg_organization: regOrgName,
-          action_type: 'search',
-          search_mode: getSearchModeDisplay(),
+          action_type: 'assistance',
           assistance_type: item.assistance,
         });
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [regOrgName, activeSearchMode]);
+  }, [regOrgName]);
 
   // Assistance data from Supabase
   const [assistanceData, setAssistanceData] = useState([]);
@@ -873,12 +866,13 @@ export default function NavBar3() {
       return newSet;
     });
 
-    // Log when activating an assistance chip (not when deactivating)
+    // Log when activating an assistance chip (not when deactivating).
+    // Logged as 'assistance', NOT 'search' — see logAssistanceSelections for
+    // the full rationale. Counted in the Reports "Assistance" section only.
     if (isActivating && typeInfo) {
       logUsage({
         reg_organization: regOrgName,
-        action_type: 'search',
-        search_mode: getSearchModeDisplay(),
+        action_type: 'assistance',
         assistance_type: typeInfo.name,
       });
     }

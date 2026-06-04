@@ -40,6 +40,43 @@
   --color-home-chip-bg: #F3EED9;
   --color-home-chip-text: #000000;
 
+  /* Training page (/training) — colors approximate; adjust freely.
+     Layout: gray left sidebar (calendar) + maroon main area + cream cards. */
+  --color-training-sidebar-bg: #4A4F56;       /* left sidebar behind calendar */
+  --color-training-main-bg: #660000;          /* maroon content area (matches home) */
+  --color-training-panel-bg: #FDFAF2;         /* cream info card */
+  --color-training-heading: #FFFFFF;          /* white headings on maroon */
+  --color-training-body-text: #1A1A1A;        /* dark text inside cards */
+  --color-training-muted-text: #5A5A5A;       /* secondary text inside cards */
+  --color-training-link: #1A73E8;             /* Add to Calendar / Google links */
+  --color-training-cell-border: #E2DFD5;      /* DATE/STARTS/etc. cell borders */
+  --color-training-cell-highlight-bg: #FBF1D6;/* amber-tinted DURATION cell */
+
+  /* Join button — four states */
+  --color-training-join-soon-bg: #5CB85C;     /* lighter green: 15 min before → start ("Join - Starts in Xm") */
+  --color-training-join-soon-text: #FFFFFF;
+  --color-training-join-live-bg: #2F8F3E;     /* green + pulsing dot: start → +15 min */
+  --color-training-join-live-text: #FFFFFF;
+  --color-training-join-live-dot: #BFF0C8;    /* pale dot inside the live button */
+  --color-training-join-late-bg: #F0B429;     /* amber: +15 min → end */
+  --color-training-join-late-text: #FFFFFF;
+  --color-training-join-future-bg: #5C6168;   /* gray: more than 15 min out (countdown) */
+  --color-training-join-future-text: #FFFFFF;
+
+  /* Status tag (top-left of card) */
+  --color-training-tag-live: #2F8F3E;         /* "LIVE NOW" text + pulsing dot (start → +15m) */
+  --color-training-tag-soon: #2F8F3E;         /* "STARTING SOON" text + steady dot (15m before → start) */
+  --color-training-tag-upcoming: #B07A00;     /* "UPCOMING" text (more than 15m out) */
+  --color-training-tag-upcoming-dot: #F0B429; /* "UPCOMING" dot (not pulsing) */
+
+  /* Sidebar calendar */
+  --color-training-cal-bg: #FFFFFF;
+  --color-training-cal-text: #222831;
+  --color-training-cal-muted: #9AA0A6;        /* weekday header + empty cells */
+  --color-training-cal-today-bg: #1A73E8;     /* today: filled blue circle */
+  --color-training-cal-today-text: #FFFFFF;
+  --color-training-cal-session-ring: #F0B429; /* session days: amber ring */
+
   /* Vertical Nav Bar */
   --color-vertical-nav-accent: #948979;
   --color-vertical-nav-bg: #222831;
