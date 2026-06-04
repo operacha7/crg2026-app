@@ -15,6 +15,9 @@ import {
   isGvExtensionInstalled,
   sendToGvExtension,
   GV_EXTENSION_STORE_URL,
+  getSavedGvAccount,
+  setSavedGvAccount,
+  buildGvComposeUrl,
 } from "../utils/gvExtension";
 
 // Detect Chrome or Edge (both support Chrome extensions)
@@ -31,6 +34,100 @@ function isMobileBrowser() {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent;
   return /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
+}
+
+/**
+ * GvAccountControl - opt-in Google Voice account override shown under the
+ * "Google Voice (auto)" card. Three states: editing form, saved-account
+ * summary (with Change), or a subtle "set your account" link.
+ */
+function GvAccountControl({
+  editing,
+  account,
+  inputValue,
+  cardRadius,
+  onInputChange,
+  onStartEdit,
+  onSave,
+  onCancel,
+}) {
+  let content;
+  if (editing) {
+    content = (
+      <div style={{ backgroundColor: "#FFFFFF", borderRadius: cardRadius, padding: "12px" }}>
+        <label
+          htmlFor="gv-account-input"
+          className="font-opensans"
+          style={{ display: "block", color: "#222831", fontSize: "12px", fontWeight: 600, marginBottom: "6px" }}
+        >
+          Google Voice account
+        </label>
+        <input
+          id="gv-account-input"
+          type="text"
+          placeholder="name@yourorg.org"
+          value={inputValue}
+          onChange={(e) => onInputChange(e.target.value)}
+          className="font-opensans w-full"
+          style={{
+            backgroundColor: "white",
+            color: "black",
+            padding: "8px 12px",
+            borderRadius: "var(--radius-panel-btn)",
+            fontSize: "14px",
+            border: "1px solid #CCCCCC",
+            outline: "none",
+          }}
+        />
+        <p style={{ color: "#4A4F56", fontSize: "11px", margin: "6px 0 10px 0", lineHeight: "1.4" }}>
+          Enter the email of the Google account that has Google Voice. This pins texts to that
+          account when you're signed into more than one. (If the email doesn't work, try the account
+          number — 0, 1, 2… — in the order you added them to Chrome.)
+        </p>
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={onCancel}
+            className="font-opensans transition-all duration-200 hover:brightness-110"
+            style={{ backgroundColor: "#9AA0A6", color: "#FFFFFF", padding: "6px 14px", borderRadius: "var(--radius-panel-btn)", fontSize: "13px", fontWeight: 600 }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onSave}
+            className="font-opensans transition-all duration-200 hover:brightness-110"
+            style={{ backgroundColor: "var(--color-panel-btn-ok-bg)", color: "#FFFFFF", padding: "6px 14px", borderRadius: "var(--radius-panel-btn)", fontSize: "13px", fontWeight: 600 }}
+          >
+            {inputValue.trim() ? "Save" : "Clear"}
+          </button>
+        </div>
+      </div>
+    );
+  } else if (account) {
+    content = (
+      <p className="font-opensans" style={{ color: "var(--color-panel-label-text)", fontSize: "12px", margin: 0 }}>
+        Google Voice account: <strong>{account}</strong>
+        {"  ·  "}
+        <button
+          onClick={onStartEdit}
+          className="font-opensans hover:brightness-125"
+          style={{ color: "#2C4146", fontSize: "12px", fontWeight: 600, textDecoration: "underline", background: "none", border: "none", padding: 0, cursor: "pointer" }}
+        >
+          Change
+        </button>
+      </p>
+    );
+  } else {
+    content = (
+      <button
+        onClick={onStartEdit}
+        className="font-opensans hover:brightness-125"
+        style={{ color: "var(--color-panel-label-text)", fontSize: "12px", textDecoration: "underline", background: "none", border: "none", padding: 0, cursor: "pointer" }}
+      >
+        Texts opening the wrong Google account? Set your Google Voice account
+      </button>
+    );
+  }
+  return <div style={{ marginTop: "6px" }}>{content}</div>;
 }
 
 /**
@@ -51,6 +148,11 @@ export default function SmsPanel({
   const [sendingViaExtension, setSendingViaExtension] = useState(false);
   const [showQrCode, setShowQrCode] = useState(false);
   const [showExtensionPrompt, setShowExtensionPrompt] = useState(false);
+  // Opt-in Google Voice account override (email or numeric index). Only
+  // multi-account users who land on the wrong account need this.
+  const [gvAccount, setGvAccount] = useState("");
+  const [editingGvAccount, setEditingGvAccount] = useState(false);
+  const [gvAccountInput, setGvAccountInput] = useState("");
 
   const isChrome = isChromeBrowser();
   const isMobile = isMobileBrowser();
@@ -64,6 +166,8 @@ export default function SmsPanel({
       setSendingViaExtension(false);
       setShowQrCode(false);
       setShowExtensionPrompt(false);
+      setEditingGvAccount(false);
+      setGvAccount(getSavedGvAccount());
       if (canUseGvAuto) {
         isGvExtensionInstalled().then(setExtensionInstalled);
       }
@@ -137,7 +241,7 @@ export default function SmsPanel({
     fireInitiated();
     setSendingViaExtension(true);
     try {
-      await sendToGvExtension(phoneNumber, composedBody);
+      await sendToGvExtension(phoneNumber, composedBody, gvAccount);
       showFeedback("Sent to Google Voice — phone and message will auto-fill.");
 
       // Fire onGvAutoSent the next time the user returns to this tab. Optimistic:
@@ -160,13 +264,23 @@ export default function SmsPanel({
           ? `Extension unavailable. Message copied — enter ${phoneNumber} in Google Voice.`
           : "Unable to reach extension or copy message."
       );
-      window.open(
-        "https://voice.google.com/u/0/messages?itemId=draft",
-        "_blank"
-      );
+      window.open(buildGvComposeUrl(gvAccount), "_blank");
     } finally {
       setSendingViaExtension(false);
     }
+  };
+
+  // --- Google Voice account override (opt-in) ---
+  const handleStartEditGvAccount = () => {
+    setGvAccountInput(gvAccount || "");
+    setEditingGvAccount(true);
+  };
+
+  const handleSaveGvAccount = () => {
+    const value = gvAccountInput.trim();
+    setSavedGvAccount(value); // blank value clears it
+    setGvAccount(value);
+    setEditingGvAccount(false);
   };
 
   // --- Card 2: Messaging App (auto) via sms: URI ---
@@ -345,42 +459,60 @@ export default function SmsPanel({
         {/* ---- CARD 1: Google Voice (auto) ---- */}
         {/* Hidden on mobile — Chrome extensions don't run on mobile browsers. */}
         {isValidPhone && !isMobile && !showExtensionPrompt && (
-          <button
-            onClick={handleGvAuto}
-            disabled={sendingViaExtension || (!isChrome && !extensionInstalled)}
-            className="font-opensans text-left transition-all duration-200 hover:brightness-110 w-full"
-            style={{
-              backgroundColor: CARD_BLUE,
-              borderRadius: CARD_RADIUS,
-              padding: "14px 16px",
-              border: "none",
-              cursor: !isChrome ? "not-allowed" : "pointer",
-              opacity: !isChrome ? 0.6 : 1,
-            }}
-          >
-            <div className="flex items-center justify-between" style={{ marginBottom: "6px" }}>
-              <span style={{ color: "#FFFFFF", fontSize: "18px", fontWeight: 600 }}>
-                {sendingViaExtension ? "Opening Google Voice..." : "Google Voice (auto)"}
-              </span>
-              <span
-                style={{
-                  backgroundColor: gvAutoBadge.bg,
-                  color: gvAutoBadge.color,
-                  fontSize: "10px",
-                  fontWeight: 400,
-                  padding: "3px 8px",
-                  borderRadius: "10px",
-                  letterSpacing: "0.03em",
-                }}
-              >
-                {gvAutoBadge.text}
-              </span>
-            </div>
-            <p style={{ color: "#FFFFFF", fontSize: "12px", margin: 0, lineHeight: "1.4" }}>
-              Requires a Google Voice Account and a Chrome Extension. Phone number and message
-              filled-in and message sent automatically.
-            </p>
-          </button>
+          <div>
+            <button
+              onClick={handleGvAuto}
+              disabled={sendingViaExtension || (!isChrome && !extensionInstalled)}
+              className="font-opensans text-left transition-all duration-200 hover:brightness-110 w-full"
+              style={{
+                backgroundColor: CARD_BLUE,
+                borderRadius: CARD_RADIUS,
+                padding: "14px 16px",
+                border: "none",
+                cursor: !isChrome ? "not-allowed" : "pointer",
+                opacity: !isChrome ? 0.6 : 1,
+              }}
+            >
+              <div className="flex items-center justify-between" style={{ marginBottom: "6px" }}>
+                <span style={{ color: "#FFFFFF", fontSize: "18px", fontWeight: 600 }}>
+                  {sendingViaExtension ? "Opening Google Voice..." : "Google Voice (auto)"}
+                </span>
+                <span
+                  style={{
+                    backgroundColor: gvAutoBadge.bg,
+                    color: gvAutoBadge.color,
+                    fontSize: "10px",
+                    fontWeight: 400,
+                    padding: "3px 8px",
+                    borderRadius: "10px",
+                    letterSpacing: "0.03em",
+                  }}
+                >
+                  {gvAutoBadge.text}
+                </span>
+              </div>
+              <p style={{ color: "#FFFFFF", fontSize: "12px", margin: 0, lineHeight: "1.4" }}>
+                Requires a Google Voice Account and a Chrome Extension. Phone number and message
+                filled-in and message sent automatically.
+              </p>
+            </button>
+
+            {/* Opt-in Google Voice account override. Only needed when a user is
+                signed into more than one Google account and lands on the wrong
+                one. Hidden behind a subtle link until set. */}
+            {isChrome && (
+              <GvAccountControl
+                editing={editingGvAccount}
+                account={gvAccount}
+                inputValue={gvAccountInput}
+                cardRadius={CARD_RADIUS}
+                onInputChange={setGvAccountInput}
+                onStartEdit={handleStartEditGvAccount}
+                onSave={handleSaveGvAccount}
+                onCancel={() => setEditingGvAccount(false)}
+              />
+            )}
+          </div>
         )}
 
         {/* ---- CARD 2: Messaging App (auto) ---- */}
