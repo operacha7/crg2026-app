@@ -171,7 +171,9 @@ export default function TrainingPage() {
           className="w-full lg:w-[340px] flex-shrink-0 flex flex-col items-center lg:items-start"
           style={{
             background: "var(--color-training-sidebar-bg)",
-            padding: "24px 20px",
+            // Top padding matches the main area's (36px) so the calendar's top
+            // edge lines up with the "Live Training" title.
+            padding: "36px 20px 24px",
           }}
         >
           <div className="w-full lg:w-auto flex justify-center lg:block">
@@ -180,13 +182,18 @@ export default function TrainingPage() {
           <div className="w-full lg:w-auto flex justify-center lg:block" style={{ marginTop: 16 }}>
             <label
               className="font-opensans flex items-center"
-              style={{ gap: 8, color: "#FFFFFF", fontSize: 14, cursor: "pointer" }}
+              style={{ gap: 8, color: "var(--color-training-cal-text)", fontSize: 14, cursor: "pointer" }}
             >
               <input
                 type="checkbox"
                 checked={showPast}
                 onChange={(e) => setShowPast(e.target.checked)}
-                style={{ width: 16, height: 16, cursor: "pointer" }}
+                style={{
+                  width: 16,
+                  height: 16,
+                  cursor: "pointer",
+                  accentColor: "var(--color-training-cal-today-bg)",
+                }}
               />
               Show past sessions
             </label>
@@ -217,7 +224,7 @@ export default function TrainingPage() {
               </header>
             ) : (
               <>
-                <header style={{ marginBottom: 22, color: "var(--color-training-heading)" }}>
+                <header style={{ marginBottom: 27, color: "var(--color-training-heading)" }}>
                   <h1 className="font-opensans" style={{ fontSize: 34, fontWeight: 700, marginBottom: 12 }}>
                     Live Training
                   </h1>
@@ -229,6 +236,16 @@ export default function TrainingPage() {
                     clicking the link in your calendar or the green <strong>Join</strong> button here.
                   </p>
                 </header>
+                {/* Footnote sits directly above the panels (closer to them than
+                    to the header paragraph) so it reads as a caption for the
+                    sessions, not a continuation of the intro. */}
+                <p
+                  className="font-opensans"
+                  style={{ marginBottom: 14, fontSize: 13, color: "rgba(255,255,255,0.7)", textAlign: "center" }}
+                >
+                  The Join button turns green 15 minutes before the start time and stays open
+                  for the duration of the session.
+                </p>
                 <div className="flex flex-col" style={{ gap: 18 }}>
                   {visibleSessions.map((session) => (
                     <SessionCard
@@ -244,13 +261,6 @@ export default function TrainingPage() {
                     />
                   ))}
                 </div>
-                <p
-                  className="font-opensans"
-                  style={{ marginTop: 14, fontSize: 13, color: "rgba(255,255,255,0.7)", textAlign: "center" }}
-                >
-                  The Join button turns green 15 minutes before the start time and stays open
-                  for the duration of the session.
-                </p>
               </>
             )}
 
@@ -482,6 +492,9 @@ function SessionCard({ session, now, count, alreadyAdded, onCalendarAdd, cardRef
             borderRadius: 8,
             overflow: "hidden",
             marginBottom: 16,
+            // Subtle nested lift: the cream card already casts a shadow; this
+            // smaller one makes the white grid appear to float off the card.
+            boxShadow: "0 2px 10px rgba(0,0,0,0.14)",
           }}
         >
           <GridCell label="DATE" value={parts.weekdayDate} sub={parts.year} />
@@ -554,7 +567,7 @@ function GridCell({ label, value, sub, bordered, highlight }) {
       style={{
         padding: "10px 14px",
         borderLeft: bordered ? "1px solid var(--color-training-cell-border)" : "none",
-        background: highlight ? "var(--color-training-cell-highlight-bg)" : "transparent",
+        background: highlight ? "var(--color-training-cell-highlight-bg)" : "#FFFFFF",
         minWidth: 0,
       }}
     >
