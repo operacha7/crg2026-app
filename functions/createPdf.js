@@ -9,6 +9,14 @@
 
 import { requireSession } from "./_lib/auth.js";
 
+// June 2026 trial: temporarily open Create PDF to guests (unauthenticated) to
+// gauge usage. Set back to false to restore the registered-orgs-only gate.
+// Must be kept in sync with the UI lever (GUEST_ACTIONS_OPEN in
+// src/layout/NavBar1.js) and the matching flag in functions/sendEmail.js.
+// WARNING: while true, this endpoint is callable by anyone on the internet,
+// not just app guests — it is backed by a paid API (PDFShift).
+const GUEST_ACTIONS_OPEN = true;
+
 export async function onRequest({ request, env }) {
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -33,9 +41,12 @@ export async function onRequest({ request, env }) {
 
   // Gate: only signed-in registered orgs can create PDFs. The React UI
   // already hides Create PDF from guests; this stops a direct caller from
-  // bypassing the UI gate by hitting the endpoint.
-  const auth = await requireSession(request, env);
-  if (!auth.ok) return auth.response;
+  // bypassing the UI gate by hitting the endpoint. During the GUEST_ACTIONS_OPEN
+  // trial the gate is skipped so guests (who have no session cookie) can create.
+  if (!GUEST_ACTIONS_OPEN) {
+    const auth = await requireSession(request, env);
+    if (!auth.ok) return auth.response;
+  }
 
   try {
     const { htmlBody, header, headerHtml, footer, filename, margin, landscape, organization } =

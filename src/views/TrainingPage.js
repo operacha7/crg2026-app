@@ -66,7 +66,9 @@ function getButtonState(start, end, now) {
   return "late";
 }
 
-// Humanized time-until-start for the gray future button.
+// Humanized time-until-start for the gray future button. Always leads with
+// "Join in …" so the label reads as the Join control even before it goes green
+// (which is what the "The Join button turns green …" footnote refers to).
 function formatCountdown(startMs, now) {
   const ms = startMs - now;
   if (ms <= 0) return "Starting now";
@@ -75,8 +77,8 @@ function formatCountdown(startMs, now) {
   if (days >= 1) return `Join in ${days} day${days > 1 ? "s" : ""}`;
   const hours = Math.floor(totalMin / 60);
   const mins = totalMin % 60;
-  if (hours >= 1) return `Starts ${hours}h ${mins}m`;
-  return `Starts ${mins}m`;
+  if (hours >= 1) return `Join in ${hours}h ${mins}m`;
+  return `Join in ${mins}m`;
 }
 
 export default function TrainingPage() {

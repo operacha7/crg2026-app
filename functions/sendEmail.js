@@ -9,6 +9,14 @@
 
 import { requireSession } from "./_lib/auth.js";
 
+// June 2026 trial: temporarily open Send Email to guests (unauthenticated) to
+// gauge usage. Set back to false to restore the registered-orgs-only gate.
+// Must be kept in sync with the UI lever (GUEST_ACTIONS_OPEN in
+// src/layout/NavBar1.js) and the matching flag in functions/createPdf.js.
+// WARNING: while true, this endpoint is callable by anyone on the internet,
+// not just app guests — it is backed by a paid API (Resend).
+const GUEST_ACTIONS_OPEN = true;
+
 export async function onRequest({ request, env }) {
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -30,11 +38,16 @@ export async function onRequest({ request, env }) {
 
   // Gate: only signed-in registered orgs can send. The React UI already
   // hides Send Email from guests; this stops a direct caller from bypassing
-  // the UI gate by hitting the endpoint.
-  const auth = await requireSession(request, env);
-  if (!auth.ok) return auth.response;
+  // the UI gate by hitting the endpoint. During the GUEST_ACTIONS_OPEN trial
+  // the gate is skipped so guests (who have no session cookie) can send.
+  let senderOrg = "Guest";
+  if (!GUEST_ACTIONS_OPEN) {
+    const auth = await requireSession(request, env);
+    if (!auth.ok) return auth.response;
+    senderOrg = auth.session.org;
+  }
 
-  console.log("📩 Incoming email request from:", auth.session.org);
+  console.log("📩 Incoming email request from:", senderOrg);
   console.log(
     "🔐 Using API Key:",
     env.RESEND_API_KEY ? "✅ Set" : "❌ Missing"

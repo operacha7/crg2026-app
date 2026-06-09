@@ -243,9 +243,20 @@ export default function NavBar1({
   // Check if user is a guest (browsing without account)
   const isGuest = loggedInUser?.isGuest === true;
 
+  // June 2026 trial: temporarily open Send Email / Create PDF / Send Text to
+  // guests to gauge usage. Set back to false to restore the registered-orgs-only
+  // gate. NOTE: this is the UI lever only — the server-side gate must be opened
+  // in lockstep (GUEST_ACTIONS_OPEN in functions/sendEmail.js + functions/createPdf.js),
+  // otherwise guest Email/PDF requests will 401. (SMS is client-side, no server gate.)
+  const GUEST_ACTIONS_OPEN = true;
+
+  // Whether to block guest access to the action buttons. When the trial is open,
+  // guests are treated like registered users for Email/PDF/Text.
+  const guestBlocked = isGuest && !GUEST_ACTIONS_OPEN;
+
   // Handle Send Email button click
   const handleEmailButtonClick = () => {
-    if (isGuest) {
+    if (guestBlocked) {
       alert("You need an account. Contact Support.");
       return;
     }
@@ -264,7 +275,7 @@ export default function NavBar1({
 
   // Handle Create PDF button click
   const handlePdfButtonClick = () => {
-    if (isGuest) {
+    if (guestBlocked) {
       alert("You need an account. Contact Support.");
       return;
     }
@@ -292,7 +303,7 @@ export default function NavBar1({
 
   // Handle Send Text button click
   const handleSmsButtonClick = () => {
-    if (isGuest) {
+    if (guestBlocked) {
       alert("You need an account. Contact Support.");
       return;
     }
@@ -433,7 +444,7 @@ export default function NavBar1({
         >
           {/* Send Email */}
           <div className="relative flex">
-            <Tooltip text={isGuest ? "You need an account. Contact Support." : ""} position="bottom">
+            <Tooltip text={guestBlocked ? "You need an account. Contact Support." : ""} position="bottom">
               <ActionButton
                 icon={SendEmailIcon}
                 label="Send Email"
@@ -442,7 +453,7 @@ export default function NavBar1({
                 chipVariant="gold"
                 isActive={emailPdfActive}
                 onClick={handleEmailButtonClick}
-                guestDisabled={isGuest}
+                guestDisabled={guestBlocked}
                 buttonRef={emailButtonRef}
                 position="first"
                 isPanelOpen={showEmailPanel}
@@ -464,7 +475,7 @@ export default function NavBar1({
 
           {/* Create PDF */}
           <div className="relative flex">
-            <Tooltip text={isGuest ? "You need an account. Contact Support." : ""} position="bottom">
+            <Tooltip text={guestBlocked ? "You need an account. Contact Support." : ""} position="bottom">
               <ActionButton
                 icon={CreatePdfIcon}
                 label="Create PDF"
@@ -473,7 +484,7 @@ export default function NavBar1({
                 chipVariant="gold"
                 isActive={emailPdfActive}
                 onClick={handlePdfButtonClick}
-                guestDisabled={isGuest}
+                guestDisabled={guestBlocked}
                 buttonRef={pdfButtonRef}
                 position="middle"
                 isPanelOpen={showPdfPanel}
@@ -493,7 +504,7 @@ export default function NavBar1({
 
           {/* Send Text */}
           <div className="relative flex">
-            <Tooltip text={isGuest ? "You need an account. Contact Support." : ""} position="bottom">
+            <Tooltip text={guestBlocked ? "You need an account. Contact Support." : ""} position="bottom">
               <ActionButton
                 icon={SendTextIcon}
                 label="Send Text"
@@ -502,7 +513,7 @@ export default function NavBar1({
                 chipVariant="teal"
                 isActive={textLabelActive}
                 onClick={handleSmsButtonClick}
-                guestDisabled={isGuest}
+                guestDisabled={guestBlocked}
                 buttonRef={smsButtonRef}
                 position="last"
                 isPanelOpen={showSmsPanel}
@@ -557,11 +568,11 @@ export default function NavBar1({
                 ref={emailButtonRef}
                 onClick={handleEmailButtonClick}
                 className={`rounded font-opensans text-sm px-4 py-2 transition-all ${
-                  isGuest
+                  guestBlocked
                     ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                     : "bg-navbar1-btn-email-bg text-navbar1-btn-email-text hover:brightness-125"
                 }`}
-                style={{ opacity: isGuest ? 0.6 : 1, minHeight: '40px' }}
+                style={{ opacity: guestBlocked ? 0.6 : 1, minHeight: '40px' }}
               >
                 Email
               </button>
@@ -583,11 +594,11 @@ export default function NavBar1({
                 ref={pdfButtonRef}
                 onClick={handlePdfButtonClick}
                 className={`rounded font-opensans text-sm px-4 py-2 transition-all ${
-                  isGuest
+                  guestBlocked
                     ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                     : "bg-navbar1-btn-pdf-bg text-navbar1-btn-pdf-text hover:brightness-125"
                 }`}
-                style={{ opacity: isGuest ? 0.6 : 1, minHeight: '40px' }}
+                style={{ opacity: guestBlocked ? 0.6 : 1, minHeight: '40px' }}
               >
                 PDF
               </button>
@@ -607,11 +618,11 @@ export default function NavBar1({
                 ref={smsButtonRef}
                 onClick={handleSmsButtonClick}
                 className={`rounded font-opensans text-sm px-4 py-2 transition-all ${
-                  isGuest
+                  guestBlocked
                     ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                     : "bg-navbar1-btn-sms-bg text-navbar1-btn-sms-text hover:brightness-125"
                 }`}
-                style={{ opacity: isGuest ? 0.6 : 1, minHeight: '40px' }}
+                style={{ opacity: guestBlocked ? 0.6 : 1, minHeight: '40px' }}
               >
                 Text
               </button>
