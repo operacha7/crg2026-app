@@ -245,10 +245,12 @@ Results display format is consistent regardless of filters applied.
 ## Commands
 
 ```bash
-npm start          # Development server at localhost:3000
-npm run build      # Production build to /build
-npm test           # Jest test runner (interactive watch mode)
+npm start          # Vite dev server at localhost:3000
+npm run build      # Vite production build to /build (runs prebuild sitemap gen first)
+npm run preview    # Preview the production build locally
 ```
+
+**Build tooling:** Vite (`vite.config.js`) with `@vitejs/plugin-react`. (Note: this project was migrated off Create React App — ignore any lingering CRA/react-scripts/Jest references.)
 
 ## Architecture
 

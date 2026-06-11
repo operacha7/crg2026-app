@@ -27,6 +27,7 @@ import {
   buildIcsDataUri,
   buildIcsFilename,
   buildGoogleCalendarUrl,
+  normalizeMeetUrl,
 } from "../utils/calendar";
 
 const JOIN_OPENS_BEFORE_MS = 15 * 60 * 1000; // green "Join Now" starts 15 min early
@@ -686,8 +687,11 @@ function JoinButton({ state, startMs, now, meetLink }) {
     );
   }
 
+  // Normalize so a scheme-less DB value (e.g. "meet.google.com/...") opens Meet
+  // instead of being treated as a relative SPA path (→ catch-all → /find).
+  const href = normalizeMeetUrl(meetLink);
   const clickable = state === "soon" || state === "live" || state === "late";
-  if (clickable && !meetLink) {
+  if (clickable && !href) {
     return (
       <span style={{ ...JOIN_BASE, background: "var(--color-training-join-future-bg)", color: "#FFFFFF", fontSize: 14 }}>
         Join link unavailable
@@ -698,7 +702,7 @@ function JoinButton({ state, startMs, now, meetLink }) {
   if (state === "live") {
     return (
       <a
-        href={meetLink}
+        href={href}
         target="_blank"
         rel="noopener noreferrer"
         className="hover:brightness-110"
@@ -722,7 +726,7 @@ function JoinButton({ state, startMs, now, meetLink }) {
     const mins = Math.max(1, Math.ceil((startMs - now) / 60000));
     return (
       <a
-        href={meetLink}
+        href={href}
         target="_blank"
         rel="noopener noreferrer"
         className="hover:brightness-110"
@@ -736,7 +740,7 @@ function JoinButton({ state, startMs, now, meetLink }) {
   if (state === "late") {
     return (
       <a
-        href={meetLink}
+        href={href}
         target="_blank"
         rel="noopener noreferrer"
         className="hover:brightness-110"

@@ -158,11 +158,24 @@ function escapeIcsText(text) {
     .replace(/\r?\n/g, "\\n");
 }
 
+// Ensure a Meet link is an absolute URL. Admins sometimes paste a scheme-less
+// link (e.g. "meet.google.com/abc-defg-hij"); used raw as an <a href> that's a
+// *relative* path, so the browser navigates within the SPA (→ catch-all → /find)
+// instead of opening Meet. Prepend https:// when no http(s) scheme is present.
+// Returns "" for empty input so callers can treat it as "no link".
+export function normalizeMeetUrl(link) {
+  const raw = String(link || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://${raw.replace(/^\/+/, "")}`;
+}
+
 // Build the human-readable event body shared by both calendar exports.
 function buildDescription(session) {
   const parts = [];
   if (session.description) parts.push(session.description);
-  if (session.meet_link) parts.push(`Join Google Meet: ${session.meet_link}`);
+  const link = normalizeMeetUrl(session.meet_link);
+  if (link) parts.push(`Join Google Meet: ${link}`);
   return parts.join("\n\n");
 }
 
@@ -186,7 +199,7 @@ export function buildIcsDataUri(session) {
     `DTEND:${toICalUtc(end)}`,
     `SUMMARY:${escapeIcsText(title)}`,
     `DESCRIPTION:${escapeIcsText(buildDescription(session))}`,
-    session.meet_link ? `URL:${escapeIcsText(session.meet_link)}` : null,
+    session.meet_link ? `URL:${escapeIcsText(normalizeMeetUrl(session.meet_link))}` : null,
     "LOCATION:Google Meet (online)",
     "END:VEVENT",
     "END:VCALENDAR",

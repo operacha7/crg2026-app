@@ -20,7 +20,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { dataService } from "../services/dataService";
-import { sessionToInstants } from "../utils/calendar";
+import { sessionToInstants, normalizeMeetUrl } from "../utils/calendar";
 import TrainingSessionPopup from "./TrainingSessionPopup";
 
 const POPUP_WINDOW_MS = 20 * 60 * 1000; // popup may fire only in the first 20 min
@@ -103,8 +103,9 @@ const TrainingSessionManager = () => {
   }, []);
 
   const handleJoin = () => {
-    if (activeSession?.meet_link) {
-      window.open(activeSession.meet_link, "_blank", "noopener,noreferrer");
+    const url = normalizeMeetUrl(activeSession?.meet_link);
+    if (url) {
+      window.open(url, "_blank", "noopener,noreferrer");
     }
     setActiveSession(null);
   };
