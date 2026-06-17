@@ -13,7 +13,9 @@ import { buildTransitDirectionsUrl } from "../utils/transitUrl";
 import { ResourceEmail } from "../emails";
 
 /**
- * Sort data by assist_id then distance
+ * Sort data by assist_id then priority then distance.
+ * priority is an editorial rank: lower number = surface higher (1 = featured).
+ * Most records have no priority (null/blank) and sort last within their group.
  */
 function getSortedData(data) {
   return [...data].sort((a, b) => {
@@ -21,6 +23,11 @@ function getSortedData(data) {
     const bAssistId = parseInt(b.assist_id, 10) || 999;
     if (aAssistId !== bAssistId) {
       return aAssistId - bAssistId;
+    }
+    const aPriority = parseInt(a.priority, 10) || Infinity;
+    const bPriority = parseInt(b.priority, 10) || Infinity;
+    if (aPriority !== bPriority) {
+      return aPriority - bPriority;
     }
     const aMiles = a.distance ?? Infinity;
     const bMiles = b.distance ?? Infinity;

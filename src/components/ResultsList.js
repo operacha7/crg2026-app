@@ -65,7 +65,9 @@ function reducer(state, action) {
 
 // ============ SORT FUNCTIONS ============
 
-// Default sort: status_id → assist_id → miles (all ascending)
+// Default sort: status_id → assist_id → priority → organization (all ascending)
+// priority is an editorial rank: lower number = surface higher (1 = featured).
+// Most records have no priority (null/blank) and sort last within their group.
 function defaultSort(a, b) {
   const aStatusId = a.status_id || 999;
   const bStatusId = b.status_id || 999;
@@ -75,9 +77,11 @@ function defaultSort(a, b) {
   const bAssistId = parseInt(b.assist_id, 10) || 999;
   if (aAssistId !== bAssistId) return aAssistId - bAssistId;
 
-  const aMiles = a.distance ?? Infinity;
-  const bMiles = b.distance ?? Infinity;
-  return aMiles - bMiles;
+  const aPriority = parseInt(a.priority, 10) || Infinity;
+  const bPriority = parseInt(b.priority, 10) || Infinity;
+  if (aPriority !== bPriority) return aPriority - bPriority;
+
+  return (a.organization || "").localeCompare(b.organization || "");
 }
 
 function sortRecords(records, sortColumn, sortDirection) {
