@@ -1,12 +1,14 @@
 // src/MainApp.js
-import React, { lazy, Suspense, useEffect, useRef } from "react";
+import React, { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useLocation, useParams, useSearchParams, useNavigate, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { Helmet } from "react-helmet-async";
 // Import Announcement components
 import AnnouncementManager from './components/AnnouncementManager';
-import TrainingSessionManager from './components/TrainingSessionManager';
 import ScheduledReload from './components/ScheduledReload';
+import { useTraining } from './Contexts/TrainingContext';
+import { TrainingProvider } from './Contexts/TrainingProvider';
+import TrainingPopup from './components/TrainingPopup';
 
 import { AppDataProvider, useAppData } from "./Contexts/AppDataContext";
 import { supabase } from "./supabaseClient";
@@ -21,15 +23,54 @@ const ReportsPage = lazy(() => import("./views/ReportsPage"));
 const SupportPage = lazy(() => import("./views/SupportPage"));
 const AnnouncementsPage = lazy(() => import("./views/AnnouncementsPage"));
 
-// MUTED for interim production testing of the Training page (the /training
-// footer link is also pulled). Flip to true to re-enable. NOTE: a redesign is
-// planned before re-enabling — reuse the Training info panel as the popup,
-// fire 15 min before → 15 min after start, and add a "Not Now" action that
-// minimizes it to a small "Join" chip in a screen corner for that same window.
-const TRAINING_POPUP_ENABLED = false;
+// Training reminders: the /find popup (shown after announcements, once per day)
+// + the transforming footer "Training Session" button, both driven by
+// TrainingProvider. Set false to fully mute (e.g. another round of testing).
+const TRAINING_POPUP_ENABLED = true;
+
+// Pop the training modal once per device/day, on the first /find landing AFTER
+// announcements clear, desktop only (mobile uses the footer bar). The 0.8s gap
+// breaks the announcement "close-close" rhythm so it isn't reflexively dismissed.
+const POPUP_GAP_MS = 800;
+const POPUP_SHOWN_KEY = "crg_training_popup_shown";
+
+function TrainingPopupTrigger({ announcementsDone }) {
+  const { todaySession, openPopup } = useTraining();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!announcementsDone) return undefined;
+    if (location.pathname !== "/find") return undefined;
+    if (!todaySession) return undefined;
+    if (window.matchMedia("(max-width: 1023px)").matches) return undefined; // desktop-only modal
+
+    const id = todaySession.id_no;
+    let shown;
+    try {
+      shown = new Set(JSON.parse(localStorage.getItem(POPUP_SHOWN_KEY) || "[]"));
+    } catch {
+      shown = new Set();
+    }
+    if (shown.has(id)) return undefined;
+
+    const t = setTimeout(() => {
+      try {
+        shown.add(id);
+        localStorage.setItem(POPUP_SHOWN_KEY, JSON.stringify(Array.from(shown)));
+      } catch {
+        /* best-effort only */
+      }
+      openPopup();
+    }, POPUP_GAP_MS);
+    return () => clearTimeout(t);
+  }, [announcementsDone, location.pathname, todaySession, openPopup]);
+
+  return null;
+}
 
 export default function MainApp({ loggedInUser, onLogout }) {
   const location = useLocation();
+  const [announcementsDone, setAnnouncementsDone] = useState(false);
 
   useEffect(() => {
     if (window.gtag) {
@@ -61,15 +102,27 @@ useEffect(() => {
 
   return (
     <AppDataProvider loggedInUser={loggedInUser} onLogout={onLogout}>
-      {/* Add ScheduledReload component */}
-      <ScheduledReload />
-      {/* Add AnnouncementManager */}
-      {loggedInUser && <AnnouncementManager loggedInUser={loggedInUser} />}
-      {/* Training "starting now" popup — fires for anyone in the app (guests
-          included), wherever they are, when a session goes live. Muted during
-          interim production testing (see TRAINING_POPUP_ENABLED above). */}
-      {TRAINING_POPUP_ENABLED && <TrainingSessionManager />}
-      <AppContent loggedInUser={loggedInUser} />
+      <TrainingProvider>
+        {/* Add ScheduledReload component */}
+        <ScheduledReload />
+        {/* Announcements show first; onComplete unblocks the training popup */}
+        {loggedInUser && (
+          <AnnouncementManager
+            loggedInUser={loggedInUser}
+            onComplete={() => setAnnouncementsDone(true)}
+          />
+        )}
+        {/* Training reminder popup — pops once on the first /find landing of the
+            day, AFTER announcements. The transforming footer "Training Session"
+            button (Footer.js) is the persistent reminder. Flag-gated above. */}
+        {TRAINING_POPUP_ENABLED && (
+          <>
+            <TrainingPopupTrigger announcementsDone={announcementsDone} />
+            <TrainingPopup />
+          </>
+        )}
+        <AppContent loggedInUser={loggedInUser} />
+      </TrainingProvider>
     </AppDataProvider>
   );
 }

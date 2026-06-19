@@ -1028,6 +1028,18 @@ The `scripts/sync-to-supabase.js` script includes a `transformAnnouncement()` fu
 - `src/views/AnnouncementsPage.js` - Announcements history page
 - `scripts/sync-to-supabase.js` - Includes announcement sync with HTML generation
 
+## Sync Gotcha: "Loading..." in synced fields (RECURRING)
+
+**Symptom:** Some records show the literal text `Loading...` (or `Loading . . .`) in the Hours column (or any other field) instead of their real value.
+
+**Cause:** The sync script snapshots whatever each Google Sheet cell *currently shows*. Formula-driven cells (`IMPORTRANGE`, `GOOGLETRANSLATE`, `ARRAYFORMULA`, etc.) display the literal text `Loading...` while still recalculating — they re-fetch on sheet open and after edits. If `npm run sync` runs during that window, it writes `Loading...` into Supabase. For `org_hours`, this then renders as-is via the formatter's legacy/raw-string fallback ([formatters.js](src/utils/formatters.js)). **This is a data/sync timing issue, not a code bug** — the string `Loading...` does not exist anywhere in the codebase.
+
+**Fix:** Wait for the sheet to fully settle (no cell anywhere shows `Loading...`) before running `npm run sync`. After syncing, verify clean:
+```sql
+SELECT id_no, organization FROM directory WHERE org_hours ILIKE '%Loading%';
+```
+Zero rows = clean. (Has happened more than once — the fix is always the same: re-sync from a settled sheet.)
+
 ## Help System (LLM-Powered)
 
 The Help system provides an AI-powered chat assistant that helps users learn how to use the CRG app. It uses Claude (Anthropic API) to answer questions with contextual, visual responses.

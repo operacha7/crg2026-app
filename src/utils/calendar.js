@@ -131,6 +131,63 @@ export function getSessionDisplayParts(session) {
   };
 }
 
+// ── Join-button state machine ────────────────────────────────────────────────
+// Shared by the Training page, the in-app popup, and the footer button. All
+// windows are relative to the session start time S:
+//   future (gray)    now < S − 20m    → "Starts …" countdown, not clickable
+//   soon   (yellow)  S − 20m → S − 5m → "Starts …" countdown, not clickable
+//   live   (green)   S − 5m  → S + 5m → "Join Now - Live" + pulse
+//   late   (orange)  S + 5m  → S + 15m → "Join Now" + pulse
+//   gone             now ≥ S + 15m    → panel/button removed
+export const TRAINING_YELLOW_BEFORE_MS = 20 * 60 * 1000;
+export const TRAINING_GREEN_BEFORE_MS = 5 * 60 * 1000;
+export const TRAINING_GREEN_AFTER_MS = 5 * 60 * 1000;
+export const TRAINING_REMOVE_AFTER_MS = 15 * 60 * 1000;
+
+export function getButtonState(start, now) {
+  if (!start) return "unavailable";
+  const s = start.getTime();
+  if (now >= s + TRAINING_REMOVE_AFTER_MS) return "gone";
+  if (now < s - TRAINING_YELLOW_BEFORE_MS) return "future"; // gray
+  if (now < s - TRAINING_GREEN_BEFORE_MS) return "soon"; // yellow
+  if (now < s + TRAINING_GREEN_AFTER_MS) return "live"; // green
+  return "late"; // orange (→ +15m)
+}
+
+// Humanized time-until-start for the non-clickable gray + yellow states, e.g.
+// "Starts 3d 4h" / "Starts 2h 14m" / "Starts 18m".
+export function formatCountdown(startMs, now) {
+  const ms = startMs - now;
+  if (ms <= 0) return "Starts now";
+  const totalMin = Math.floor(ms / 60000);
+  const days = Math.floor(totalMin / 1440);
+  if (days >= 1) {
+    const hrs = Math.floor((totalMin % 1440) / 60);
+    return `Starts ${days}d ${hrs}h`;
+  }
+  const hours = Math.floor(totalMin / 60);
+  const mins = totalMin % 60;
+  if (hours >= 1) return `Starts ${hours}h ${mins}m`;
+  return `Starts ${mins}m`;
+}
+
+// The single session to surface in the footer button / popup: the one currently
+// in its live/late window if any, else the earliest upcoming session whose start
+// is TODAY (Central) and which hasn't passed its +15m cutoff. null if none.
+export function getRelevantTodaySession(sessions, now) {
+  if (!Array.isArray(sessions)) return null;
+  const todayKey = centralYmd(new Date(now));
+  const candidates = sessions
+    .map((s) => ({ s, start: centralWallClockToDate(s.session_date, s.start_time) }))
+    .filter(({ start }) => start && now < start.getTime() + TRAINING_REMOVE_AFTER_MS)
+    .filter(({ start }) => centralYmd(start) === todayKey)
+    .sort((a, b) => a.start - b.start);
+  const liveNow = candidates.find(
+    ({ start }) => now >= start.getTime() - TRAINING_GREEN_BEFORE_MS
+  );
+  return (liveNow || candidates[0])?.s || null;
+}
+
 // Central-time calendar day key for a Date instant, "YYYY-MM-DD" (en-CA gives
 // ISO order). Used by the sidebar calendar to mark session days / today in
 // Houston time regardless of the viewer's own timezone.

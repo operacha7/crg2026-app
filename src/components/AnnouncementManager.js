@@ -1,7 +1,7 @@
 // src/components/AnnouncementManager.js
 // 2026 Redesign - Updated to use new AnnouncementService API
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import AnnouncementService from '../services/AnnouncementService';
@@ -15,11 +15,21 @@ import AnnouncementPopup from './AnnouncementPopup';
  * - Service handles audience_code filtering based on user.isGuest
  * - Supports guest users seeing audience_code 1 and 3
  */
-const AnnouncementManager = ({ loggedInUser }) => {
+const AnnouncementManager = ({ loggedInUser, onComplete }) => {
   const [announcements, setAnnouncements] = useState([]);
   const [currentAnnouncementIndex, setCurrentAnnouncementIndex] = useState(0);
   const [showPopup, setShowPopup] = useState(false);
   const [initialized, setInitialized] = useState(false);
+
+  // Fire onComplete exactly once — when the last announcement is dismissed, or
+  // immediately if there are none / they're suppressed (mobile). The training
+  // popup waits on this so it never stacks on top of an announcement.
+  const completedRef = useRef(false);
+  const fireComplete = useCallback(() => {
+    if (completedRef.current) return;
+    completedRef.current = true;
+    onComplete?.();
+  }, [onComplete]);
 
   // Defer the popup while the login modal is up — otherwise the announcement
   // stacks behind the modal where it can't be read or dismissed. Once the user
@@ -36,6 +46,7 @@ const AnnouncementManager = ({ loggedInUser }) => {
       // Desktop users still see them; announcements remain accessible via the Announcements page.
       if (window.matchMedia("(max-width: 1023px)").matches) {
         setInitialized(true);
+        fireComplete(); // no announcements shown on mobile → unblock the training popup
         return;
       }
 
@@ -49,6 +60,8 @@ const AnnouncementManager = ({ loggedInUser }) => {
         // Show the first announcement if there are any
         if (activeAnnouncements.length > 0) {
           setShowPopup(true);
+        } else {
+          fireComplete(); // nothing to show → unblock the training popup now
         }
 
         setInitialized(true);
@@ -72,6 +85,7 @@ const AnnouncementManager = ({ loggedInUser }) => {
     } else {
       // No more announcements, close the popup
       setShowPopup(false);
+      fireComplete(); // last one dismissed → the training popup may now appear
     }
   };
 

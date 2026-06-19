@@ -42,6 +42,37 @@
   }
 }
 
+/* --- Training "Join Now" attention pulse ---
+   Functional glow on the live/late (green/orange) Join buttons + the footer
+   Training Session button. An expanding ring radiates out in the button's own
+   color, set per-state via the inline --training-glow-rgb custom property
+   (green "8,255,8" / orange "255,123,25"). The base drop shadow is baked into
+   each keyframe so it survives while the ring animates. No layout shift. */
+@keyframes training-glow-pulse {
+  0% {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25),
+      0 0 0 0 rgba(var(--training-glow-rgb, 8, 255, 8), 0.7);
+  }
+  70% {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25),
+      0 0 0 12px rgba(var(--training-glow-rgb, 8, 255, 8), 0);
+  }
+  100% {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25),
+      0 0 0 0 rgba(var(--training-glow-rgb, 8, 255, 8), 0);
+  }
+}
+
+.training-pulse {
+  animation: training-glow-pulse 1.6s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .training-pulse {
+    animation: none;
+  }
+}
+
 /* --- Reports table row hover --- */
 tr.reports-row-hover:hover,
 tr.reports-row-hover:hover td {

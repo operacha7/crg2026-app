@@ -123,13 +123,13 @@ export default function App() {
   const handleLogout = () => {
     setLogoutInProgress(true);
     setUser(null);
-    // Reset the training "starting now" popup dedupe so a fresh login during a
-    // live session is re-prompted. Key must match SHOWN_STORAGE_KEY in
-    // src/components/TrainingSessionManager.js. Within a single visit (refresh /
-    // navigation, no logout) the flag persists, so the popup still shows only
-    // once per session.
+    // Reset the training popup dedupe so a fresh login the same day is
+    // re-prompted. Key must match POPUP_SHOWN_KEY in src/MainApp.js. Within a
+    // single visit (refresh / navigation, no logout) the flag persists, so the
+    // popup still shows only once.
     try {
       localStorage.removeItem("crg_training_popup_shown");
+      localStorage.removeItem("crg_training_minimized");
       // Reset the guest-session dedupe so that if this browser re-enters the
       // app as a guest after logging out, it counts as a new session. Without
       // this the flag persists for the tab's lifetime and a post-logout

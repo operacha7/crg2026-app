@@ -52,21 +52,21 @@
   --color-training-cell-border: #E2DFD5;      /* DATE/STARTS/etc. cell borders */
   --color-training-cell-highlight-bg: #FBF1D6;/* amber-tinted DURATION cell */
 
-  /* Join button — four states */
-  --color-training-join-soon-bg: #5CB85C;     /* lighter green: 15 min before → start ("Join - Starts in Xm") */
-  --color-training-join-soon-text: #FFFFFF;
-  --color-training-join-live-bg: #2F8F3E;     /* green + pulsing dot: start → +15 min */
-  --color-training-join-live-text: #FFFFFF;
-  --color-training-join-live-dot: #BFF0C8;    /* pale dot inside the live button */
-  --color-training-join-late-bg: #F0B429;     /* amber: +15 min → end */
-  --color-training-join-late-text: #FFFFFF;
-  --color-training-join-future-bg: #5C6168;   /* gray: more than 15 min out (countdown) */
-  --color-training-join-future-text: #FFFFFF;
+  /* Join button — four states (windows relative to start time S) */
+  --color-training-join-soon-bg: #FFFF00;     /* yellow: S−20m → S−5m ("Starts …", not clickable) */
+  --color-training-join-soon-text: #1A1A1A;
+  --color-training-join-live-bg: #08FF08;     /* bright green + pulsing dot: S−5m → S+5m ("Join Now - Live") */
+  --color-training-join-live-text: #1A1A1A;
+  --color-training-join-live-dot: #1A1A1A;    /* dark dot inside the live button */
+  --color-training-join-late-bg: #FF7B19;     /* orange: S+5m → S+15m ("Join Now") */
+  --color-training-join-late-text: #1A1A1A;
+  --color-training-join-future-bg: #D0D3D5;   /* gray: more than 20 min out (countdown "Starts …") */
+  --color-training-join-future-text: #1A1A1A;
 
   /* Status tag (top-left of card) */
-  --color-training-tag-live: #2F8F3E;         /* "LIVE NOW" text + pulsing dot (start → +15m) */
-  --color-training-tag-soon: #2F8F3E;         /* "STARTING SOON" text + steady dot (15m before → start) */
-  --color-training-tag-upcoming: #B07A00;     /* "UPCOMING" text (more than 15m out) */
+  --color-training-tag-live: #2F8F3E;         /* "LIVE NOW" text + pulsing dot (S−5m → S+15m) */
+  --color-training-tag-soon: #2F8F3E;         /* "STARTING SOON" text + steady dot (S−20m → S−5m) */
+  --color-training-tag-upcoming: #B07A00;     /* "UPCOMING" text (more than 20m out) */
   --color-training-tag-upcoming-dot: #F0B429; /* "UPCOMING" dot (not pulsing) */
 
   /* Sidebar calendar */
