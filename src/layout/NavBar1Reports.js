@@ -15,7 +15,9 @@ const REPORT_OPTIONS = [
   { id: 'usage-tables', label: 'Usage Data Table' },
   { id: 'coverage', label: 'The Matt Report', color: '#f7f584' },
   { id: 'map2-v2', label: 'New Zip Code Maps', color: '#de84f7' },
-  { id: 'map2', label: 'Zip Code Maps', color: '#9df784' },
+  // Hidden for now (superseded by "New Zip Code Maps"). Not deleted yet — restore
+  // this line to bring it back, or remove the underlying map2 code to delete fully.
+  // { id: 'map2', label: 'Zip Code Maps', color: '#9df784' },
   { id: 'consolidated', label: 'Zip Code Data', color: '#84f7f5' },
 ];
 
