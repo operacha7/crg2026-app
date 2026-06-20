@@ -78,12 +78,13 @@ module.exports = {
         'reports-row-hover': 'var(--color-results-row-hover-bg)',
       },
       fontFamily: {
-        body: ["Lexend", "sans-serif"],
-        lexend: ["Lexend", "sans-serif"],
+        // Open Sans is the single app-wide body font; Comfortaa is title-only.
+        // `body`/`lexend` kept as aliases (now mapped to Open Sans) for back-compat.
+        body: ['"Open Sans"', "sans-serif"],
+        lexend: ['"Open Sans"', "sans-serif"],
         comfortaa: ["Comfortaa", "cursive"],
-        label: ['"Montserrat"', "sans-serif"],
+        label: ['"Open Sans"', "sans-serif"],
         opensans: ['"Open Sans"', "sans-serif"],
-        handlee: ['"Marcellus SC"', "sans-serif"],
       },
       fontSize: {
         'footer': 'var(--font-size-footer)',

@@ -136,7 +136,7 @@ Results display format is consistent regardless of filters applied.
 ### Results Header (`src/layout/ResultsHeader.js`)
 - Height: 30px
 - Background: `#B8001F` (red - same as footer)
-- Text: white, Lexend, 14px, 2% letter-spacing
+- Text: white, Open Sans, 14px, 2% letter-spacing
 - **Grid columns aligned with ResultRow:** `4% 3% 20% 8% 17% 6% 6% 33% 3%`
 - Columns: Select | Miles | Organization | Assistance | Hours | Status | Telephone | Requirements | Zip
 - Column gaps (paddingLeft): Hours +30px, Status +40px, Telephone +20px
@@ -604,8 +604,8 @@ All design values defined as CSS custom properties, referenced by Tailwind confi
 - Expand/collapse: `--color-results-expand-chevron: #FF0004`, `--color-results-distance-label: #666666`
 - Tooltip: `--color-tooltip-bg: #1F2937`, `--color-tooltip-text: #FFFFFF`, `--font-size-tooltip: 12px`
 
-**Fonts:**
-- Lexend (body - primary font for all UI, weights: 400, 500, 600, 700)
+**Fonts:** (only these two — standardized June 2026; Lexend/Montserrat/Marcellus SC/Lora all removed)
+- Open Sans (body - the single primary font for ALL UI, weights: 400, 500, 600, 700). Applied app-wide via the `font-opensans` root wrapper in `App.js` + `--font-family-body`. The `body`/`lexend` Tailwind aliases are kept for back-compat but now map to Open Sans.
 - Comfortaa (title only - "Community Resources Guide Houston")
 
 **Hover Effects:**

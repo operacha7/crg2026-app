@@ -22,7 +22,7 @@ const X_READY_MS = 550; // X becomes visible/clickable this long after open
 
 export default function TrainingPopup() {
   const {
-    todaySession,
+    upcomingSession,
     now,
     popupOpen,
     closePopup,
@@ -56,7 +56,7 @@ export default function TrainingPopup() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [popupOpen]);
 
-  if (!popupOpen || !todaySession) return null;
+  if (!popupOpen || !upcomingSession) return null;
 
   const handleClose = async () => {
     if (closing) return;
@@ -128,7 +128,7 @@ export default function TrainingPopup() {
     closePopup();
   };
 
-  const id = todaySession.id_no;
+  const id = upcomingSession.id_no;
 
   return (
     <motion.div
@@ -145,11 +145,11 @@ export default function TrainingPopup() {
         animate={panelControls}
       >
         <SessionCard
-          session={todaySession}
+          session={upcomingSession}
           now={now}
           count={getCount(id)}
           alreadyAdded={isAdded(id)}
-          onCalendarAdd={() => trackCalendarAdd(todaySession)}
+          onCalendarAdd={() => trackCalendarAdd(upcomingSession)}
           singleRowGrid
         />
 

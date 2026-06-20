@@ -987,7 +987,7 @@ export default function NavBar3() {
             lets long names truncate at narrow viewports instead of forcing
             the left cluster off-screen. */}
         <div
-          className="font-handlee"
+          className="font-opensans"
           style={{
             color: "var(--color-navbar3-user-text, #FFFFFF)",
             fontSize: "var(--font-size-navbar3-user)",
@@ -1053,7 +1053,7 @@ export default function NavBar3() {
               for mobile. Truncates with ellipsis rather than wrapping so the
               chips row below stays on the second line as intended. */}
           <div
-            className="font-handlee"
+            className="font-opensans"
             style={{
               color: "var(--color-navbar3-user-text, #FFFFFF)",
               fontSize: "14px",

@@ -12,7 +12,8 @@
 import { createContext, useContext } from "react";
 
 export const TRAINING_DEFAULT = {
-  todaySession: null,
+  upcomingSession: null,
+  isToday: false,
   buttonState: "unavailable",
   now: 0,
   popupOpen: false,

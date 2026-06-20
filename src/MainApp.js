@@ -28,23 +28,25 @@ const AnnouncementsPage = lazy(() => import("./views/AnnouncementsPage"));
 // TrainingProvider. Set false to fully mute (e.g. another round of testing).
 const TRAINING_POPUP_ENABLED = true;
 
-// Pop the training modal once per device/day, on the first /find landing AFTER
-// announcements clear, desktop only (mobile uses the footer bar). The 0.8s gap
-// breaks the announcement "close-close" rhythm so it isn't reflexively dismissed.
+// Pop the training modal once per session, on the first /find landing AFTER
+// announcements clear, desktop only (mobile uses the footer bar). Fires ONLY on
+// the session's own day — advance notice in the week before is handled by the
+// chyron above the footer, not the popup. The 0.8s gap breaks the announcement
+// "close-close" rhythm so it isn't reflexively dismissed.
 const POPUP_GAP_MS = 800;
 const POPUP_SHOWN_KEY = "crg_training_popup_shown";
 
 function TrainingPopupTrigger({ announcementsDone }) {
-  const { todaySession, openPopup } = useTraining();
+  const { upcomingSession, isToday, openPopup } = useTraining();
   const location = useLocation();
 
   useEffect(() => {
     if (!announcementsDone) return undefined;
     if (location.pathname !== "/find") return undefined;
-    if (!todaySession) return undefined;
+    if (!upcomingSession || !isToday) return undefined; // day-of only
     if (window.matchMedia("(max-width: 1023px)").matches) return undefined; // desktop-only modal
 
-    const id = todaySession.id_no;
+    const id = upcomingSession.id_no;
     let shown;
     try {
       shown = new Set(JSON.parse(localStorage.getItem(POPUP_SHOWN_KEY) || "[]"));
@@ -63,7 +65,7 @@ function TrainingPopupTrigger({ announcementsDone }) {
       openPopup();
     }, POPUP_GAP_MS);
     return () => clearTimeout(t);
-  }, [announcementsDone, location.pathname, todaySession, openPopup]);
+  }, [announcementsDone, location.pathname, upcomingSession, openPopup]);
 
   return null;
 }

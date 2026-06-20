@@ -5,7 +5,10 @@
 // homepage components (Footer) read.
 //
 // Fetches the sessions once, ticks every 30s, and provides:
-//   - todaySession  : the one session to surface (live now, else next today) or null
+//   - upcomingSession : the one session to surface — live now, else the earliest
+//                       session starting within the look-ahead window (~1 week) —
+//                       or null. Broadened from today-only so users get advance
+//                       notice and can add it to their calendar days ahead.
 //   - buttonState   : its getButtonState() value (future/soon/live/late/gone/unavailable)
 //   - popupOpen + openPopup()/closePopup()
 //   - footerButtonRef : the footer button's DOM node, so the popup can "shoosh" into it
@@ -13,7 +16,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { dataService } from "../services/dataService";
-import { getRelevantTodaySession, getButtonState, sessionToInstants } from "../utils/calendar";
+import { getUpcomingSession, getButtonState, sessionToInstants, centralYmd, TRAINING_LEAD_MS } from "../utils/calendar";
 import { TrainingContext } from "./TrainingContext";
 
 const TICK_MS = 30 * 1000;
@@ -71,13 +74,25 @@ export function TrainingProvider({ children }) {
     return () => clearInterval(id);
   }, []);
 
-  const todaySession = useMemo(() => getRelevantTodaySession(sessions, now), [sessions, now]);
+  const upcomingSession = useMemo(
+    () => getUpcomingSession(sessions, now, TRAINING_LEAD_MS),
+    [sessions, now]
+  );
 
   const buttonState = useMemo(() => {
-    if (!todaySession) return "unavailable";
-    const { start } = sessionToInstants(todaySession);
+    if (!upcomingSession) return "unavailable";
+    const { start } = sessionToInstants(upcomingSession);
     return getButtonState(start, now);
-  }, [todaySession, now]);
+  }, [upcomingSession, now]);
+
+  // Whether the surfaced session falls on the current Central calendar day.
+  // Splits the two notice mechanisms: advance days → chyron; the day itself →
+  // popup + color-changing footer button.
+  const isToday = useMemo(() => {
+    if (!upcomingSession) return false;
+    const { start } = sessionToInstants(upcomingSession);
+    return !!start && centralYmd(start) === centralYmd(new Date(now));
+  }, [upcomingSession, now]);
 
   const value = useMemo(() => {
     const trackCalendarAdd = (session) => {
@@ -98,7 +113,7 @@ export function TrainingProvider({ children }) {
     // popup is closed (the panel whooshes down into the footer button). Persisted
     // so the indicator stays after a reload that day.
     const minimize = () => {
-      const id = todaySession?.id_no;
+      const id = upcomingSession?.id_no;
       if (id == null) return;
       setMinimizedIds((prev) => {
         if (prev.has(id)) return prev;
@@ -109,20 +124,21 @@ export function TrainingProvider({ children }) {
     };
 
     return {
-      todaySession,
+      upcomingSession,
+      isToday,
       buttonState,
       now,
       popupOpen,
       openPopup: () => setPopupOpen(true),
       closePopup: () => setPopupOpen(false),
-      minimized: todaySession ? minimizedIds.has(todaySession.id_no) : false,
+      minimized: upcomingSession ? minimizedIds.has(upcomingSession.id_no) : false,
       minimize,
       footerButtonRef,
       getCount: (id) => counts[id] || 0,
       isAdded: (id) => addedIds.has(id),
       trackCalendarAdd,
     };
-  }, [todaySession, buttonState, now, popupOpen, counts, addedIds, minimizedIds]);
+  }, [upcomingSession, isToday, buttonState, now, popupOpen, counts, addedIds, minimizedIds]);
 
   return <TrainingContext.Provider value={value}>{children}</TrainingContext.Provider>;
 }

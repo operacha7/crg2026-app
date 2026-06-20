@@ -4,18 +4,22 @@
 //   2. Red copyright bar (unchanged from prior versions)
 // Renders on every page — homepage, public pages, and in-app.
 //
-// On training days (in-app, where TrainingProvider is mounted) the "Training"
-// link transforms into the enlarged "Training Session — …" button that carries
-// the session's state (gray/yellow/green/orange) and glow-pulses on green/orange.
-// The teal tier auto-grows to fit it. Public pages (no provider) show the plain
-// "Training" link. On mobile the teal tier is hidden, so the training button
-// appears instead as a full-width bar above the copyright line.
+// Training notice splits by timing (in-app, where TrainingProvider is mounted):
+//   - In the WEEK BEFORE a session (not its day): a yellow "breaking news"
+//     chyron scrolls above the teal tier telling users to click "Training" to
+//     schedule. The teal tier keeps its plain "Training" link as the target.
+//   - On the session's OWN DAY: the "Training" link transforms into the enlarged
+//     "Training Session — …" button carrying the live state (gray/yellow/green/
+//     orange) that glow-pulses on green/orange. The teal tier auto-grows for it.
+// Public pages (no provider) show the plain "Training" link only. On mobile the
+// teal tier is hidden, so the day-of button appears as a full-width bar above the
+// copyright line, and the advance chyron still shows full-width.
 
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { USFlagIcon } from "../icons";
 import { useTraining } from "../Contexts/TrainingContext";
-import { sessionToInstants, formatCountdown } from "../utils/calendar";
+import { sessionToInstants, getSessionDisplayParts, formatCountdown } from "../utils/calendar";
 
 const SECONDARY_LINKS = [
   { label: "Training", to: "/training" },
@@ -31,6 +35,17 @@ const SECONDARY_LINKS = [
 
 // Glow ring color (rgb triplet for the .training-pulse keyframe) per state.
 const GLOW = { live: "8, 255, 8", late: "255, 123, 25" };
+
+// How many right→left passes the advance chyron makes before it collapses for
+// the rest of the visit. Tunable.
+const CHYRON_PASSES = 2;
+
+// Amber "emergency beacon" used on the teal-footer Training link whenever a
+// session is in the look-ahead window (a slow pulse — deliberately well under the
+// 3-flashes/sec photosensitivity limit; disabled entirely by prefers-reduced-
+// motion via .training-pulse). #FFB302 as an rgb triplet for the glow keyframe.
+const BEACON_AMBER = "#FFB302";
+const BEACON_RGB = "255, 179, 2";
 
 // Button fill/text tokens per state (shared with the SessionCard Join button).
 function trainingColors(state) {
@@ -51,8 +66,8 @@ function trainingSuffix(state, startMs, now) {
   return formatCountdown(startMs, now).replace(/^Starts\s+/, "");
 }
 
-// The transforming Training Session button. `fullWidth` is the mobile bar
-// variant; otherwise it's the inline enlarged button in the teal tier.
+// Day-of "Training Session — …" button. `fullWidth` is the mobile bar variant;
+// otherwise it's the inline enlarged button in the teal tier.
 function TrainingFooterButton({ session, state, now, fullWidth, buttonRef }) {
   const { start } = sessionToInstants(session);
   const colors = trainingColors(state);
@@ -86,24 +101,116 @@ function TrainingFooterButton({ session, state, now, fullWidth, buttonRef }) {
   );
 }
 
+// Advance-notice "breaking news" chyron — amber bar (same amber as the Training
+// beacon, so the whole "upcoming — plan ahead" story is one color) that scrolls
+// the schedule reminder a few times then collapses for the rest of the visit.
+// Shown only in the days BEFORE a session (the day-of button replaces it).
+// Reduced-motion users get the message statically (no scroll, no auto-hide).
+function TrainingChyron({ session }) {
+  const [done, setDone] = useState(false);
+  const reduce =
+    typeof window !== "undefined" &&
+    window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const parts = getSessionDisplayParts(session);
+  if (!parts || done) return null;
+
+  const message = `Next Live Training Session on ${parts.weekdayDate} at ${parts.startTime}  —  Click “Training” below to schedule.`;
+
+  return (
+    <div
+      className="w-full overflow-hidden"
+      role="status"
+      aria-live="polite"
+      style={{
+        background: BEACON_AMBER,
+        color: "#1A1A1A",
+        height: 30,
+        display: "flex",
+        alignItems: "center",
+        fontWeight: 700,
+        fontSize: 14,
+        letterSpacing: "0.3px",
+        borderTop: "1px solid rgba(0,0,0,0.18)",
+        borderBottom: "1px solid rgba(0,0,0,0.18)",
+      }}
+    >
+      {reduce ? (
+        <span style={{ width: "100%", textAlign: "center", padding: "0 12px" }}>
+          {message}
+        </span>
+      ) : (
+        <span
+          className="training-chyron-track"
+          style={{ animationIterationCount: CHYRON_PASSES }}
+          onAnimationEnd={() => setDone(true)}
+        >
+          {message}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// The teal-tier "Training" link in its advance state: an amber emergency-beacon
+// LED + amber label, so it stands out from the white sibling links whenever a
+// session is coming up (and the day-of color button isn't showing yet).
+function TrainingBeaconLink() {
+  return (
+    <Link
+      to="/training"
+      className="hover:brightness-110"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 7,
+        color: BEACON_AMBER,
+        fontWeight: 700,
+        textDecoration: "none",
+      }}
+    >
+      <span
+        className="training-pulse"
+        aria-hidden="true"
+        style={{
+          flexShrink: 0,
+          width: 9,
+          height: 9,
+          borderRadius: "50%",
+          background: BEACON_AMBER,
+          "--training-glow-rgb": BEACON_RGB,
+        }}
+      />
+      Training
+    </Link>
+  );
+}
+
 export default function Footer() {
   const currentYear = new Date().getFullYear();
-  const { todaySession, buttonState, now, minimized, footerButtonRef } = useTraining();
+  const { upcomingSession, isToday, buttonState, now, minimized, footerButtonRef } = useTraining();
 
-  // There's a surface-able session today (not past its cutoff).
-  const hasTodaySession =
-    !!todaySession && buttonState !== "gone" && buttonState !== "unavailable";
-  // The DESKTOP teal-tier button only appears once the popup has been closed
-  // (minimized) — the panel "whooshes" down into it. Until then the teal tier
-  // shows the plain "Training" link. The mobile bar (there is no popup on
-  // mobile) shows the indicator directly.
-  const showDesktopButton = hasTodaySession && minimized;
+  // There's a surface-able session within the look-ahead window (not past its cutoff).
+  const hasUpcomingSession =
+    !!upcomingSession && buttonState !== "gone" && buttonState !== "unavailable";
+  // Advance notice (days before the session) → chyron above the teal tier.
+  const showChyron = hasUpcomingSession && !isToday;
+  // Day-of → the color-changing button. On DESKTOP it only appears once the popup
+  // has been closed (minimized) — the panel "whooshes" down into it; until then
+  // the teal tier shows the plain "Training" link. Mobile has no popup, so its
+  // full-width bar shows the day-of button directly.
+  const showDesktopButton = hasUpcomingSession && isToday && minimized;
+  const showMobileButton = hasUpcomingSession && isToday;
 
   return (
     <>
+      {/* Advance-notice chyron — sits directly above the teal tier. */}
+      {showChyron && <TrainingChyron session={upcomingSession} />}
+
       {/* Teal secondary tier — hidden on mobile (links live in the hamburger).
           minHeight (not fixed height) so it auto-grows for the taller training
-          button on training days; extra vertical padding only when it's shown. */}
+          button on the session's day; extra vertical padding only when shown. */}
       <div
         className="hidden lg:flex items-center justify-center w-full"
         style={{
@@ -111,7 +218,7 @@ export default function Footer() {
           color: "var(--color-footer-secondary-text)",
           minHeight: "var(--height-footer-secondary)",
           padding: showDesktopButton ? "8px 0" : 0,
-          fontFamily: "var(--font-family-body)",
+          fontFamily: "'Open Sans', sans-serif",
           fontSize: "var(--font-size-footer-secondary)",
         }}
       >
@@ -123,11 +230,13 @@ export default function Footer() {
             <React.Fragment key={link.to}>
               {link.to === "/training" && showDesktopButton ? (
                 <TrainingFooterButton
-                  session={todaySession}
+                  session={upcomingSession}
                   state={buttonState}
                   now={now}
                   buttonRef={footerButtonRef}
                 />
+              ) : link.to === "/training" && hasUpcomingSession ? (
+                <TrainingBeaconLink />
               ) : (
                 <Link
                   to={link.to}
@@ -145,12 +254,12 @@ export default function Footer() {
         </nav>
       </div>
 
-      {/* Mobile training bar — the teal tier is hidden on mobile, so on training
-          days surface the button as a full-width bar above the copyright line. */}
-      {hasTodaySession && (
+      {/* Mobile training bar — the teal tier is hidden on mobile, so on the
+          session's day surface the button as a full-width bar above copyright. */}
+      {showMobileButton && (
         <div className="lg:hidden w-full">
           <TrainingFooterButton
-            session={todaySession}
+            session={upcomingSession}
             state={buttonState}
             now={now}
             fullWidth

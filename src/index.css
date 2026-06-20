@@ -73,6 +73,39 @@
   }
 }
 
+/* --- Training advance-notice chyron --------------------------------------
+   A "breaking news" ticker above the teal footer, shown in the week BEFORE a
+   session (not on its day). The inner text scrolls right→left a fixed number of
+   times then the bar collapses (JS removes it on animationend). Starts just off
+   the right viewport edge (100vw) and ends fully off the left (-100% of its own
+   width). Pure transform → cheap, no layout thrash. */
+@keyframes training-chyron {
+  from {
+    transform: translateX(100vw);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+.training-chyron-track {
+  display: inline-block;
+  white-space: nowrap;
+  will-change: transform;
+  /* count is set inline via animation-iteration-count so it's tunable in JS */
+  animation-name: training-chyron;
+  animation-duration: 30s;
+  animation-timing-function: linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* No scroll for motion-sensitive users — the bar shows the message statically
+     (centered) and simply stays put; JS skips the auto-hide. */
+  .training-chyron-track {
+    animation: none;
+  }
+}
+
 /* --- Reports table row hover --- */
 tr.reports-row-hover:hover,
 tr.reports-row-hover:hover td {

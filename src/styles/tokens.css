@@ -286,8 +286,9 @@
    * TYPOGRAPHY
    * ========================================== */
 
-  /* Font Families */
-  --font-family-body: 'Lexend', sans-serif;
+  /* Font Families — Open Sans is the single body font app-wide; Comfortaa is
+     reserved for the title only. */
+  --font-family-body: 'Open Sans', sans-serif;
   --font-family-heading: 'Comfortaa', cursive;
 
   /* Footer Typography */
@@ -508,8 +509,8 @@
   --color-memo-btn-close-text: #000000;
   --color-memo-overlay-bg: rgba(0, 0, 0, 0.6);
 
-  /* Memo Typography */
-  --font-family-memo: 'Lora', Georgia, serif;
+  /* Memo Typography — folded into the app-wide Open Sans (was Lora serif). */
+  --font-family-memo: 'Open Sans', sans-serif;
   --line-height-memo: 1.6;
   --font-size-memo-title: 90px;
   --font-weight-memo-title: 600;

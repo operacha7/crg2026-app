@@ -171,16 +171,23 @@ export function formatCountdown(startMs, now) {
   return `Starts ${mins}m`;
 }
 
+// How far ahead a session starts surfacing in the footer button / popup. Set to
+// ~1 week so users get advance notice and can add it to their calendar before the
+// day arrives (rather than only finding out the day-of). Tunable.
+export const TRAINING_LEAD_MS = 7 * 24 * 60 * 60 * 1000;
+
 // The single session to surface in the footer button / popup: the one currently
-// in its live/late window if any, else the earliest upcoming session whose start
-// is TODAY (Central) and which hasn't passed its +15m cutoff. null if none.
-export function getRelevantTodaySession(sessions, now) {
+// in its live/late window if any, else the earliest upcoming session that starts
+// within `leadMs` from now (default ~1 week) and hasn't passed its +15m cutoff.
+// null if none. Broadened from today-only so an upcoming session is announced —
+// and can be calendar-added — days ahead, not just on its own day.
+export function getUpcomingSession(sessions, now, leadMs = TRAINING_LEAD_MS) {
   if (!Array.isArray(sessions)) return null;
-  const todayKey = centralYmd(new Date(now));
+  const horizon = now + leadMs;
   const candidates = sessions
     .map((s) => ({ s, start: centralWallClockToDate(s.session_date, s.start_time) }))
     .filter(({ start }) => start && now < start.getTime() + TRAINING_REMOVE_AFTER_MS)
-    .filter(({ start }) => centralYmd(start) === todayKey)
+    .filter(({ start }) => start.getTime() <= horizon)
     .sort((a, b) => a.start - b.start);
   const liveNow = candidates.find(
     ({ start }) => now >= start.getTime() - TRAINING_GREEN_BEFORE_MS
