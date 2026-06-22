@@ -14,11 +14,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
+import { Toaster } from "react-hot-toast";
 import HomeNavBar from "../layout/HomeNavBar";
 import Footer from "../layout/Footer";
 import { dataService } from "../services/dataService";
 import { sessionToInstants, centralYmd, TRAINING_REMOVE_AFTER_MS } from "../utils/calendar";
 import SessionCard from "../components/SessionCard";
+import TrainingMatrix from "../components/TrainingMatrix";
 
 const TICK_MS = 30 * 1000; // re-evaluate states / countdowns every 30s
 const ADDED_STORAGE_KEY = "crg_calendar_added"; // device-local dedupe, never sent
@@ -113,6 +115,10 @@ export default function TrainingPage() {
         <link rel="canonical" href="https://crghouston.org/training" />
       </Helmet>
 
+      {/* Public route (outside MainApp), so it needs its own Toaster for the
+          availability-matrix success toast. Matches MainApp's position. */}
+      <Toaster position="top-center" />
+
       <HomeNavBar />
 
       <div className="flex flex-col lg:flex-row flex-1 lg:min-h-0">
@@ -129,6 +135,11 @@ export default function TrainingPage() {
         >
           <div className="w-full lg:w-auto flex justify-center lg:block">
             <SessionCalendar sessions={visibleSessions} onSelectSession={scrollToSession} />
+          </div>
+          {/* "Suggest a better time" availability matrix — self-contained
+              (own fetch + submit); sits directly below the calendar. */}
+          <div className="w-full lg:w-auto flex justify-center lg:block">
+            <TrainingMatrix />
           </div>
         </aside>
 

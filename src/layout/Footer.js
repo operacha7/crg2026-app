@@ -38,7 +38,7 @@ const GLOW = { live: "8, 255, 8", late: "255, 123, 25" };
 
 // How many right→left passes the advance chyron makes before it collapses for
 // the rest of the visit. Tunable.
-const CHYRON_PASSES = 2;
+const CHYRON_PASSES = 1;
 
 // Amber "emergency beacon" used on the teal-footer Training link whenever a
 // session is in the look-ahead window (a slow pulse — deliberately well under the
@@ -116,7 +116,7 @@ function TrainingChyron({ session }) {
   const parts = getSessionDisplayParts(session);
   if (!parts || done) return null;
 
-  const message = `Next Live Training Session on ${parts.weekdayDate} at ${parts.startTime}  —  Click “Training” below to schedule.`;
+  const message = `Next Live Training Session on ${parts.weekdayDate} at ${parts.startTime}  —  Click “Training” below to attend.`;
 
   return (
     <div

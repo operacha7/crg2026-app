@@ -35,6 +35,8 @@ export default defineConfig({
       '/createPdf': 'http://localhost:8788',
       '/log-usage': 'http://localhost:8788',
       '/sendSupportEmail': 'http://localhost:8788',
+      '/training-request': 'http://localhost:8788',
+      '/track-calendar-add': 'http://localhost:8788',
       // Auth endpoints (Set-Cookie / Cookie pass through fine; default
       // proxy preserves them, and we don't set Domain on the cookie so the
       // browser ties it to the request origin — localhost:3000 in dev).

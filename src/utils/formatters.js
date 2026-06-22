@@ -242,6 +242,22 @@ export function formatDistance(distance) {
   return `${distance.toFixed(1)} miles`;
 }
 
+// ============ PHONE FORMATTING ============
+
+/**
+ * Split a telephone field into individual numbers.
+ * Some orgs list multiple numbers comma-separated; each should display on its
+ * own line and the comma itself is not shown. Used by the on-screen row, email,
+ * and PDF so all three stay consistent.
+ *
+ * @param {string} telephone - Raw org_telephone field (may contain commas)
+ * @returns {string[]} Array of trimmed phone numbers (empty when none)
+ */
+export function parsePhoneNumbers(telephone) {
+  if (!telephone) return [];
+  return String(telephone).split(",").map(p => p.trim()).filter(Boolean);
+}
+
 // ============ REQUIREMENTS FORMATTING ============
 
 /**

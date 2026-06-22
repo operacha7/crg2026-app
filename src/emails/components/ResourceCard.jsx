@@ -5,6 +5,7 @@ import { Section, Text, Link } from '@react-email/components';
 import { HoursTable, HoursNotes } from './HoursTable';
 import { BUS_ICON_URL } from '../../data/constants';
 import { buildTransitDirectionsUrl } from '../../utils/transitUrl';
+import { parsePhoneNumbers } from '../../utils/formatters';
 
 // Bus Route pill links to Google Maps in transit mode. We intentionally call
 // buildTransitDirectionsUrl WITHOUT clientCoordinates so the sender's local
@@ -63,10 +64,16 @@ export function ResourceCard({
         </Link>
       </Text>
 
-      {/* Phone number - 8px gap above */}
-      {resource.org_telephone && (
+      {/* Phone number(s) - 8px gap above. Multiple comma-separated numbers
+          each render on their own line (comma not shown). */}
+      {parsePhoneNumbers(resource.org_telephone).length > 0 && (
         <Text style={styles.phone}>
-          {resource.org_telephone}
+          {parsePhoneNumbers(resource.org_telephone).map((phone, i) => (
+            <span key={phone}>
+              {i > 0 && <br />}
+              {phone}
+            </span>
+          ))}
         </Text>
       )}
 

@@ -65,10 +65,12 @@ function reducer(state, action) {
 
 // ============ SORT FUNCTIONS ============
 
-// Default sort: status_id → assist_id → priority → organization (all ascending)
+// Type-first default sort (Zip Code, Ask a Question modes):
+// status_id → assist_id → priority → organization (all ascending)
+// Groups results by kind of help, which matches "what food/rent/etc. is near me".
 // priority is an editorial rank: lower number = surface higher (1 = featured).
 // Most records have no priority (null/blank) and sort last within their group.
-function defaultSort(a, b) {
+function defaultSortByType(a, b) {
   const aStatusId = a.status_id || 999;
   const bStatusId = b.status_id || 999;
   if (aStatusId !== bStatusId) return aStatusId - bStatusId;
@@ -84,9 +86,38 @@ function defaultSort(a, b) {
   return (a.organization || "").localeCompare(b.organization || "");
 }
 
-function sortRecords(records, sortColumn, sortDirection) {
+// Org-first default sort (Organization, Location modes):
+// org_parent → organization → assist_id → status_id
+// Keeps every record for one branch contiguous so you can read a single org's
+// full footprint at a glance (its assistance types and the status of each),
+// instead of scattering it across the list by type. status_id is the final
+// tiebreaker — deliberately last — so a branch's rows stay together regardless
+// of mixed statuses. org_parent leads so a multi-branch parent's locations are
+// grouped (a no-op in Organization mode, where one parent is already selected;
+// it earns its keep in Location mode, where results span many parents).
+function defaultSortByOrg(a, b) {
+  const parentCmp = (a.org_parent || a.organization || "").localeCompare(b.org_parent || b.organization || "");
+  if (parentCmp !== 0) return parentCmp;
+
+  const orgCmp = (a.organization || "").localeCompare(b.organization || "");
+  if (orgCmp !== 0) return orgCmp;
+
+  const aAssistId = parseInt(a.assist_id, 10) || 999;
+  const bAssistId = parseInt(b.assist_id, 10) || 999;
+  if (aAssistId !== bAssistId) return aAssistId - bAssistId;
+
+  const aStatusId = a.status_id || 999;
+  const bStatusId = b.status_id || 999;
+  return aStatusId - bStatusId;
+}
+
+function sortRecords(records, sortColumn, sortDirection, searchMode) {
   if (!sortColumn) {
-    return [...records].sort(defaultSort);
+    const defaultComparator =
+      searchMode === "organization" || searchMode === "location"
+        ? defaultSortByOrg
+        : defaultSortByType;
+    return [...records].sort(defaultComparator);
   }
 
   const dir = sortDirection === "asc" ? 1 : -1;
@@ -250,8 +281,8 @@ export default function ResultsList({
   );
 
   const sortedRecords = useMemo(
-    () => sortRecords(filteredRecords, state.sortColumn, state.sortDirection),
-    [filteredRecords, state.sortColumn, state.sortDirection]
+    () => sortRecords(filteredRecords, state.sortColumn, state.sortDirection, activeSearchMode),
+    [filteredRecords, state.sortColumn, state.sortDirection, activeSearchMode]
   );
 
   // Report filtered count back to parent.

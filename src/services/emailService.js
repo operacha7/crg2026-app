@@ -8,6 +8,7 @@ import {
   formatAddress,
   formatHoursFromJson,
   parseRequirements,
+  parsePhoneNumbers,
 } from "../utils/formatters";
 import { buildTransitDirectionsUrl } from "../utils/transitUrl";
 import { ResourceEmail } from "../emails";
@@ -221,7 +222,7 @@ function renderAssistanceGroupsHtml(items, includeAssistanceHeaders, nextIndex) 
       <!-- Right column: Phone, hours, hours notes -->
       <td style="vertical-align: top; width: 45%; text-align: right;">
         <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px;">
-          ${e.org_telephone || ""}
+          ${parsePhoneNumbers(e.org_telephone).join("<br>")}
         </div>
         ${hoursHtml}
         ${hoursNotesHtml}

@@ -9,6 +9,7 @@ import {
   formatHoursFromJson,
   formatAddress,
   formatIconName,
+  parsePhoneNumbers,
 } from "../utils/formatters";
 import { buildTransitDirectionsUrl } from "../utils/transitUrl";
 
@@ -186,6 +187,13 @@ function ResultRow({
   // dominates render cost on cold start, so memoize it on the raw input.
   const formattedHours = useMemo(() => formatHoursFromJson(record.org_hours), [record.org_hours]);
 
+  // Some orgs list multiple phone numbers, comma-separated. Show each on its
+  // own line (the comma itself is not displayed).
+  const phoneNumbers = useMemo(
+    () => parsePhoneNumbers(record.telephone),
+    [record.telephone]
+  );
+
   // Determine background based on selection state or alternating row colors
   const getBgStyle = () => {
     if (isSelected) {
@@ -350,10 +358,14 @@ function ResultRow({
               </span>
             ))}
           </div>
-          {record.telephone && (
-            <a href={`tel:${record.telephone.replace(/\D/g, "")}`} className="text-blue-600">
-              {record.telephone}
-            </a>
+          {phoneNumbers.length > 0 && (
+            <div className="flex flex-col items-end">
+              {phoneNumbers.map((phone) => (
+                <a key={phone} href={`tel:${phone.replace(/\D/g, "")}`} className="text-blue-600">
+                  {phone}
+                </a>
+              ))}
+            </div>
           )}
         </div>
 
@@ -779,22 +791,23 @@ function ResultRow({
 
       {/* Telephone Column - gap before (20px) */}
       <div
-        className="flex items-start"
+        className="flex flex-col"
         style={{
           fontSize: "var(--font-size-results-default)",
           letterSpacing: "var(--letter-spacing-results-default)",
           paddingLeft: "20px",
         }}
       >
-        {record.telephone ? (
+        {phoneNumbers.map((phone) => (
           <a
-            href={`tel:${record.telephone.replace(/\D/g, "")}`}
+            key={phone}
+            href={`tel:${phone.replace(/\D/g, "")}`}
             className="hover:underline"
             style={{ color: "#0066cc", textDecoration: "none" }}
           >
-            {record.telephone}
+            {phone}
           </a>
-        ) : ""}
+        ))}
       </div>
 
       {/* Requirements Column - flexible, bullet list, gap before (20px) */}

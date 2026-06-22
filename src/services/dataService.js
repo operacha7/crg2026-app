@@ -231,6 +231,31 @@ export const dataService = {
     return data;
   },
 
+  // ======= TRAINING REQUESTS (preferred-time votes) =======
+  // Anonymous availability votes for the /training matrix ("suggest a better
+  // time"). Each row is one vote: { date, day, time, reg_organization }. We
+  // only read the trailing 30 days so the displayed tally reflects *current*
+  // demand and stale preferences age out. Rows are inserted server-side by
+  // functions/training-request.js (browser writes are blocked by policy); the
+  // browser only reads. Aggregation into per-cell counts happens in the
+  // TrainingMatrix component.
+  async getTrainingRequests() {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10); // YYYY-MM-DD, 30 days ago
+
+    const { data, error } = await supabase
+      .from('training_request')
+      .select('date, day, time')
+      .gte('date', cutoff);
+
+    if (error) {
+      console.error("Error fetching training requests:", error);
+      return [];
+    }
+    return data;
+  },
+
 };
 
 // Export helper functions for use elsewhere if needed
