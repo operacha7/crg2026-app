@@ -241,8 +241,8 @@ export default function HomePage() {
                 marginBottom: 10,
               }}
             >
-              <strong>Serving 14 Southeast Texas Counties:</strong>{" "}
-              Austin, Brazoria, Chambers, Fort Bend, Galveston, Grimes, Harris,
+              <strong>Serving 15 Southeast Texas Counties:</strong>{" "}
+              Austin, Brazos, Brazoria, Chambers, Colorado, Fort Bend, Galveston, Grimes, Harris,
               Liberty, Matagorda, Montgomery, Walker, Waller and Wharton
             </p>
 
