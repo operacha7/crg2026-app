@@ -11,6 +11,7 @@ import { useState, useRef, useEffect } from "react";
 import { Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { SHARED_NAV_LINKS } from "../data/navLinks";
+import { getHomeOrigin } from "../utils/homeOrigin";
 
 // In-app default — Home points to /find (the working search app), not /
 // (the marketing homepage), since in-app users want a way back to the app
@@ -18,7 +19,10 @@ import { SHARED_NAV_LINKS } from "../data/navLinks";
 // Logout are injected at render time. NavBar1 and SupportPage both pick this
 // up by calling `<MobileMenu />` with no args.
 const DEFAULT_ITEMS = [
-  { label: "Home", path: "/find" },
+  // Home is an action (not a fixed path) so it returns to the page the user
+  // entered the menu cluster from — the same getHomeOrigin logic the desktop
+  // nav uses — instead of always jumping to the in-app fallback.
+  { label: "Home", action: "home" },
   ...SHARED_NAV_LINKS,
 ];
 
@@ -27,6 +31,9 @@ export default function MobileMenu({
   iconColor = "var(--color-footer-bg)",
   onLogout,
   onOpenHelp,
+  // Where Home goes when no origin has been recorded yet. In-app default is
+  // /find; the public shell passes "/". Matches the desktop nav's fallbacks.
+  homeFallback = "/find",
 }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -109,6 +116,8 @@ export default function MobileMenu({
                   onLogout?.();
                 } else if (item.action === "help") {
                   onOpenHelp?.();
+                } else if (item.action === "home") {
+                  navigate(getHomeOrigin(homeFallback));
                 } else {
                   navigate(item.path);
                 }

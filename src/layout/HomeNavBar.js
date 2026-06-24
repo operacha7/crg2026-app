@@ -49,7 +49,10 @@ export default function HomeNavBar() {
   // with the in-app menu (SHARED_NAV_LINKS — kept in one place so the two
   // hamburgers can't drift apart).
   const mobileItems = [
-    ...(isHome ? [] : [{ label: "Home", path: "/" }]),
+    // Home is an action so it returns to where the user entered the menu
+    // cluster from (getHomeOrigin), matching the desktop nav. Hidden on / since
+    // you're already home.
+    ...(isHome ? [] : [{ label: "Home", action: "home" }]),
     { label: "About", path: "/about" },
     ...SHARED_NAV_LINKS,
   ];
@@ -141,6 +144,7 @@ export default function HomeNavBar() {
         <MobileMenu
           items={mobileItems}
           iconColor="var(--color-home-navbar-about)"
+          homeFallback="/"
         />
       </div>
     </nav>
