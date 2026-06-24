@@ -78,6 +78,11 @@ const QUICK_TIPS_TOPICS = [
     content: VerticalNavTip,
   },
   {
+    id: "training",
+    title: "Training",
+    content: TrainingTip,
+  },
+  {
     id: "zipcode",
     title: "Zip Code Search",
     content: ZipCodeSearchTip,
@@ -780,6 +785,89 @@ function ZipCodeSearchTip() {
   );
 }
 
+// Training tip — orientation, not a how-to (the /training page covers mechanics).
+// Surfaces the three things a user in /find can't see: that live training exists
+// (and where to find it), the Join-button color states that change over time, and
+// the fact that a session drops off the page ~15 min after it starts.
+function TrainingTip() {
+  const bodyText = {
+    fontSize: "var(--font-size-quicktips-body)",
+    color: "var(--color-quicktips-section-body-text)",
+  };
+
+  // The four Join-button states, in the order a user encounters them as start
+  // time approaches. Colors/labels mirror SessionCard's JoinButton exactly.
+  const joinStates = [
+    {
+      bg: "var(--color-training-join-future-bg)",
+      color: "var(--color-training-join-future-text)",
+      label: "Starts 2h 14m",
+      when: "More than 20 minutes out — a countdown, not clickable yet.",
+    },
+    {
+      bg: "var(--color-training-join-soon-bg)",
+      color: "var(--color-training-join-soon-text)",
+      label: "Starts 18m",
+      when: "About 20 minutes before — almost time; still counting down.",
+    },
+    {
+      bg: "var(--color-training-join-live-bg)",
+      color: "var(--color-training-join-live-text)",
+      label: "Join Now - Live",
+      when: "From 5 minutes before the start — click it to join.",
+    },
+    {
+      bg: "var(--color-training-join-late-bg)",
+      color: "var(--color-training-join-late-text)",
+      label: "Join Now",
+      when: "Up to 15 minutes after the start — last chance to join.",
+    },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <p style={bodyText}>
+        We run <strong>live virtual training</strong> sessions on Google Meet —
+        free, no registration, no setup, open to everyone (clients included).
+      </p>
+      <p style={bodyText}>
+        Find them on the <strong>Training</strong> link in the footer. Pick a
+        session and add it to your calendar (Google or Apple/Outlook) so you get
+        a reminder with the join link.
+      </p>
+
+      <p style={{ ...bodyText, fontWeight: 600, marginTop: 12 }}>
+        The green <strong>Join</strong> button changes color as start time nears:
+      </p>
+      <div className="space-y-2">
+        {joinStates.map((s) => (
+          <div key={s.label} className="flex items-center gap-3">
+            <span
+              className="flex-shrink-0 rounded-full text-center"
+              style={{
+                backgroundColor: s.bg,
+                color: s.color,
+                fontSize: 12,
+                fontWeight: 700,
+                padding: "5px 12px",
+                minWidth: 108,
+              }}
+            >
+              {s.label}
+            </span>
+            <span style={{ ...bodyText, fontSize: 13 }}>{s.when}</span>
+          </div>
+        ))}
+      </div>
+
+      <p style={{ ...bodyText, fontStyle: "italic", marginTop: 10 }}>
+        A session drops off the page about 15 minutes after it starts, so join on
+        time — or grab the next one.
+      </p>
+    </div>
+  );
+}
+
 // Troubleshooting steps — the visually set-apart "Something Not Working?" item.
 // Plain-language, ordered so most people are fixed by step 1. onContactSupport
 // closes the panel and routes to the Contact Support form.
@@ -793,7 +881,7 @@ function TroubleshootingTip({ onContactSupport }) {
     width: 22,
     height: 22,
     borderRadius: "50%",
-    backgroundColor: "var(--color-panel-btn-ok-bg)", // green, matches OK buttons
+    backgroundColor: "var(--color-quicktips-troubleshoot-header-bg)", // blue, matches the troubleshoot header
     color: "#FFFFFF",
     display: "inline-flex",
     alignItems: "center",
@@ -850,7 +938,7 @@ function TroubleshootingTip({ onContactSupport }) {
               onClick={onContactSupport}
               className="hover:brightness-110"
               style={{
-                backgroundColor: "var(--color-panel-btn-ok-bg)",
+                backgroundColor: "var(--color-quicktips-troubleshoot-header-bg)",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: 6,

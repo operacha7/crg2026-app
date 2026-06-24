@@ -597,7 +597,7 @@
   --color-quicktips-icon-label: #666666;
   --color-quicktips-highlight-bg: #FFF3CD; /* Yellow highlight for auto-opened chip toggle section */
   --color-quicktips-highlight-border: #FFC857; /* Gold border for slide-out highlight */
-  --color-quicktips-troubleshoot-header-bg: #B8001F; /* Red header for the "Something Not Working?" troubleshooting item, set apart from the charcoal topic headers */
+  --color-quicktips-troubleshoot-header-bg: #4285F4; /* Blue header for the "Something Not Working?" troubleshooting item, set apart from the charcoal topic headers; also used for its step numbers + "Email or Text Me" button */
   --color-quicktips-troubleshoot-header-text: #FFFFFF;
 
   /* Contact Support page (subject-routed redesign). Fully token-driven so the
