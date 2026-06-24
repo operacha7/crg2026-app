@@ -175,7 +175,7 @@ export default function TrainingPage() {
                     Live Training
                   </h1>
                   <p className="font-opensans" style={{ fontSize: 17, marginBottom: 4 }}>
-                    Free. &nbsp;No registration. &nbsp;No setup. &nbsp;Virtual sessions. &nbsp;Open to Everyone.
+                    Free. &nbsp;No Registration. &nbsp;No Setup. &nbsp;Virtual Sessions. &nbsp;Open to Everyone.
                   </p>
                   <p className="font-opensans" style={{ fontSize: 17, lineHeight: 1.5, maxWidth: 720 }}>
                     Find a session and add it to your calendar.
