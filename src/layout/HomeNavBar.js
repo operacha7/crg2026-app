@@ -19,6 +19,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import MobileMenu from "../components/MobileMenu";
 import { HomeIcon } from "../icons";
 import { getHomeOrigin } from "../utils/homeOrigin";
+import { SHARED_NAV_LINKS } from "../data/navLinks";
 
 // Page titles shown at the right of the header (desktop), mirroring how
 // Contact Support displays its page name in NavBar1. Keyed by pathname; the
@@ -43,18 +44,14 @@ export default function HomeNavBar() {
     navigate(getHomeOrigin("/"));
   };
 
-  // Hamburger contents: same five items as the teal secondary footer, plus
-  // an explicit "Home" link when not already on /. Mirrors the desktop
-  // contextual link so mobile users still have a one-tap way back home.
+  // Hamburger contents: an explicit "Home" link when not already on / (mirrors
+  // the desktop contextual link), the public-only "About", then the links shared
+  // with the in-app menu (SHARED_NAV_LINKS — kept in one place so the two
+  // hamburgers can't drift apart).
   const mobileItems = [
     ...(isHome ? [] : [{ label: "Home", path: "/" }]),
     { label: "About", path: "/about" },
-    { label: "Privacy Policy", path: "/privacy" },
-    { label: "Terms of Service", path: "/terms" },
-    { label: "Contact Support", path: "/support" },
-    // Relative path so the modal opens on the current page; LoginModal
-    // forwards to /find after a successful login from the homepage.
-    { label: "Organization Login", path: "?login=1" },
+    ...SHARED_NAV_LINKS,
   ];
 
   const rightLinkStyle = {

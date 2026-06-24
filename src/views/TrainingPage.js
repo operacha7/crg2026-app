@@ -137,8 +137,11 @@ export default function TrainingPage() {
             <SessionCalendar sessions={visibleSessions} onSelectSession={scrollToSession} />
           </div>
           {/* "Suggest a better time" availability matrix — self-contained
-              (own fetch + submit); sits directly below the calendar. */}
-          <div className="w-full lg:w-auto flex justify-center lg:block">
+              (own fetch + submit). Desktop only: sits below the calendar in the
+              sidebar. On mobile it renders below the sessions instead (the
+              lg:hidden copy after <main>), so the scheduled sessions come before
+              this "if none of these work" fallback. */}
+          <div className="hidden lg:block">
             <TrainingMatrix />
           </div>
         </aside>
@@ -210,6 +213,21 @@ export default function TrainingPage() {
             )}
           </div>
         </main>
+
+        {/* Mobile-only: the availability matrix lives BELOW the sessions here
+            (on desktop it's in the sidebar above). Keeps the scheduled sessions
+            as the first thing after the calendar; this "suggest other times"
+            fallback comes last. Tan sidebar background so it reads as the same
+            kind of control as the calendar. */}
+        <div
+          className="lg:hidden w-full flex justify-center"
+          style={{
+            background: "var(--color-training-sidebar-bg)",
+            padding: "24px 20px 28px",
+          }}
+        >
+          <TrainingMatrix />
+        </div>
       </div>
 
       <Footer />

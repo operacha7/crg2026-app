@@ -10,19 +10,16 @@
 import { useState, useRef, useEffect } from "react";
 import { Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { SHARED_NAV_LINKS } from "../data/navLinks";
 
 // In-app default — Home points to /find (the working search app), not /
 // (the marketing homepage), since in-app users want a way back to the app
-// they were just using. NavBar1 and SupportPage both pick this up by
-// calling `<MobileMenu />` with no args.
+// they were just using, then the links shared with the public menu. Help +
+// Logout are injected at render time. NavBar1 and SupportPage both pick this
+// up by calling `<MobileMenu />` with no args.
 const DEFAULT_ITEMS = [
   { label: "Home", path: "/find" },
-  { label: "Privacy Policy", path: "/privacy" },
-  { label: "Terms of Service", path: "/terms" },
-  { label: "Contact Support", path: "/support" },
-  // Relative path: opens the login modal on the current page rather than
-  // navigating to /find first. LoginModal handles post-login forwarding.
-  { label: "Organization Login", path: "?login=1" },
+  ...SHARED_NAV_LINKS,
 ];
 
 export default function MobileMenu({

@@ -66,7 +66,12 @@ export default function SessionCard({ session, now, count, alreadyAdded, onCalen
             // Popup forces one non-wrapping row (singleRowGrid); the /training
             // page stays responsive (wraps on narrow screens).
             gridTemplateColumns: singleRowGrid ? "repeat(4, 1fr)" : "repeat(auto-fit, minmax(130px, 1fr))",
-            gap: 0,
+            // 1px gaps over a gray container background render as hairlines
+            // between every cell — vertical AND horizontal — so the dividers
+            // adapt automatically when the grid wraps (e.g. STARTS above WHERE on
+            // narrow/mobile widths). Replaces the per-cell left borders.
+            gap: "1px",
+            background: "var(--color-training-cell-border)",
             border: "1px solid var(--color-training-cell-border)",
             borderRadius: 8,
             overflow: "hidden",
@@ -77,15 +82,14 @@ export default function SessionCard({ session, now, count, alreadyAdded, onCalen
           }}
         >
           <GridCell label="DATE" value={parts.weekdayDate} sub={parts.year} />
-          <GridCell label="STARTS" value={parts.startTime} sub="Central (CT)" bordered />
+          <GridCell label="STARTS" value={parts.startTime} sub="Central (CT)" />
           <GridCell
             label="DURATION"
             value={`${parts.durationMin} min`}
             sub={`ends ${parts.endTime}`}
-            bordered
             highlight
           />
-          <GridCell label="WHERE" value="Google Meet" sub="in your browser" bordered />
+          <GridCell label="WHERE" value="Google Meet" sub="in your browser" />
         </div>
       )}
 
@@ -140,12 +144,13 @@ export default function SessionCard({ session, now, count, alreadyAdded, onCalen
   );
 }
 
-function GridCell({ label, value, sub, bordered, highlight }) {
+function GridCell({ label, value, sub, highlight }) {
   return (
     <div
       style={{
         padding: "10px 14px",
-        borderLeft: bordered ? "1px solid var(--color-training-cell-border)" : "none",
+        // Dividers now come from the grid's 1px gap (see the grid container);
+        // each cell just paints its own background over that gray backdrop.
         background: highlight ? "var(--color-training-cell-highlight-bg)" : "#FFFFFF",
         minWidth: 0,
       }}

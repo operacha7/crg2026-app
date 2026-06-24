@@ -116,7 +116,7 @@ function TrainingChyron({ session }) {
   const parts = getSessionDisplayParts(session);
   if (!parts || done) return null;
 
-  const message = `Next Live Training Session on ${parts.weekdayDate} at ${parts.startTime}  —  Click “Training” below to attend.`;
+  const message = `Next Live Training Session on ${parts.weekdayDate} at ${parts.startTime}  —  Click on “Training” to attend.`;
 
   return (
     <div
