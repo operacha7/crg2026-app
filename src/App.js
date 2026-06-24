@@ -3,6 +3,8 @@ import React, { useState, useEffect, lazy, Suspense } from "react";
 import { HelmetProvider } from "react-helmet-async";
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import LoginModal from "./auth/LoginModal";
+import { resetAnnouncementsShown } from "./components/AnnouncementManager";
+import { recordHomeOrigin } from "./utils/homeOrigin";
 import HomePage from "./views/HomePage";
 import AboutPage from "./views/AboutPage";
 import PrivacyPage from "./views/PrivacyPage";
@@ -45,6 +47,13 @@ const isPublicMainPath = (pathname) =>
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Remember the last primary page (so the "Home" buttons on the secondary
+  // pages — About/Privacy/Terms/Training/Support/Reports/Announcements — return
+  // the user to where they came from, not just one history step back).
+  useEffect(() => {
+    recordHomeOrigin(location.pathname, location.search);
+  }, [location]);
 
   // Check for ?guest=1 deep link (SMS share links auto-login as guest)
   const searchParams = new URLSearchParams(location.search);
@@ -123,6 +132,9 @@ export default function App() {
   const handleLogout = () => {
     setLogoutInProgress(true);
     setUser(null);
+    // Re-arm announcements so a fresh login in the same tab (no page reload)
+    // shows them again, matching the "on log-on or refresh" rule.
+    resetAnnouncementsShown();
     // Reset the training popup dedupe so a fresh login the same day is
     // re-prompted. Key must match POPUP_SHOWN_KEY in src/MainApp.js. Within a
     // single visit (refresh / navigation, no logout) the flag persists, so the

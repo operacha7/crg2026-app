@@ -125,6 +125,7 @@ export default function NavBar3Reports({
     sessions: "login",
     "emails-sent": "email",
     "pdfs-created": "pdf",
+    "texts-sent": "sms",
     "reports-chart": "reports",
   };
 

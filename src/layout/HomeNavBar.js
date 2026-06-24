@@ -17,18 +17,30 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import MobileMenu from "../components/MobileMenu";
+import { HomeIcon } from "../icons";
+import { getHomeOrigin } from "../utils/homeOrigin";
+
+// Page titles shown at the right of the header (desktop), mirroring how
+// Contact Support displays its page name in NavBar1. Keyed by pathname; the
+// homepage has no entry (it shows the "About" link instead).
+const PAGE_TITLES = {
+  "/about": "About",
+  "/privacy": "Privacy Policy",
+  "/terms": "Terms of Service",
+  "/training": "Training",
+};
 
 export default function HomeNavBar() {
   const location = useLocation();
   const navigate = useNavigate();
   const isHome = location.pathname === "/";
+  const pageTitle = PAGE_TITLES[location.pathname];
 
+  // Return to the primary page the user came from (tracked in homeOrigin),
+  // regardless of how many secondary pages they hopped through. Falls back to
+  // the marketing home when nothing was recorded (cold landing).
   const handleHomeClick = () => {
-    if (location.key === "default") {
-      navigate("/");
-    } else {
-      navigate(-1);
-    }
+    navigate(getHomeOrigin("/"));
   };
 
   // Hamburger contents: same five items as the teal secondary footer, plus
@@ -86,8 +98,12 @@ export default function HomeNavBar() {
         </h1>
       </Link>
 
-      {/* Desktop: contextual About / Home text link */}
-      <div className="hidden lg:block">
+      {/* Desktop right side:
+          - Homepage: the contextual "About" text link (unchanged).
+          - Other pages: the page title (static, mirrors Contact Support's
+            NavBar1 title) followed by the Home icon as the back-home affordance
+            — the same icon used in the in-app vertical nav. */}
+      <div className="hidden lg:flex items-center" style={{ gap: 20 }}>
         {isHome ? (
           <Link
             to="/about"
@@ -97,14 +113,29 @@ export default function HomeNavBar() {
             About
           </Link>
         ) : (
-          <button
-            type="button"
-            onClick={handleHomeClick}
-            className="hover:brightness-125 font-opensans"
-            style={{ ...rightLinkStyle, background: "none", border: "none", cursor: "pointer" }}
-          >
-            Home
-          </button>
+          <>
+            {pageTitle && (
+              <span
+                className="font-opensans"
+                style={{
+                  color: "var(--color-navbar1-title)",
+                  fontSize: "var(--font-size-navbar1-btn)",
+                  fontWeight: "var(--font-weight-navbar1-btn)",
+                  letterSpacing: "var(--letter-spacing-navbar1-btn)",
+                }}
+              >
+                {pageTitle}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={handleHomeClick}
+              className="hover:brightness-125 focus:outline-none"
+              aria-label="Home"
+            >
+              <HomeIcon size={35} />
+            </button>
+          </>
         )}
       </div>
 

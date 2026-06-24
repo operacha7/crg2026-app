@@ -16,6 +16,7 @@ import Tooltip from "../components/Tooltip";
 import { useAppData } from "../Contexts/AppDataContext";
 import HelpPanel from "../components/HelpPanel";
 import QuickTipsPanel from "../components/QuickTipsPanel";
+import { getHomeOrigin } from "../utils/homeOrigin";
 
 // Legal and Contact Support icons removed — both are now reachable from the
 // site-wide secondary footer (Privacy Policy / Terms of Service / Contact
@@ -125,8 +126,11 @@ export default function VerticalNavBar({ externalHelpOpen, onHelpOpenChange }) {
     setClientAddress("");
     setClientCoordinates("");
     // Note: Assistance selections are NOT cleared - they persist until session restart
-    // Navigate to /find (the in-app ZipCodePage URL); / is the public HomePage now.
-    navigate("/find");
+    // Return to the primary page the user came from (e.g. arrived at Contact
+    // Support from /find → back to /find; from the marketing home → back to /).
+    // Falls back to /find — the in-app home — since this bar only renders inside
+    // the app. The resets above are harmless when the origin isn't /find.
+    navigate(getHomeOrigin("/find"));
   };
 
   return (

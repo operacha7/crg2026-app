@@ -4,6 +4,7 @@
 // Can be triggered by icon click or auto-opened to specific section
 
 import { useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppData } from "../Contexts/AppDataContext";
 import PanelScrim from "./PanelScrim";
@@ -80,6 +81,12 @@ const QUICK_TIPS_TOPICS = [
     id: "zipcode",
     title: "Zip Code Search",
     content: ZipCodeSearchTip,
+  },
+  {
+    id: "troubleshoot",
+    title: "Something Not Working?",
+    content: TroubleshootingTip,
+    variant: "troubleshoot", // red header + gap above; set apart from the topic list
   },
 ];
 
@@ -773,17 +780,112 @@ function ZipCodeSearchTip() {
   );
 }
 
+// Troubleshooting steps — the visually set-apart "Something Not Working?" item.
+// Plain-language, ordered so most people are fixed by step 1. onContactSupport
+// closes the panel and routes to the Contact Support form.
+function TroubleshootingTip({ onContactSupport }) {
+  const bodyText = {
+    fontSize: "var(--font-size-quicktips-body)",
+    color: "var(--color-quicktips-section-body-text)",
+  };
+  const stepNum = {
+    flexShrink: 0,
+    width: 22,
+    height: 22,
+    borderRadius: "50%",
+    backgroundColor: "var(--color-panel-btn-ok-bg)", // green, matches OK buttons
+    color: "#FFFFFF",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 12,
+    fontWeight: 700,
+  };
+
+  return (
+    <div className="space-y-4">
+      <p style={bodyText}>
+        If a page looks wrong or won&rsquo;t load, try these in order — most problems
+        are fixed by the first step.
+      </p>
+
+      {/* Step 1 — hard refresh */}
+      <div className="flex gap-3">
+        <span style={stepNum}>1</span>
+        <div style={bodyText}>
+          <p style={{ fontWeight: 600, marginBottom: 4 }}>Refresh the page (hard refresh)</p>
+          <p><strong>Windows:</strong> hold <strong>Ctrl</strong> and press <strong>F5</strong></p>
+          <p><strong>Mac:</strong> hold <strong>&#8984; Cmd + Shift + R</strong></p>
+          <p style={{ fontStyle: "italic", marginTop: 4 }}>
+            Or, on any computer, hold <strong>Shift</strong> and click the reload (&#8635;) button.
+          </p>
+        </div>
+      </div>
+
+      {/* Step 2 — update browser */}
+      <div className="flex gap-3">
+        <span style={stepNum}>2</span>
+        <div style={bodyText}>
+          <p style={{ fontWeight: 600, marginBottom: 4 }}>Make sure your browser is up to date</p>
+          <p>An out-of-date browser can stop parts of the app from working — older versions of Safari especially.</p>
+        </div>
+      </div>
+
+      {/* Step 3 — try a different browser */}
+      <div className="flex gap-3">
+        <span style={stepNum}>3</span>
+        <div style={bodyText}>
+          <p style={{ fontWeight: 600, marginBottom: 4 }}>Try a different browser</p>
+          <p>We recommend <strong>Google Chrome</strong>.</p>
+        </div>
+      </div>
+
+      {/* Step 4 — routes to /support which offers both email and text */}
+      <div className="flex gap-3">
+        <span style={stepNum}>4</span>
+        <div style={bodyText} className="flex-1">
+          <p style={{ fontWeight: 600, marginBottom: 10 }}>Still stuck?</p>
+          <div className="flex justify-center">
+            <button
+              onClick={onContactSupport}
+              className="hover:brightness-110"
+              style={{
+                backgroundColor: "var(--color-panel-btn-ok-bg)",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: 6,
+                padding: "8px 16px",
+                fontSize: "var(--font-size-quicktips-body)",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Email or Text Me
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ============================================
 // ACCORDION SECTION COMPONENT
 // ============================================
 
-function AccordionSection({ topic, isExpanded, onToggle, highlightChipToggle }) {
+function AccordionSection({ topic, isExpanded, onToggle, highlightChipToggle, onContactSupport }) {
   const ContentComponent = topic.content;
   const TitleIcon = topic.titleIcon;
   const contentRef = useRef(null);
 
-  // Check if this topic's content component accepts highlightChipToggle prop
-  const contentProps = topic.id === "assistance" ? { highlightChipToggle } : {};
+  // Pass the prop each special content component expects.
+  let contentProps = {};
+  if (topic.id === "assistance") contentProps = { highlightChipToggle };
+  else if (topic.variant === "troubleshoot") contentProps = { onContactSupport };
+
+  // The troubleshooting item gets a red header to set it apart from the
+  // charcoal topic headers above it.
+  const isTroubleshoot = topic.variant === "troubleshoot";
 
   return (
     <div style={{ borderBottom: "1px solid var(--color-quicktips-section-border)" }}>
@@ -792,8 +894,12 @@ function AccordionSection({ topic, isExpanded, onToggle, highlightChipToggle }) 
         onClick={onToggle}
         className="w-full flex items-center justify-between transition-colors hover:brightness-110"
         style={{
-          backgroundColor: "var(--color-quicktips-section-header-bg)",
-          color: "var(--color-quicktips-section-header-text)",
+          backgroundColor: isTroubleshoot
+            ? "var(--color-quicktips-troubleshoot-header-bg)"
+            : "var(--color-quicktips-section-header-bg)",
+          color: isTroubleshoot
+            ? "var(--color-quicktips-troubleshoot-header-text)"
+            : "var(--color-quicktips-section-header-text)",
           padding: "var(--padding-quicktips-section-y) var(--padding-quicktips-section-x)",
           fontSize: "var(--font-size-quicktips-section-header)",
           fontWeight: "var(--font-weight-quicktips-section-header)",
@@ -852,6 +958,13 @@ export default function QuickTipsPanel() {
   } = useAppData();
 
   const panelRef = useRef(null);
+  const navigate = useNavigate();
+
+  // Close the panel and route to the Contact Support form (troubleshooting step 4).
+  const handleContactSupport = () => {
+    setQuickTipsOpen(false);
+    navigate("/support");
+  };
 
   // Clear highlight when panel closes
   useEffect(() => {
@@ -955,6 +1068,7 @@ export default function QuickTipsPanel() {
                   isExpanded={quickTipsExpandedSection === topic.id}
                   onToggle={() => handleToggleSection(topic.id)}
                   highlightChipToggle={topic.id === "assistance" && quickTipsHighlightChipToggle}
+                  onContactSupport={handleContactSupport}
                 />
               </div>
             ))}

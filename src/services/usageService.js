@@ -153,39 +153,58 @@ export async function fetchDailyUsage({
 
   console.log('fetchDailyUsage date range:', { startDateStr, endDate, days });
 
-  let query = supabase
-    .from('v_daily_usage')
-    .select('*')
-    .gte('log_date', startDateStr)
-    .lte('log_date', endDate)
-    .order('log_date', { ascending: true });
+  // Supabase enforces a server-side max-rows cap (default 1000) regardless of
+  // .limit(), so paginate via .range() to be sure we get every row. Without
+  // this, the most recent day's rows (last in ascending order) get silently
+  // dropped once the view exceeds 1000 rows. That made the unfiltered Usage
+  // Data Table undercount "today" (e.g. 4 emails / 1 PDF / 17 searches) while
+  // the per-action-type charts — far fewer rows, under the cap — stayed correct
+  // (5 / 6 / 101). Mirrors the same pagination already used in fetchMonthlyUsage.
+  const PAGE_SIZE = 1000;
+  let allData = [];
+  let from = 0;
 
-  if (reg_organization && reg_organization !== 'All' && reg_organization !== 'All Organizations') {
-    const aliases = legacyNamesFor(reg_organization);
-    query = aliases.length > 0
-      ? query.in('reg_organization', [reg_organization, ...aliases])
-      : query.eq('reg_organization', reg_organization);
+  while (true) {
+    let query = supabase
+      .from('v_daily_usage')
+      .select('*')
+      .gte('log_date', startDateStr)
+      .lte('log_date', endDate)
+      .order('log_date', { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (reg_organization && reg_organization !== 'All' && reg_organization !== 'All Organizations') {
+      const aliases = legacyNamesFor(reg_organization);
+      query = aliases.length > 0
+        ? query.in('reg_organization', [reg_organization, ...aliases])
+        : query.eq('reg_organization', reg_organization);
+    }
+
+    if (action_type) {
+      query = Array.isArray(action_type)
+        ? query.in('action_type', action_type)
+        : query.eq('action_type', action_type);
+    }
+
+    if (search_mode) {
+      query = query.eq('search_mode', search_mode);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Daily usage error:', error);
+      return remapRowsToCanonical(allData);
+    }
+
+    allData = allData.concat(data);
+
+    if (data.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
   }
 
-  if (action_type) {
-    query = Array.isArray(action_type)
-      ? query.in('action_type', action_type)
-      : query.eq('action_type', action_type);
-  }
-
-  if (search_mode) {
-    query = query.eq('search_mode', search_mode);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Daily usage error:', error);
-    return [];
-  }
-
-  console.log('fetchDailyUsage result:', data);
-  return remapRowsToCanonical(data);
+  console.log('fetchDailyUsage result:', allData);
+  return remapRowsToCanonical(allData);
 }
 
 /**

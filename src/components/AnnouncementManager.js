@@ -7,6 +7,18 @@ import { AnimatePresence } from 'framer-motion';
 import AnnouncementService from '../services/AnnouncementService';
 import AnnouncementPopup from './AnnouncementPopup';
 
+// Module-level flag: have announcements already been presented during THIS page
+// load? It survives client-side route changes (which can unmount/remount this
+// component — e.g. arriving at /support from a top-level App.js page like /about
+// or /privacy mounts MainApp, and AnnouncementManager with it) but resets on a
+// genuine page reload. That's precisely the "only on first log-on or refresh"
+// boundary: component state (`initialized`) can't do this because it's wiped on
+// every remount. Reset on logout so a fresh login the same session re-shows.
+let announcementsShownThisLoad = false;
+export function resetAnnouncementsShown() {
+  announcementsShownThisLoad = false;
+}
+
 /**
  * Component to manage and display announcements after login
  *
@@ -42,6 +54,15 @@ const AnnouncementManager = ({ loggedInUser, onComplete }) => {
     const fetchAnnouncements = async () => {
       if (!loggedInUser) return;
 
+      // Already shown earlier this page load (e.g. on first /find landing).
+      // A remount from cross-layer navigation (App.js page → /support) must NOT
+      // re-show them — only a real refresh/login should. Unblock training and bail.
+      if (announcementsShownThisLoad) {
+        setInitialized(true);
+        fireComplete();
+        return;
+      }
+
       // Suppress announcement popups on mobile (< lg breakpoint).
       // Desktop users still see them; announcements remain accessible via the Announcements page.
       if (window.matchMedia("(max-width: 1023px)").matches) {
@@ -57,8 +78,10 @@ const AnnouncementManager = ({ loggedInUser, onComplete }) => {
 
         setAnnouncements(activeAnnouncements);
 
-        // Show the first announcement if there are any
+        // Show the first announcement if there are any. Mark them shown for the
+        // rest of this page load so a later remount doesn't replay them.
         if (activeAnnouncements.length > 0) {
+          announcementsShownThisLoad = true;
           setShowPopup(true);
         } else {
           fireComplete(); // nothing to show → unblock the training popup now

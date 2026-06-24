@@ -250,6 +250,26 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
       return rowData;
     });
 
+    // Catch-all for action_type='search' rows whose search_mode isn't one of
+    // the four known modes — e.g. /assistance/<slug> chip landings without a
+    // zip log search_mode=null (see MainApp.js). The Search chart sums ALL
+    // action_type='search' rows, so without this the section undercounts those
+    // and won't tie with the chart. Mirrors the Assistance "Undefined" row.
+    const knownModesSet = new Set(SEARCH_MODES);
+    const undefinedSearchRow = { metric: "Undefined" };
+    let undefinedSearchTotal = 0;
+    dateColumns.forEach(date => {
+      const count = data
+        .filter(row => row[dateKey] === date && row.action_type === "search" && !knownModesSet.has(row.search_mode))
+        .reduce((sum, row) => sum + row.count, 0);
+      undefinedSearchRow[date] = count;
+      undefinedSearchTotal += count;
+    });
+    undefinedSearchRow._total = undefinedSearchTotal;
+    if (undefinedSearchTotal > 0) {
+      rows.push(undefinedSearchRow);
+    }
+
     // Header Filter row: aggregates every column-header filter event
     // regardless of which column was filtered (status / hours / organization
     // / requirements). Per-column breakdown lives in app_usage_logs.search_mode

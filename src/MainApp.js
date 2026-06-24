@@ -132,12 +132,20 @@ useEffect(() => {
 // Separate component for the app content
 function AppContent({ loggedInUser }) {
   const { directory, assistance, zipCodes, loading, error } = useAppData();
+  const location = useLocation();
+
+  // Pages that don't read directory data shouldn't sit behind the "Loading data..."
+  // gate. /support is reached from the standalone About/Privacy/Terms pages (which
+  // live outside MainApp); entering MainApp there would otherwise remount the data
+  // provider and flash "Loading data..." even though Contact Support never uses that
+  // data. Let those pages render immediately while the fetch happens in the background.
+  const isDataIndependentPage = location.pathname === "/support";
 
   // While Phase 1 data (directory, assistance, zipCodes) is still in flight, show a loading
   // screen instead of rendering the app shell with empty data. Without this, users see the
   // Zip Code dropdown and try to click it before the data has arrived — their click appears
   // to stall for several seconds on a slow connection.
-  if (loading) {
+  if (loading && !isDataIndependentPage) {
     return (
       <div className="flex items-center justify-center h-dvh bg-gray-50">
         <div className="text-center">
@@ -147,8 +155,9 @@ function AppContent({ loggedInUser }) {
     );
   }
 
-  // Show error state
-  if (error) {
+  // Show error state (but not for data-independent pages like /support, which
+  // work fine even if the directory fetch failed).
+  if (error && !isDataIndependentPage) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="text-center text-red-600">

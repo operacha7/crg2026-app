@@ -11,6 +11,7 @@ const REPORT_OPTIONS = [
   { id: 'sessions', label: 'Sessions Chart' },
   { id: 'emails-sent', label: 'Emails Chart' },
   { id: 'pdfs-created', label: 'PDFs Chart' },
+  { id: 'texts-sent', label: 'Texts Chart' },
   { id: 'reports-chart', label: 'Reports Chart' },
   { id: 'usage-tables', label: 'Usage Data Table' },
   { id: 'coverage', label: 'The Matt Report', color: '#f7f584' },

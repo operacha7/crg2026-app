@@ -32,7 +32,7 @@
   --color-home-right-area-bg: #660000; /* maroon frame around the white panel */
   --color-home-panel-bg: #FDFAF2;
   --color-home-panel-inner-bg: #43747D;
-  --color-home-h1: #660000;
+  --color-home-h1: #222831;       /* charcoal headings — matches the .legal-content headings on Privacy/Terms */
   --color-home-tagline: #222831;
   --color-home-label: #FFFFFF;
   --color-home-zip-dropdown-bg: #FCD290;
@@ -597,6 +597,29 @@
   --color-quicktips-icon-label: #666666;
   --color-quicktips-highlight-bg: #FFF3CD; /* Yellow highlight for auto-opened chip toggle section */
   --color-quicktips-highlight-border: #FFC857; /* Gold border for slide-out highlight */
+  --color-quicktips-troubleshoot-header-bg: #B8001F; /* Red header for the "Something Not Working?" troubleshooting item, set apart from the charcoal topic headers */
+  --color-quicktips-troubleshoot-header-text: #FFFFFF;
+
+  /* Contact Support page (subject-routed redesign). Fully token-driven so the
+     planned yellow+blue nonprofit rebrand is a variable swap. */
+  --color-support-card-bg: #FDFAF2;
+  --color-support-heading: #222831;       /* charcoal heading — matches the .legal-content headings on Privacy/Terms */
+  --color-support-panel-blush: #FAF1EE;   /* intro + subject panels */
+  /* Text lane = green #60935D, Email lane = blue #4285F4 (from the Text
+     Resources panel). Each lane's accent drives its left bar, reco tag, AND
+     button; the panel bg is a very-light tint of that accent. */
+  --color-support-panel-urgent: #EFF5EE;  /* text lane bg — light green tint of #60935D */
+  --color-support-panel-calm: #EEF4FE;    /* email lane bg — light blue tint of #4285F4 */
+  --color-support-bar-brand: #9C2B2B;     /* 5px left bar — neutral/brand (intro + subject) */
+  --color-support-bar-urgent: #60935D;    /* text lane accent — left bar, reco tag, button (green) */
+  --color-support-bar-calm: #4285F4;      /* email lane accent — left bar, reco tag, button (blue) */
+  --color-support-hairline: #E8DCD6;
+  --color-support-field-border: #CBD5D8;
+  --color-support-ink: #1F2937;
+  --color-support-muted: #6B7280;
+  --color-support-lead-urgent: #3E5C3B;   /* lead text on the green text panel */
+  --color-support-body-blush: #3A342A;
+  --color-support-accent-amber: #D4A548;  /* focus ring */
 
   /* Quick Tips Panel Typography */
   --font-size-quicktips-title: 20px;

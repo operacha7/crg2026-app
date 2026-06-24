@@ -12,6 +12,7 @@ import ZipCodeReport from "../components/reports/ZipCodeReport";
 import SessionsReport from "../components/reports/SessionsReport";
 import EmailsReport from "../components/reports/EmailsReport";
 import PdfsReport from "../components/reports/PdfsReport";
+import TextsReport from "../components/reports/TextsReport";
 import ReportsReport from "../components/reports/ReportsReport";
 import UsageDataTables from "../components/reports/UsageDataTables";
 import CoverageReport from "../components/reports/CoverageReport";
@@ -278,6 +279,8 @@ export default function ReportsPage() {
         return <EmailsReport {...commonProps} />;
       case "pdfs-created":
         return <PdfsReport {...commonProps} />;
+      case "texts-sent":
+        return <TextsReport {...commonProps} />;
       case "reports-chart":
         return <ReportsReport {...commonProps} />;
       case "usage-tables":
