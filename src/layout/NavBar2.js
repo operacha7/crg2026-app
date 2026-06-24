@@ -934,6 +934,7 @@ function ZipCodeFilters({
 }
 
 function OrganizationFilters({
+  mobile = false,
   parentOrgOptions = [],
   organizations = [],
   selectedParent,
@@ -953,6 +954,27 @@ function OrganizationFilters({
       .map(o => o.organization)
       .sort();
   }, [selectedParent, organizations]);
+
+  // Mobile: two squeezed native selects sharing one row (short field labels so
+  // you can tell Parent from Child even when narrow).
+  if (mobile) {
+    return (
+      <>
+        <MobileSelect
+          placeholder="Parent Org"
+          options={parentOrgOptions}
+          value={selectedParent}
+          onChange={setSelectedParent}
+        />
+        <MobileSelect
+          placeholder="Organization"
+          options={childOrgOptions}
+          value={selectedChild}
+          onChange={setSelectedChild}
+        />
+      </>
+    );
+  }
 
   return (
     <>
@@ -975,6 +997,7 @@ function OrganizationFilters({
 }
 
 function LocationFilters({
+  mobile = false,
   directory = [],
   selectedLocationZip,
   setSelectedLocationZip,
@@ -1049,6 +1072,47 @@ function LocationFilters({
     return neighborhoods.sort();
   }, [directory, selectedLocationZip, selectedCity, selectedCounty]);
 
+  // Mobile: three squeezed native selects (County · City · Zip) in one row —
+  // neighborhood is dropped on mobile. Each onChange mirrors the desktop cascade
+  // resets so picking a broader level clears the narrower ones. Any-level entry
+  // is preserved (all three are always tappable).
+  if (mobile) {
+    return (
+      <>
+        <MobileSelect
+          placeholder="County"
+          options={countyOptions}
+          value={selectedCounty}
+          onChange={(val) => {
+            setSelectedCounty(val);
+            setSelectedCity("");
+            setSelectedLocationZip("");
+            setSelectedNeighborhood("");
+          }}
+        />
+        <MobileSelect
+          placeholder="City"
+          options={cityOptions}
+          value={selectedCity}
+          onChange={(val) => {
+            setSelectedCity(val);
+            setSelectedLocationZip("");
+            setSelectedNeighborhood("");
+          }}
+        />
+        <MobileSelect
+          placeholder="Zip"
+          options={zipOptions}
+          value={selectedLocationZip}
+          onChange={(val) => {
+            setSelectedLocationZip(val);
+            setSelectedNeighborhood("");
+          }}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <FilterDropdown
@@ -1119,6 +1183,105 @@ function LLMFilters({
   );
 }
 
+// Native <select> styled for the squeezed mobile filter row. On a phone the
+// native picker opens full-screen regardless of the field's on-screen width, so
+// several can share one row; the filled background/border signals "something is
+// chosen here" even when the value is too narrow to read (tap to re-open and
+// see it). Default flex-1 makes each box share the row evenly.
+function MobileSelect({ value, onChange, placeholder, options = [] }) {
+  const normalized = useMemo(
+    () => options.map((o) => (typeof o === "string" ? { value: o, label: o } : o)),
+    [options]
+  );
+  const hasValue = Boolean(value);
+  return (
+    <select
+      value={value || ""}
+      onChange={(e) => onChange(e.target.value)}
+      className="font-opensans flex-1 min-w-0"
+      style={{
+        height: "var(--height-navbar2-btn)",
+        paddingLeft: "10px",
+        paddingRight: "30px",
+        borderRadius: "var(--radius-navbar2-btn)",
+        fontSize: "var(--font-size-navbar2-dropdown)",
+        fontWeight: "var(--font-weight-navbar2-dropdown)",
+        letterSpacing: "var(--letter-spacing-navbar2-dropdown)",
+        backgroundColor: hasValue
+          ? "var(--color-navbar2-dropdown-bg)"
+          : "var(--color-navbar2-dropdown-prompting-bg)",
+        color: hasValue
+          ? "var(--color-navbar2-dropdown-text)"
+          : "var(--color-navbar2-dropdown-prompting-text)",
+        border: hasValue
+          ? "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)"
+          : "var(--border-width-btn) solid var(--color-navbar2-dropdown-prompting-border)",
+        WebkitAppearance: "none",
+        appearance: "none",
+        backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 24 24' fill='white' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E\")",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "right 6px center",
+        backgroundSize: "20px",
+      }}
+    >
+      <option value="">{placeholder}</option>
+      {normalized.map((o) => (
+        <option key={o.value} value={o.value}>{o.label}</option>
+      ))}
+    </select>
+  );
+}
+
+// Ask-a-Question input for mobile — a lightweight native text field + Go button
+// (the desktop LLMSearchDropdown is too heavy for the squeezed bar). Enter or Go
+// runs the same handleLLMSearch the desktop uses.
+function MobileLLMInput({ query, setQuery, onSearch, isLoading }) {
+  const submit = () => {
+    if (query.trim() && !isLoading) onSearch(query);
+  };
+  return (
+    <>
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") submit();
+        }}
+        placeholder="What are you looking for today?"
+        className="font-opensans flex-1 min-w-0"
+        style={{
+          height: "var(--height-navbar2-btn)",
+          padding: "0 12px",
+          borderRadius: "var(--radius-navbar2-btn)",
+          fontSize: "var(--font-size-navbar2-dropdown)",
+          backgroundColor: "var(--color-navbar2-dropdown-bg)",
+          color: "var(--color-navbar2-dropdown-text)",
+          border: "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)",
+        }}
+      />
+      <button
+        onClick={submit}
+        disabled={isLoading || !query.trim()}
+        className="font-opensans flex-shrink-0 transition-all hover:brightness-110"
+        style={{
+          height: "var(--height-navbar2-btn)",
+          padding: "0 16px",
+          borderRadius: "var(--radius-navbar2-btn)",
+          backgroundColor: "var(--color-navbar2-dropdown-bg)",
+          color: "#FFFFFF",
+          border: "none",
+          fontWeight: 600,
+          fontSize: "14px",
+          opacity: isLoading || !query.trim() ? 0.6 : 1,
+        }}
+      >
+        {isLoading ? "…" : "Go"}
+      </button>
+    </>
+  );
+}
+
 export default function NavBar2() {
   // Get data and filter state from context
   const {
@@ -1167,26 +1330,9 @@ export default function NavBar2() {
   // Get organization name for logging
   const regOrgName = loggedInUser?.reg_organization || 'Guest';
 
-  // Mobile is locked to Zip Code mode — force it whenever we're under the lg breakpoint.
-  // Exception: SMS deep links (?guest=1 with a non-zipcode mode) are honored on mobile,
-  // since the recipient's whole point is to land on the sender's filtered view.
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const isDeepLink = urlParams.get("guest") === "1" &&
-                       urlParams.get("mode") &&
-                       urlParams.get("mode") !== SEARCH_MODES.ZIPCODE;
-    if (isDeepLink) return;
-
-    const mq = window.matchMedia("(max-width: 1023px)");
-    const enforceZip = () => {
-      if (mq.matches && activeSearchMode !== SEARCH_MODES.ZIPCODE) {
-        setActiveSearchMode(SEARCH_MODES.ZIPCODE);
-      }
-    };
-    enforceZip();
-    mq.addEventListener("change", enforceZip);
-    return () => mq.removeEventListener("change", enforceZip);
-  }, [activeSearchMode, setActiveSearchMode]);
+  // Mobile now supports all four modes via the NavBar2 mode toggle (below), so we
+  // no longer force Zip on small screens. Default mode still comes from context
+  // (Zip), and SMS deep links set their own mode — both work without forcing.
 
   // Handler for LLM search declared later via useCallback; ref so the auto-search
   // effect can call it without adding a forward-reference dependency.
@@ -1478,14 +1624,68 @@ export default function NavBar2() {
     }
   };
 
-  // Get short labels for mobile mode selector
+  // Short labels for the mobile mode toggle (kept terse so all four fit one row).
   const getModeLabel = (mode) => {
     switch (mode) {
       case SEARCH_MODES.ZIPCODE: return "Zip";
       case SEARCH_MODES.ORGANIZATION: return "Org";
-      case SEARCH_MODES.LOCATION: return "Location";
-      case SEARCH_MODES.LLM: return "AI Search";
+      case SEARCH_MODES.LOCATION: return "Loc";
+      case SEARCH_MODES.LLM: return "Ask";
       default: return "Zip";
+    }
+  };
+
+  // Mobile filter row for the active mode — squeezed native selects (Zip/Org/Loc)
+  // or the lightweight Ask input. Reuses the same handlers/options as desktop.
+  const renderMobileFilters = () => {
+    switch (activeSearchMode) {
+      case SEARCH_MODES.ZIPCODE:
+        return (
+          <MobileSelect
+            placeholder="Choose Zip Code"
+            options={zipCodeOptions}
+            value={selectedZipCode}
+            onChange={handleZipCodeChange}
+          />
+        );
+      case SEARCH_MODES.ORGANIZATION:
+        return (
+          <OrganizationFilters
+            mobile
+            parentOrgOptions={parentOrgOptions}
+            organizations={organizations}
+            selectedParent={selectedParentOrg}
+            setSelectedParent={handleParentOrgChange}
+            selectedChild={selectedChildOrg}
+            setSelectedChild={handleChildOrgChange}
+          />
+        );
+      case SEARCH_MODES.LOCATION:
+        return (
+          <LocationFilters
+            mobile
+            directory={directory}
+            selectedLocationZip={selectedLocationZip}
+            setSelectedLocationZip={handleLocationZipChange}
+            selectedCounty={selectedLocationCounty}
+            setSelectedCounty={handleCountyChange}
+            selectedCity={selectedLocationCity}
+            setSelectedCity={handleCityChange}
+            selectedNeighborhood={selectedLocationNeighborhood}
+            setSelectedNeighborhood={handleNeighborhoodChange}
+          />
+        );
+      case SEARCH_MODES.LLM:
+        return (
+          <MobileLLMInput
+            query={llmSearchQuery}
+            setQuery={setLlmSearchQuery}
+            onSearch={handleLLMSearch}
+            isLoading={llmSearchLoading}
+          />
+        );
+      default:
+        return null;
     }
   };
 
@@ -1580,43 +1780,36 @@ export default function NavBar2() {
         )}
 
       {/* ========== MOBILE LAYOUT (<lg) ========== */}
-      {/* Mobile is locked to Zip Code mode — no mode selector, no neighborhood, no distance */}
-      {/* Uses native <select> for reliable iOS scrolling and instant selection */}
-      <div className="lg:hidden flex items-center py-2 px-3">
-        <select
-          value={selectedZipCode || ""}
-          onChange={(e) => handleZipCodeChange(e.target.value)}
-          className="font-opensans"
-          style={{
-            height: "var(--height-navbar2-btn)",
-            paddingLeft: "var(--padding-navbar2-btn-x)",
-            borderRadius: "var(--radius-navbar2-btn)",
-            fontSize: "var(--font-size-navbar2-dropdown)",
-            fontWeight: "var(--font-weight-navbar2-dropdown)",
-            letterSpacing: "var(--letter-spacing-navbar2-dropdown)",
-            backgroundColor: selectedZipCode
-              ? "var(--color-navbar2-dropdown-bg)"
-              : "var(--color-navbar2-dropdown-prompting-bg)",
-            color: selectedZipCode
-              ? "var(--color-navbar2-dropdown-text)"
-              : "var(--color-navbar2-dropdown-prompting-text)",
-            border: selectedZipCode
-              ? "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)"
-              : "var(--border-width-btn) solid var(--color-navbar2-dropdown-prompting-border)",
-            WebkitAppearance: "none",
-            appearance: "none",
-            backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 24 24' fill='white' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E\")",
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "right 8px center",
-            backgroundSize: "24px",
-            paddingRight: "36px",
-          }}
-        >
-          <option value="">Choose Zip Code</option>
-          {zipCodeOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
+      {/* Row 1: mode toggle (Zip · Org · Loc · Ask). Row 2: the active mode's
+          filters as squeezed native selects (or the Ask input). Distance and
+          neighborhood are intentionally omitted on mobile. */}
+      <div className="lg:hidden">
+        <div className="flex items-stretch px-3 pt-2" style={{ gap: 4 }}>
+          {[SEARCH_MODES.ZIPCODE, SEARCH_MODES.ORGANIZATION, SEARCH_MODES.LOCATION, SEARCH_MODES.LLM].map((mode) => {
+            const isActive = activeSearchMode === mode;
+            return (
+              <button
+                key={mode}
+                onClick={() => handleModeChange(mode)}
+                className="font-opensans flex-1 text-center transition-all duration-150"
+                style={{
+                  padding: "6px 4px",
+                  background: "transparent",
+                  color: isActive ? "var(--color-accent-gold)" : "var(--color-navbar2-mode-inactive-text)",
+                  fontSize: "15px",
+                  fontWeight: isActive ? 600 : 500,
+                  borderBottom: `2px solid ${isActive ? "var(--color-accent-gold)" : "transparent"}`,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {getModeLabel(mode)}
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex items-center px-3 py-2" style={{ gap: 6 }}>
+          {renderMobileFilters()}
+        </div>
       </div>
     </nav>
   );

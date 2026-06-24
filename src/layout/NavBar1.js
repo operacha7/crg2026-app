@@ -9,7 +9,6 @@ import Tooltip from "../components/Tooltip";
 import EmailPanel from "../components/EmailPanel";
 import SmsPanel from "../components/SmsPanel";
 import SmsWarningModal from "../components/SmsWarningModal";
-import AnimatedCounter from "../components/AnimatedCounter";
 import MobileMenu from "../components/MobileMenu";
 import { SendEmailIcon, CreatePdfIcon, SendTextIcon } from "../icons";
 
@@ -139,6 +138,7 @@ export default function NavBar1({
   onSmsInitiated,
   onMessagesHandoff,
   onGvAutoSent,
+  onOpenHelp,
 }) {
   // Logout handler comes from the top-level App via AppDataContext —
   // forwarded into the mobile hamburger so users can sign out from the
@@ -541,33 +541,17 @@ export default function NavBar1({
           className="w-8 h-8 object-contain"
         />
 
-        {/* Right side - Counters, Buttons, Hamburger */}
+        {/* Right side - Send buttons + Hamburger. The old orange/blue counter
+            circles are gone on mobile; the send count now rides on each button
+            like desktop (selected rows → Email; filtered list → Text). */}
         <div className="flex items-center gap-3">
-          {/* Counters */}
-          <div className="flex items-center gap-1">
-            <AnimatedCounter
-              value={displayFilteredCount}
-              duration={1000}
-              glowColor="rgba(229, 186, 102, 0.85)"
-              className="bg-navbar1-counter-filtered text-navbar1-counter-text-filtered rounded-full flex items-center justify-center font-opensans text-xs font-medium"
-              style={{ width: '28px', height: '28px' }}
-            />
-            <AnimatedCounter
-              value={selectedCount}
-              duration={600}
-              glowColor="rgba(229, 186, 102, 0.85)"
-              className="bg-navbar1-counter-selected text-navbar1-counter-text-selected rounded-full flex items-center justify-center font-opensans text-xs font-medium"
-              style={{ width: '28px', height: '28px' }}
-            />
-          </div>
-
-          {/* Email/PDF buttons - sized for touch (40px min height) with good spacing */}
+          {/* Send buttons - sized for touch (40px min height). PDF is desktop-only. */}
           <div className="flex items-center gap-3">
             <div className="relative">
               <button
                 ref={emailButtonRef}
                 onClick={handleEmailButtonClick}
-                className={`rounded font-opensans text-sm px-4 py-2 transition-all ${
+                className={`inline-flex items-center rounded font-opensans text-sm px-4 py-2 transition-all ${
                   guestBlocked
                     ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                     : "bg-navbar1-btn-email-bg text-navbar1-btn-email-text hover:brightness-125"
@@ -575,6 +559,14 @@ export default function NavBar1({
                 style={{ opacity: guestBlocked ? 0.6 : 1, minHeight: '40px' }}
               >
                 Email
+                {selectedCount > 0 && (
+                  <span
+                    className="ml-1.5 inline-flex items-center justify-center rounded-full font-semibold"
+                    style={{ minWidth: '18px', height: '18px', padding: '0 5px', fontSize: '11px', backgroundColor: '#FFFFFF', color: '#222831' }}
+                  >
+                    {selectedCount}
+                  </span>
+                )}
               </button>
               <EmailPanel
                 isOpen={showEmailPanel}
@@ -591,33 +583,9 @@ export default function NavBar1({
             </div>
             <div className="relative">
               <button
-                ref={pdfButtonRef}
-                onClick={handlePdfButtonClick}
-                className={`rounded font-opensans text-sm px-4 py-2 transition-all ${
-                  guestBlocked
-                    ? "bg-gray-400 text-gray-600 cursor-not-allowed"
-                    : "bg-navbar1-btn-pdf-bg text-navbar1-btn-pdf-text hover:brightness-125"
-                }`}
-                style={{ opacity: guestBlocked ? 0.6 : 1, minHeight: '40px' }}
-              >
-                PDF
-              </button>
-              <EmailPanel
-                isOpen={showPdfPanel}
-                onCancel={handlePdfCancel}
-                onSend={handlePdfCreate}
-                panelRef={pdfPanelRef}
-                isPdfMode={true}
-                hasInactiveResources={hasInactiveResources}
-                isSending={isSending}
-                statusMessage={statusMessage}
-              />
-            </div>
-            <div className="relative">
-              <button
                 ref={smsButtonRef}
                 onClick={handleSmsButtonClick}
-                className={`rounded font-opensans text-sm px-4 py-2 transition-all ${
+                className={`inline-flex items-center rounded font-opensans text-sm px-4 py-2 transition-all ${
                   guestBlocked
                     ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                     : "bg-navbar1-btn-sms-bg text-navbar1-btn-sms-text hover:brightness-125"
@@ -625,6 +593,14 @@ export default function NavBar1({
                 style={{ opacity: guestBlocked ? 0.6 : 1, minHeight: '40px' }}
               >
                 Text
+                {textChipShown && (
+                  <span
+                    className="ml-1.5 inline-flex items-center justify-center rounded-full font-semibold"
+                    style={{ minWidth: '18px', height: '18px', padding: '0 5px', fontSize: '11px', backgroundColor: '#FFFFFF', color: '#222831' }}
+                  >
+                    {displayFilteredCount}
+                  </span>
+                )}
               </button>
               <SmsPanel
                 isOpen={showSmsPanel}
@@ -639,7 +615,7 @@ export default function NavBar1({
           </div>
 
           {/* Hamburger menu — Home / Contact Support / Privacy Policy / Logout */}
-          <MobileMenu onLogout={onLogout} />
+          <MobileMenu onLogout={onLogout} onOpenHelp={onOpenHelp} />
         </div>
       </div>
 

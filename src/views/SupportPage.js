@@ -526,18 +526,47 @@ const SupportPage = ({ loggedInUser }) => {
                           </div>
                         </div>
 
-                        {/* QR below, centered */}
+                        {/* Text trigger, centered. Desktop scans a QR to hop the
+                            message to a separate phone; mobile taps straight into
+                            the native messaging app. */}
                         <div className="flex flex-col items-center" style={{ marginTop: 18 }}>
-                          <div style={{ padding: 8, background: '#FFFFFF', border: '1px solid var(--color-support-hairline)', borderRadius: 6 }}>
-                            <QRCodeSVG value={smsHref} size={140} level="M" />
+                          {/* Desktop: QR code */}
+                          <div className="hidden lg:flex flex-col items-center">
+                            <div style={{ padding: 8, background: '#FFFFFF', border: '1px solid var(--color-support-hairline)', borderRadius: 6 }}>
+                              <QRCodeSVG value={smsHref} size={140} level="M" />
+                            </div>
+                            <p style={{ fontSize: 12.5, color: 'var(--color-support-muted)', marginTop: 8 }}>
+                              Scan to text
+                            </p>
                           </div>
-                          <p style={{ fontSize: 12.5, color: 'var(--color-support-muted)', marginTop: 8 }}>
-                            Scan to text
+
+                          {/* Mobile: tap-to-text — opens the phone's messaging app
+                              with the details filled in, and optimistically closes
+                              out (same model as the desktop "I've sent my text"). */}
+                          <a
+                            href={smsHref}
+                            onClick={handleTextSent}
+                            className="lg:hidden font-opensans transition-all duration-200 hover:brightness-95 text-center"
+                            style={{
+                              backgroundColor: 'var(--color-support-bar-urgent)',
+                              color: '#FFFFFF',
+                              fontWeight: 400,
+                              borderRadius: 8,
+                              padding: '12px 26px',
+                              textDecoration: 'none',
+                            }}
+                          >
+                            Text Me
+                          </a>
+                          <p className="lg:hidden" style={{ fontSize: 12.5, color: 'var(--color-support-muted)', marginTop: 8, textAlign: 'center' }}>
+                            Opens your messaging app with the details filled in.
                           </p>
+
+                          {/* Desktop closure button (mobile closes via the tap above) */}
                           <button
                             type="button"
                             onClick={handleTextSent}
-                            className="font-opensans transition-all duration-200 hover:brightness-95"
+                            className="hidden lg:block font-opensans transition-all duration-200 hover:brightness-95"
                             style={{
                               marginTop: 12,
                               backgroundColor: 'var(--color-support-bar-urgent)',

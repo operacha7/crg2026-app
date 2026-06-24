@@ -34,7 +34,16 @@ const navRoutes = {
   announcements: "/announcements",
 };
 
-export default function VerticalNavBar({ externalHelpOpen, onHelpOpenChange }) {
+export default function VerticalNavBar({
+  externalHelpOpen,
+  onHelpOpenChange,
+  // When a parent (PageLayout) owns the Help panel so it can also be opened from
+  // the mobile hamburger, it passes onRequestHelp (open + reset) and sets
+  // renderHelpPanel=false so we don't render a duplicate. Standalone pages pass
+  // neither and stay fully self-contained (internal state + own HelpPanel).
+  onRequestHelp,
+  renderHelpPanel = true,
+}) {
   const navigate = useNavigate();
   const location = useLocation();
   const [internalHelpOpen, setInternalHelpOpen] = useState(false);
@@ -103,7 +112,12 @@ export default function VerticalNavBar({ externalHelpOpen, onHelpOpenChange }) {
       return;
     }
     if (id === "information") {
-      // Always increment reset key to clear conversation, whether panel is open or not
+      // Parent-owned panel (PageLayout): let it handle open + conversation reset.
+      if (onRequestHelp) {
+        onRequestHelp();
+        return;
+      }
+      // Self-contained: always increment reset key to clear conversation, whether panel is open or not
       setHelpResetKey((prev) => prev + 1);
       setIsHelpOpen(true);
       return;
@@ -234,8 +248,11 @@ export default function VerticalNavBar({ externalHelpOpen, onHelpOpenChange }) {
       </div>
     </div>
 
-    {/* Help Panel */}
-    <HelpPanel isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} resetKey={helpResetKey} />
+    {/* Help Panel — only when self-contained. When a parent owns the panel
+        (PageLayout, so the mobile hamburger can open it too) this is skipped. */}
+    {renderHelpPanel && (
+      <HelpPanel isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} resetKey={helpResetKey} />
+    )}
 
     {/* Quick Tips Panel */}
     <QuickTipsPanel />

@@ -5,6 +5,7 @@ import NavBar2 from "./NavBar2";
 import NavBar3 from "./NavBar3";
 import Footer from "./Footer";
 import VerticalNavBar from "./VerticalNavBar";
+import HelpPanel from "../components/HelpPanel";
 
 export default function PageLayout({
   children,
@@ -28,6 +29,14 @@ export default function PageLayout({
   onGvAutoSent,
 }) {
   const [helpPanelOpen, setHelpPanelOpen] = useState(false);
+  // resetKey bumps on each fresh open so HelpPanel clears the prior conversation.
+  // The panel is owned here (not inside VerticalNavBar) so it can be opened from
+  // both the desktop sidebar icon AND the mobile hamburger.
+  const [helpResetKey, setHelpResetKey] = useState(0);
+  const openHelp = () => {
+    setHelpResetKey((k) => k + 1);
+    setHelpPanelOpen(true);
+  };
 
   return (
     <div className="h-dvh flex flex-col lg:flex-row overflow-hidden bg-gray-50 text-gray-900 font-opensans">
@@ -58,6 +67,7 @@ export default function PageLayout({
             onSmsInitiated={onSmsInitiated}
             onMessagesHandoff={onMessagesHandoff}
             onGvAutoSent={onGvAutoSent}
+            onOpenHelp={openHelp}
           />
         )}
 
@@ -77,14 +87,28 @@ export default function PageLayout({
         <Footer />
       </div>
 
-      {/* Vertical Nav Bar - Right side (hidden on mobile) */}
+      {/* Vertical Nav Bar - Right side (hidden on mobile). The Help panel is
+          owned by PageLayout (below), not VerticalNavBar, so the mobile
+          hamburger can open it too — hence renderHelpPanel={false}. */}
       {showNav && (
         <div className="hidden lg:block">
           <VerticalNavBar
             externalHelpOpen={helpPanelOpen}
             onHelpOpenChange={setHelpPanelOpen}
+            onRequestHelp={openHelp}
+            renderHelpPanel={false}
           />
         </div>
+      )}
+
+      {/* Help panel — rendered once here (viewport-independent) so it works from
+          the desktop sidebar icon and the mobile hamburger alike. */}
+      {showNav && (
+        <HelpPanel
+          isOpen={helpPanelOpen}
+          onClose={() => setHelpPanelOpen(false)}
+          resetKey={helpResetKey}
+        />
       )}
     </div>
   );

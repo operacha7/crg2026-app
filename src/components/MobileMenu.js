@@ -29,19 +29,28 @@ export default function MobileMenu({
   items = DEFAULT_ITEMS,
   iconColor = "var(--color-footer-bg)",
   onLogout,
+  onOpenHelp,
 }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
 
+  // Help is an action (opens the Help panel), not a route. Injected right after
+  // Home when the caller provides onOpenHelp — this is how the mobile app reaches
+  // Help, since the desktop VerticalNavBar (which normally hosts it) is hidden on
+  // small screens. Callers without onOpenHelp (e.g. public pages) don't get it.
+  const withHelp = onOpenHelp
+    ? [items[0], { label: "Help", action: "help" }, ...items.slice(1)]
+    : items;
+
   // Append Logout when the caller provides an onLogout handler. Kept here
   // (rather than in the items list) so callers don't have to assemble it
   // themselves, and so HomeNavBar (which passes its own items but has no
   // logged-in session to drop) is naturally opted out by not providing it.
   const allItems = onLogout
-    ? [...items, { label: "Logout", action: "logout" }]
-    : items;
+    ? [...withHelp, { label: "Logout", action: "logout" }]
+    : withHelp;
 
   useEffect(() => {
     if (!open) return undefined;
@@ -101,6 +110,8 @@ export default function MobileMenu({
                 setOpen(false);
                 if (item.action === "logout") {
                   onLogout?.();
+                } else if (item.action === "help") {
+                  onOpenHelp?.();
                 } else {
                   navigate(item.path);
                 }

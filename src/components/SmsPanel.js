@@ -406,7 +406,10 @@ export default function SmsPanel({
         )}
 
         {/* ---- CARD 3: Text From Phone (auto) ---- */}
-        {isValidPhone && !showExtensionPrompt && (
+        {/* Desktop-only: this card's whole purpose is to hop a message from a
+            computer to your phone via QR. On a phone you're already there, so
+            Card 2 (Messaging App) is the single mobile option. */}
+        {isValidPhone && !showExtensionPrompt && !isMobile && (
           <div>
             <button
               onClick={handleTextFromPhone}
