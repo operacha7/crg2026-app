@@ -72,6 +72,46 @@ function persistAddedIds(set) {
   }
 }
 
+// Static PDF served from /public/documents/. Opens in a new tab (browser viewer
+// has its own download button).
+const SETUP_TIPS_PDF = "/documents/Google_Meet_Tips.pdf";
+
+// Always-on "tech setup tips" link above the sessions. Deliberately lighter than
+// a session card (translucent bar, not cream) so it doesn't read as a session.
+function SetupTipsLink() {
+  return (
+    <a
+      href={SETUP_TIPS_PDF}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-opensans hover:brightness-110"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: 12,
+        marginBottom: 28,
+        padding: "12px 18px",
+        borderRadius: 10,
+        background: "rgba(255, 253, 247, 0.10)",
+        border: "1px solid rgba(255, 253, 247, 0.35)",
+        color: "#FFFFFF",
+        textDecoration: "none",
+        fontSize: 15,
+        lineHeight: 1.4,
+      }}
+    >
+      <span style={{ fontSize: 22 }} aria-hidden="true">📄</span>
+      <span>
+        <strong>New to video meetings?</strong> Set up your mic, camera &amp; screen.
+      </span>
+      <span style={{ marginLeft: "auto", fontWeight: 700, color: "#F0B429", whiteSpace: "nowrap" }}>
+        Setup Tips (PDF) →
+      </span>
+    </a>
+  );
+}
+
 export default function TrainingPage() {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -185,6 +225,10 @@ export default function TrainingPage() {
           }}
         >
           <div style={{ maxWidth: 900 }}>
+            {/* Always-on setup-tips link — sits above the heading/first session
+                in every state (loading, no sessions, or a list). Opens the PDF
+                in a new tab; the browser viewer offers download. */}
+            <SetupTipsLink />
             {loading ? (
               <div className="font-opensans" style={{ color: "#FFFFFF", opacity: 0.9, padding: "24px 0" }}>
                 Loading sessions…

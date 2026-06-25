@@ -4,7 +4,7 @@
 // dropdown, and category-grouped assistance-type chips that link to
 // /assistance/[slug]. Site-wide footer (secondary tier + red copyright) renders here too.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { dataService } from "../services/dataService";
@@ -93,6 +93,18 @@ export default function HomePage() {
 
   const buildChipHref = (slug) =>
     selectedZip ? `/assistance/${slug}?zip=${selectedZip}` : `/assistance/${slug}`;
+
+  // Houston-area zips as {value, label} for the searchable combobox.
+  const zipOptions = useMemo(
+    () =>
+      zipCodes
+        .filter((z) => z.houston_area === "Y")
+        .map((z) => ({
+          value: z.zip_code,
+          label: z.city ? `${z.zip_code} — ${z.city}` : z.zip_code,
+        })),
+    [zipCodes]
+  );
 
   return (
     <div className="min-h-dvh lg:h-dvh flex flex-col lg:overflow-hidden">
@@ -280,32 +292,11 @@ export default function HomePage() {
               >
                 Select Your Zip Code
               </label>
-              <select
-                id="home-zip"
+              <HomeZipCombobox
                 value={selectedZip}
-                onChange={(e) => setSelectedZip(e.target.value)}
-                className="font-opensans w-full lg:w-auto lg:min-w-[200px] box-border"
-                style={{
-                  background: "var(--color-home-zip-dropdown-bg)",
-                  color: "var(--color-home-zip-dropdown-text)",
-                  border: "none",
-                  borderRadius: 4,
-                  padding: "6px 10px",
-                  fontSize: 18,
-                  fontWeight: 600,
-                  maxWidth: "100%",
-                }}
-              >
-                <option value="">— Select —</option>
-                {zipCodes
-                  .filter((z) => z.houston_area === "Y")
-                  .map((z) => (
-                    <option key={z.id_no} value={z.zip_code}>
-                      {z.zip_code}
-                      {z.city ? ` — ${z.city}` : ""}
-                    </option>
-                  ))}
-              </select>
+                options={zipOptions}
+                onChange={setSelectedZip}
+              />
             </div>
 
             {/* Assistance-type panel */}
@@ -412,6 +403,151 @@ function CategoryGroup({ name, color, panelBg, children }) {
       >
         {name}
       </span>
+    </div>
+  );
+}
+
+// Searchable zip-code combobox for the home hero panel. Mirrors the /find
+// ZipCodeDropdown effect (NavBar2): a trigger styled like the old <select>, and
+// when open a visible "Type zip code…" input (auto-focused) over a filtered,
+// scrollable list — so users see they can type, not just scroll. Filters by zip
+// prefix; Enter picks the first match; outside-click / Escape closes.
+function HomeZipCombobox({ value, options = [], onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const containerRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const filtered = useMemo(() => {
+    const q = searchText.trim();
+    if (!q) return options;
+    return options.filter((o) => o.value.startsWith(q));
+  }, [options, searchText]);
+
+  const selectedLabel = useMemo(() => {
+    if (!value) return "— Select —";
+    const match = options.find((o) => o.value === value);
+    return match ? match.label : value;
+  }, [value, options]);
+
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+        setSearchText("");
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && inputRef.current) inputRef.current.focus({ preventScroll: true });
+  }, [isOpen]);
+
+  const select = (v) => {
+    onChange?.(v);
+    setIsOpen(false);
+    setSearchText("");
+  };
+
+  const onKeyDown = (e) => {
+    if (e.key === "Enter" && filtered.length > 0) {
+      e.preventDefault();
+      select(filtered[0].value);
+    } else if (e.key === "Escape") {
+      setIsOpen(false);
+      setSearchText("");
+    }
+  };
+
+  return (
+    <div ref={containerRef} className="relative w-full lg:w-auto lg:min-w-[200px]">
+      <button
+        type="button"
+        onClick={() => setIsOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        className="font-opensans w-full box-border flex items-center justify-between hover:brightness-105"
+        style={{
+          background: "var(--color-home-zip-dropdown-bg)",
+          color: "var(--color-home-zip-dropdown-text)",
+          border: "none",
+          borderRadius: 4,
+          padding: "6px 10px",
+          fontSize: 18,
+          fontWeight: 600,
+          maxWidth: "100%",
+          cursor: "pointer",
+          textAlign: "left",
+        }}
+      >
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {selectedLabel}
+        </span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0, marginLeft: 6 }}>
+          <path d="M7 10l5 5 5-5z" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div
+          className="absolute left-0 right-0 mt-1 rounded shadow-lg z-50"
+          style={{ background: "#FFFFFF", border: "1px solid var(--color-home-zip-dropdown-bg)" }}
+        >
+          <div style={{ padding: 8, borderBottom: "1px solid #E2E2E2" }}>
+            <input
+              ref={inputRef}
+              type="text"
+              inputMode="numeric"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder="Type zip code..."
+              className="w-full font-opensans"
+              style={{
+                fontSize: 15,
+                color: "#222831",
+                background: "#FFFFFF",
+                border: "2px solid var(--color-home-zip-dropdown-bg)",
+                borderRadius: 4,
+                padding: "8px 10px",
+                outline: "none",
+              }}
+            />
+          </div>
+          <div role="listbox" style={{ maxHeight: 280, overflowY: "auto" }}>
+            {filtered.length > 0 ? (
+              filtered.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  role="option"
+                  aria-selected={o.value === value}
+                  onClick={() => select(o.value)}
+                  className="font-opensans w-full text-left hover:brightness-95"
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    padding: "8px 12px",
+                    fontSize: 15,
+                    color: "#222831",
+                    background: o.value === value ? "var(--color-home-zip-dropdown-bg)" : "#FFFFFF",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  {o.label}
+                </button>
+              ))
+            ) : (
+              <div className="font-opensans" style={{ padding: "10px 12px", fontSize: 14, color: "#666666" }}>
+                No matching zip code
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

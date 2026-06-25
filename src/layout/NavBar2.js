@@ -131,7 +131,7 @@ function HoverDropdown({ placeholder, options = [], value, onChange, allowReset 
           onTouchStart={(e) => e.stopPropagation()}
           onTouchEnd={(e) => e.stopPropagation()}
         >
-          {allowReset && (
+          {allowReset && value && (
             <button
               onClick={(e) => { e.stopPropagation(); handleSelect(""); }}
               onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); handleSelect(""); }}
@@ -143,7 +143,7 @@ function HoverDropdown({ placeholder, options = [], value, onChange, allowReset 
                 backgroundColor: hoveredOption === "__reset__" ? "var(--color-dropdown-hover-bg)" : "transparent",
               }}
             >
-              {placeholder}
+              Clear Filter
             </button>
           )}
           {options.map((opt, idx) => (
@@ -170,8 +170,10 @@ function HoverDropdown({ placeholder, options = [], value, onChange, allowReset 
   );
 }
 
-// Alias for backwards compatibility
-const FilterDropdown = HoverDropdown;
+// County/City Location dropdowns. Use SearchableDropdown so they get the same
+// "Type to search…" input box as Select Zip and Select Neighborhood (was
+// HoverDropdown, which was scroll-only).
+const FilterDropdown = SearchableDropdown;
 
 // SearchableDropdown - allows typing to filter options (searches anywhere in name)
 // Used for organization dropdowns where user wants to find "Health" anywhere in org name
@@ -326,7 +328,7 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
 
           {/* Options list */}
           <div className="max-h-[350px] overflow-y-auto">
-            {allowReset && (
+            {allowReset && value && (
               <button
                 onClick={(e) => { e.stopPropagation(); handleSelect(""); }}
                 onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); handleSelect(""); }}
@@ -338,7 +340,7 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
                   backgroundColor: hoveredOption === "__reset__" ? "var(--color-dropdown-hover-bg)" : "transparent",
                 }}
               >
-                {placeholder}
+                Clear Filter
               </button>
             )}
             {filteredOptions.length === 0 ? (
@@ -520,6 +522,21 @@ function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select 
           </div>
           {/* Options list */}
           <div className="max-h-[350px] overflow-y-auto">
+            {hasValue && (
+              <button
+                onClick={(e) => { e.stopPropagation(); handleSelect(""); }}
+                onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); handleSelect(""); }}
+                onMouseEnter={() => setHoveredOption("__reset__")}
+                onMouseLeave={() => setHoveredOption(null)}
+                className="w-full text-left px-4 py-2 font-opensans text-gray-500 italic"
+                style={{
+                  fontSize: "14px",
+                  backgroundColor: hoveredOption === "__reset__" ? "var(--color-dropdown-hover-bg)" : "transparent",
+                }}
+              >
+                Clear Filter
+              </button>
+            )}
             {filteredOptions.length > 0 ? (
               filteredOptions.map((opt) => (
                 <button
@@ -1014,19 +1031,41 @@ function LocationFilters({
   // hides counties/cities/zips that have no organizations physically located
   // in them — so users can't pick a Location that's guaranteed to return zero
   // results.
+  // Label carries the state ("Harris, TX") for context; the stored value is the
+  // bare county name so filtering/cascade against directory.org_county is
+  // unchanged. (Zip uses " — "; county/city use ", " per design.)
   const countyOptions = useMemo(() => {
-    const counties = [...new Set(directory.map(d => d.org_county).filter(Boolean))];
-    return counties.sort();
+    const byCounty = new Map();
+    for (const d of directory) {
+      if (!d.org_county) continue;
+      if (!byCounty.has(d.org_county)) byCounty.set(d.org_county, d.org_state || "");
+    }
+    return Array.from(byCounty.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([county, state]) => ({
+        value: county,
+        label: state ? `${county}, ${state}` : county,
+      }));
   }, [directory]);
 
-  // Cities scoped to directory orgs in the selected county
+  // Cities scoped to directory orgs in the selected county. Same value/label
+  // split as counties — bare city stored, "City, ST" displayed.
   const cityOptions = useMemo(() => {
     let filtered = directory;
     if (selectedCounty) {
       filtered = filtered.filter(d => d.org_county === selectedCounty);
     }
-    const cities = [...new Set(filtered.map(d => d.org_city).filter(Boolean))];
-    return cities.sort();
+    const byCity = new Map();
+    for (const d of filtered) {
+      if (!d.org_city) continue;
+      if (!byCity.has(d.org_city)) byCity.set(d.org_city, d.org_state || "");
+    }
+    return Array.from(byCity.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([city, state]) => ({
+        value: city,
+        label: state ? `${city}, ${state}` : city,
+      }));
   }, [directory, selectedCounty]);
 
   // Zips scoped to directory orgs in the selected county and city. Label
