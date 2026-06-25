@@ -234,6 +234,7 @@ export default function TrainingPage() {
                       alreadyAdded={addedIds.has(session.id_no)}
                       onCalendarAdd={() => trackCalendarAdd(session)}
                       accentColor={accentMap[session.title || ""]?.card}
+                      gradientColor={accentMap[session.title || ""]?.ring}
                       cardRef={(node) => {
                         cardRefs.current[session.id_no] = node;
                       }}

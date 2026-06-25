@@ -25,22 +25,31 @@ import {
   normalizeMeetUrl,
 } from "../utils/calendar";
 
-export default function SessionCard({ session, now, count, alreadyAdded, onCalendarAdd, cardRef, singleRowGrid, accentColor, cardBg }) {
+export default function SessionCard({ session, now, count, alreadyAdded, onCalendarAdd, cardRef, singleRowGrid, accentColor, gradientColor, cardBg }) {
   const { start } = sessionToInstants(session);
   const parts = getSessionDisplayParts(session);
   const state = getButtonState(start, now);
+
+  // Card background, layered top→bottom: the solid 8px accent stripe on the
+  // left, then the course wash (~15%→0% over the left half), then the cream
+  // base. Painting the stripe as a BACKGROUND layer (not a border) lets the
+  // card's border-radius clip it, so its top/bottom ends curve with the corners
+  // and read as part of the card — instead of the flat diagonal wedge a thick
+  // border-left makes against the rounded corners. Tune wash start via the alpha
+  // hex (`26` ≈ 15%) and its spread via the 50% stop; stripe width via the 8px.
+  const baseBg = cardBg || "var(--color-training-panel-bg)";
+  const layers = [];
+  if (accentColor) layers.push(`linear-gradient(to right, ${accentColor} 0, ${accentColor} 10px, transparent 10px)`);
+  if (gradientColor) layers.push(`linear-gradient(to right, ${gradientColor}26 0%, ${gradientColor}00 50%)`);
+  const background = layers.length ? `${layers.join(", ")}, ${baseBg}` : baseBg;
 
   return (
     <article
       ref={cardRef}
       className="font-opensans"
       style={{
-        background: cardBg || "var(--color-training-panel-bg)",
-        borderRadius: 14,
-        // Course accent: a single outline around the whole card, with a wider
-        // left edge, gives the stack rhythm and lets the eye group "Training I"
-        // vs "Training II" at a glance. Same treatment on every card.
-        borderLeft: accentColor ? `8px solid ${accentColor}` : undefined,
+        background,
+        borderRadius: 20,
         padding: "20px 24px",
         boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
         color: "var(--color-training-body-text)",
