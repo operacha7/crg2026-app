@@ -22,6 +22,20 @@ const TABLES = [
   { sheetName: 'zip_code_data', supabaseTable: 'zip_code_data', transform: transformZipCodeData, primaryKey: 'id' },
   { sheetName: 'header_config', supabaseTable: 'header_config', transform: transformHeaderConfig },
   { sheetName: 'fin_funding_data', supabaseTable: 'fin_funding_data', transform: transformFinFundingData, primaryKey: 'id' },
+  // training_sessions is the one table synced by UPSERT instead of the shared
+  // delete-then-insert. The sheet carries id_no + 7 content columns; Supabase
+  // owns created_at (default now()) and calendar_adds (an anonymous counter
+  // written server-side by functions/track-calendar-add.js). Upserting on id_no
+  // overwrites only the columns we send, so created_at and calendar_adds are
+  // left untouched — the counter survives every sync. `mode: 'upsert'` routes
+  // this table to uploadViaUpsert() below.
+  {
+    sheetName: 'training_sessions',
+    supabaseTable: 'training_sessions',
+    transform: transformTrainingSession,
+    mode: 'upsert',
+    primaryKey: 'id_no',
+  },
 ];
 
 // Columns that contain JSON data and should be parsed before inserting
@@ -97,6 +111,15 @@ async function transformRegisteredOrg(row) {
 }
 
 function transformFinFundingData(row) { return passthroughTransform(row, ['id']); }
+
+// training_sessions: pass the sheet's id_no + 7 content columns straight
+// through. We deliberately drop calendar_adds (Supabase-owned counter) and
+// created_at (default now()) if they ever appear as stray sheet columns, so an
+// upsert never overwrites them. Postgres handles the type coercion: `time`
+// accepts "1:00 PM", `date` accepts "2026-06-25".
+function transformTrainingSession(row) {
+  return passthroughTransform(row, ['created_at', 'calendar_adds']);
+}
 
 function transformHeaderConfig(row) {
   const result = passthroughTransform(row);
@@ -459,6 +482,33 @@ async function uploadToSupabase(tableName, data, primaryKey = 'id_no') {
   return data.length;
 }
 
+// Upload via UPSERT keyed on the primary key (used by training_sessions).
+// Unlike uploadToSupabase, this never deletes: rows are matched on primaryKey
+// and only the columns present in `data` are written. Columns we omit
+// (created_at, calendar_adds) keep their existing Supabase values, so the
+// anonymous add-counter survives every sync. New ids insert fresh with column
+// defaults. To retire a session, delete its row directly in Supabase — removing
+// it from the sheet alone won't (upsert doesn't prune).
+// Returns the count of records upserted, or null if failed.
+async function uploadViaUpsert(tableName, data, primaryKey = 'id_no') {
+  if (data.length === 0) {
+    console.log(`Skipping ${tableName} - no data`);
+    return 0;
+  }
+
+  const { error } = await supabase
+    .from(tableName)
+    .upsert(data, { onConflict: primaryKey });
+
+  if (error) {
+    console.error(`Error upserting into ${tableName}:`, error);
+    return null;
+  }
+
+  console.log(`✓ ${tableName}: ${data.length} rows upserted`);
+  return data.length;
+}
+
 // Log sync results to sync_log table
 async function logSyncResults(syncCounts) {
   // Get current time in Central Time
@@ -525,7 +575,9 @@ async function syncAll() {
       data = await Promise.all(data.map(table.transform));
     }
 
-    const count = await uploadToSupabase(table.supabaseTable, data, table.primaryKey);
+    const count = table.mode === 'upsert'
+      ? await uploadViaUpsert(table.supabaseTable, data, table.primaryKey)
+      : await uploadToSupabase(table.supabaseTable, data, table.primaryKey);
     syncCounts[table.supabaseTable] = count;
   }
 

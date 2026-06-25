@@ -212,15 +212,15 @@ export const dataService = {
   },
 
   // ======= TRAINING SESSIONS (online onboarding sessions) =======
-  // Only active rows, ordered for display. `calendar_adds` (anonymous "added
-  // to calendar" count) rides along via select('*'); it's written server-side
-  // by functions/track-calendar-add.js, never from the browser.
+  // All rows, ordered by date then time for display. Past sessions are dropped
+  // by the UI's time-based filter (start + 15 min cutoff in calendar.js), so no
+  // is_active flag is needed here. `calendar_adds` (anonymous "added to
+  // calendar" count) rides along via select('*'); it's written server-side by
+  // functions/track-calendar-add.js, never from the browser.
   async getTrainingSessions() {
     const { data, error } = await supabase
       .from('training_sessions')
       .select('*')
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true, nullsFirst: false })
       .order('session_date', { ascending: true })
       .order('start_time', { ascending: true });
 

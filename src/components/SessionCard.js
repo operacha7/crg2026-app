@@ -12,6 +12,7 @@
 // The green/orange buttons get the whole-button glow (.training-pulse) — the
 // pulse is tied to "joinable now," not to the approaching countdown.
 
+import { useState, useRef, useEffect } from "react";
 import {
   sessionToInstants,
   getSessionDisplayParts,
@@ -20,24 +21,26 @@ import {
   buildIcsDataUri,
   buildIcsFilename,
   buildGoogleCalendarUrl,
+  buildOutlookCalendarUrl,
   normalizeMeetUrl,
 } from "../utils/calendar";
 
-export default function SessionCard({ session, now, count, alreadyAdded, onCalendarAdd, cardRef, singleRowGrid }) {
+export default function SessionCard({ session, now, count, alreadyAdded, onCalendarAdd, cardRef, singleRowGrid, accentColor, cardBg }) {
   const { start } = sessionToInstants(session);
   const parts = getSessionDisplayParts(session);
   const state = getButtonState(start, now);
-
-  const icsUri = buildIcsDataUri(session);
-  const googleUrl = buildGoogleCalendarUrl(session);
 
   return (
     <article
       ref={cardRef}
       className="font-opensans"
       style={{
-        background: "var(--color-training-panel-bg)",
+        background: cardBg || "var(--color-training-panel-bg)",
         borderRadius: 14,
+        // Course accent: a single outline around the whole card, with a wider
+        // left edge, gives the stack rhythm and lets the eye group "Training I"
+        // vs "Training II" at a glance. Same treatment on every card.
+        borderLeft: accentColor ? `8px solid ${accentColor}` : undefined,
         padding: "20px 24px",
         boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
         color: "var(--color-training-body-text)",
@@ -49,7 +52,7 @@ export default function SessionCard({ session, now, count, alreadyAdded, onCalen
         <JoinButton state={state} startMs={start?.getTime()} now={now} meetLink={session.meet_link} />
       </div>
 
-      <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6, lineHeight: 1.2 }}>
+      <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6, lineHeight: 1.2, color: accentColor || undefined }}>
         {session.title || "CRG Houston Training"}
       </h2>
       {session.description && (
@@ -95,31 +98,7 @@ export default function SessionCard({ session, now, count, alreadyAdded, onCalen
 
       <div style={{ borderTop: "1px solid var(--color-training-cell-border)", paddingTop: 14 }}>
         <div className="flex flex-wrap items-center justify-between" style={{ gap: 12 }}>
-          <div className="flex flex-wrap items-center" style={{ gap: 18 }}>
-            {icsUri && (
-              <a
-                href={icsUri}
-                download={buildIcsFilename(session)}
-                onClick={onCalendarAdd}
-                className="hover:brightness-110"
-                style={calendarLinkStyle}
-              >
-                🗓️ Add to Calendar
-              </a>
-            )}
-            {googleUrl && (
-              <a
-                href={googleUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={onCalendarAdd}
-                className="hover:brightness-110"
-                style={calendarLinkStyle}
-              >
-                Google Calendar
-              </a>
-            )}
-          </div>
+          <CalendarMenu session={session} onCalendarAdd={onCalendarAdd} accentColor={accentColor} />
 
           <div
             style={{
@@ -207,12 +186,122 @@ function StatusTag({ state }) {
   return null;
 }
 
-const calendarLinkStyle = {
-  color: "var(--color-training-link)",
+// Standard "Add to Calendar ▾" control. One button reveals the per-provider
+// options so we keep the one-click Google/Outlook paths (and a universal .ics
+// for Apple/everything else) without three links cluttering every card. Each
+// pick fires onCalendarAdd so the anonymous "saved this session" counter still
+// increments. Closes on outside-click or Escape.
+function CalendarMenu({ session, onCalendarAdd, accentColor }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  const icsUri = buildIcsDataUri(session);
+  const googleUrl = buildGoogleCalendarUrl(session);
+  const outlookUrl = buildOutlookCalendarUrl(session);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDocClick = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  if (!icsUri && !googleUrl && !outlookUrl) return <div />;
+
+  // download anchors (.ics) fire onCalendarAdd; web links open in a new tab.
+  const handlePick = () => {
+    onCalendarAdd?.();
+    setOpen(false);
+  };
+
+  const accent = accentColor || "var(--color-training-link)";
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="hover:brightness-110"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          background: "#FFFFFF",
+          border: `1.5px solid ${accent}`,
+          color: accent,
+          borderRadius: 8,
+          padding: "8px 14px",
+          fontSize: 14,
+          fontWeight: 600,
+          cursor: "pointer",
+        }}
+      >
+        🗓️ Add to Calendar
+        <span style={{ fontSize: 11, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          style={{
+            position: "absolute",
+            top: "calc(100% + 6px)",
+            left: 0,
+            zIndex: 20,
+            minWidth: 200,
+            background: "#FFFFFF",
+            border: "1px solid var(--color-training-cell-border)",
+            borderRadius: 10,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.22)",
+            overflow: "hidden",
+          }}
+        >
+          {googleUrl && (
+            <a href={googleUrl} target="_blank" rel="noopener noreferrer" role="menuitem" onClick={handlePick} style={calendarMenuItemStyle}>
+              Google Calendar
+            </a>
+          )}
+          {outlookUrl && (
+            <a href={outlookUrl} target="_blank" rel="noopener noreferrer" role="menuitem" onClick={handlePick} style={calendarMenuItemStyle}>
+              Outlook.com
+            </a>
+          )}
+          {icsUri && (
+            <a href={icsUri} download={buildIcsFilename(session)} role="menuitem" onClick={handlePick} style={calendarMenuItemStyle}>
+              Apple Calendar
+            </a>
+          )}
+          {icsUri && (
+            <a href={icsUri} download={buildIcsFilename(session)} role="menuitem" onClick={handlePick} style={{ ...calendarMenuItemStyle, borderTop: "1px solid var(--color-training-cell-border)" }}>
+              Other (download .ics)
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const calendarMenuItemStyle = {
+  display: "block",
+  padding: "10px 14px",
   fontSize: 14,
   fontWeight: 600,
-  textDecoration: "underline",
+  color: "var(--color-training-body-text)",
+  textDecoration: "none",
   cursor: "pointer",
+  background: "#FFFFFF",
 };
 
 // Shared button geometry — fixed width so the control doesn't resize as its

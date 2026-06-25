@@ -298,3 +298,23 @@ export function buildGoogleCalendarUrl(session) {
   });
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
+
+// Build a one-click Outlook.com "Add event" link (also works for Outlook web /
+// Microsoft 365 personal accounts). Uses ISO timestamps with the trailing Z so
+// Outlook reads them as UTC, matching the Google/.ics events. Returns null if
+// the session lacks valid date/time data.
+export function buildOutlookCalendarUrl(session) {
+  const { start, end } = sessionToInstants(session);
+  if (!start || !end) return null;
+
+  const params = new URLSearchParams({
+    path: "/calendar/action/compose",
+    rru: "addevent",
+    subject: session.title || "CRG Houston Training",
+    startdt: start.toISOString(),
+    enddt: end.toISOString(),
+    body: buildDescription(session),
+    location: "Google Meet (online)",
+  });
+  return `https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`;
+}

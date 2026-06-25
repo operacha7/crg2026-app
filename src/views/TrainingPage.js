@@ -28,6 +28,33 @@ const ADDED_STORAGE_KEY = "crg_calendar_added"; // device-local dedupe, never se
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const pad2 = (n) => String(n).padStart(2, "0");
 
+// Course accent palette. Each distinct session title gets the next color PAIR,
+// shared across all of that course's sessions, so the stack of cards has rhythm
+// instead of reading as a wall of beige. `card` paints the card border + title
+// (darker, for legibility on the light cream card); `ring` paints that course's
+// calendar-day ring (lighter, to pop on the dark navy calendar). Today's date
+// is red, so blues/greens are free to use here.
+const TRACK_COLORS = [
+  { card: "#245AA8", ring: "#6BA1F0" }, // blue
+  { card: "#1F7A46", ring: "#4FBE7E" }, // green
+  { card: "#C25E12", ring: "#F2792B" }, // orange
+  { card: "#7B53C0", ring: "#A07BE0" }, // violet
+  { card: "#B58A00", ring: "#F0B429" }, // gold
+];
+
+function buildAccentMap(sessions) {
+  const map = {};
+  let i = 0;
+  for (const s of sessions) {
+    const key = s.title || "";
+    if (!(key in map)) {
+      map[key] = TRACK_COLORS[i % TRACK_COLORS.length];
+      i++;
+    }
+  }
+  return map;
+}
+
 function readAddedIds() {
   try {
     const raw = localStorage.getItem(ADDED_STORAGE_KEY);
@@ -99,6 +126,9 @@ export default function TrainingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessions, now]);
 
+  // One accent color per distinct course title, stable across its sessions.
+  const accentMap = useMemo(() => buildAccentMap(visibleSessions), [visibleSessions]);
+
   const scrollToSession = (id) => {
     const node = cardRefs.current[id];
     if (node) node.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -134,7 +164,7 @@ export default function TrainingPage() {
           }}
         >
           <div className="w-full lg:w-auto flex justify-center lg:block">
-            <SessionCalendar sessions={visibleSessions} onSelectSession={scrollToSession} />
+            <SessionCalendar sessions={visibleSessions} onSelectSession={scrollToSession} accentMap={accentMap} />
           </div>
           {/* "Suggest a better time" availability matrix — self-contained
               (own fetch + submit). Desktop only: sits below the calendar in the
@@ -194,7 +224,7 @@ export default function TrainingPage() {
                 >
                    
                 </p>
-                <div className="flex flex-col" style={{ gap: 18 }}>
+                <div className="flex flex-col" style={{ gap: 30 }}>
                   {visibleSessions.map((session) => (
                     <SessionCard
                       key={session.id_no}
@@ -203,6 +233,7 @@ export default function TrainingPage() {
                       count={counts[session.id_no] || 0}
                       alreadyAdded={addedIds.has(session.id_no)}
                       onCalendarAdd={() => trackCalendarAdd(session)}
+                      accentColor={accentMap[session.title || ""]?.card}
                       cardRef={(node) => {
                         cardRefs.current[session.id_no] = node;
                       }}
@@ -237,18 +268,20 @@ export default function TrainingPage() {
 
 // ---- Sidebar month calendar -------------------------------------------------
 
-function SessionCalendar({ sessions, onSelectSession }) {
-  // Map each session day (Central) → first session id that day, for click→scroll.
+function SessionCalendar({ sessions, onSelectSession, accentMap = {} }) {
+  // Map each session day (Central) → { id, color } for the first session that
+  // day: id drives click→scroll, color paints the day ring to match the course
+  // accent on its card.
   const sessionDayMap = useMemo(() => {
     const m = {};
     for (const s of sessions) {
       const { start } = sessionToInstants(s);
       if (!start) continue;
       const key = centralYmd(start);
-      if (!(key in m)) m[key] = s.id_no;
+      if (!(key in m)) m[key] = { id: s.id_no, color: accentMap[s.title || ""]?.ring };
     }
     return m;
-  }, [sessions]);
+  }, [sessions, accentMap]);
 
   const todayKey = centralYmd(new Date());
   const [ty, tm] = todayKey.split("-").map(Number); // today year, month(1-12)
@@ -334,6 +367,9 @@ function SessionCalendar({ sessions, onSelectSession }) {
           const key = `${view.year}-${pad2(view.month + 1)}-${pad2(d)}`;
           const isToday = key === todayKey;
           const hasSession = key in sessionDayMap;
+          const ringColor = hasSession
+            ? sessionDayMap[key].color || "var(--color-training-cal-session-ring)"
+            : null;
 
           const cellStyle = {
             display: "flex",
@@ -347,7 +383,7 @@ function SessionCalendar({ sessions, onSelectSession }) {
             cursor: hasSession ? "pointer" : "default",
             background: isToday ? "var(--color-training-cal-today-bg)" : "transparent",
             color: isToday ? "var(--color-training-cal-today-text)" : "var(--color-training-cal-text)",
-            border: hasSession ? "2px solid var(--color-training-cal-session-ring)" : "2px solid transparent",
+            border: hasSession ? `2px solid ${ringColor}` : "2px solid transparent",
             fontWeight: hasSession || isToday ? 700 : 400,
           };
 
@@ -355,7 +391,7 @@ function SessionCalendar({ sessions, onSelectSession }) {
             <button
               key={key}
               type="button"
-              onClick={hasSession ? () => onSelectSession(sessionDayMap[key]) : undefined}
+              onClick={hasSession ? () => onSelectSession(sessionDayMap[key].id) : undefined}
               disabled={!hasSession}
               className={hasSession ? "hover:brightness-95" : ""}
               style={{ ...cellStyle, padding: 0 }}
