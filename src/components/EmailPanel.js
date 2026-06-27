@@ -8,6 +8,8 @@ import { render } from "@react-email/components";
 import DropPanel from "./DropPanel";
 import PanelScrim from "./PanelScrim";
 import { ResourceEmail } from "../emails";
+import { useAppData } from "../Contexts/AppDataContext";
+import SenderStatusLine from "./SenderStatusLine";
 
 /**
  * EmailPanel - Panel for email/PDF with inactive resource warning and preview
@@ -41,6 +43,10 @@ export default function EmailPanel({
   selectedData = [],
   headerText = "Resources",
 }) {
+  // senderFooter must also appear in the live preview so it matches the sent
+  // email. The "Sending as / blocked" line itself is rendered by SenderStatusLine.
+  const { senderFooter } = useAppData();
+
   // Track which view to show: "warning" or "input"
   const [currentView, setCurrentView] = useState("input");
   const [recipient, setRecipient] = useState("");
@@ -70,6 +76,7 @@ export default function EmailPanel({
               resources: selectedData,
               headerText: headerText,
               note: note,
+              senderFooter: senderFooter,
             })
           );
           setPreviewHtml(html);
@@ -81,7 +88,7 @@ export default function EmailPanel({
       };
       generatePreview();
     }
-  }, [isOpen, isPdfMode, selectedData, headerText, note]);
+  }, [isOpen, isPdfMode, selectedData, headerText, note, senderFooter]);
 
   // Translate preview when language changes
   useEffect(() => {
@@ -411,6 +418,10 @@ export default function EmailPanel({
       okDisabled={!isPdfMode && !recipient}
     >
       <div className="flex flex-col gap-4">
+        {/* Sender-footer status: who this will be "Sent by", with a change/select
+            link, or the blocked explanation. Hidden for guests. */}
+        <SenderStatusLine />
+
         {/* Language — uppercase teal label above an outlined select styled
             as a button-with-caret. Same #43747D for label, border, and text. */}
         <div className="flex flex-col gap-1.5 self-start">

@@ -5,6 +5,8 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { dataService } from '../services/dataService';
 import { readPhase1Cache, writePhase1Cache } from '../services/dataCache';
+import { resolveSavedChild, saveChildId } from '../services/senderIdentity';
+import { setLogOrganization } from '../services/usageService';
 
 const AppDataContext = createContext();
 
@@ -137,6 +139,14 @@ export const AppDataProvider = ({ children, loggedInUser, onLogout }) => {
   // Set from a deep link (?mode=llm&q=...) so NavBar2 can auto-run the search once
   // assistance/zipCodes are loaded. Cleared by the consumer after it runs.
   const [pendingLlmAutoSearch, setPendingLlmAutoSearch] = useState(false);
+
+  // Sender-footer identity (email/PDF/text). Logins are parent-level but the
+  // footer shows the CHILD org's name+phone. These hold the logged-in parent's
+  // children (from the real `organizations` table) and the resolved child.
+  // See EMAIL_SENDER_FOOTER_PLAN.md.
+  const [senderChildren, setSenderChildren] = useState([]); // organizations rows for this account_id
+  const [selectedSenderChild, setSelectedSenderChildState] = useState(null); // the chosen child row
+  const [senderPickerOpen, setSenderPickerOpen] = useState(false); // "Which location are you?" modal
 
   // Quick Tips panel state
   const [quickTipsOpen, setQuickTipsOpen] = useState(false);
@@ -334,6 +344,105 @@ export const AppDataProvider = ({ children, loggedInUser, onLogout }) => {
     };
   }, []);
 
+  // Resolve the sender-footer child whenever the logged-in user changes.
+  // Loads the real `organizations` table (separate from the directory-derived
+  // `organizations` used for search dropdowns) and filters to this parent's
+  // children. Guests / dev users (no account_id) have no sender identity.
+  useEffect(() => {
+    let cancelled = false;
+    const accountId = loggedInUser?.account_id;
+
+    if (!accountId || loggedInUser?.isGuest) {
+      setSenderChildren([]);
+      setSelectedSenderChildState(null);
+      setSenderPickerOpen(false);
+      return;
+    }
+
+    (async () => {
+      const allOrgs = await dataService.getOrganizations();
+      if (cancelled) return;
+
+      const children = allOrgs.filter(
+        (o) => o.account_id != null && String(o.account_id) === String(accountId)
+      );
+      setSenderChildren(children);
+
+      // Solo / 1:1 (incl. child name == parent name) → auto-select silently.
+      if (children.length <= 1) {
+        setSelectedSenderChildState(children[0] || null);
+        setSenderPickerOpen(false);
+        return;
+      }
+
+      // Multi-child → apply a saved choice, else prompt. Independent of block:
+      // block only governs whether the name shows on sent items, not whether
+      // the session must declare which child it is (so usage logs and the
+      // panel's change affordance work for blocked orgs too).
+      const { selectedChild, needsPicker } = resolveSavedChild(accountId, children);
+      setSelectedSenderChildState(selectedChild);
+      setSenderPickerOpen(needsPicker);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loggedInUser]);
+
+  // Mirror the resolved child name into the usage-logging module so every
+  // logUsage() call stamps the `organization` column without threading it
+  // through ~15 call sites. Null for guests / before resolution → /log-usage
+  // falls back to reg_organization, so solo orgs and guests are still recorded
+  // (never null). Blocked children still log their real name — block only
+  // suppresses the client-facing footer, not internal analytics.
+  useEffect(() => {
+    setLogOrganization(selectedSenderChild?.organization || null);
+  }, [selectedSenderChild]);
+
+  // Set + persist the chosen child (keyed by parent account_id). Closes the picker.
+  const setSelectedSenderChild = (child) => {
+    setSelectedSenderChildState(child || null);
+    if (child && loggedInUser?.account_id) {
+      saveChildId(loggedInUser.account_id, child.id_no);
+    }
+    setSenderPickerOpen(false);
+  };
+
+  // Block lives solely on the organizations (child) row now — a parent-wide
+  // block is applied by flagging every child. One source, no auth-layer wiring.
+  const senderBlocked = Boolean(selectedSenderChild?.is_block);
+
+  // Footer payload rendered in email/PDF/SMS. null = no footer (guest, blocked,
+  // or multi-child not yet selected). Phone only when non-empty.
+  const senderFooter = useMemo(() => {
+    if (!loggedInUser?.account_id || loggedInUser?.isGuest) return null;
+    if (senderBlocked) return null;
+    if (!selectedSenderChild) return null;
+    return {
+      name: selectedSenderChild.organization || "",
+      phone: (selectedSenderChild.org_telephone || "").trim(),
+    };
+  }, [loggedInUser, senderBlocked, selectedSenderChild]);
+
+  // Status object for the "Sending as / blocked" line in the send panels.
+  const senderStatus = useMemo(() => {
+    const applicable = Boolean(loggedInUser?.account_id) && !loggedInUser?.isGuest;
+    if (!applicable) return { applicable: false };
+    // Block governs only whether the name/phone appears on SENT items — not the
+    // panel line. Blocked users still see their selection (with a red note that
+    // it won't be shown) and can change it. Any multi-child parent can change.
+    const canChange = senderChildren.length > 1;
+    return {
+      applicable: true,
+      blocked: senderBlocked,
+      name: selectedSenderChild?.organization || null,
+      phone: (selectedSenderChild?.org_telephone || "").trim() || null,
+      canChange,
+      // multi-child parent who hasn't picked yet (e.g. dismissed a change re-open)
+      needsSelection: !selectedSenderChild && senderChildren.length > 1,
+    };
+  }, [loggedInUser, senderBlocked, senderChildren, selectedSenderChild]);
+
   // Derived: whether any search filter is active (for NavBar3 button state)
   const hasActiveSearchFilter = Boolean(
     selectedZipCode ||
@@ -362,6 +471,16 @@ export const AppDataProvider = ({ children, loggedInUser, onLogout }) => {
     // Auth
     loggedInUser,
     onLogout,
+
+    // Sender-footer identity (email/PDF/text)
+    senderChildren,
+    selectedSenderChild,
+    setSelectedSenderChild,
+    senderPickerOpen,
+    setSenderPickerOpen,
+    senderBlocked,
+    senderFooter,
+    senderStatus,
 
     // Status
     loading,
@@ -433,6 +552,8 @@ export const AppDataProvider = ({ children, loggedInUser, onLogout }) => {
     directory, assistance, zipCodes, organizations, orgAssistanceMap,
     zipCodeData, headerConfig,
     loggedInUser, onLogout, loading, error,
+    senderChildren, selectedSenderChild, senderPickerOpen,
+    senderBlocked, senderFooter, senderStatus,
     activeSearchMode, hasActiveSearchFilter,
     selectedZipCode, selectedParentOrg, selectedChildOrg,
     selectedLocationCounty, selectedLocationCity, selectedLocationZip, selectedLocationNeighborhood,

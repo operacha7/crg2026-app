@@ -11,6 +11,7 @@ import { Copy } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import DropPanel from "./DropPanel";
 import PanelScrim from "./PanelScrim";
+import SenderStatusLine from "./SenderStatusLine";
 import {
   isGvExtensionInstalled,
   sendToGvExtension,
@@ -79,9 +80,12 @@ export default function SmsPanel({
 
   const digits = phoneNumber.replace(/\D/g, "");
   const isValidPhone = digits.length === 10;
-  const e164 = isValidPhone ? `+1${digits}` : "";
+  // Use the bare 10-digit number — NOT "+1{digits}". Some carriers/gateways bounce
+  // the 11-digit "1{digits}" form with "Invalid Number. Please re-send using a valid
+  // 10 digit mobile number." (the "+" gets stripped in transit, leaving the leading
+  // 1). The bare 10-digit form matches what works when a number is typed by hand.
   const smsHref = isValidPhone
-    ? `sms:${e164}?body=${encodeURIComponent(composedBody)}`
+    ? `sms:${digits}?body=${encodeURIComponent(composedBody)}`
     : "";
 
   const fireInitiated = () => {
@@ -120,7 +124,9 @@ export default function SmsPanel({
   const handleCopyPhone = async () => {
     if (!isValidPhone) return;
     fireInitiated();
-    const ok = await copyToClipboard(e164);
+    // Copy the bare 10-digit number (same reason as smsHref — the 11-digit
+    // "+1"/"1" form bounces on some carriers).
+    const ok = await copyToClipboard(digits);
     showFeedback(ok ? "Phone number copied!" : "Unable to copy");
   };
 
@@ -137,7 +143,7 @@ export default function SmsPanel({
     fireInitiated();
     setSendingViaExtension(true);
     try {
-      await sendToGvExtension(phoneNumber, composedBody);
+      await sendToGvExtension(digits, composedBody);
       showFeedback("Sent to Google Voice — phone and message will auto-fill.");
 
       // Fire onGvAutoSent the next time the user returns to this tab. Optimistic:
@@ -226,6 +232,10 @@ export default function SmsPanel({
       cancelButtonText="Close"
     >
       <div className="flex flex-col gap-4">
+        {/* Sender-footer status: who this text will be "from", with a change/select
+            link, or the blocked explanation. Hidden for guests. */}
+        <SenderStatusLine />
+
         {/* Phone input */}
         <div className="flex flex-col gap-1.5">
           <label

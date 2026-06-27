@@ -64,6 +64,32 @@ function DoubleChevronIcon({ expanded }) {
   );
 }
 
+// Gold star shown next to the organization name for priority (featured) records.
+// Priority is an editorial flag in the directory table; priority === 1 = featured.
+function PriorityStar({ size = 16 }) {
+  return (
+    <span
+      className="inline-flex shrink-0"
+      style={{ color: "#FFC857" }}
+      aria-label="Featured organization"
+      title="Featured organization"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        stroke="#B8860B"
+        strokeWidth="1"
+        strokeLinejoin="round"
+      >
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+      </svg>
+    </span>
+  );
+}
+
 // Status pill component
 function StatusPill({ statusId, status }) {
   const bgColorClass = {
@@ -179,6 +205,9 @@ function ResultRow({
     return allAssistanceTypes.filter((at) => orgAssistIds.includes(at.assist_id));
   }, [allAssistanceTypes, orgAssistanceMap, record.organization]);
 
+  // Priority (featured) records get a gold star next to the org name.
+  const isPriority = parseInt(record.priority, 10) === 1;
+
   // Format address
   const addressLines = useMemo(() => formatAddress(record), [record]);
 
@@ -235,19 +264,22 @@ function ResultRow({
             }}
           />
           <div className="flex-1 min-w-0">
-            {record.webpage ? (
-              <a
-                href={record.webpage}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-semibold text-base leading-tight hover:underline"
-                style={{ color: "#0066cc", textDecoration: "none" }}
-              >
-                {record.organization}
-              </a>
-            ) : (
-              <div className="font-semibold text-base leading-tight">{record.organization}</div>
-            )}
+            <div className="flex items-center gap-1">
+              {isPriority && <PriorityStar size={15} />}
+              {record.webpage ? (
+                <a
+                  href={record.webpage}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-base leading-tight hover:underline"
+                  style={{ color: "#0066cc", textDecoration: "none" }}
+                >
+                  {record.organization}
+                </a>
+              ) : (
+                <div className="font-semibold text-base leading-tight">{record.organization}</div>
+              )}
+            </div>
             {addressLines.length > 0 && (
               record.googlemaps ? (
                 <a
@@ -515,34 +547,38 @@ function ResultRow({
           address wraps to). For virtual orgs with no address the address column is
           empty, so the pill ends up where the first address line would have been. */}
       <div style={{ paddingLeft: "20px" }}>
-        {/* Organization name - hyperlink to webpage if available */}
-        {record.webpage ? (
-          <a
-            href={record.webpage}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:underline"
-            style={{
-              fontSize: "var(--font-size-results-org)",
-              fontWeight: "var(--font-weight-results-org)",
-              letterSpacing: "var(--letter-spacing-results-org)",
-              color: "#0066cc",
-              textDecoration: "none",
-            }}
-          >
-            {record.organization}
-          </a>
-        ) : (
-          <span
-            style={{
-              fontSize: "var(--font-size-results-org)",
-              fontWeight: "var(--font-weight-results-org)",
-              letterSpacing: "var(--letter-spacing-results-org)",
-            }}
-          >
-            {record.organization}
-          </span>
-        )}
+        {/* Organization name - hyperlink to webpage if available.
+            Priority (featured) records show a gold star to the right of the name. */}
+        <span className="inline-flex items-center gap-1.5">
+          {isPriority && <PriorityStar size={16} />}
+          {record.webpage ? (
+            <a
+              href={record.webpage}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline"
+              style={{
+                fontSize: "var(--font-size-results-org)",
+                fontWeight: "var(--font-weight-results-org)",
+                letterSpacing: "var(--letter-spacing-results-org)",
+                color: "#0066cc",
+                textDecoration: "none",
+              }}
+            >
+              {record.organization}
+            </a>
+          ) : (
+            <span
+              style={{
+                fontSize: "var(--font-size-results-org)",
+                fontWeight: "var(--font-weight-results-org)",
+                letterSpacing: "var(--letter-spacing-results-org)",
+              }}
+            >
+              {record.organization}
+            </span>
+          )}
+        </span>
         <div
           className="flex"
           style={{

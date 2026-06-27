@@ -102,9 +102,17 @@ export async function onRequest({ request, env }) {
     });
   }
 
+  // Sender child (conference/location) for child-level usage analytics. Comes
+  // from the body — the server can't know the localStorage-resolved child.
+  // Informational, not security-sensitive. Falls back to reg_organization when
+  // absent (solo orgs, guests) so the column is never null.
+  let organization = cap(body?.organization, MAX_FIELD_LENGTH);
+  if (!organization) organization = reg_organization;
+
   const row = {
     log_date: getCentralDate(),
     reg_organization,
+    organization,
     action_type,
     search_mode: cap(body?.search_mode, MAX_FIELD_LENGTH),
     assistance_type: cap(body?.assistance_type, MAX_FIELD_LENGTH),

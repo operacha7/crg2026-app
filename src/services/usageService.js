@@ -3,6 +3,23 @@
 
 import { supabase } from '../supabaseClient';
 
+// Sender child's display name for the current session, mirrored here from
+// AppDataContext (via setLogOrganization) so every logUsage() call can stamp the
+// `organization` column without each call site threading it. Null for guests /
+// before resolution → /log-usage falls back to reg_organization (never null).
+let currentLogOrganization = null;
+
+/**
+ * Set the sender child name stamped onto subsequent usage logs. Called by
+ * AppDataContext whenever the selected sender child changes. Pass null to clear
+ * (guest / logout) — the server then falls back to reg_organization.
+ *
+ * @param {string|null} name - Child organization name, or null
+ */
+export function setLogOrganization(name) {
+  currentLogOrganization = name || null;
+}
+
 // TODO: remove after 2027-06-01 — by then the trailing-12-month window has
 // fully rolled past the 2026-05 org rename and no legacy names remain in
 // app_usage_logs that fall inside any active report range. This was a
@@ -68,6 +85,7 @@ export async function logUsage({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         reg_organization: reg_organization || 'Guest',
+        organization: currentLogOrganization,
         action_type,
         search_mode,
         assistance_type,

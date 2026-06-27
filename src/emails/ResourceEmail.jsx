@@ -89,12 +89,15 @@ function groupByStatusThenAssistance(data) {
  * @param {string} props.headerText - Dynamic header (e.g., "Resources for Zip Code: 77025")
  * @param {string} props.previewText - Email preview text (shown in inbox)
  * @param {string} props.note - Optional personal note from sender (verbatim, not translated)
+ * @param {Object|null} props.senderFooter - Sending org { name, phone } shown above the
+ *        CRG logo footer. null when blocked / guest / unselected (no sender line).
  */
 export function ResourceEmail({
   resources = [],
   headerText = 'Resources',
   previewText = 'Your requested community resources',
   note = '',
+  senderFooter = null,
 }) {
   const trimmedNote = (note || '').trim();
   const hasNonActive = resources.some((r) => (r.status_id ?? 1) !== 1);
@@ -211,6 +214,23 @@ export function ResourceEmail({
             </Section>
           ))}
 
+          {/* Sender sign-off — the sending child org's name + phone. Omitted
+              entirely when blocked / guest / unselected (senderFooter null).
+              The org name + phone are wrapped translate="no" so they stay
+              verbatim under Spanish translation; only the "Sent by:" label
+              translates. */}
+          {senderFooter?.name && (
+            <Section style={styles.senderFooter}>
+              <Text style={styles.senderText}>
+                Sent by:{' '}
+                <span className="notranslate" translate="no">
+                  <strong>{senderFooter.name}</strong>
+                  {senderFooter.phone ? ` · ${senderFooter.phone}` : ''}
+                </span>
+              </Text>
+            </Section>
+          )}
+
           {/* Footer with logo */}
           <Hr style={styles.hr} />
           <Section style={styles.footer}>
@@ -299,6 +319,15 @@ const styles = {
     marginBottom: '16px',
     fontSize: '16px',
     fontWeight: 'bold',
+  },
+  senderFooter: {
+    marginTop: '32px',
+  },
+  senderText: {
+    fontSize: '14px',
+    lineHeight: '1.5',
+    color: '#333',
+    margin: '0',
   },
   hr: {
     borderTop: '1px solid #ccc',

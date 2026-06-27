@@ -112,7 +112,7 @@ export default function HomePage() {
         <title>CRG Houston — Free help &amp; community resources across the Houston region</title>
         <meta
           name="description"
-          content="Free directory of 1,000+ verified community assistance programs across 14 Southeast Texas counties — Harris, Fort Bend, Galveston, Montgomery, and more. Search by zip code and assistance type."
+          content="Free directory of 1,100+ verified community assistance programs across 15 Southeast Texas counties — Harris, Fort Bend, Galveston, Montgomery, and more. Search by zip code and assistance type."
         />
         <link rel="canonical" href="https://crghouston.org/" />
         <meta property="og:type" content="website" />

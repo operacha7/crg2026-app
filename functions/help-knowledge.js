@@ -159,6 +159,12 @@ Vertical strip with icons: [[HOME_ICON]] [[INFO_ICON]] [[REPORTS_ICON]] and othe
 4. The text contains a short link the recipient taps to open the same filtered view of the resources you selected
 5. Texts don't support the "Add Note" feature — once the message lands in your messaging app you can type a personal note directly in that conversation before or after sending
 
+### Your organization's name and phone on what you send (the "Sent by" line)
+When a registered organization sends an email or PDF (or texts a link), the sending organization's name and phone appear at the bottom as a "Sent by" line, so the client knows who helped them and can follow up. A few things to know:
+- **Which name shows:** If your login covers several locations or chapters (for example, a parent organization with many branches), the first time you send you'll be asked **"Which location are you?"** — pick yours once and it's remembered on that browser. Single-location organizations are filled in automatically and never see this prompt.
+- **Change who you're sending as:** Each Send Email, Create PDF, and Send Text panel shows a "Sending as: [your location]" line. If it's wrong, click **"change"** right there and pick the correct location.
+- **If your name and phone do NOT appear:** This is almost always intentional — your organization's leadership chose to keep the organization's name and phone off sent items. The panels show a short note ("Your organization's name and phone won't appear on sent items (set by your organization)") when this is the case. It is not a bug, and it can only be changed by your organization's administrator, not in the app. Guests (people sending without an account) also have no "Sent by" line, since there's no organization to name.
+
 ### Add a personal note to email or PDF
 Both the Send Email and Create PDF panels include an "Add Note" button. Click it to open a small text box where you can type a brief personal message — for example, "Hi Maria, here's the list we talked about" or "Call them today, they close at 5." The note appears in the email or PDF as an indigo italic paragraph with a vertical bar on the left, set apart from the standard content so the recipient can tell it's from you personally.
 

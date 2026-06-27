@@ -48,6 +48,8 @@ export default function ZipCodePage({
     // LLM Search state
     llmSearchFilters,
     llmSearchQuery,
+    // Sender-footer identity (child org name + phone) for email/PDF/text
+    senderFooter,
   } = useAppData();
 
   // State management
@@ -347,6 +349,7 @@ export default function ZipCodePage({
       loggedInUser,
       language,
       note,
+      senderFooter,
     });
 
     // Reset selections and show toast
@@ -370,6 +373,7 @@ export default function ZipCodePage({
       loggedInUser,
       language,
       note,
+      senderFooter,
     });
 
     // Reset selections and show toast
@@ -492,7 +496,7 @@ export default function ZipCodePage({
   const smsBody = useMemo(() => buildSmsBody({
     searchContext: buildSearchContext(),
     activeAssistanceChips,
-    loggedInUser,
+    senderFooter,
   }), [
     activeSearchMode,
     selectedZipCode,
@@ -504,7 +508,7 @@ export default function ZipCodePage({
     selectedLocationNeighborhood,
     llmSearchQuery,
     activeAssistanceChips,
-    loggedInUser,
+    senderFooter,
   ]);
 
   // Calculate selected data for email/PDF panels

@@ -11,6 +11,7 @@ import { TrainingProvider } from './Contexts/TrainingProvider';
 import TrainingPopup from './components/TrainingPopup';
 
 import { AppDataProvider, useAppData } from "./Contexts/AppDataContext";
+import SenderChildPicker from "./components/SenderChildPicker";
 import { supabase } from "./supabaseClient";
 import { getAssistanceSeo } from "./seo/assistanceMetadata";
 import { logUsage } from "./services/usageService";
@@ -123,14 +124,14 @@ useEffect(() => {
             <TrainingPopup />
           </>
         )}
-        <AppContent loggedInUser={loggedInUser} />
+        <AppContent loggedInUser={loggedInUser} announcementsDone={announcementsDone} />
       </TrainingProvider>
     </AppDataProvider>
   );
 }
 
 // Separate component for the app content
-function AppContent({ loggedInUser }) {
+function AppContent({ loggedInUser, announcementsDone }) {
   const { directory, assistance, zipCodes, loading, error } = useAppData();
   const location = useLocation();
 
@@ -171,6 +172,11 @@ function AppContent({ loggedInUser }) {
   return (
     <>
       <Toaster position="top-center" />
+      {/* "Which location are you?" picker for multi-child registered parents.
+          Self-gates via senderPickerOpen in context (only multi-child, no saved
+          choice, not blocked). gateReady defers the forced first-login prompt
+          until announcements finish — same ordering as the training popup. */}
+      <SenderChildPicker gateReady={announcementsDone} />
       <Suspense fallback={null}>
         <Routes>
           <Route

@@ -305,6 +305,9 @@ export async function sendEmail({
   loggedInUser,
   language = "en",
   note = "",
+  // Sending org { name, phone } for the footer sign-off. null = no sender line
+  // (blocked / guest / unselected). See EMAIL_SENDER_FOOTER_PLAN.md.
+  senderFooter = null,
   // Legacy prop - still supported for backwards compatibility
   selectedZip,
 }) {
@@ -322,6 +325,7 @@ export async function sendEmail({
       resources: selectedData,
       headerText: headerText,
       note: note,
+      senderFooter: senderFooter,
     })
   );
 
@@ -380,6 +384,9 @@ export async function createPdf({
   loggedInUser,
   language = "en",
   note = "",
+  // Sending org { name, phone } for the footer sign-off (same as email). null =
+  // no sender line (blocked / guest / unselected).
+  senderFooter = null,
   // Legacy prop - still supported for backwards compatibility
   selectedZip,
 }) {
@@ -420,8 +427,14 @@ export async function createPdf({
     });
   };
 
-  // Registered org name for "By:" line (blank/dummy for now since not wired)
-  const registeredOrgName = loggedInUser?.reg_organization || "";
+  // Sender sign-off line (child org name + phone). Omitted entirely when there's
+  // no sender footer (blocked / guest / unselected) — no "By: —" placeholder.
+  // Name + phone are translate="no" so they stay verbatim under Spanish
+  // translation; only the "Sent by:" label translates.
+  const senderPhonePart = senderFooter?.phone ? ` &middot; ${senderFooter.phone}` : "";
+  const senderLineHtml = senderFooter?.name
+    ? `<div style="font-size: 12px;">Sent by: <span class="notranslate" translate="no"><strong>${senderFooter.name}</strong>${senderPhonePart}</span></div>`
+    : "";
 
   const pdfHtml = `<!DOCTYPE html>
 <html>
@@ -441,7 +454,7 @@ body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 0; }
 </div>
 <div style="font-size: 13px; margin-bottom: 3px;"><strong>${headerText}</strong></div>
 <div style="font-size: 12px; margin-bottom: 2px;">Generated: ${formatDisplayDate()}</div>
-<div style="font-size: 12px;">By: ${registeredOrgName || "—"}</div>
+${senderLineHtml}
 </div>
 <p style="font-size: 12px; line-height: 1.6; margin: 0 0 16px 0;">
 We strive for accuracy, but funding and eligibility requirements can change without notice. Please contact the organization directly for their latest requirements. For the most up-to-date listings or to explore more resources, visit <a href="https://crghouston.org" style="color: #0066cc; text-decoration: underline;">crghouston.org</a>.
@@ -524,9 +537,12 @@ ${htmlContent}
  * @returns {string} Full URL with query parameters
  */
 export function buildShareUrl(searchContext, activeAssistanceChips) {
-  const baseUrl = window.location.hostname === "localhost"
-    ? "http://localhost:3000"
-    : "https://crghouston.org";
+  // ALWAYS the production domain — this URL is texted to external recipients,
+  // who must open it on the live site. A "http://localhost:3000" link (from dev
+  // testing) is both useless to them AND a strong SMS-spam signal: carriers bounce
+  // link-bearing texts, and a localhost link is rejected almost every time with a
+  // misleading "Invalid Number… valid 10 digit mobile number or short code" error.
+  const baseUrl = "https://crghouston.org";
 
   const params = new URLSearchParams();
   params.set("guest", "1");
@@ -571,9 +587,27 @@ export function buildShareUrl(searchContext, activeAssistanceChips) {
  * The sender copies or forwards this into their SMS tool of choice
  * (native Messages, Google Voice, etc.) — CRG does not transmit it.
  */
-export function buildSmsBody({ searchContext, activeAssistanceChips, loggedInUser }) {
+export function buildSmsBody({ searchContext, activeAssistanceChips, senderFooter }) {
   const shareUrl = buildShareUrl(searchContext, activeAssistanceChips);
   const headerText = generateSearchHeader(searchContext);
-  const orgName = loggedInUser?.reg_organization || "CRG Houston";
-  return `${orgName} - ${headerText}: ${shareUrl}`;
+
+  // Sending child org sign-off, mirroring the email/PDF "Sent by:" footer.
+  // Omitted entirely when there's no sender footer (blocked / guest / unselected)
+  // — no name is ever shown as a fallback. See EMAIL_SENDER_FOOTER_PLAN.md.
+  //
+  // IMPORTANT: keep this a SINGLE LINE — no newlines. Newlines in an sms: URI
+  // body break QR/sms: parsing (recipients saw "not a valid 10-digit number")
+  // and can make Google Voice send the message early (Enter = send). The sign-off
+  // leads so the share URL stays last (best for tap-to-open + link preview).
+  let senderPrefix = "";
+  if (senderFooter?.name) {
+    // Plain ASCII only (comma, not "·") — SMS bodies and the GV extension's
+    // auto-fill are fragile with special characters.
+    const phonePart = senderFooter.phone ? `, ${senderFooter.phone}` : "";
+    senderPrefix = `Sent by: ${senderFooter.name}${phonePart}. `;
+  }
+
+  // If SMS length ever becomes a problem, drop the header line ("Resources for
+  // Zip Code: …") — the sign-off and link are the essential payload.
+  return `${senderPrefix}${headerText}: ${shareUrl}`;
 }
