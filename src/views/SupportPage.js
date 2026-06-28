@@ -64,16 +64,22 @@ const SupportPage = ({ loggedInUser }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null); // 'success', 'error', or null
 
-  // Text lane: the browser/OS is captured in its own field (prefilled, editable,
-  // deletable) so the developer gets diagnostics fast; the message is separate.
+  // Text lane: the browser/OS is captured read-only so the developer gets
+  // accurate diagnostics fast. The user can remove it ("in or out") but cannot
+  // edit it — re-adding always restores the true captured value, so we never
+  // receive incorrect browser info. The message is a separate field.
   const [smsBrowser, setSmsBrowser] = useState('');
+  const [includeBrowser, setIncludeBrowser] = useState(true);
   const [smsMessage, setSmsMessage] = useState('');
   useEffect(() => {
     setSmsBrowser(getBrowserInfo());
   }, []);
 
-  // Composed text body = browser line (if kept) + the message.
-  const smsBody = [smsBrowser.trim() ? `Browser: ${smsBrowser.trim()}` : '', smsMessage]
+  // Composed text body = browser line (only when included) + the message.
+  const smsBody = [
+    includeBrowser && smsBrowser.trim() ? `Browser: ${smsBrowser.trim()}` : '',
+    smsMessage,
+  ]
     .filter(Boolean)
     .join('\n');
   const smsHref = `sms:${SUPPORT_PHONE_E164}?body=${encodeURIComponent(smsBody)}`;
@@ -190,6 +196,7 @@ const SupportPage = ({ loggedInUser }) => {
     setSubmitStatus(null);
     setSmsMessage('');
     setSmsBrowser(getBrowserInfo());
+    setIncludeBrowser(true);
     setFormData({
       name: '',
       email: '',
@@ -485,20 +492,71 @@ const SupportPage = ({ loggedInUser }) => {
                           scan the code, and it sends from your phone — no name or email needed.
                         </p>
 
-                        {/* Browser (auto-filled, editable, deletable) */}
+                        {/* Browser: auto-captured and read-only so we always get an
+                            accurate string. Can be removed ("in or out") but never
+                            edited; re-adding restores the true captured value. */}
                         <div>
-                          <label htmlFor="sms-browser" className="block mb-1" style={labelStyle}>
+                          <div className="block mb-1" style={labelStyle}>
                             Browser
-                          </label>
-                          <input
-                            type="text" id="sms-browser" value={smsBrowser}
-                            onChange={(e) => setSmsBrowser(e.target.value)}
-                            className={fieldClass} style={fieldStyle}
-                          />
-                          <p style={{ fontSize: 12.5, color: 'var(--color-support-muted)', marginTop: 6 }}>
-                            Your browser version is filled in automatically so I can help faster —
-                            edit or delete it if you like.
-                          </p>
+                          </div>
+                          {includeBrowser ? (
+                            <>
+                              <div
+                                style={{
+                                  ...fieldStyle,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: 8,
+                                }}
+                              >
+                                <span>{smsBrowser}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setIncludeBrowser(false)}
+                                  aria-label="Remove browser information"
+                                  className="hover:brightness-110"
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    color: 'var(--color-support-muted)',
+                                    fontSize: 18,
+                                    lineHeight: 1,
+                                    padding: '0 2px',
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  &times;
+                                </button>
+                              </div>
+                              <p style={{ fontSize: 12.5, color: 'var(--color-support-muted)', marginTop: 6 }}>
+                                Your browser version is filled in automatically so I can help faster —
+                                remove it if you prefer not to share it.
+                              </p>
+                            </>
+                          ) : (
+                            <p style={{ fontSize: 12.5, color: 'var(--color-support-muted)', marginTop: 6 }}>
+                              Browser information removed.{' '}
+                              <button
+                                type="button"
+                                onClick={() => { setSmsBrowser(getBrowserInfo()); setIncludeBrowser(true); }}
+                                className="hover:brightness-110"
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  padding: 0,
+                                  color: 'var(--color-support-ink)',
+                                  fontWeight: 600,
+                                  textDecoration: 'underline',
+                                  cursor: 'pointer',
+                                  fontSize: 12.5,
+                                }}
+                              >
+                                Add it back
+                              </button>
+                            </p>
+                          )}
                         </div>
 
                         {/* Message */}

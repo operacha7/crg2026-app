@@ -6,7 +6,7 @@
 
 export const PRIVACY_POLICY_HTML = `
 <h1>Privacy Policy</h1>
-<p style="color:#666; font-size:14px;">Effective Date: April 18, 2026</p>
+<p style="color:#666; font-size:14px;">Effective Date: June 27, 2026</p>
 <hr>
 
 <h3>1. Introduction</h3>
@@ -23,7 +23,7 @@ export const PRIVACY_POLICY_HTML = `
 
 <h4>Registered Users</h4>
 <p>For registered organizations, we collect usage information associated with an assigned user ID. This includes which features are used, search criteria selected, and resources recommended to clients.</p>
-<p>We do <strong>not</strong> collect or track IP addresses, cookies, device identifiers, or other personal data.</p>
+<p>We use a single, strictly necessary cookie to keep registered users signed in during a session, and we store certain functional preferences — such as which location a user represents — in the user's own browser. We do <strong>not</strong> use tracking, advertising, or analytics cookies, and we do <strong>not</strong> collect IP addresses, device-tracking identifiers, or other personal data.</p>
 
 <h4>Non-Registered Users</h4>
 <p>Registration is not required to use CRG. For non-registered users, we collect only aggregated usage data (e.g., which features are used and general search patterns). This data is not associated with individual users.</p>
@@ -46,6 +46,9 @@ export const PRIVACY_POLICY_HTML = `
 <p>We do <strong>not</strong> store client email addresses or phone numbers.</p>
 <p>This information is used to maintain and improve the application, monitor capacity and performance, manage costs, and identify potential bottlenecks.</p>
 <p>We also log queries submitted through the LLM Search &amp; Help features. These logs are used solely to improve the Help experience and underlying language model behavior. Logs are reviewed on a regular basis to train internal models and removed when no longer needed or in 90 days, whichever comes first. These logs are not used to identify individuals and are not shared or used to train external models.</p>
+
+<h4>Diagnostic Information</h4>
+<p>When you contact us through the Support form and indicate that a feature or function isn't working, we automatically attach a brief description of your browser and operating system (for example, "Chrome 149.0 on macOS") to help us reproduce and resolve the issue. This is shown to you before you submit, with an explanation, and you may remove it. We collect no other information about your device.</p>
 <hr>
 
 <h3>3. How We Use Information</h3>
@@ -80,7 +83,6 @@ export const PRIVACY_POLICY_HTML = `
 <h3>7. Contact Us</h3>
 <p>If you have questions or concerns about this Privacy Policy, you may contact us by clicking <strong>"Contact Support"</strong> within the Application or by emailing <strong>info@crghouston.org</strong>.</p>
 <p><strong>Omar Peracha</strong></p>
-<p>April 18, 2026</p>
 `;
 
 export const TERMS_OF_SERVICE_HTML = `
@@ -115,5 +117,4 @@ export const TERMS_OF_SERVICE_HTML = `
 <h3>6. Contact</h3>
 <p>Questions or concerns regarding these Terms may be directed to the developer by clicking <strong>"Contact Support"</strong> within the Application or by emailing <strong>info@crghouston.org</strong>.</p>
 <p><strong>Omar Peracha</strong></p>
-<p>April 18, 2026</p>
 `;
