@@ -430,10 +430,12 @@ export async function createPdf({
   // Sender sign-off line (child org name + phone). Omitted entirely when there's
   // no sender footer (blocked / guest / unselected) — no "By: —" placeholder.
   // Name + phone are translate="no" so they stay verbatim under Spanish
-  // translation; only the "Sent by:" label translates.
+  // translation; only the "Prepared by:" label translates. PDF uses "Prepared
+  // by" (a printed handout) vs. email/text "Sent by" (transmitted) — each fits
+  // its medium; a recipient only ever sees one.
   const senderPhonePart = senderFooter?.phone ? ` &middot; ${senderFooter.phone}` : "";
   const senderLineHtml = senderFooter?.name
-    ? `<div style="font-size: 12px;">Sent by: <span class="notranslate" translate="no"><strong>${senderFooter.name}</strong>${senderPhonePart}</span></div>`
+    ? `<div style="font-size: 12px;">Prepared by: <span class="notranslate" translate="no"><strong>${senderFooter.name}</strong>${senderPhonePart}</span></div>`
     : "";
 
   const pdfHtml = `<!DOCTYPE html>

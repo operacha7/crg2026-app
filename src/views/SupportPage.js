@@ -52,7 +52,18 @@ const RecoTag = ({ color, children }) => (
 );
 
 const SupportPage = ({ loggedInUser }) => {
-  const { onLogout } = useAppData();
+  const { onLogout, selectedSenderChild } = useAppData();
+
+  // Organization field default. Registered users get their selected child (the
+  // stored sender identity) — read-only + greyed; falls back to the parent
+  // reg_organization if no child has resolved yet. Guests get "Guest" but may
+  // edit it. (Blocked orgs still identify their real child here — block only
+  // affects the client-facing footer, not internal/support attribution.)
+  const isRegistered = !loggedInUser?.isGuest && !!loggedInUser?.reg_organization;
+  const defaultOrganization = loggedInUser?.isGuest
+    ? 'Guest'
+    : (selectedSenderChild?.organization || loggedInUser?.reg_organization || '');
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -89,12 +100,13 @@ const SupportPage = ({ loggedInUser }) => {
   const isUrgent = URGENT_SUBJECTS.has(subject);
   const showResult = subject !== '';
 
-  // Auto-fill organization if user is logged in (not Guest)
+  // Auto-fill the Organization field with the default (child for registered
+  // users, "Guest" for guests). Re-runs when the child resolves asynchronously
+  // so it isn't stuck on the parent name. For guests the default is the stable
+  // string "Guest", so this fires once and never clobbers a guest's own edit.
   useEffect(() => {
-    if (loggedInUser?.reg_organization && !loggedInUser?.isGuest) {
-      setFormData((prev) => ({ ...prev, organization: loggedInUser.reg_organization }));
-    }
-  }, [loggedInUser]);
+    setFormData((prev) => ({ ...prev, organization: defaultOrganization }));
+  }, [defaultOrganization]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -149,7 +161,7 @@ const SupportPage = ({ loggedInUser }) => {
         setFormData({
           name: '',
           email: '',
-          organization: (!loggedInUser?.isGuest && loggedInUser?.reg_organization) || '',
+          organization: defaultOrganization,
           message: '',
         });
       } else {
@@ -264,8 +276,12 @@ const SupportPage = ({ loggedInUser }) => {
         <input
           type="text" id="organization" name="organization" value={formData.organization}
           onChange={handleInputChange} required
-          className={fieldClass} style={fieldStyle} placeholder="Your organization name"
-          readOnly={!loggedInUser?.isGuest && !!loggedInUser?.reg_organization}
+          className={fieldClass} placeholder="Your organization name"
+          style={isRegistered
+            ? { ...fieldStyle, backgroundColor: '#E9E9E9', color: 'var(--color-support-muted)', cursor: 'not-allowed' }
+            : fieldStyle}
+          readOnly={isRegistered}
+          aria-readonly={isRegistered}
         />
       </div>
 
