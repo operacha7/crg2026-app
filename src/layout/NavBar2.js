@@ -10,6 +10,7 @@ import { searchWithLLM } from "../services/llmSearchService";
 import { geocodeAddress } from "../services/geocodeService";
 import { LOADING_MESSAGES } from "../constants/loadingMessages";
 import { buildParentDropdownOptions, matchesParentOrSubgroup } from "../utils/orgFilters";
+import ServiceAreaChipButton from "../components/ServiceAreaChipButton";
 
 // Search mode definitions
 const SEARCH_MODES = {
@@ -182,7 +183,7 @@ const FilterDropdown = SearchableDropdown;
 // Options accept either bare strings (label === value) or {value, label} objects.
 // This lets the parent dropdown render subgroups indented (e.g., "— District 4")
 // while the underlying filter value stays clean (e.g., "District 4").
-function SearchableDropdown({ placeholder, options = [], value, onChange, allowReset = true, maxChars = 74 }) {
+function SearchableDropdown({ placeholder, options = [], value, onChange, allowReset = true, maxChars = 74, disabled = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredOption, setHoveredOption] = useState(null);
   const [searchText, setSearchText] = useState("");
@@ -245,6 +246,7 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
   }, [isOpen]);
 
   const handleClick = () => {
+    if (disabled) return;
     setIsOpen(!isOpen);
   };
 
@@ -275,7 +277,8 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
     >
       <button
         onClick={handleClick}
-        className="font-opensans transition-all duration-200 hover:brightness-125"
+        disabled={disabled}
+        className={`font-opensans transition-all duration-200 ${disabled ? "" : "hover:brightness-125"}`}
         style={{
           height: "var(--height-navbar2-btn)",
           paddingLeft: "var(--padding-navbar2-btn-x)",
@@ -294,6 +297,8 @@ function SearchableDropdown({ placeholder, options = [], value, onChange, allowR
             ? "var(--border-width-btn) solid var(--color-navbar2-btn-active-border)"
             : "var(--border-width-btn) solid var(--color-navbar2-btn-inactive-border)",
           whiteSpace: "nowrap",
+          opacity: disabled ? 0.5 : 1,
+          cursor: disabled ? "not-allowed" : "pointer",
         }}
       >
         {hasValue ? truncateText(selectedLabel) : placeholder}
@@ -958,6 +963,8 @@ function OrganizationFilters({
   setSelectedParent,
   selectedChild,
   setSelectedChild,
+  serviceAreaActive = false,
+  onToggleServiceArea,
 }) {
   // Filter child orgs based on selected parent
   const childOrgOptions = useMemo(() => {
@@ -1001,6 +1008,7 @@ function OrganizationFilters({
         value={selectedParent}
         onChange={setSelectedParent}
         allowReset={true}
+        disabled={serviceAreaActive}
       />
       <SearchableDropdown
         placeholder="-- Select Child Organization --"
@@ -1008,6 +1016,10 @@ function OrganizationFilters({
         value={selectedChild}
         onChange={setSelectedChild}
         allowReset={true}
+      />
+      <ServiceAreaChipButton
+        isActive={serviceAreaActive}
+        onToggle={onToggleServiceArea}
       />
     </>
   );
@@ -1344,6 +1356,8 @@ export default function NavBar2() {
     selectedLocationNeighborhood,
     setSelectedLocationNeighborhood,
     setActiveAssistanceChips,
+    serviceAreaActive,
+    setServiceAreaActive,
     directory,
     // Client coordinates from context — Address chip lives in NavBar3 now, but
     // we still clear these here when the search mode changes.
@@ -1404,6 +1418,8 @@ export default function NavBar2() {
       setSelectedLocationCity("");
       setSelectedLocationNeighborhood("");
       setActiveAssistanceChips(new Set());
+      // Exit Service Area audit mode (Organization-mode-only feature)
+      setServiceAreaActive(false);
       // Clear client coordinates
       setClientAddress("");
       setClientCoordinates("");
@@ -1428,6 +1444,16 @@ export default function NavBar2() {
         search_value: zipCode,
       });
     }
+  };
+
+  // Toggle Service Area audit mode. On activation, clear any selected parent
+  // first (the audit is child-only) before the parent dropdown greys out, so a
+  // stale parent value isn't left showing in the locked control.
+  const handleToggleServiceArea = (next) => {
+    if (next) {
+      setSelectedParentOrg("");
+    }
+    setServiceAreaActive(next);
   };
 
   // Wrapper to log parent org selection
@@ -1624,6 +1650,8 @@ export default function NavBar2() {
             setSelectedParent={handleParentOrgChange}
             selectedChild={selectedChildOrg}
             setSelectedChild={handleChildOrgChange}
+            serviceAreaActive={serviceAreaActive}
+            onToggleServiceArea={handleToggleServiceArea}
           />
         );
       case SEARCH_MODES.LOCATION:

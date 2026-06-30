@@ -2,7 +2,10 @@
 // Service for sending emails and creating PDFs
 // Extracted from EmailDialog.js for reuse
 
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { render } from "@react-email/components";
+import { getIconByName } from "../icons/iconMap";
 import { LOGO_URL_Email, BUS_ICON_URL } from "../data/constants";
 import {
   formatAddress,
@@ -528,6 +531,185 @@ ${htmlContent}
   document.body.removeChild(a);
 
   return { success: true, filename, count: selectedData.length };
+}
+
+/**
+ * Compact hours renderer for the Service Area audit table (one cell per row).
+ * Reuses the shared formatter; flattens to small text + red hours notes.
+ */
+function formatHoursAuditHtml(record) {
+  const fh = formatHoursFromJson(record.org_hours);
+  if (!fh) return "";
+  if (fh.legacy) return fh.legacy;
+  const parts = [];
+  [...(fh.rows || []), ...(fh.special || [])].forEach((r) => parts.push(`${r.days}&nbsp;${r.hours}`));
+  (fh.labeled || []).forEach((i) => parts.push(`<strong>${i.label}:</strong>&nbsp;${i.days} ${i.hours}`));
+  let html = parts.join("<br/>");
+  if (record.hours_notes) {
+    html += `<div style="color:#e74c3c;font-style:italic;margin-top:2px;">${record.hours_notes}</div>`;
+  }
+  return html;
+}
+
+/**
+ * Build + download the Service Area Audit PDF (internal audit tool).
+ *
+ * Audit-specific dense table layout (distinct from the client-facing createPdf):
+ * a header with the audited child org, date, and the full service-area zip list,
+ * then one row per displayed resource with Organization (+address +assistance),
+ * Phone, Hours, Status, and Requirements. Status IS shown — validating it is the
+ * point of the audit. Captures the records as passed in (already filtered by
+ * mode + assistance), sorted in the established order. Posts to the same
+ * /createPdf Cloudflare Function used by the email/PDF system.
+ *
+ * @param {object} args
+ * @param {Array}  args.records           - Records to include (the displayed service-area results)
+ * @param {string} args.childOrgName      - Audited child org name (header + filename)
+ * @param {string[]} args.serviceAreaZips - The child's service-area zips (page-1 body block)
+ * @param {string[]} args.selectedAssistance - Names of the assistance types currently filtered (repeating header)
+ * @returns {Promise<{success:boolean, filename?:string, count?:number, message?:string}>}
+ */
+export async function createAuditPdf({ records = [], childOrgName = "", serviceAreaZips = [], selectedAssistance = [], assistIconMap = {} }) {
+  if (!records.length) {
+    return { success: false, message: "No resources to download." };
+  }
+
+  // Match the on-screen Organization-mode sort exactly (defaultSortByOrg in
+  // ResultsList): org_parent → organization → assist_id → status_id.
+  const sorted = [...records].sort((a, b) => {
+    const parentCmp = (a.org_parent || a.organization || "").localeCompare(b.org_parent || b.organization || "");
+    if (parentCmp !== 0) return parentCmp;
+    const orgCmp = (a.organization || "").localeCompare(b.organization || "");
+    if (orgCmp !== 0) return orgCmp;
+    const aAssistId = parseInt(a.assist_id, 10) || 999;
+    const bAssistId = parseInt(b.assist_id, 10) || 999;
+    if (aAssistId !== bAssistId) return aAssistId - bAssistId;
+    return (a.status_id || 999) - (b.status_id || 999);
+  });
+  const dateStr = new Date().toISOString().slice(0, 10);
+
+  // Render each assistance icon to a static SVG string once (cached by icon
+  // name), colored olive to match the on-screen Assistance column.
+  const iconCache = {};
+  const renderAssistIcon = (assistId) => {
+    const iconName = assistIconMap[assistId];
+    if (!iconName) return "";
+    if (iconCache[iconName] !== undefined) return iconCache[iconName];
+    let Comp = getIconByName(iconName);
+    if (Array.isArray(Comp)) Comp = Comp[0];
+    let svg = "";
+    if (Comp) {
+      try {
+        svg = renderToStaticMarkup(createElement(Comp, { size: 12 }));
+      } catch {
+        svg = "";
+      }
+    }
+    iconCache[iconName] = svg;
+    return svg;
+  };
+
+  const cell = "padding:4px 6px;font-size:10px;border:1px solid #ccc;vertical-align:top;word-wrap:break-word;";
+  // print-color-adjust:exact forces PDFShift/Chromium to render the maroon
+  // background in the repeating header region (backgrounds there are otherwise
+  // dropped, unlike in the body).
+  const th = "background:#660000;color:#fff;padding:5px 6px;font-size:10px;border:1px solid #660000;text-align:left;-webkit-print-color-adjust:exact;print-color-adjust:exact;";
+
+  // Shared fixed column widths — used by BOTH the repeating header's column row
+  // and the body table so the columns line up across the page boundary.
+  const colgroup = `<colgroup>`
+    + `<col style="width:3%"><col style="width:23%"><col style="width:10%">`
+    + `<col style="width:16%"><col style="width:8%"><col style="width:40%">`
+    + `</colgroup>`;
+
+  const bodyRows = sorted.map((e, i) => {
+    const addressHtml = formatAddress(e).join("<br/>");
+    const reqs = parseRequirements(e.requirements);
+    const reqHtml = reqs.length
+      ? `<ul style="margin:0;padding-left:14px;">${reqs.map((r) => `<li>${r}</li>`).join("")}</ul>`
+      : "";
+    const phones = parsePhoneNumbers(e.org_telephone).join("<br/>");
+    const iconSvg = renderAssistIcon(e.assist_id);
+    const assistLine = e.assistance
+      ? `<br/><span style="display:inline-block;color:#808000;vertical-align:middle;">${iconSvg}</span>`
+        + `<span style="color:#888;font-style:italic;vertical-align:middle;margin-left:4px;">${e.assistance}</span>`
+      : "";
+    const orgCell = `<strong>${e.organization || "N/A"}</strong>`
+      + (addressHtml ? `<br/><span style="color:#555;">${addressHtml}</span>` : "")
+      + assistLine;
+    return `<tr>
+      <td style="${cell}text-align:right;">${i + 1}</td>
+      <td style="${cell}">${orgCell}</td>
+      <td style="${cell}">${phones}</td>
+      <td style="${cell}">${formatHoursAuditHtml(e)}</td>
+      <td style="${cell}">${e.status || ""}</td>
+      <td style="${cell}">${reqHtml}</td>
+    </tr>`;
+  }).join("");
+
+  const zipList = serviceAreaZips.length ? serviceAreaZips.join(", ") : "—";
+  const assistanceList = selectedAssistance.length ? selectedAssistance.join(", ") : "All assistance types";
+
+  // Repeating page masthead — title, generated/count, assistance types, service
+  // area, and the table column-header row, all in the PDFShift header so the
+  // FULL block repeats on every page (the table's own <thead> does not repeat
+  // reliably under PDFShift). Same colgroup + table-layout:fixed as the body so
+  // the column labels stay aligned with the data columns below.
+  const pdfHeader = `<div style="font-family:Arial,sans-serif;padding:0 0.3in;width:100%;box-sizing:border-box;">
+    <div style="font-weight:bold;color:#222831;font-size:14px;">CRG Service Area Audit${childOrgName ? ` — ${childOrgName}` : ""}</div>
+    <div style="color:#555;font-size:11px;">Generated ${dateStr}&nbsp;&nbsp;|&nbsp;&nbsp;${sorted.length} resource${sorted.length === 1 ? "" : "s"}</div>
+    <div style="color:#2E5A88;font-size:11px;"><strong>Assistance Types:</strong> ${assistanceList}</div>
+    <div style="color:#2E5A88;font-size:11px;margin-bottom:12px;"><strong>Service Area (${serviceAreaZips.length} zip${serviceAreaZips.length === 1 ? "" : "s"}):</strong> ${zipList}</div>
+    <table style="border-collapse:collapse;width:100%;table-layout:fixed;">${colgroup}
+      <tr><th style="${th}">#</th><th style="${th}">Organization</th><th style="${th}">Telephone</th><th style="${th}">Hours</th><th style="${th}">Status</th><th style="${th}">Requirements</th></tr>
+    </table>
+  </div>`;
+
+  const htmlBody = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+    /* Keep each resource row whole — push it to the next page rather than
+       splitting it across the page break. (A row taller than a full page
+       still has to split; nothing can prevent that.) */
+    tr { break-inside: avoid; page-break-inside: avoid; }
+  </style></head><body>
+    <table>${colgroup}<tbody>${bodyRows}</tbody></table>
+  </body></html>`;
+
+  const filename = `CRG - Service Area Audit - ${childOrgName || "Org"} - ${dateStr}.pdf`;
+  const pdfFooter = `<div style="width:100%;padding:10px 0.5in 0 0.5in;font-family:Arial,sans-serif;"><div style="text-align:right;font-size:10px;font-style:italic;color:#666;">Page {{page}} of {{total}}</div></div>`;
+
+  const res = await fetch("/createPdf", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      htmlBody,
+      filename,
+      landscape: true,
+      header: { source: pdfHeader, spacing: "0px" },
+      footer: { source: pdfFooter, spacing: "10px" },
+      margin: { top: "1.12in", bottom: "0.3in", left: "0.3in", right: "0.3in" },
+    }),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Failed to create audit PDF: ${res.status} - ${errorText}`);
+  }
+
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.style.display = "none";
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+
+  return { success: true, filename, count: sorted.length };
 }
 
 /**

@@ -1237,7 +1237,8 @@ export default function NavBar2Reports({
           onClick={onMap2Download}
           className="flex items-center gap-2 transition-all duration-200 hover:brightness-125"
           style={{
-            background: "#4285F4",
+            // Standardized Download color — matches the New Zip Code Map (V2 sidebar).
+            background: "var(--color-reports-sidebar-v2-btn-download-bg)",
             border: "none",
             borderRadius: "6px",
             padding: "6px 14px",

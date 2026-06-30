@@ -118,6 +118,12 @@ export const AppDataProvider = ({ children, loggedInUser, onLogout }) => {
   const [selectedLocationNeighborhood, setSelectedLocationNeighborhood] = useState("");
   const [activeAssistanceChips, setActiveAssistanceChips] = useState(new Set());
 
+  // Service Area audit mode (Organization mode only). When active, results show
+  // ALL resources serving any zip in the selected CHILD org's service area
+  // (union of its client_zip_codes), the parent dropdown is locked, and a
+  // Service Area bar lists those zips. Internal audit tool — not the neighbor flow.
+  const [serviceAreaActive, setServiceAreaActive] = useState(false);
+
   // Client location override - for distance calculations
   // When set, overrides zip centroid for distance calculations
   // Cleared when zip code changes
@@ -511,6 +517,10 @@ export const AppDataProvider = ({ children, loggedInUser, onLogout }) => {
     activeAssistanceChips,
     setActiveAssistanceChips,
 
+    // Service Area audit mode (Organization mode)
+    serviceAreaActive,
+    setServiceAreaActive,
+
     // Client location override
     clientAddress,
     setClientAddress,
@@ -558,6 +568,7 @@ export const AppDataProvider = ({ children, loggedInUser, onLogout }) => {
     selectedZipCode, selectedParentOrg, selectedChildOrg,
     selectedLocationCounty, selectedLocationCity, selectedLocationZip, selectedLocationNeighborhood,
     activeAssistanceChips,
+    serviceAreaActive,
     clientAddress, clientCoordinates,
     drivingDistances, drivingDistancesLoading,
     llmSearchQuery, llmSearchFilters, llmSearchInterpretation,

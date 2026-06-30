@@ -155,6 +155,23 @@
   --width-navbar2-mode-underline: 2px;
   --color-navbar2-link: #F0F8FF;
 
+  /* Service Area chip (NavBar2, Organization mode) — internal audit toggle.
+   * Mirrors the Address chip's outlined/filled reversal but in NavBar2 blue. */
+  --color-service-area-chip-inactive-bg: #FFFFFF;
+  --color-service-area-chip-inactive-text: #2E5A88;
+  --color-service-area-chip-active-bg: #2E5A88;
+  --color-service-area-chip-active-text: #FFFFFF;
+  --color-service-area-chip-border: #2E5A88;
+
+  /* Service Area bar — opens below NavBar3 while the audit toggle is active.
+   * Lists the audited child's service-area zips (small font) + Download button. */
+  --color-service-area-bar-bg: #1e4062;
+  --color-service-area-bar-text: #fff;
+  --height-service-area-bar: 38px;
+  --font-size-service-area-zips: 12px;
+  --color-service-area-download-bg: #660000;
+  --color-service-area-download-text: #FFFFFF;
+
   /* NavBar 3 */
   --color-navbar3-bg: #E8E2CD;
   --color-navbar3-user-text: #43747D;

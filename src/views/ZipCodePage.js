@@ -2,6 +2,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import PageLayout from "../layout/PageLayout";
 import ResultsList from "../components/ResultsList";
+import ServiceAreaBar from "../layout/ServiceAreaBar";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { calculateDistance, parseCoordinates } from "../services/dataService";
@@ -33,6 +34,8 @@ export default function ZipCodePage({
     selectedLocationCity,
     selectedLocationNeighborhood,
     activeAssistanceChips,
+    // Service Area audit mode (Organization mode) — OR-filter by the child's zips
+    serviceAreaActive,
     // Client coordinates override for distance calculations
     clientCoordinates,
     // Address setters — used to clear the client's address after sending
@@ -68,13 +71,42 @@ export default function ZipCodePage({
 
   // Search key for auto-resetting inline filters when search params change
   const searchKey = useMemo(() =>
-    `${activeSearchMode}:${selectedZipCode}:${selectedParentOrg}:${selectedChildOrg}:${selectedLocationZip}:${selectedLocationCity}:${selectedLocationCounty}:${selectedLocationNeighborhood}:${[...activeAssistanceChips].sort().join(',')}:${llmSearchQuery}`,
-    [activeSearchMode, selectedZipCode, selectedParentOrg, selectedChildOrg, selectedLocationZip, selectedLocationCity, selectedLocationCounty, selectedLocationNeighborhood, activeAssistanceChips, llmSearchQuery]
+    `${activeSearchMode}:${selectedZipCode}:${selectedParentOrg}:${selectedChildOrg}:${serviceAreaActive}:${selectedLocationZip}:${selectedLocationCity}:${selectedLocationCounty}:${selectedLocationNeighborhood}:${[...activeAssistanceChips].sort().join(',')}:${llmSearchQuery}`,
+    [activeSearchMode, selectedZipCode, selectedParentOrg, selectedChildOrg, serviceAreaActive, selectedLocationZip, selectedLocationCity, selectedLocationCounty, selectedLocationNeighborhood, activeAssistanceChips, llmSearchQuery]
   );
 
   const handleFilteredCountChange = useCallback((count) => {
     setInlineFilteredCount(count);
   }, []);
+
+  // Names of the assistance types currently filtered — shown in the audit PDF's
+  // repeating header so the auditor knows what the list was scoped to.
+  const selectedAssistanceNames = useMemo(
+    () => assistance.filter(a => activeAssistanceChips.has(a.assist_id)).map(a => a.assistance),
+    [assistance, activeAssistanceChips]
+  );
+
+  // assist_id → icon name, so the audit PDF can render each row's assistance icon
+  // (matters when no assistance filter is applied and the list mixes types).
+  const assistIconMap = useMemo(() => {
+    const map = {};
+    assistance.forEach(a => { map[a.assist_id] = a.icon; });
+    return map;
+  }, [assistance]);
+
+  // Service Area audit mode: the union of all zips the selected CHILD org serves.
+  // Drives both the OR-filter below and the Service Area bar's zip list. Empty
+  // until a child is chosen. (Same union shape as Reports' orgZipLookup.)
+  const serviceAreaZips = useMemo(() => {
+    if (!serviceAreaActive || !selectedChildOrg) return [];
+    const zips = new Set();
+    directory.forEach(r => {
+      if (r.organization === selectedChildOrg) {
+        (r.client_zip_codes || []).forEach(z => zips.add(z));
+      }
+    });
+    return [...zips].sort();
+  }, [serviceAreaActive, selectedChildOrg, directory]);
 
   // Filter directory based on active search mode and filters
   const filteredDirectory = useMemo(() => {
@@ -116,8 +148,20 @@ export default function ZipCodePage({
         break;
 
       case "organization":
-        // Filter by organization name
-        if (selectedChildOrg) {
+        if (serviceAreaActive) {
+          // Service Area audit: show ALL resources serving any zip in the
+          // selected CHILD's service area (union of its client_zip_codes).
+          // Parent is ignored/locked; empty until a child is chosen.
+          if (serviceAreaZips.length > 0) {
+            const zipSet = new Set(serviceAreaZips);
+            filtered = filtered.filter(record =>
+              record.client_zip_codes?.some(z => zipSet.has(z))
+            );
+          } else {
+            filtered = [];
+          }
+        } else if (selectedChildOrg) {
+          // Filter by organization name
           filtered = filtered.filter(record => record.organization === selectedChildOrg);
         } else if (selectedParentOrg) {
           // selectedParentOrg may be either a real parent (matches org_parent)
@@ -209,7 +253,7 @@ export default function ZipCodePage({
 
     // Sorting is handled by ResultsList (status_id, assist_id, miles)
     return filtered;
-  }, [directory, zipCodes, assistance, activeSearchMode, selectedZipCode, selectedParentOrg, selectedChildOrg, selectedLocationZip, selectedLocationCity, selectedLocationCounty, selectedLocationNeighborhood, activeAssistanceChips, clientCoordinates, llmSearchFilters]);
+  }, [directory, zipCodes, assistance, activeSearchMode, selectedZipCode, selectedParentOrg, selectedChildOrg, selectedLocationZip, selectedLocationCity, selectedLocationCounty, selectedLocationNeighborhood, activeAssistanceChips, serviceAreaActive, serviceAreaZips, clientCoordinates, llmSearchFilters]);
 
   // Fetch driving distances when user enters a custom address
   // This runs after filtering to only fetch for visible results
@@ -566,6 +610,18 @@ export default function ZipCodePage({
       onGvAutoSent={handleGvAutoSent}
     >
       <div className="flex flex-col flex-1 overflow-hidden">
+        {/* Service Area audit bar — below NavBar3, above results. Visible only
+            while the Service Area toggle (NavBar2, Org mode) is active. Lists the
+            audited child's service-area zips + a Download (audit PDF) button. */}
+        <ServiceAreaBar
+          active={serviceAreaActive && activeSearchMode === "organization"}
+          zips={serviceAreaZips}
+          childOrgName={selectedChildOrg}
+          records={displayDirectory}
+          selectedAssistance={selectedAssistanceNames}
+          assistIconMap={assistIconMap}
+        />
+
         {/* Per-slug screen-reader-only H1. Set on /assistance/:slug routes
             so indexable landing pages have a real on-page heading element
             for Googlebot and screen readers (not just a <title> meta tag).
