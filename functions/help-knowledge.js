@@ -104,9 +104,17 @@ Vertical strip with icons: [[HOME_ICON]] [[INFO_ICON]] [[REPORTS_ICON]] and othe
 1. Click [[ORGANIZATION_BTN]] in the gray bar
 2. You'll see two dropdowns: "Select Parent Org" and "Select Organization"
 3. Parent organizations are the main entity; child organizations are programs or branches under them
-4. You can select a parent to filter the child dropdown, OR select a child directly
+4. You do NOT have to pick a parent first. You can select an organization directly from the second dropdown. Choosing a parent simply filters the second dropdown to that parent's branches.
 5. Results will show resources for the selected organization
 6. To refine your results, click [[SELECT_ASSISTANCE_BTN]] in the tan bar to filter by assistance type
+
+**Service Area (explore a child organization's whole service area):**
+With a child organization selected in Organization mode, a "Service Area" chip appears next to the dropdowns. Click it to view all resources matching that organization's zip codes (instead of just its own listings). When it's on:
+- The Parent dropdown is disabled and the child organization drives the results.
+- A zip code bar appears (below the assistance filters) listing that service area's zip codes, so you can verify coverage.
+- A "Download" button in that bar saves a printable PDF of the current results.
+- Assistance-type filters still narrow the service-area results.
+- Toggle "Service Area" again to exit.
 
 ### Search by Location
 1. Click [[LOCATION_BTN]] in the gray bar

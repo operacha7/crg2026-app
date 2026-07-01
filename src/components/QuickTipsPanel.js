@@ -22,6 +22,7 @@ import {
   QuickTipsIcon,
   MedicalPrimaryCareIcon,
   EducationChildrenIcon,
+  ServiceAreaIcon,
 } from "../icons";
 
 // Topic definitions with their visual content
@@ -621,24 +622,58 @@ function LlmSearchTip() {
 function OrganizationSearchTip() {
   return (
     <div className="space-y-4">
-      <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
-        Search for a specific organization by name.
-      </p>
-
       <div className="flex items-center gap-3">
         <span
-          className="inline-block px-2 py-0.5 rounded text-xs font-medium"
-          style={{ backgroundColor: "var(--color-navbar2-btn-active-bg)", color: "var(--color-navbar2-btn-active-text)" }}
+          className="inline-block shrink-0"
+          style={{
+            color: "var(--color-accent-gold)",
+            fontWeight: 600,
+            fontSize: "var(--font-size-quicktips-body)",
+            borderBottom: "2px solid var(--color-accent-gold)",
+            paddingBottom: "2px",
+          }}
         >
           Organization
         </span>
-        <span style={{ color: "var(--color-quicktips-section-body-text)", fontSize: "var(--font-size-quicktips-body)" }}>
-          Click to switch to Organization mode
+        <span style={{ color: "var(--color-quicktips-section-body-text)", fontSize: "var(--font-size-quicktips-body)", fontWeight: 700 }}>
+          Search by Organization
         </span>
       </div>
 
       <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
-        Select a parent organization, then a child below it.
+        Switch to Organization mode. Select an organization directly, or choose a
+        parent organization to filter its branches.
+      </p>
+
+      {/* Service Area audit toggle — active version of the real NavBar2 chip */}
+      <div className="flex items-center gap-3">
+        <span
+          className="inline-flex items-center shrink-0"
+          style={{
+            gap: "6px",
+            padding: "3px 10px",
+            borderRadius: "var(--radius-assistance-chip)",
+            border: "var(--border-width-btn) solid var(--color-service-area-chip-border)",
+            backgroundColor: "var(--color-service-area-chip-active-bg)",
+            color: "var(--color-service-area-chip-active-text)",
+            fontSize: "var(--font-size-quicktips-body)",
+            fontWeight: 500,
+            whiteSpace: "nowrap",
+          }}
+        >
+          <ServiceAreaIcon size={16} />
+          Service Area
+        </span>
+        <span style={{ color: "var(--color-quicktips-section-body-text)", fontSize: "var(--font-size-quicktips-body)", fontWeight: 700 }}>
+          Explore Service Area
+        </span>
+      </div>
+
+      <p style={{ fontSize: "var(--font-size-quicktips-body)", color: "var(--color-quicktips-section-body-text)" }}>
+        With a child organization selected, click <strong>Service Area</strong> to
+        view all resources matching its zip codes. From the zip code bar that
+        appears, you can verify coverage or click <strong>Download</strong> to save
+        a printable PDF. Toggle <strong>Service Area</strong> again to exit.
       </p>
     </div>
   );

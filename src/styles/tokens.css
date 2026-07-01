@@ -157,7 +157,7 @@
 
   /* Service Area chip (NavBar2, Organization mode) — internal audit toggle.
    * Mirrors the Address chip's outlined/filled reversal but in NavBar2 blue. */
-  --color-service-area-chip-inactive-bg: #FFFFFF;
+  --color-service-area-chip-inactive-bg: var(--color-navbar2-btn-inactive-bg); /* match the Parent/Child dropdown bg (#FDF6E3) */
   --color-service-area-chip-inactive-text: #2E5A88;
   --color-service-area-chip-active-bg: #2E5A88;
   --color-service-area-chip-active-text: #FFFFFF;

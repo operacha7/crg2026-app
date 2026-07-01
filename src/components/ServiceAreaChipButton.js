@@ -12,29 +12,7 @@
 // Internal audit tool — not part of the neighbor lookup flow.
 
 import Tooltip from "./Tooltip";
-
-// Placeholder icon — REPLACE with the icon the user supplies. Kept as a simple
-// inline SVG (overlapping pins / "area") so the chip reads correctly until the
-// real asset lands. Inherits color via `currentColor`.
-function ServiceAreaPlaceholderIcon({ size = 20 }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3z" />
-      <path d="M9 4v13M15 7v13" />
-    </svg>
-  );
-}
+import { ServiceAreaIcon } from "../icons";
 
 export default function ServiceAreaChipButton({
   isActive = false,
@@ -80,7 +58,7 @@ export default function ServiceAreaChipButton({
           cursor: disabled ? "not-allowed" : "pointer",
         }}
       >
-        <ServiceAreaPlaceholderIcon size={22} />
+        <ServiceAreaIcon size={22} />
         <span>Service Area</span>
       </button>
     </Tooltip>
