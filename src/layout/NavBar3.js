@@ -612,6 +612,7 @@ export default function NavBar3() {
     activeAssistanceChips,
     setActiveAssistanceChips,
     loggedInUser,
+    selectedSenderChild,
     activeSearchMode,
     // Filter state from each search mode — used to gate the Address chip
     selectedZipCode,
@@ -892,10 +893,14 @@ export default function NavBar3() {
     );
   }
 
-  // Display name for logged-in user
+  // Display name for logged-in user. Prefer the stored child organization
+  // (chosen once via the sender picker) over the parent/registered org name.
+  // Falls back to reg_organization for solo orgs / before the child resolves.
   const displayName = loggedInUser?.isGuest
     ? 'Guest'
-    : loggedInUser?.reg_organization || 'Guest';
+    : selectedSenderChild?.organization
+      || loggedInUser?.reg_organization
+      || 'Guest';
 
   return (
     <nav className="bg-navbar3-bg relative">
