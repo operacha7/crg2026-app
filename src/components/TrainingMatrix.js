@@ -187,7 +187,7 @@ export default function TrainingMatrix() {
             </svg>
           </span>
           <span style={{ color: "var(--color-training-cal-text)", fontSize: 15, fontWeight: 500, lineHeight: 1.25 }}>
-            Tap any date/time that you’re free
+            Tap your preferences
           </span>
         </div>
       </div>
