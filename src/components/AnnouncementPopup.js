@@ -15,6 +15,24 @@ const AnnouncementPopup = ({ announcement, onClose, currentIndex, totalCount }) 
     return date.toLocaleDateString('en-US', options);
   };
 
+  // Recency highlight: the Date value gets a bright pink background that fades
+  // by how many days the announcement has been live (from start_date):
+  //   day 1 → 100%, day 2 → 50%, day 3 → 20%, day 4 and after → 0% (no highlight).
+  // Purely date-driven (no per-user "seen" state), so guests and shared
+  // computers behave identically — a fresh announcement always glows brightest.
+  const freshnessAlpha = (startDateString) => {
+    const [year, month, day] = startDateString.split('-').map(Number);
+    const start = new Date(year, month - 1, day);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const daysLive = Math.floor((today - start) / 86400000); // 0 on the start date
+    if (daysLive <= 0) return 1;    // first day (or future-dated safety) → full
+    if (daysLive === 1) return 0.5; // second day
+    if (daysLive === 2) return 0.2; // third day
+    return 0;                       // fourth day onward → no highlight
+  };
+  const dateHighlight = `rgba(var(--color-memo-date-fresh-rgb), ${freshnessAlpha(announcement.start_date)})`;
+
   // Get the "To:" display text from the service
   const toText = AnnouncementService.getAudienceDisplayText(announcement);
 
@@ -110,7 +128,14 @@ const AnnouncementPopup = ({ announcement, onClose, currentIndex, totalCount }) 
                 >
                   Date:
                 </span>
-                <span style={{ fontWeight: 'var(--font-weight-memo-body)' }}>
+                <span
+                  style={{
+                    fontWeight: 'var(--font-weight-memo-body)',
+                    backgroundColor: dateHighlight,
+                    padding: '1px 8px',
+                    borderRadius: '3px',
+                  }}
+                >
                   {formatDate(announcement.start_date)}
                 </span>
               </div>

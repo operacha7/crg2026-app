@@ -10,6 +10,7 @@ import ResultsHeader from "../layout/ResultsHeader";
 import FilterRow from "./FilterRow";
 import { useAppData } from "../Contexts/AppDataContext";
 import { parseHoursJson } from "../utils/formatters";
+import { GUEST_SELECTION_OPEN } from "../config/guestAccess";
 
 // ============ SORT/FILTER REDUCER ============
 
@@ -244,8 +245,13 @@ export default function ResultsList({
   searchKey = "",
   onFilteredCountChange,
 }) {
-  const { activeSearchMode, llmSearchFilters, llmSearchQuery, llmSearchInterpretation, clientCoordinates } = useAppData();
+  const { activeSearchMode, llmSearchFilters, llmSearchQuery, llmSearchInterpretation, clientCoordinates, loggedInUser } = useAppData();
   const isDrivingDistance = !!clientCoordinates;
+
+  // Disable the row Select checkbox for guests when they can neither Email nor
+  // PDF — otherwise checking boxes just runs up a count for buttons they can't
+  // use (misleading). Reopening either action re-enables it (see guestAccess.js).
+  const selectionDisabled = loggedInUser?.isGuest === true && !GUEST_SELECTION_OPEN;
 
   // Sort/filter state
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -460,6 +466,7 @@ export default function ResultsList({
                 record={record}
                 isSelected={selectedIds.has(record.id)}
                 onSelect={handleSelect}
+                selectionDisabled={selectionDisabled}
                 assistanceIcon={assistanceInfo.icon}
                 assistanceLabel={assistanceInfo.label}
                 allAssistanceTypes={assistanceData}

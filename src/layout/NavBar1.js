@@ -11,6 +11,7 @@ import SmsPanel from "../components/SmsPanel";
 import SmsWarningModal from "../components/SmsWarningModal";
 import MobileMenu from "../components/MobileMenu";
 import { SendEmailIcon, CreatePdfIcon, SendTextIcon } from "../icons";
+import { GUEST_EMAIL_OPEN, GUEST_PDF_OPEN, GUEST_TEXT_OPEN } from "../config/guestAccess";
 
 // sessionStorage key to track whether the SMS warning has been acknowledged this session
 const SMS_WARNING_ACK_KEY = "crg_sms_warning_acknowledged";
@@ -243,20 +244,17 @@ export default function NavBar1({
   // Check if user is a guest (browsing without account)
   const isGuest = loggedInUser?.isGuest === true;
 
-  // June 2026 trial: temporarily open Send Email / Create PDF / Send Text to
-  // guests to gauge usage. Set back to false to restore the registered-orgs-only
-  // gate. NOTE: this is the UI lever only — the server-side gate must be opened
-  // in lockstep (GUEST_ACTIONS_OPEN in functions/sendEmail.js + functions/createPdf.js),
-  // otherwise guest Email/PDF requests will 401. (SMS is client-side, no server gate.)
-  const GUEST_ACTIONS_OPEN = true;
-
-  // Whether to block guest access to the action buttons. When the trial is open,
-  // guests are treated like registered users for Email/PDF/Text.
-  const guestBlocked = isGuest && !GUEST_ACTIONS_OPEN;
+  // Whether to block guest access to each action button. Flags live in
+  // src/config/guestAccess.js (single source of truth; also gates the row
+  // checkbox). Email/PDF must stay in sync with their server gates — see that
+  // file. Each action is independent so any one can be reopened to guests.
+  const guestEmailBlocked = isGuest && !GUEST_EMAIL_OPEN;
+  const guestPdfBlocked = isGuest && !GUEST_PDF_OPEN;
+  const guestTextBlocked = isGuest && !GUEST_TEXT_OPEN;
 
   // Handle Send Email button click
   const handleEmailButtonClick = () => {
-    if (guestBlocked) {
+    if (guestEmailBlocked) {
       alert("You need an account. Contact Support.");
       return;
     }
@@ -275,7 +273,7 @@ export default function NavBar1({
 
   // Handle Create PDF button click
   const handlePdfButtonClick = () => {
-    if (guestBlocked) {
+    if (guestPdfBlocked) {
       alert("You need an account. Contact Support.");
       return;
     }
@@ -303,7 +301,7 @@ export default function NavBar1({
 
   // Handle Send Text button click
   const handleSmsButtonClick = () => {
-    if (guestBlocked) {
+    if (guestTextBlocked) {
       alert("You need an account. Contact Support.");
       return;
     }
@@ -444,7 +442,7 @@ export default function NavBar1({
         >
           {/* Send Email */}
           <div className="relative flex">
-            <Tooltip text={guestBlocked ? "You need an account. Contact Support." : ""} position="bottom">
+            <Tooltip text={guestEmailBlocked ? "You need an account. Contact Support." : ""} position="bottom">
               <ActionButton
                 icon={SendEmailIcon}
                 label="Send Email"
@@ -453,7 +451,7 @@ export default function NavBar1({
                 chipVariant="gold"
                 isActive={emailPdfActive}
                 onClick={handleEmailButtonClick}
-                guestDisabled={guestBlocked}
+                guestDisabled={guestEmailBlocked}
                 buttonRef={emailButtonRef}
                 position="first"
                 isPanelOpen={showEmailPanel}
@@ -475,7 +473,7 @@ export default function NavBar1({
 
           {/* Create PDF */}
           <div className="relative flex">
-            <Tooltip text={guestBlocked ? "You need an account. Contact Support." : ""} position="bottom">
+            <Tooltip text={guestPdfBlocked ? "You need an account. Contact Support." : ""} position="bottom">
               <ActionButton
                 icon={CreatePdfIcon}
                 label="Create PDF"
@@ -484,7 +482,7 @@ export default function NavBar1({
                 chipVariant="gold"
                 isActive={emailPdfActive}
                 onClick={handlePdfButtonClick}
-                guestDisabled={guestBlocked}
+                guestDisabled={guestPdfBlocked}
                 buttonRef={pdfButtonRef}
                 position="middle"
                 isPanelOpen={showPdfPanel}
@@ -504,7 +502,7 @@ export default function NavBar1({
 
           {/* Send Text */}
           <div className="relative flex">
-            <Tooltip text={guestBlocked ? "You need an account. Contact Support." : ""} position="bottom">
+            <Tooltip text={guestTextBlocked ? "You need an account. Contact Support." : ""} position="bottom">
               <ActionButton
                 icon={SendTextIcon}
                 label="Send Text"
@@ -513,7 +511,7 @@ export default function NavBar1({
                 chipVariant="teal"
                 isActive={textLabelActive}
                 onClick={handleSmsButtonClick}
-                guestDisabled={guestBlocked}
+                guestDisabled={guestTextBlocked}
                 buttonRef={smsButtonRef}
                 position="last"
                 isPanelOpen={showSmsPanel}
@@ -552,11 +550,11 @@ export default function NavBar1({
                 ref={emailButtonRef}
                 onClick={handleEmailButtonClick}
                 className={`inline-flex items-center rounded font-opensans text-sm px-4 py-2 transition-all ${
-                  guestBlocked
+                  guestEmailBlocked
                     ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                     : "bg-navbar1-btn-email-bg text-navbar1-btn-email-text hover:brightness-125"
                 }`}
-                style={{ opacity: guestBlocked ? 0.6 : 1, minHeight: '40px' }}
+                style={{ opacity: guestEmailBlocked ? 0.6 : 1, minHeight: '40px' }}
               >
                 Email
                 {selectedCount > 0 && (
@@ -586,11 +584,11 @@ export default function NavBar1({
                 ref={smsButtonRef}
                 onClick={handleSmsButtonClick}
                 className={`inline-flex items-center rounded font-opensans text-sm px-4 py-2 transition-all ${
-                  guestBlocked
+                  guestTextBlocked
                     ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                     : "bg-navbar1-btn-sms-bg text-navbar1-btn-sms-text hover:brightness-125"
                 }`}
-                style={{ opacity: guestBlocked ? 0.6 : 1, minHeight: '40px' }}
+                style={{ opacity: guestTextBlocked ? 0.6 : 1, minHeight: '40px' }}
               >
                 Text
                 {textChipShown && (

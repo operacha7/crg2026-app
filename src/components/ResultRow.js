@@ -160,6 +160,7 @@ function ResultRow({
   record,
   isSelected,
   onSelect,
+  selectionDisabled = false,
   assistanceIcon,
   allAssistanceTypes = [],
   orgAssistanceMap = {},
@@ -256,11 +257,13 @@ function ResultRow({
             type="checkbox"
             checked={isSelected}
             onChange={(e) => onSelect(record.id, e.target.checked)}
-            className="cursor-pointer mt-1 flex-shrink-0"
+            disabled={selectionDisabled}
+            className={`mt-1 flex-shrink-0 ${selectionDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
             style={{
               width: "20px",
               height: "20px",
               accentColor: "var(--color-results-checkbox-checked)",
+              opacity: selectionDisabled ? 0.4 : 1,
             }}
           />
           <div className="flex-1 min-w-0">
@@ -500,13 +503,15 @@ function ResultRow({
             type="checkbox"
             checked={isSelected}
             onChange={(e) => onSelect(record.id, e.target.checked)}
-            className="cursor-pointer"
+            disabled={selectionDisabled}
+            className={selectionDisabled ? "cursor-not-allowed" : "cursor-pointer"}
             style={{
               width: "var(--size-results-checkbox)",
               height: "var(--size-results-checkbox)",
               position: "relative",
               top: "-1.5px",
               accentColor: "var(--color-results-checkbox-checked)",
+              opacity: selectionDisabled ? 0.4 : 1,
             }}
             onClick={(e) => e.stopPropagation()}
           />

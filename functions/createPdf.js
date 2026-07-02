@@ -9,13 +9,14 @@
 
 import { requireSession } from "./_lib/auth.js";
 
-// June 2026 trial: temporarily open Create PDF to guests (unauthenticated) to
-// gauge usage. Set back to false to restore the registered-orgs-only gate.
-// Must be kept in sync with the UI lever (GUEST_ACTIONS_OPEN in
-// src/layout/NavBar1.js) and the matching flag in functions/sendEmail.js.
+// June 2026 trial: temporarily opened Create PDF to guests (unauthenticated) to
+// gauge usage. Closed again 2026-07-01 — PDF is registered-orgs-only. Must be
+// kept in sync with the UI lever (GUEST_EMAIL_PDF_OPEN in src/layout/NavBar1.js)
+// and the matching flag in functions/sendEmail.js. (Text/SMS stays open to
+// guests, but that's client-side only and has no server gate here.)
 // WARNING: while true, this endpoint is callable by anyone on the internet,
 // not just app guests — it is backed by a paid API (PDFShift).
-const GUEST_ACTIONS_OPEN = true;
+const GUEST_ACTIONS_OPEN = false;
 
 export async function onRequest({ request, env }) {
   const corsHeaders = {

@@ -537,6 +537,10 @@
   --color-memo-text: #000000;
   --color-memo-label: #000000;
   --color-memo-shadow: rgba(0, 0, 0, 0.5);
+  /* Recency highlight behind the memo Date value. RGB triple (not hex) so the
+     popup can apply a per-age alpha: 100% day 1, 60% day 2, 30% day 3+. Bright
+     pink so a fresh announcement stands out against the calm white memo. */
+  --color-memo-date-fresh-rgb: 255, 79, 163;
   --color-memo-btn-close-bg: #FF0000;
   --color-memo-btn-close-text: #000000;
   --color-memo-overlay-bg: rgba(0, 0, 0, 0.6);
