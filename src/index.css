@@ -3,6 +3,29 @@
     label {
       @apply font-label;
     }
+
+    /* App-wide cursor affordances (mimics standard web behavior — matters for
+       live training + recorded videos). Lives in the base layer so it only
+       fills gaps: any element that sets its own cursor (inline style, a
+       `cursor-*` utility, or :disabled handling) still wins via the cascade.
+       Only semantic/interactive elements are targeted — text inputs keep their
+       I-beam, since only checkbox/radio become pointers here. */
+    button:not(:disabled),
+    a[href],
+    label[for],
+    select:not(:disabled),
+    summary,
+    input[type="checkbox"]:not(:disabled),
+    input[type="radio"]:not(:disabled) {
+      cursor: pointer;
+    }
+
+    button:disabled,
+    select:disabled,
+    input:disabled,
+    [aria-disabled="true"] {
+      cursor: not-allowed;
+    }
   }
 @tailwind components;
 @tailwind utilities;
