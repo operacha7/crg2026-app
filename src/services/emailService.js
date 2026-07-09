@@ -437,8 +437,11 @@ export async function createPdf({
   // by" (a printed handout) vs. email/text "Sent by" (transmitted) — each fits
   // its medium; a recipient only ever sees one.
   const senderPhonePart = senderFooter?.phone ? ` &middot; ${senderFooter.phone}` : "";
+  const senderEmailPart = senderFooter?.email
+    ? ` &middot; <a href="mailto:${senderFooter.email}" style="color: #0066cc; text-decoration: underline;">${senderFooter.email}</a>`
+    : "";
   const senderLineHtml = senderFooter?.name
-    ? `<div style="font-size: 12px;">Prepared by: <span class="notranslate" translate="no"><strong>${senderFooter.name}</strong>${senderPhonePart}</span></div>`
+    ? `<div style="font-size: 12px;">Prepared by: <span class="notranslate" translate="no"><strong>${senderFooter.name}</strong>${senderPhonePart}${senderEmailPart}</span></div>`
     : "";
 
   const pdfHtml = `<!DOCTYPE html>
@@ -786,9 +789,12 @@ export function buildSmsBody({ searchContext, activeAssistanceChips, senderFoote
   let senderPrefix = "";
   if (senderFooter?.name) {
     // Plain ASCII only (comma, not "·") — SMS bodies and the GV extension's
-    // auto-fill are fragile with special characters.
+    // auto-fill are fragile with special characters. The email is left as a
+    // bare address (no mailto:) — phones auto-link it, and mailto: would leak
+    // into the GV auto-fill.
     const phonePart = senderFooter.phone ? `, ${senderFooter.phone}` : "";
-    senderPrefix = `Sent by: ${senderFooter.name}${phonePart}. `;
+    const emailPart = senderFooter.email ? `, ${senderFooter.email}` : "";
+    senderPrefix = `Sent by: ${senderFooter.name}${phonePart}${emailPart}. `;
   }
 
   // If SMS length ever becomes a problem, drop the header line ("Resources for

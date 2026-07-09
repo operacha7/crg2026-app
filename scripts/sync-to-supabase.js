@@ -137,6 +137,26 @@ function parseNumericOrNull(val) {
   return isNaN(parsed) ? null : parsed;
 }
 
+// Build the centered "Link to associated CRG resource" anchor from a comma-
+// separated directory_id_no cell (e.g. "1256, 147, 3"). Returns '' when the
+// cell is blank or has no numeric ids. The href is an internal, same-tab link
+// (no target="_blank") intercepted client-side to run an "Ask a Question"
+// search for those records — so it is intentionally NOT routed through
+// formatParagraph (which would rewrite the relative URL to https://).
+function buildResourceLink(directoryIdNoRaw) {
+  if (!directoryIdNoRaw) return '';
+  const ids = directoryIdNoRaw
+    .toString()
+    .split(',')
+    .map(s => s.trim())
+    .filter(s => /^\d+$/.test(s));
+  if (ids.length === 0) return '';
+
+  const href = `/find?ids=${ids.join(',')}`;
+  const anchor = `<a href="${escapeHtml(href)}" style="color: #0066CC; text-decoration: underline">Link to associated CRG resource</a>`;
+  return `<p style="text-align: center">${anchor}</p>`;
+}
+
 // Transform function for announcements
 // Converts format_1/para_1, format_2/para_2, etc. into a single message_html field
 // Dynamically handles any number of paragraphs (not limited to 4)
@@ -162,7 +182,18 @@ function transformAnnouncement(row) {
     i++;
   }
 
-  const messageHtml = paragraphs.join('\n');
+  let messageHtml = paragraphs.join('\n');
+
+  // Optional "Link to associated CRG resource" — the admin lists one or more
+  // directory id_no values in the sheet's directory_id_no column (comma-
+  // separated). We append a single centered link at the very bottom. Clicking
+  // it runs a normal "Ask a Question" search for those records (see the click
+  // interceptor in AnnouncementPopup). The ids live only in this link — no
+  // separate Supabase column is needed.
+  const resourceLink = buildResourceLink(row.directory_id_no);
+  if (resourceLink) {
+    messageHtml = messageHtml ? `${messageHtml}\n${resourceLink}` : resourceLink;
+  }
 
   // Build title_html from format_0 + title (rendered inline, wrapped in <span>).
   // format_0 is a sheet-only column; title_html lives in Supabase. If title is

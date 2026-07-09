@@ -427,6 +427,7 @@ export const AppDataProvider = ({ children, loggedInUser, onLogout }) => {
     return {
       name: selectedSenderChild.organization || "",
       phone: (selectedSenderChild.org_telephone || "").trim(),
+      email: (selectedSenderChild.org_email || "").trim(),
     };
   }, [loggedInUser, senderBlocked, selectedSenderChild]);
 
@@ -443,6 +444,7 @@ export const AppDataProvider = ({ children, loggedInUser, onLogout }) => {
       blocked: senderBlocked,
       name: selectedSenderChild?.organization || null,
       phone: (selectedSenderChild?.org_telephone || "").trim() || null,
+      email: (selectedSenderChild?.org_email || "").trim() || null,
       canChange,
       // multi-child parent who hasn't picked yet (e.g. dismissed a change re-open)
       needsSelection: !selectedSenderChild && senderChildren.length > 1,

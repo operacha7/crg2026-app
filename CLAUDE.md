@@ -390,6 +390,7 @@ NavBar2 has 4 search modes selected by buttons on the right. Only one can be act
 - **Left frame:** Text input field
 - **Uses:** Anthropic API for natural language queries
 - **Example:** "food pantry within 5 miles open Thursday morning"
+- **id_no lookup:** also understands direct record references, e.g. "Show me id_no 1256, 147, 3" → shows exactly those directory records (regardless of status). Powers the announcement "Link to associated CRG resource" (see Announcements System).
 
 ### Distance Calculation
 
@@ -971,6 +972,24 @@ Announcements are managed in Google Sheets (same spreadsheet as directory data) 
 | K | para_3 | Third paragraph text |
 | L | format_4 | Format codes for para_4 (optional) |
 | M | para_4 | Fourth paragraph text |
+| … | directory_id_no | Optional. Comma-separated directory `id_no` values (e.g. `1256, 147, 3`). See "Link to associated CRG resource" below. |
+
+**Link to associated CRG resource (`directory_id_no`):**
+For a time-sensitive resource already in the `directory` table, list its `id_no`(s) in the
+`directory_id_no` column (comma-separated). The sync script appends a single centered link —
+**"Link to associated CRG resource"** — at the bottom of the announcement. Clicking it runs a
+normal **"Ask a Question"** search for those records (query: `Show me id_no 1256, 147, 3`) in the
+same tab and closes the popup, so the user lands on the results with those resources shown, ready
+to select and Email/PDF.
+- **No new capability is special-cased:** anyone can type `Show me id_no 1256, 147, 3` into Ask a
+  Question and get the same result — the link just auto-types it. The `/llm-search` function
+  understands id_no lookups (`id_nos` in its tool schema); `applyLLMFilters` filters on `id_no`.
+- **Works for everyone** (guests and registered orgs) and **preserves the session** — the link is
+  internal/same-tab and never uses `guest=1` (which would downgrade a registered user and block
+  Email/PDF). Implementation: `buildResourceLink()` in `scripts/sync-to-supabase.js` generates the
+  link; `src/hooks/useResourceLinkHandler.js` intercepts the click.
+- `directory_id_no` is consumed at sync time only — the ids are baked into the generated link, so
+  there is no `directory_id_no` column in the Supabase `announcements` table.
 
 **Format Codes (comma-separated in format columns):**
 | Code | Effect |

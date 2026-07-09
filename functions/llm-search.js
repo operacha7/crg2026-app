@@ -68,6 +68,12 @@ const FILTER_TOOL = {
       organization_name: { type: "string" },
       county: { type: "string" },
       city: { type: "string" },
+      id_nos: {
+        type: "array",
+        items: { type: "integer" },
+        description:
+          "Specific directory record id_no values to show, when the user references record/id numbers directly (e.g. 'Show me id_no 1256, 147, 3'). Return exactly those integers.",
+      },
       geocode_address: {
         type: "string",
         description:
@@ -361,6 +367,12 @@ ${zipNote}
 11. **City** - Filter by city where organization is LOCATED. Cities include:
     Houston, Katy, Sugar Land, Pearland, Pasadena, Baytown, Conroe, Galveston, etc.
 
+12. **Record id_no** - When the user references specific record/id numbers directly
+    (e.g. "Show me id_no 1256, 147, 3" or "records 1256 and 147"), put those integers in
+    id_nos. This shows exactly those directory records. When id_nos is set, leave status_ids
+    null so the requested records appear regardless of their status, and leave the other
+    filter fields unset.
+
 ## RESPONSE FORMAT:
 
 Call the apply_filters tool. Fill fields the user mentioned; leave the rest unset. The shape:
@@ -460,6 +472,9 @@ Response: {"assistance_types":null,"zip_codes":null,"days":null,"time_filter":nu
 
 Query: "medical help close to 9900 Memorial Dr Houston TX 77024"
 Response: {"assistance_types":["Medical - Primary Care","Medical - Dental & Vision","Medical - Mental Health","Medical - Addiction Recovery","Medical - Program Enrollment","Medical - Bill Payment"],"zip_codes":null,"days":null,"time_filter":null,"status_ids":[1],"max_miles":null,"requirements_keywords":null,"neighborhood":null,"organization_name":null,"county":null,"city":null,"geocode_address":"9900 Memorial Dr, Houston, TX 77024","interpretation":"Medical assistance near 9900 Memorial Dr"}
+
+Query: "Show me id_no 1256, 147, 3"
+Response: {"assistance_types":null,"zip_codes":null,"days":null,"time_filter":null,"status_ids":null,"max_miles":null,"requirements_keywords":null,"neighborhood":null,"organization_name":null,"county":null,"city":null,"id_nos":[1256,147,3],"interpretation":"Showing selected resources"}
 
 IMPORTANT:
 - Always call the apply_filters tool

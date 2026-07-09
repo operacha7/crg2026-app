@@ -145,7 +145,7 @@ export default function NavBar1({
   // forwarded into the mobile hamburger so users can sign out from the
   // mobile layout (the desktop logout lives in VerticalNavBar, which is
   // hidden on mobile).
-  const { onLogout } = useAppData();
+  const { onLogout, senderPickerOpen } = useAppData();
   // Orange counter always reflects the current filtered count. With the
   // show-all-by-default UX, this is the full directory count when nothing
   // is selected and the narrowed count once filters are applied. (Pre-2026
@@ -195,6 +195,13 @@ export default function NavBar1({
     const handleClickOutside = (event) => {
       const now = Date.now();
 
+      // Keep the panel open while the sender-org picker is up: the user opened
+      // it via the "(change)" link inside this panel, so their clicks in the
+      // picker modal (rows, OK/Cancel) are "outside" the panel but must NOT
+      // close it — otherwise changing the child org drops them back to /find
+      // instead of the Email/PDF/Text panel they started from.
+      if (senderPickerOpen) return;
+
       // Email panel - ignore clicks within 300ms of opening (prevents mobile touch issues)
       if (
         showEmailPanel &&
@@ -239,7 +246,7 @@ export default function NavBar1({
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("touchstart", handleClickOutside);
     };
-  }, [showEmailPanel, showPdfPanel, showSmsPanel]);
+  }, [showEmailPanel, showPdfPanel, showSmsPanel, senderPickerOpen]);
 
   // Check if user is a guest (browsing without account)
   const isGuest = loggedInUser?.isGuest === true;

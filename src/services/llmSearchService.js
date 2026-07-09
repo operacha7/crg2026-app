@@ -61,6 +61,14 @@ export function applyLLMFilters(directory, filters, assistanceLookup = {}) {
 
   let filtered = [...directory];
 
+  // Filter by explicit record id_no list (e.g. "Show me id_no 1256, 147, 3").
+  // Composes like every other field; for a pure id_no query the LLM returns only
+  // id_nos, so the result is exactly those records regardless of status.
+  if (filters.id_nos && filters.id_nos.length > 0) {
+    const wanted = new Set(filters.id_nos.map(Number));
+    filtered = filtered.filter(record => wanted.has(Number(record.id_no)));
+  }
+
   // Filter by assistance types
   if (filters.assistance_types && filters.assistance_types.length > 0) {
     // Convert assistance names to assist_ids

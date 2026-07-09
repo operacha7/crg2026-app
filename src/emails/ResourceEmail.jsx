@@ -226,6 +226,17 @@ export function ResourceEmail({
                 <span className="notranslate" translate="no">
                   <strong>{senderFooter.name}</strong>
                   {senderFooter.phone ? ` · ${senderFooter.phone}` : ''}
+                  {senderFooter.email ? (
+                    <>
+                      {' · '}
+                      <Link
+                        href={`mailto:${senderFooter.email}`}
+                        style={styles.senderEmailLink}
+                      >
+                        {senderFooter.email}
+                      </Link>
+                    </>
+                  ) : ''}
                 </span>
               </Text>
             </Section>
@@ -328,6 +339,10 @@ const styles = {
     lineHeight: '1.5',
     color: '#333',
     margin: '0',
+  },
+  senderEmailLink: {
+    color: '#0066cc',
+    textDecoration: 'underline',
   },
   hr: {
     borderTop: '1px solid #ccc',

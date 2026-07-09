@@ -7,9 +7,14 @@ import AnnouncementService from '../services/AnnouncementService';
 import VerticalNavBar from '../layout/VerticalNavBar';
 import Footer from '../layout/Footer';
 import { ChevronLeftIcon, ChevronRightIcon } from '../icons';
+import useResourceLinkHandler from '../hooks/useResourceLinkHandler';
 
 // Inline memo display component (same as popup but without close button)
 const MemoDisplay = ({ announcement }) => {
+  // Intercept the generated "Link to associated CRG resource" link — runs the
+  // equivalent "Ask a Question" search (see the hook). No popup to close here.
+  const handleResourceLinkClick = useResourceLinkHandler();
+
   // Format the date to display like "January 8, 2026"
   const formatDate = (dateString) => {
     const [year, month, day] = dateString.split('-').map(Number);
@@ -122,7 +127,10 @@ const MemoDisplay = ({ announcement }) => {
           minHeight: '100px',
         }}
       >
-        <div dangerouslySetInnerHTML={{ __html: announcement.message_html }} />
+        <div
+          onClick={handleResourceLinkClick}
+          dangerouslySetInnerHTML={{ __html: announcement.message_html }}
+        />
         {announcement.expiration_date && (
           <div
             style={{

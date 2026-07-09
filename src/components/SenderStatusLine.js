@@ -56,12 +56,13 @@ export default function SenderStatusLine() {
           <div>
             Sending as: <strong>{senderStatus.name}</strong>
             {senderStatus.phone ? ` · ${senderStatus.phone}` : ""}
+            {senderStatus.email ? ` · ${senderStatus.email}` : ""}
             {changeLink}
           </div>
         )}
         <div style={{ color: "#B8001F", marginTop: senderStatus.name ? "4px" : 0 }}>
-          Your organization&rsquo;s name and phone won&rsquo;t appear on sent
-          items (set by your organization).
+          Your organization&rsquo;s name, phone and email won&rsquo;t appear on
+          sent items (set by your organization).
         </div>
       </div>
     );
@@ -72,6 +73,7 @@ export default function SenderStatusLine() {
       <p className="font-opensans" style={noteStyle}>
         Sending as: <strong>{senderStatus.name}</strong>
         {senderStatus.phone ? ` · ${senderStatus.phone}` : ""}
+        {senderStatus.email ? ` · ${senderStatus.email}` : ""}
         {changeLink}
       </p>
     );

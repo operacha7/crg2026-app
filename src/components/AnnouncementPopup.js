@@ -4,8 +4,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import AnnouncementService from '../services/AnnouncementService';
+import useResourceLinkHandler from '../hooks/useResourceLinkHandler';
 
 const AnnouncementPopup = ({ announcement, onClose, currentIndex, totalCount }) => {
+  // Intercept the generated "Link to associated CRG resource" link: close the
+  // popup and run the equivalent "Ask a Question" search (see the hook).
+  const handleResourceLinkClick = useResourceLinkHandler(onClose);
+
   // Format the date to display like "January 8, 2026"
   // Parse as UTC to avoid timezone shift (dates come as YYYY-MM-DD from Supabase)
   const formatDate = (dateString) => {
@@ -192,7 +197,10 @@ const AnnouncementPopup = ({ announcement, onClose, currentIndex, totalCount }) 
               minHeight: '100px',
             }}
           >
-            <div dangerouslySetInnerHTML={{ __html: announcement.message_html }} />
+            <div
+              onClick={handleResourceLinkClick}
+              dangerouslySetInnerHTML={{ __html: announcement.message_html }}
+            />
             {announcement.expiration_date && (
               <div
                 style={{
