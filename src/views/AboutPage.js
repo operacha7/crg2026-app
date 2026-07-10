@@ -23,7 +23,7 @@ export default function AboutPage() {
         <title>About | CRG Houston — Community Resources Guide</title>
         <meta
           name="description"
-          content="Free directory of 1,000+ community resources from 526 organizations across the Greater Houston Area, serving clients and caseworkers since 2008."
+          content="Free directory of 1,200+ community resources from 526 organizations across the Greater Houston Area, serving neighbors and caseworkers since 2008."
         />
         <link rel="canonical" href="https://crghouston.org/about" />
         <meta property="og:type" content="website" />
@@ -31,7 +31,7 @@ export default function AboutPage() {
         <meta property="og:title" content="About | CRG Houston — Community Resources Guide" />
         <meta
           property="og:description"
-          content="Free directory of 1,000+ community resources from 526 organizations across the Greater Houston Area, serving clients and caseworkers since 2008."
+          content="Free directory of 1,200+ community resources from 526 organizations across the Greater Houston Area, serving neighbors and caseworkers since 2008."
         />
       </Helmet>
 
@@ -74,38 +74,39 @@ export default function AboutPage() {
           </h1>
 
           <p style={{ marginBottom: 14 }}>
-            I&rsquo;m Omar Peracha. I built this guide because of a specific
-            challenge I encountered while answering phone calls from neighbors
-            in need.
+            I&rsquo;m Omar Peracha. I built this guide to address a specific
+            challenge encountered when answering phone calls from neighbors in
+            need.
           </p>
           <p style={{ marginBottom: 14 }}>
             After a 27-year career in finance at Chevron and Shell, I retired
-            to travel and pursue long-distance hiking. Eventually I looked for
-            ways to give back locally, and started volunteering with the
-            Society of St. Vincent de Paul and the Christian Community Service
-            Center.
+            to travel and pursue long-distance hiking. Eventually, I looked for
+            ways to give back locally and started volunteering with the Society
+            of St. Vincent de Paul and the Christian Community Service Center.
           </p>
           <p style={{ marginBottom: 14 }}>
-            Both organizations get constant calls for financial assistance, and
-            when a caller&rsquo;s needs fell outside our service area we relied
-            on paper referral directories. They had real limitations: multiple
-            directories meant multiple versions of the truth, updates were
-            difficult so the data went stale, and the time pressure of a phone
-            call usually meant we could share only two or three resources
-            before moving on.
+            Both organizations received constant calls for financial
+            assistance. When a caller&rsquo;s needs fell outside their service
+            area, volunteers relied on paper referral directories. These paper
+            resource directories had real limitations: multiple directories
+            meant multiple versions of the truth, updates were difficult so the
+            data went stale, and the time pressure of a phone call usually meant
+            a volunteer could share only two or three resources before moving
+            on.
           </p>
           <p style={{ marginBottom: 14 }}>
-            At my jobs I was always drawn to solving problems through code.  Due
-            to the rigidity of the companies, sometimes surreptitiously, 
-            often falling back on the old adage of asking for forgiveness rather than
-            permission.  So I started a Google Sheet of 100 referrals to
-            do better. As it grew, it had to get more interactive: data
-            validation, then scripts, then a real application with its own
-            database. I&rsquo;m now on version 8. These days the actual coding
-            is done by Claude Code while I focus on design, data integrity,
-            and maintenance &mdash; including refreshing financial assistance
-            providers at least twice a year, since their funding and program
-            rules change frequently.
+            In my past career, I was always drawn to solving problems through
+            code, writing programs to automate or speed up work. Falling back on
+            that experience, I started with a simple spreadsheet of 100
+            referrals, which I updated and expanded on a regular basis. Now, in
+            its 8th version, it is a standalone application, built from scratch,
+            with its own domain and over 1,200 referrals. It is more reliable,
+            accurate, and accessible&mdash;not only to organizations providing
+            assistance, but directly to neighbors in need. These days, the
+            actual coding is done by Claude Code while I focus on design, data
+            integrity, and maintenance, which includes refreshing financial
+            assistance providers at least once a year since their funding and
+            program rules change frequently.
           </p>
           <p style={{ marginBottom: 24 }}>
             The site is free, has no ads, and exists for one reason: when
@@ -126,29 +127,26 @@ export default function AboutPage() {
             What&rsquo;s in the Guide
           </h2>
           <p style={{ marginBottom: 14 }}>
-            The directory contains over 1,000 resources from 526 organizations
+            The directory contains over 1,200 resources from 526 organizations
             across the Greater Houston Area &mdash; nonprofits, government
             agencies, faith-based organizations, and community programs. When
-            an organization offers more than one type of help, each is its own
-            entry, so a single organization can appear as several resources.
+            an organization offers more than one type of help, each assistance
+            type has its own entry. So a single organization can appear several
+            times based on the resources it provides.
           </p>
           <p style={{ marginBottom: 14 }}>
             Each listing shows contact details, hours of operation, eligibility
-            requirements, the zip codes the resource serves, distance from your
-            search zip code, and a current status &mdash; active, limited,
-            inactive, or closed. Organizations are never removed from the
-            directory; when a program closes, the entry stays, marked closed,
-            so nothing is silently missing.
+            requirements, the zip codes served, distance, and a current status
+            &mdash; active, limited, inactive, or closed. Organizations are
+            never removed from the directory; when a program closes, the entry
+            stays and is marked closed so nothing is silently missing.
           </p>
           <p style={{ marginBottom: 8 }}>Coverage spans:</p>
           <ul style={{ marginBottom: 24, paddingLeft: 24, listStyle: "disc" }}>
-            <li style={{ marginBottom: 4 }}>14 counties</li>
-            <li style={{ marginBottom: 4 }}>136 cities</li>
-            <li style={{ marginBottom: 4 }}>284 zip codes</li>
-            <li style={{ marginBottom: 4 }}>
-              30 categories of assistance, from emergency food to long-term
-              housing
-            </li>
+            <li style={{ marginBottom: 4 }}>15 counties</li>
+            <li style={{ marginBottom: 4 }}>142 cities</li>
+            <li style={{ marginBottom: 4 }}>290 zip codes</li>
+            <li style={{ marginBottom: 4 }}>29 categories of assistance</li>
           </ul>
 
           <h2
@@ -171,9 +169,9 @@ export default function AboutPage() {
             <li>
               <strong>Navigators and caseworkers</strong> &mdash; Built for
               social workers, case managers, hospital discharge planners,
-              school counselors, and others helping clients access services.
+              school counselors, and others helping neighbors access services.
               Registered partner organizations get additional features:
-              emailing or texting customized resource lists to clients, and
+              emailing or texting customized resource lists to neighbors, and
               generating PDF handouts.
             </li>
           </ul>
