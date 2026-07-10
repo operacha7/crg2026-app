@@ -396,10 +396,15 @@ function ZipCodeDropdown({ value, onChange, options = [], placeholder = "Select 
     [options]
   );
 
-  // Type-ahead filter against the zip value (the user types digits, not city).
+  // Type-ahead filter: match the zip by prefix (user types digits) OR the city
+  // anywhere in the label ("77027 — Houston"), so either a zip or a city name
+  // finds the option. Mirrors SearchableDropdown's label-includes matching.
   const filteredOptions = useMemo(() => {
-    if (!searchText.trim()) return normalizedOptions;
-    return normalizedOptions.filter((opt) => opt.value.startsWith(searchText));
+    const q = searchText.trim().toLowerCase();
+    if (!q) return normalizedOptions;
+    return normalizedOptions.filter(
+      (opt) => opt.value.startsWith(searchText) || opt.label.toLowerCase().includes(q)
+    );
   }, [normalizedOptions, searchText]);
 
   // Closed-state button shows the city alongside the selected zip.
