@@ -16,6 +16,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { dataService } from "../services/dataService";
+import { getLogOrganization } from "../services/usageService";
 import { getUpcomingSession, getButtonState, sessionToInstants, centralYmd, TRAINING_LEAD_MS } from "../utils/calendar";
 import { TrainingContext } from "./TrainingContext";
 
@@ -104,8 +105,9 @@ export function TrainingProvider({ children }) {
       setCounts((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
       fetch("/track-calendar-add", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: id }),
+        body: JSON.stringify({ session_id: id, organization: getLogOrganization() }),
       }).catch((err) => console.error("track-calendar-add failed", err));
     };
 

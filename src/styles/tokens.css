@@ -52,21 +52,19 @@
   --color-training-cell-border: #E2DFD5;      /* DATE/STARTS/etc. cell borders */
   --color-training-cell-highlight-bg: #FBF1D6;/* amber-tinted DURATION cell */
 
-  /* Join button — four states (windows relative to start time S) */
-  --color-training-join-soon-bg: #FFFF00;     /* yellow: S−20m → S−5m ("Starts …", not clickable) */
-  --color-training-join-soon-text: #1A1A1A;
-  --color-training-join-live-bg: #08FF08;     /* bright green + pulsing dot: S−5m → S+5m ("Join Now - Live") */
+  /* Join button — two states (windows relative to start time S) */
+  --color-training-join-add-bg: #1E7BE0;      /* bright blue: before S−10m ("Add to Calendar") */
+  --color-training-join-add-border: #14508F;  /* darker blue border for the Add button */
+  --color-training-join-add-text: #FFFFFF;
+  --color-training-join-live-bg: #08FF08;     /* bright green + pulsing dot: S−10m → S+10m ("Join Now") */
   --color-training-join-live-text: #1A1A1A;
   --color-training-join-live-dot: #1A1A1A;    /* dark dot inside the live button */
-  --color-training-join-late-bg: #FF7B19;     /* orange: S+5m → S+15m ("Join Now") */
-  --color-training-join-late-text: #1A1A1A;
-  --color-training-join-future-bg: #D0D3D5;   /* gray: more than 20 min out (countdown "Starts …") */
+  --color-training-join-future-bg: #D0D3D5;   /* gray: footer countdown + "Join link unavailable" fallback */
   --color-training-join-future-text: #1A1A1A;
 
   /* Status tag (top-left of card) */
-  --color-training-tag-live: #2F8F3E;         /* "LIVE NOW" text + pulsing dot (S−5m → S+15m) */
-  --color-training-tag-soon: #2F8F3E;         /* "STARTING SOON" text + steady dot (S−20m → S−5m) */
-  --color-training-tag-upcoming: #B07A00;     /* "UPCOMING" text (more than 20m out) */
+  --color-training-tag-live: #2F8F3E;         /* "LIVE NOW" text + pulsing dot (S−10m → S+10m) */
+  --color-training-tag-upcoming: #B07A00;     /* "UPCOMING" text (more than 10m out) */
   --color-training-tag-upcoming-dot: #F0B429; /* "UPCOMING" dot (not pulsing) */
 
   /* Sidebar calendar */
@@ -76,21 +74,6 @@
   --color-training-cal-today-bg: #D6453E;     /* today: filled muted-red circle (Apple Calendar style) */
   --color-training-cal-today-text: #FFFFFF;
   --color-training-cal-session-ring: #F0B429; /* session days: amber ring */
-
-  /* Availability matrix (sidebar, below calendar) — "suggest a better time".
-     7 day rows × 3 time columns of tappable vote circles. Lives on the gray
-     sidebar, so colors are tuned to read against --color-training-sidebar-bg. */
-  --color-training-matrix-question: #3FBF6F;  /* green headline + 1px prompt-box border + Submit bg */
-  --color-training-matrix-question-fill: rgba(31, 138, 77, 0.14); /* translucent green tint inside the prompt box */
-  --color-training-matrix-day-bg: #B8001F;    /* red day pills (Sun…Sat) — matches footer/results red */
-  --color-training-matrix-day-text: #FDF6E3;  /* cream — matches the calendar day-number color */
-  --color-training-matrix-col-morning: #F2D479;   /* Morning column header (pale gold) */
-  --color-training-matrix-col-afternoon: #BFE3F2; /* Afternoon column header (pale blue) */
-  --color-training-matrix-col-evening: #C9B8E8;   /* Evening column header (pale purple) */
-  --color-training-matrix-col-text: #1A1A1A;  /* dark text on the pale column headers */
-  --color-training-matrix-circle-text: #1A1A1A; /* vote-count text on light (low-count) circles */
-  --color-training-matrix-selected-border: #2FB344; /* green ring = your pick */
-  --color-training-matrix-submit-text: #FFFFFF;
 
   /* Vertical Nav Bar */
   --color-vertical-nav-accent: #948979;

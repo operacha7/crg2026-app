@@ -20,6 +20,17 @@ export function setLogOrganization(name) {
   currentLogOrganization = name || null;
 }
 
+/**
+ * Read the sender child name for the current session (or null before it's
+ * resolved / for guests). Used by other server-logged actions (e.g. the
+ * training calendar-add) that also want to stamp the selected child.
+ *
+ * @returns {string|null}
+ */
+export function getLogOrganization() {
+  return currentLogOrganization;
+}
+
 // TODO: remove after 2027-06-01 — by then the trailing-12-month window has
 // fully rolled past the 2026-05 org rename and no legacy names remain in
 // app_usage_logs that fall inside any active report range. This was a

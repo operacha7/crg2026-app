@@ -4,20 +4,18 @@
 // title, optional description, a DATE/STARTS/DURATION/WHERE grid, calendar-add
 // links, the "saved this session" counter, and the four-state Join control.
 //
-// Join states (all relative to start S; see getButtonState in utils/calendar):
-//   future (gray)   "Starts …"            not clickable
-//   soon   (yellow) "Starts …"            not clickable
-//   live   (green)  "Join Now - Live" + glow pulse   clickable
-//   late   (orange) "Join Now" + glow pulse           clickable
-// The green/orange buttons get the whole-button glow (.training-pulse) — the
-// pulse is tied to "joinable now," not to the approaching countdown.
+// Two button states (relative to start S; see getButtonState in utils/calendar):
+//   future (blue)   "Add to Calendar" dropdown   before S − 10m
+//   live   (green)  "Join Now" + glow pulse       S − 10m → S + 10m, clickable
+// The pre-session slot IS the calendar-add control (no separate button); it
+// flips to the green Join button 10 min out. The green button gets the whole-
+// button glow (.training-pulse) — the "joinable now" signal.
 
 import { useState, useRef, useEffect } from "react";
 import {
   sessionToInstants,
   getSessionDisplayParts,
   getButtonState,
-  formatCountdown,
   buildIcsDataUri,
   buildIcsFilename,
   buildGoogleCalendarUrl,
@@ -55,10 +53,16 @@ export default function SessionCard({ session, now, count, alreadyAdded, onCalen
         color: "var(--color-training-body-text)",
       }}
     >
-      {/* Top row: status tag (left) + join button (right) */}
+      {/* Top row: status tag (left) + primary control (right). Before the join
+          window the control IS the blue "Add to Calendar" dropdown; at S−10m it
+          becomes the green Join button. */}
       <div className="flex items-start justify-between" style={{ gap: 12, marginBottom: 8 }}>
         <div><StatusTag state={state} /></div>
-        <JoinButton state={state} startMs={start?.getTime()} now={now} meetLink={session.meet_link} />
+        {state === "future" ? (
+          <CalendarMenu session={session} onCalendarAdd={onCalendarAdd} accentColor={accentColor} variant="primary" />
+        ) : (
+          <JoinButton state={state} now={now} meetLink={session.meet_link} />
+        )}
       </div>
 
       <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6, lineHeight: 1.2, color: accentColor || undefined }}>
@@ -106,9 +110,7 @@ export default function SessionCard({ session, now, count, alreadyAdded, onCalen
       )}
 
       <div style={{ borderTop: "1px solid var(--color-training-cell-border)", paddingTop: 14 }}>
-        <div className="flex flex-wrap items-center justify-between" style={{ gap: 12 }}>
-          <CalendarMenu session={session} onCalendarAdd={onCalendarAdd} accentColor={accentColor} />
-
+        <div className="flex flex-wrap items-center justify-end" style={{ gap: 12 }}>
           <div
             style={{
               display: "inline-flex",
@@ -161,26 +163,17 @@ function GridCell({ label, value, sub, highlight }) {
 }
 
 // Status tag by button state:
-//   live + late (S−5m → S+15m)   → "LIVE NOW" (pulsing green dot)
-//   soon (S−20m → S−5m)          → "STARTING SOON" (steady green dot)
-//   future (more than 20m out)   → "UPCOMING" (steady amber dot)
+//   live (S−10m → S+10m)         → "LIVE NOW" (pulsing green dot)
+//   future (more than 10m out)   → "UPCOMING" (steady amber dot)
 //   gone / unavailable           → no tag
 function StatusTag({ state }) {
   const dotBase = { width: 9, height: 9, borderRadius: "50%", display: "inline-block" };
   const labelBase = { gap: 7, fontSize: 13, fontWeight: 700, letterSpacing: "0.06em" };
-  if (state === "live" || state === "late") {
+  if (state === "live") {
     return (
       <div className="flex items-center" style={{ ...labelBase, color: "var(--color-training-tag-live)" }}>
         <span className="animate-pulse" style={{ ...dotBase, background: "var(--color-training-tag-live)" }} />
         LIVE NOW
-      </div>
-    );
-  }
-  if (state === "soon") {
-    return (
-      <div className="flex items-center" style={{ ...labelBase, color: "var(--color-training-tag-soon)" }}>
-        <span style={{ ...dotBase, background: "var(--color-training-tag-soon)" }} />
-        STARTING SOON
       </div>
     );
   }
@@ -200,9 +193,10 @@ function StatusTag({ state }) {
 // for Apple/everything else) without three links cluttering every card. Each
 // pick fires onCalendarAdd so the anonymous "saved this session" counter still
 // increments. Closes on outside-click or Escape.
-function CalendarMenu({ session, onCalendarAdd, accentColor }) {
+function CalendarMenu({ session, onCalendarAdd, accentColor, variant }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
+  const primary = variant === "primary";
 
   const icsUri = buildIcsDataUri(session);
   const googleUrl = buildGoogleCalendarUrl(session);
@@ -242,21 +236,41 @@ function CalendarMenu({ session, onCalendarAdd, accentColor }) {
         aria-haspopup="menu"
         aria-expanded={open}
         className="hover:brightness-110"
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          background: "#FFFFFF",
-          border: `1.5px solid ${accent}`,
-          color: accent,
-          borderRadius: 8,
-          padding: "8px 14px",
-          fontSize: 14,
-          fontWeight: 600,
-          cursor: "pointer",
-        }}
+        style={
+          primary
+            ? {
+                // Primary "Add to Calendar": the pre-session button in the
+                // top-right slot, sized to match the green Join button (JOIN_BASE).
+                // fontFamily is set explicitly because <button> does NOT inherit
+                // it from the font-opensans card (unlike the green Join <a>).
+                ...JOIN_BASE,
+                fontFamily: "'Open Sans', sans-serif",
+                fontWeight: 500,
+                background: "var(--color-training-join-add-bg)",
+                border: "1.5px solid var(--color-training-join-add-border)",
+                color: "var(--color-training-join-add-text)",
+                cursor: "pointer",
+              }
+            : {
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                fontFamily: "'Open Sans', sans-serif",
+                background: "#FFFFFF",
+                border: `1.5px solid ${accent}`,
+                color: accent,
+                borderRadius: 8,
+                padding: "8px 14px",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+              }
+        }
       >
-        🗓️ Add to Calendar
+        <span style={{ display: "inline-flex", alignItems: "center", gap: primary ? 16 : 8 }}>
+          <span aria-hidden="true">🗓️</span>
+          Add to Calendar
+        </span>
         <span style={{ fontSize: 11, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
       </button>
 
@@ -333,36 +347,20 @@ export const JOIN_BASE = {
   boxShadow: "0 2px 6px rgba(0,0,0,0.25)", // lift the button off the cream card
 };
 
-// Glow color (rgb triplet for the .training-pulse keyframe) by joinable state.
-export const TRAINING_GLOW_RGB = { live: "8, 255, 8", late: "255, 123, 25" };
+// Glow color (rgb triplet for the .training-pulse keyframe) for the joinable state.
+export const TRAINING_GLOW_RGB = { live: "8, 255, 8" };
 
-// Join control. Non-clickable "Starts …" countdown for future (gray) and soon
-// (yellow); clickable link for live (green) and late (orange), each with the
-// whole-button glow pulse. Falls back to a disabled pill if a clickable state
-// has no meet link.
-function JoinButton({ state, startMs, now, meetLink }) {
-  // Gray + yellow: identical non-clickable countdown, differing only in color.
-  if (state === "future" || state === "soon") {
-    const bg =
-      state === "future"
-        ? "var(--color-training-join-future-bg)"
-        : "var(--color-training-join-soon-bg)";
-    const color =
-      state === "future"
-        ? "var(--color-training-join-future-text)"
-        : "var(--color-training-join-soon-text)";
-    return (
-      <span style={{ ...JOIN_BASE, background: bg, color }}>
-        {formatCountdown(startMs, now)}
-      </span>
-    );
-  }
+// Join control for the green "live" window (S−10m → S+10m): a clickable link
+// with the whole-button glow pulse. Falls back to a disabled pill when the meet
+// link is missing. Renders nothing for gone/unavailable. The pre-session
+// "future" state is handled by the blue CalendarMenu, not here.
+function JoinButton({ state, meetLink }) {
+  if (state !== "live") return null; // gone / unavailable
 
   // Normalize so a scheme-less DB value (e.g. "meet.google.com/...") opens Meet
   // instead of being treated as a relative SPA path (→ catch-all → /find).
   const href = normalizeMeetUrl(meetLink);
-  const clickable = state === "live" || state === "late";
-  if (clickable && !href) {
+  if (!href) {
     return (
       <span style={{ ...JOIN_BASE, background: "var(--color-training-join-future-bg)", color: "var(--color-training-join-future-text)", fontSize: 14 }}>
         Join link unavailable
@@ -370,48 +368,24 @@ function JoinButton({ state, startMs, now, meetLink }) {
     );
   }
 
-  if (state === "live") {
-    return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="hover:brightness-110 training-pulse"
-        style={{
-          ...JOIN_BASE,
-          gap: 16, // doubled spacing between the dot and the label
-          background: "var(--color-training-join-live-bg)",
-          color: "var(--color-training-join-live-text)",
-          "--training-glow-rgb": TRAINING_GLOW_RGB.live,
-        }}
-      >
-        <span
-          style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--color-training-join-live-dot)" }}
-        />
-        Join Now - Live
-      </a>
-    );
-  }
-
-  if (state === "late") {
-    return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="hover:brightness-110 training-pulse"
-        style={{
-          ...JOIN_BASE,
-          background: "var(--color-training-join-late-bg)",
-          color: "var(--color-training-join-late-text)",
-          "--training-glow-rgb": TRAINING_GLOW_RGB.late,
-        }}
-      >
-        Join Now
-      </a>
-    );
-  }
-
-  // gone / unavailable
-  return null;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="hover:brightness-110 training-pulse"
+      style={{
+        ...JOIN_BASE,
+        gap: 16, // doubled spacing between the dot and the label
+        background: "var(--color-training-join-live-bg)",
+        color: "var(--color-training-join-live-text)",
+        "--training-glow-rgb": TRAINING_GLOW_RGB.live,
+      }}
+    >
+      <span
+        style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--color-training-join-live-dot)" }}
+      />
+      Join Now
+    </a>
+  );
 }

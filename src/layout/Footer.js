@@ -33,8 +33,8 @@ const SECONDARY_LINKS = [
   { label: "Organization Login", to: "?login=1" },
 ];
 
-// Glow ring color (rgb triplet for the .training-pulse keyframe) per state.
-const GLOW = { live: "8, 255, 8", late: "255, 123, 25" };
+// Glow ring color (rgb triplet for the .training-pulse keyframe) for the live state.
+const GLOW = { live: "8, 255, 8" };
 
 // How many right→left passes the advance chyron makes before it collapses for
 // the rest of the visit. Tunable.
@@ -48,21 +48,20 @@ const BEACON_AMBER = "#FFB302";
 const BEACON_RGB = "255, 179, 2";
 
 // Button fill/text tokens per state (shared with the SessionCard Join button).
+// `future` uses the same blue as the panel's "Add to Calendar" button (gray is
+// no longer used anywhere in the Training UI).
 function trainingColors(state) {
   const map = {
-    future: { bg: "var(--color-training-join-future-bg)", color: "var(--color-training-join-future-text)" },
-    soon: { bg: "var(--color-training-join-soon-bg)", color: "var(--color-training-join-soon-text)" },
+    future: { bg: "var(--color-training-join-add-bg)", color: "var(--color-training-join-add-text)" },
     live: { bg: "var(--color-training-join-live-bg)", color: "var(--color-training-join-live-text)" },
-    late: { bg: "var(--color-training-join-late-bg)", color: "var(--color-training-join-late-text)" },
   };
   return map[state] || map.future;
 }
 
-// Suffix after "Training Session — ": the bare countdown for gray/yellow
-// ("2h 14m" / "20m"), or the join label for green/orange.
+// Suffix after "Training Session — ": the bare countdown for the gray future
+// state ("2h 14m" / "20m"), or the join label once the green window opens.
 function trainingSuffix(state, startMs, now) {
-  if (state === "live") return "Join Now - Live";
-  if (state === "late") return "Join Now";
+  if (state === "live") return "Join Now";
   return formatCountdown(startMs, now).replace(/^Starts\s+/, "");
 }
 
@@ -71,7 +70,7 @@ function trainingSuffix(state, startMs, now) {
 function TrainingFooterButton({ session, state, now, fullWidth, buttonRef }) {
   const { start } = sessionToInstants(session);
   const colors = trainingColors(state);
-  const pulse = state === "live" || state === "late";
+  const pulse = state === "live";
   return (
     <Link
       to="/training"

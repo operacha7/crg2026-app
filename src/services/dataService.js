@@ -213,10 +213,16 @@ export const dataService = {
 
   // ======= TRAINING SESSIONS (online onboarding sessions) =======
   // All rows, ordered by date then time for display. Past sessions are dropped
-  // by the UI's time-based filter (start + 15 min cutoff in calendar.js), so no
-  // is_active flag is needed here. `calendar_adds` (anonymous "added to
-  // calendar" count) rides along via select('*'); it's written server-side by
-  // functions/track-calendar-add.js, never from the browser.
+  // by the UI's time-based filter (start + 10 min cutoff in calendar.js), so no
+  // is_active flag is needed here.
+  //
+  // The "saved this session" counter (`calendar_adds`) is DERIVED — it's a
+  // COUNT of live rows in the `training_taken` log (one row per calendar-add,
+  // written server-side by functions/track-calendar-add.js). We attach it here
+  // under the same `calendar_adds` name the UI already seeds from, so the count
+  // moved out of training_sessions without any UI change. Scoped to the current
+  // session ids (`.in`) so the read stays small (well under the 1000-row cap);
+  // if the log ever grows large, switch this to a DB aggregate/RPC.
   async getTrainingSessions() {
     const { data, error } = await supabase
       .from('training_sessions')
@@ -228,32 +234,25 @@ export const dataService = {
       console.error("Error fetching training sessions:", error);
       return [];
     }
-    return data;
-  },
 
-  // ======= TRAINING REQUESTS (preferred-time votes) =======
-  // Anonymous availability votes for the /training matrix ("suggest a better
-  // time"). Each row is one vote: { date, day, time, reg_organization }. We
-  // only read the trailing 30 days so the displayed tally reflects *current*
-  // demand and stale preferences age out. Rows are inserted server-side by
-  // functions/training-request.js (browser writes are blocked by policy); the
-  // browser only reads. Aggregation into per-cell counts happens in the
-  // TrainingMatrix component.
-  async getTrainingRequests() {
-    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10); // YYYY-MM-DD, 30 days ago
-
-    const { data, error } = await supabase
-      .from('training_request')
-      .select('date, day, time')
-      .gte('date', cutoff);
-
-    if (error) {
-      console.error("Error fetching training requests:", error);
-      return [];
+    const ids = (data || []).map((s) => s.id_no).filter((id) => id != null);
+    const countsById = {};
+    if (ids.length) {
+      const { data: taken, error: takenErr } = await supabase
+        .from('training_taken')
+        .select('session_id')
+        .eq('medium', 'live')
+        .in('session_id', ids);
+      if (takenErr) {
+        console.error("Error fetching training_taken counts:", takenErr);
+      } else {
+        for (const r of taken || []) {
+          if (r.session_id != null) countsById[r.session_id] = (countsById[r.session_id] || 0) + 1;
+        }
+      }
     }
-    return data;
+
+    return (data || []).map((s) => ({ ...s, calendar_adds: countsById[s.id_no] || 0 }));
   },
 
 };

@@ -2,10 +2,10 @@
 // Public /training page — "Live Training". Left sidebar holds a month calendar
 // (today + session days highlighted; click a session day to scroll to its
 // panel). Main area lists info panels for upcoming sessions; a panel is removed
-// from the page once it passes 15 min after its start time.
+// from the page once it passes 10 min after its start time.
 //
-// The session panel itself (title, grid, calendar links, counter, four-state
-// Join control) lives in src/components/SessionCard.js — shared with the in-app
+// The session panel itself (title, grid, calendar links, counter, two-state
+// Add-to-Calendar → Join control) lives in src/components/SessionCard.js — shared with the in-app
 // TrainingPopup. The Join-button state machine + countdown live in
 // src/utils/calendar.js (getButtonState / formatCountdown), also shared.
 //
@@ -18,9 +18,9 @@ import { Toaster } from "react-hot-toast";
 import HomeNavBar from "../layout/HomeNavBar";
 import Footer from "../layout/Footer";
 import { dataService } from "../services/dataService";
+import { getLogOrganization } from "../services/usageService";
 import { sessionToInstants, centralYmd, TRAINING_REMOVE_AFTER_MS } from "../utils/calendar";
 import SessionCard from "../components/SessionCard";
-import TrainingMatrix from "../components/TrainingMatrix";
 
 const TICK_MS = 30 * 1000; // re-evaluate states / countdowns every 30s
 const ADDED_STORAGE_KEY = "crg_calendar_added"; // device-local dedupe, never sent
@@ -33,9 +33,9 @@ const pad2 = (n) => String(n).padStart(2, "0");
 // instead of reading as a wall of beige. `card` paints the card border + title
 // (darker, for legibility on the light cream card); `ring` paints that course's
 // calendar-day ring (lighter, to pop on the dark navy calendar). Today's date
-// is red, so blues/greens are free to use here.
+// is red, so greens/warm tones are free to use here. Blue is intentionally
+// omitted so a course accent never clashes with the blue "Add to Calendar" button.
 const TRACK_COLORS = [
-  { card: "#245AA8", ring: "#6BA1F0" }, // blue
   { card: "#1F7A46", ring: "#4FBE7E" }, // green
   { card: "#C25E12", ring: "#F2792B" }, // orange
   { card: "#7B53C0", ring: "#A07BE0" }, // violet
@@ -149,13 +149,14 @@ export default function TrainingPage() {
     setCounts((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
     fetch("/track-calendar-add", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id: id }),
+      body: JSON.stringify({ session_id: id, organization: getLogOrganization() }),
     }).catch((err) => console.error("track-calendar-add failed", err));
   };
 
-  // Show a session until 15 min after its start, then drop it (the panel
-  // disappears at the +15m cutoff). Recomputed each render so the 30s tick
+  // Show a session until 10 min after its start, then drop it (the panel
+  // disappears at the +10m cutoff). Recomputed each render so the 30s tick
   // removes a session the moment it passes the cutoff.
   const now = Date.now();
   const visibleSessions = useMemo(() => {
@@ -205,14 +206,6 @@ export default function TrainingPage() {
         >
           <div className="w-full lg:w-auto flex justify-center lg:block">
             <SessionCalendar sessions={visibleSessions} onSelectSession={scrollToSession} accentMap={accentMap} />
-          </div>
-          {/* "Suggest a better time" availability matrix — self-contained
-              (own fetch + submit). Desktop only: sits below the calendar in the
-              sidebar. On mobile it renders below the sessions instead (the
-              lg:hidden copy after <main>), so the scheduled sessions come before
-              this "if none of these work" fallback. */}
-          <div className="hidden lg:block">
-            <TrainingMatrix />
           </div>
         </aside>
 
@@ -289,21 +282,6 @@ export default function TrainingPage() {
             )}
           </div>
         </main>
-
-        {/* Mobile-only: the availability matrix lives BELOW the sessions here
-            (on desktop it's in the sidebar above). Keeps the scheduled sessions
-            as the first thing after the calendar; this "suggest other times"
-            fallback comes last. Tan sidebar background so it reads as the same
-            kind of control as the calendar. */}
-        <div
-          className="lg:hidden w-full flex justify-center"
-          style={{
-            background: "var(--color-training-sidebar-bg)",
-            padding: "24px 20px 28px",
-          }}
-        >
-          <TrainingMatrix />
-        </div>
       </div>
 
       <Footer />

@@ -822,40 +822,28 @@ function ZipCodeSearchTip() {
 
 // Training tip — orientation, not a how-to (the /training page covers mechanics).
 // Surfaces the three things a user in /find can't see: that live training exists
-// (and where to find it), the Join-button color states that change over time, and
-// the fact that a session drops off the page ~15 min after it starts.
+// (and where to find it), the two Join-button states, and the fact that a session
+// drops off the page ~10 min after it starts.
 function TrainingTip() {
   const bodyText = {
     fontSize: "var(--font-size-quicktips-body)",
     color: "var(--color-quicktips-section-body-text)",
   };
 
-  // The four Join-button states, in the order a user encounters them as start
-  // time approaches. Colors/labels mirror SessionCard's JoinButton exactly.
+  // The two states of the session's primary button, in the order a user
+  // encounters them. Colors/labels mirror SessionCard exactly.
   const joinStates = [
     {
-      bg: "var(--color-training-join-future-bg)",
-      color: "var(--color-training-join-future-text)",
-      label: "Starts 2h 14m",
-      when: "More than 20 minutes out — a countdown, not clickable yet.",
-    },
-    {
-      bg: "var(--color-training-join-soon-bg)",
-      color: "var(--color-training-join-soon-text)",
-      label: "Starts 18m",
-      when: "About 20 minutes before — almost time; still counting down.",
+      bg: "var(--color-training-join-add-bg)",
+      color: "var(--color-training-join-add-text)",
+      label: "🗓️ Add to Calendar",
+      when: "Before the session — save it to your calendar so you get a reminder with the join link.",
     },
     {
       bg: "var(--color-training-join-live-bg)",
       color: "var(--color-training-join-live-text)",
-      label: "Join Now - Live",
-      when: "From 5 minutes before the start — click it to join.",
-    },
-    {
-      bg: "var(--color-training-join-late-bg)",
-      color: "var(--color-training-join-late-text)",
       label: "Join Now",
-      when: "Up to 15 minutes after the start — last chance to join.",
+      when: "From 10 minutes before the start — the button turns green; click it to join.",
     },
   ];
 
@@ -872,7 +860,7 @@ function TrainingTip() {
       </p>
 
       <p style={{ ...bodyText, fontWeight: 600, marginTop: 12 }}>
-        The green <strong>Join</strong> button changes color as start time nears:
+        The session's button has two states:
       </p>
       <div className="space-y-2">
         {joinStates.map((s) => (
@@ -896,7 +884,7 @@ function TrainingTip() {
       </div>
 
       <p style={{ ...bodyText, fontStyle: "italic", marginTop: 10 }}>
-        A session drops off the page about 15 minutes after it starts, so join on
+        A session drops off the page about 10 minutes after it starts, so join on
         time — or grab the next one.
       </p>
     </div>

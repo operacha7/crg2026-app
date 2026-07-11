@@ -132,26 +132,20 @@ export function getSessionDisplayParts(session) {
 }
 
 // ── Join-button state machine ────────────────────────────────────────────────
-// Shared by the Training page, the in-app popup, and the footer button. All
-// windows are relative to the session start time S:
-//   future (gray)    now < S − 20m    → "Starts …" countdown, not clickable
-//   soon   (yellow)  S − 20m → S − 5m → "Starts …" countdown, not clickable
-//   live   (green)   S − 5m  → S + 5m → "Join Now - Live" + pulse
-//   late   (orange)  S + 5m  → S + 15m → "Join Now" + pulse
-//   gone             now ≥ S + 15m    → panel/button removed
-export const TRAINING_YELLOW_BEFORE_MS = 20 * 60 * 1000;
-export const TRAINING_GREEN_BEFORE_MS = 5 * 60 * 1000;
-export const TRAINING_GREEN_AFTER_MS = 5 * 60 * 1000;
-export const TRAINING_REMOVE_AFTER_MS = 15 * 60 * 1000;
+// Shared by the Training page, the in-app popup, and the footer button. Two
+// states relative to the session start time S:
+//   future (blue)   now < S − 10m   → panel: "Add to Calendar"; footer: countdown
+//   live   (green)  S − 10m → S + 10m → "Join Now" + pulse (clickable)
+//   gone            now ≥ S + 10m    → panel/button removed
+export const TRAINING_GREEN_BEFORE_MS = 10 * 60 * 1000;
+export const TRAINING_REMOVE_AFTER_MS = 10 * 60 * 1000;
 
 export function getButtonState(start, now) {
   if (!start) return "unavailable";
   const s = start.getTime();
   if (now >= s + TRAINING_REMOVE_AFTER_MS) return "gone";
-  if (now < s - TRAINING_YELLOW_BEFORE_MS) return "future"; // gray
-  if (now < s - TRAINING_GREEN_BEFORE_MS) return "soon"; // yellow
-  if (now < s + TRAINING_GREEN_AFTER_MS) return "live"; // green
-  return "late"; // orange (→ +15m)
+  if (now < s - TRAINING_GREEN_BEFORE_MS) return "future"; // blue Add to Calendar
+  return "live"; // green Join Now (S − 10m → S + 10m)
 }
 
 // Humanized time-until-start for the non-clickable gray + yellow states, e.g.
