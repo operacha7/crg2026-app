@@ -3,16 +3,62 @@
 
 import { supabase } from '../supabaseClient';
 
+// The audience token for the current viewer: registered orgs use their org name,
+// guests use the literal "Guest" (a valid code-3 target — the guest object has no
+// reg_organization, just organization: 'Guest').
+function viewerIdentity(user) {
+  if (user?.isGuest) return 'Guest';
+  return (user?.reg_organization || '').trim();
+}
+
+// Split a code-3 target field into a normalized list. The field may hold MULTIPLE
+// comma-separated targets ("Org A, Guest, Org B"). Null/empty → [] which callers
+// treat as "everyone" (the documented default when a code-3 row has no target).
+function parseTargets(regOrg) {
+  if (!regOrg) return [];
+  return String(regOrg)
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+// Whether `user` may see `announcement`, by audience_code:
+//   1 → everyone (guests + registered)
+//   2 → registered organizations only (not guests)
+//   3 → specific targets in reg_organization (Guest is a valid target); a
+//       null/empty target list defaults to everyone
+//   anything else → everyone (safe default, matches getAudienceDisplayText)
+// Applied client-side (not in the query) so multi-value targets and the
+// null→everyone rule are handled precisely, and org names with quotes/commas
+// can't break a PostgREST filter string.
+function canViewAnnouncement(announcement, user) {
+  const code = Number(announcement.audience_code);
+  const isGuest = !!user?.isGuest;
+
+  if (code === 2) return !isGuest;
+  if (code === 3) {
+    const targets = parseTargets(announcement.reg_organization);
+    if (targets.length === 0) return true; // no target → everyone
+    return targets.includes(viewerIdentity(user).toLowerCase());
+  }
+  return true; // code 1 (or unexpected) → everyone
+}
+
 const AnnouncementService = {
+  canViewAnnouncement,
+
   /**
-   * Get active announcements for a user based on their login status
+   * Get active announcements for a user based on their login status.
    *
    * Audience codes (2026):
-   * - 1 = All CRG Users (everyone sees, including guests)
-   * - 2 = Registered Organizations (only logged-in users, not guests)
-   * - 3 = Specific Organization (only the org in reg_organization field)
+   * - 1 = All CRG Users (everyone, including guests)
+   * - 2 = Registered Organizations (logged-in users only, not guests)
+   * - 3 = Specific target(s) in reg_organization — one or more comma-separated
+   *       registered orgs and/or "Guest"; null/empty target defaults to everyone
    *
-   * Note: Guest-only code was removed (redundant - only one Guest account)
+   * Fetches the active date window, then filters by audience client-side
+   * (see canViewAnnouncement) so multi-value targets, Guest targeting, and the
+   * null→everyone default all work.
    *
    * @param {Object} user - The logged in user object
    * @param {boolean} user.isGuest - Whether this is a guest user
@@ -22,33 +68,15 @@ const AnnouncementService = {
   getActiveAnnouncements: async (user) => {
     try {
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      const { data, error } = await supabase
+        .from('announcements')
+        .select('*')
+        .lte('start_date', today)
+        .gte('expiration_date', today)
+        .order('start_date', { ascending: false });
 
-      if (user.isGuest) {
-        // Guests only see audience_code 1 (All CRG Users)
-        const { data, error } = await supabase
-          .from('announcements')
-          .select('*')
-          .lte('start_date', today)
-          .gte('expiration_date', today)
-          .eq('audience_code', 1)
-          .order('start_date', { ascending: false });
-
-        if (error) throw error;
-        return data || [];
-      } else {
-        // Registered users see: audience_code 1 (All), 2 (Registered), or 3 (their specific org)
-        // Use separate query for code 3 to handle org name matching properly
-        const { data, error } = await supabase
-          .from('announcements')
-          .select('*')
-          .lte('start_date', today)
-          .gte('expiration_date', today)
-          .or(`audience_code.in.(1,2),and(audience_code.eq.3,reg_organization.eq."${user.reg_organization}")`)
-          .order('start_date', { ascending: false });
-
-        if (error) throw error;
-        return data || [];
-      }
+      if (error) throw error;
+      return (data || []).filter((a) => canViewAnnouncement(a, user));
     } catch (error) {
       console.error('Error getting active announcements:', error);
       return [];
@@ -64,27 +92,13 @@ const AnnouncementService = {
    */
   getAllAnnouncements: async (user) => {
     try {
-      if (user.isGuest) {
-        // Guests only see audience_code 1 (All CRG Users)
-        const { data, error } = await supabase
-          .from('announcements')
-          .select('*')
-          .eq('audience_code', 1)
-          .order('start_date', { ascending: false });
+      const { data, error } = await supabase
+        .from('announcements')
+        .select('*')
+        .order('start_date', { ascending: false });
 
-        if (error) throw error;
-        return data || [];
-      } else {
-        // Registered users see: audience_code 1 (All), 2 (Registered), or 3 (their specific org)
-        const { data, error } = await supabase
-          .from('announcements')
-          .select('*')
-          .or(`audience_code.in.(1,2),and(audience_code.eq.3,reg_organization.eq."${user.reg_organization}")`)
-          .order('start_date', { ascending: false });
-
-        if (error) throw error;
-        return data || [];
-      }
+      if (error) throw error;
+      return (data || []).filter((a) => canViewAnnouncement(a, user));
     } catch (error) {
       console.error('Error getting all announcements:', error);
       return [];
