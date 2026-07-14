@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { fetchDailyUsage, fetchMonthlyUsage } from "../../services/usageService";
+import { WEEKS_TO_SHOW, WEEKLY_FETCH_DAYS, getWeekStartStr, formatWeekRange } from "../../utils/weekBuckets";
 import VerticalLineIcon from "../../icons/VerticalLineIcon";
 import { useAppData } from "../../Contexts/AppDataContext";
 
@@ -42,10 +43,13 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
       };
 
       let result;
-      if (viewMode === "daily") {
-        result = await fetchDailyUsage({ ...params, days: 30 });
-      } else {
+      if (viewMode === "monthly") {
         result = await fetchMonthlyUsage({ ...params, months: 12 });
+      } else {
+        // Weekly view: fetch daily rows over a wider window and tag each with its
+        // Sunday-start week so the table can aggregate by week (dateKey "week").
+        result = await fetchDailyUsage({ ...params, days: WEEKLY_FETCH_DAYS });
+        result = result.map(row => ({ ...row, week: getWeekStartStr(row.log_date) }));
       }
 
       // Exclude Administrator rows (used for testing) so they don't skew counts
@@ -72,16 +76,21 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
 
   // Get date columns
   const dateColumns = useMemo(() => {
-    const dateKey = viewMode === "daily" ? "log_date" : "month";
-    const dates = [...new Set(data.map(row => row[dateKey]))]
+    const dateKey = viewMode === "monthly" ? "month" : "week";
+    let dates = [...new Set(data.map(row => row[dateKey]))]
       .filter(d => d != null) // Filter out null/undefined
       .sort();
+    // Weekly fetches an extra boundary week; show only the most recent 12.
+    if (viewMode !== "monthly") {
+      dates = dates.slice(-WEEKS_TO_SHOW);
+    }
     console.log('UsageDataTables dateColumns:', { dateKey, dates, sampleData: data.slice(0, 3) });
     return dates;
   }, [data, viewMode]);
 
-  // Format date for column header
-  // Parse date string manually to avoid timezone issues
+  // Format date for column header.
+  // Monthly returns a plain string (e.g. "Jul 26"); Weekly returns a two-line
+  // node with the week start over the week end (e.g. 7/5 over 7/11).
   const formatDateHeader = (dateStr) => {
     if (!dateStr) return '';
 
@@ -93,18 +102,22 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
       const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       return `${monthNames[month - 1]} ${String(year).slice(-2)}`;
     }
-    // Daily uses "YYYY-MM-DD" format from database
-    const parts = dateStr.split('-');
-    if (parts.length < 3) return dateStr;
-    const [, month, day] = parts.map(Number);
-    return `${month}/${day}`;
+    // Weekly: "YYYY-MM-DD" week-start → stacked start / end labels
+    const { start, end } = formatWeekRange(dateStr);
+    return (
+      <>
+        {start}
+        <br />
+        {end}
+      </>
+    );
   };
 
   // Build data for Sessions section
   // Sessions has a single action_type ('login'); the Total row mirrors the
   // Login row so the section's visual structure matches every other section.
   const sessionsData = useMemo(() => {
-    const dateKey = viewMode === "daily" ? "log_date" : "month";
+    const dateKey = viewMode === "monthly" ? "month" : "week";
 
     const rowData = { metric: "Login" };
     let total = 0;
@@ -137,7 +150,7 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
 
   // Build data for Communications section
   const communicationsData = useMemo(() => {
-    const dateKey = viewMode === "daily" ? "log_date" : "month";
+    const dateKey = viewMode === "monthly" ? "month" : "week";
 
     const rows = COMMUNICATION_ACTIONS.map(({ label, actionType }) => {
       const rowData = { metric: label };
@@ -180,7 +193,7 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
 
   // Build data for Reports section (dynamic - auto-discovers report names from data)
   const reportsData = useMemo(() => {
-    const dateKey = viewMode === "daily" ? "log_date" : "month";
+    const dateKey = viewMode === "monthly" ? "month" : "week";
 
     // Discover all report names from the data (search_mode values where action_type === 'reports')
     const reportNames = [...new Set(
@@ -232,7 +245,7 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
 
   // Build data for Search section
   const searchData = useMemo(() => {
-    const dateKey = viewMode === "daily" ? "log_date" : "month";
+    const dateKey = viewMode === "monthly" ? "month" : "week";
 
     const rows = SEARCH_MODES.map(mode => {
       const rowData = { metric: mode };
@@ -311,7 +324,7 @@ export default function UsageDataTables({ selectedOrg, viewMode }) {
 
   // Build data for Assistance section
   const assistanceData = useMemo(() => {
-    const dateKey = viewMode === "daily" ? "log_date" : "month";
+    const dateKey = viewMode === "monthly" ? "month" : "week";
 
     // Build rows for known assistance types from the assistance table
     const rows = assistanceTypes.map(type => {

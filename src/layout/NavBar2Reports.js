@@ -903,7 +903,7 @@ export default function NavBar2Reports({
   }, [availableAssistance]);
 
   const handleToggle = () => {
-    onViewModeChange(viewMode === "daily" ? "monthly" : "daily");
+    onViewModeChange(viewMode === "weekly" ? "monthly" : "weekly");
   };
 
   // === Zip Code Map (Mapbox) MUTUAL cross-filtered options ===
@@ -1540,7 +1540,7 @@ export default function NavBar2Reports({
             placeholder="All Users"
           />
           <SlideToggle
-            leftLabel="Daily"
+            leftLabel="Weekly"
             rightLabel="Monthly"
             isRight={viewMode === "monthly"}
             onToggle={handleToggle}

@@ -28,6 +28,7 @@ Results display format is consistent regardless of filters applied.
 - ⬜ Simplify usage reporting
 - ⬜ LLM search (Anthropic API)
 - ⬜ Announcement popup redesign (typewriter/memo style)
+- ⬜ Opportunity Scan system (Supabase pg_cron + Edge Function) — see "Opportunity Scan System (PLANNED)" section
 
 ## Components Reference
 
@@ -510,7 +511,9 @@ Groups are **evergreen** - determined by the `group` field in the `assistance` t
 
 Each type has an icon in `/src/icons/` mapped via `src/icons/iconMap.js`.
 
-## Supabase Tables (5 tables total)
+## Supabase Tables (7 tables total)
+
+All tables are synced from the Google Sheets master data via `npm run sync` (`scripts/sync-to-supabase.js`). The sync is a generic passthrough — whatever columns exist in a sheet tab land in the matching Supabase table (columns must exist in Supabase first via `ALTER TABLE`). The 7 synced tables: `directory`, `zip_codes`, `assistance`, `organizations`, `registered_organizations`, `announcements`, `zip_code_data`.
 
 ### `directory` (main resources table - ~836 records, expect ~1000)
 This is the primary data displayed in results. All filtering happens against this table.
@@ -572,6 +575,23 @@ This is the primary data displayed in results. All filtering happens against thi
 | `county_city_zip` | text | `"Harris \| Houston \| 77002"` | Combined display |
 | `county_city_zip_neighborhood` | text | Full combined string | For dropdowns |
 
+### `organizations` (~452 records - one row per child org)
+Synced from the `organizations` sheet tab. Distinct from the directory-derived org list used for NavBar2 dropdowns — this is the real table, loaded via `dataService.getOrganizations()` and used in `AppDataContext` (e.g. `senderChildren`, per-org block flag). One row per child organization.
+
+**Columns for Opportunity Scan (Omar is adding these to the sheet tab + Supabase, July 2026):**
+| Field | Type | Notes |
+|-------|------|-------|
+| `scan` | integer, default 0 | Org-check tier. **0** = never proactively checked by name — as if the row didn't exist for org checks (but STILL included in cross-reference matching: a news hit on a scan=0 org is still tagged "IN CRG — update existing record"). **1** = rotating by-name news check on rotation Mondays (full cycle **twice a year**). **2** = monthly page scan on the first Monday of each month. **3** = quarterly page scan on the second Monday of each quarter's first month (Jan/Apr/Jul/Oct). On page-scan days rotation pauses — only that tier gets org checks. Omar manages flags so scan=2 AND scan=3 each resolve to **≤40 distinct org_url values** (all homepage-level; as of July 2026: ~40 twos, ~40 threes, ~348 ones) — the code never reasons about parent/child, it just does `SELECT DISTINCT org_url WHERE scan = 2` (or 3). |
+| `org_url` | text | Highest-level (parent) HOMEPAGE URL. **Added to the sheet July 2026.** Repeated on every child row of the same parent — all 4 locations of a parent carry the same org_url. |
+
+**Parent/child + URL idiosyncrasies (matter for the scan):**
+- A "child" can be a **program** (veterans, food pantry, rent…) — each program row in `directory` usually has its own `webpage` URL
+- A "child" can be a **location/branch** — sometimes each location has its own page (distinct `webpage` values), sometimes all locations share one page (identical `webpage` on all rows, may equal `org_url`)
+- Therefore: **never treat org rows and URLs as 1:1.** Always `DISTINCT` URLs before fetching, and map a finding on a shared URL back to ALL child rows/locations that carry it.
+
+### `zip_code_data` (census/demographic data by zip)
+Synced from the `zip_code_data` sheet tab (primary key `id`). Rate fields stored as fractions (e.g. `0.194` = 19.4%). Used by Reports map (`src/components/reports/MapboxMapV2.js`) for medians and bivariate map codes (e.g. `fvi_map_code`).
+
 ### `registered_organizations` (auth - implement last)
 | Field | Type | Example | Notes |
 |-------|------|---------|-------|
@@ -579,6 +599,8 @@ This is the primary data displayed in results. All filtering happens against thi
 | `reg_organization` | text | `"Christian Community..."` | Org name for login |
 | `org_passcode` | text | `"he3aq6"` | Login passcode |
 | `org_color` | text | `"#FF7C7C"` | Branding color |
+
+**Note:** sync applies `transformRegisteredOrg` (PBKDF2 passcode hashing, primary key `account_id`) — the raw sheet columns above may predate that transform; verify against the live table when working on auth.
 
 ## Styling
 
@@ -1238,6 +1260,136 @@ The Quick Tips pattern can be reused for other contextual help. When a feature c
 3. Trigger auto-open by calling `setQuickTipsOpen(true)` and `setQuickTipsExpandedSection("topic-id")`
 
 **Note:** Avoid overusing auto-open. Reserve for truly new or confusing features. Manual access via lightbulb should be the primary discovery method.
+
+## Opportunity Scan System (PLANNED — not yet implemented)
+
+> **⚠️ SUPERSEDED BY v2 DESIGN (July 2026).** The detailed spec below is kept for historical
+> context but its **core assumption is wrong**. Two years of manual monitoring showed org
+> websites are the *worst* signal (stale, closures invisible, buried press releases), so the
+> page-scan tiers (`scan` 0/1/2/3 + rotation math) are **demoted to a minor net**. The v2
+> design re-centers on **push feeds** (Google Alerts, GDELT/local TV+newspaper news, org
+> newsletters) + **closure/existence registries** (Google "permanently closed", ProPublica/IRS,
+> TX charity registration) + **gov enrollment calendars**, with **Claude as triager/synthesizer,
+> not crawler**. Runtime consolidates on **Cloudflare** (not a new Supabase Edge Function).
+> Two lanes: weekly wide-net (Batch API, −50%) + daily fast-lane (sync). Cost target ≤ $10/mo.
+> The `scan` tier system collapses to a single `organizations.reliable_updater` flag.
+> **Read the full v2 design before implementing:**
+> `~/.claude/plans/claude-md-includes-an-opportunity-woolly-music.md`. When build begins,
+> replace this entire section with that design.
+
+An autonomous weekly scan that finds new, temporary, or time-sensitive assistance opportunities online so Omar can add/update CRG records or post announcements — instead of discovering them by chance.
+
+**Motivating examples:**
+- BakerRipley opens its utility-assistance portal ~4x/year for a capped number of applications (e.g. opened July 13, 2026 for 3,000 applications, then closed until Sept 14). Omar needs to know when portals open.
+- DoD accepted applications for paid cyber internships (no IT experience required) through July 17 — a broader opportunity worth highlighting on CRG that was found by chance.
+
+### Architecture
+
+```
+Supabase pg_cron (weekly, Monday morning)
+  └─> pg_net http_post → Supabase Edge Function `opportunity-scan`
+        ├─ 1. Query `organizations` (full org list + scan tiers + org_url)
+        ├─ 2. Query `directory` (distinct webpage values for page-scan tier orgs, by org name)
+        ├─ 3. Read scan prompt from `scan_config` table (editable without redeploy)
+        ├─ 4. Call Anthropic Messages API (Claude Sonnet) with server tools:
+        │      - web_search (capped via max_uses — hard cost ceiling)
+        │      - web_fetch (page-scan days: scan=2 monthly, scan=3 quarterly)
+        ├─ 5. Parse findings → insert rows into `scan_findings`
+        └─ 6. Email digest via Resend (from info@crghouston.org → Omar)
+```
+
+**Why Supabase-triggered (vs. Cowork/desktop scheduled task):** runs even when Omar's computer is off; queries live org data directly (no stale CSV export); findings land in the DB where a future review UI can turn them into announcements. An interim Cowork scheduled task (`crg-weekly-opportunity-scan`, Mondays 8am) exists and should be retired once this ships.
+
+### Scan logic (what each weekly run does)
+
+1. **Broad category scan — EVERY Monday, including page-scan days** (items from roughly the last 7-14 days, 15-county greater Houston area). The `scan` field governs org checks only; this part always runs:
+   - **Time-limited application windows** — utility assistance portal openings (BakerRipley, LIHEAP/CEAP rounds, CenterPoint/Reliant bill help), rent assistance rounds, back-to-school distributions, holiday assistance signups (Angel Tree, Toys for Tots), Medicaid/CHIP/SNAP/Marketplace enrollment windows
+   - **New/temporary resources** — pop-up clinics, one-time food/supply distributions, mobile health events, new orgs/programs launching, disaster-relief resources after storms/floods/heat events
+   - **Broader opportunities** — paid internships, job training, apprenticeships, scholarships open to low-income / no-experience applicants (federal programs open to Houston-area residents count)
+   - **General org news** — "Houston nonprofit closing OR suspends program" type queries
+2. **Rotating by-name org check (scan = 1) — rotation Mondays only** (any Monday that isn't a page-scan day). Target: full cycle **twice a YEAR**. Math: 52 weeks − 12 first Mondays − 4 quarterly Mondays = 36 rotation weeks → each org every 18 weeks → slice size = ceil(count(scan=1) × 2 / 36), e.g. 348 orgs → ~19-20/week. Alphabetical slices; derive slice index deterministically (e.g. rotation-run count mod number of slices). Batch ~8 org names per query with OR: `"Org A" OR "Org B" ... Houston news` (~20 orgs ≈ 2-3 searches/week). Looking for: closures, suspended programs, relocations, portal openings, changed hours/eligibility. Compute slice size from live counts so re-flagging in the sheet never requires a code change.
+3. **Page scans (scan = 2 monthly, scan = 3 quarterly).** Two kinds of page-scan days, each deterministic from the date, each ≤40 distinct homepages (managed by Omar in the sheet):
+   - **scan = 2:** first Monday of EVERY month
+   - **scan = 3:** second Monday of each quarter's FIRST month (Jan/Apr/Jul/Oct) — so quarter-start months have two heavy Mondays back-to-back; this is accepted
+   - On a page-scan day, rotation pauses and ONLY that tier gets org checks (broad category scan still runs). Identical treatment for both tiers. Per org:
+   - Fetch the homepage (`SELECT DISTINCT org_url FROM organizations WHERE scan = <tier being run>`)
+   - Fetch that org's resource/program pages: `DISTINCT directory.webpage` joined by org name. These hand-curated URLs are where "applications open/closed" usually appears — a homepage-only fetch would MISS a change buried on e.g. abccharities.org/gethelp when abccharities.org itself is unchanged.
+   - Follow assistance-related links found on fetched pages 1 level deep (get help / apply / programs / news) — ~3-5 pages per org total. Catches new programs CRG doesn't know about yet.
+   - **Diff against CRG's current data:** pass the org's directory records (requirements, org_hours, status) in context and ask Claude to report anything that would change what a caseworker tells a client — eligibility, application windows/portal status, hours, closures, relocations. This is the working definition of "important"; expect to tune it in `scan_config` after the first few runs.
+   - One batched news search over that tier's org names as backup
+   - **Batch across multiple Anthropic calls** (~10-15 orgs per call), accumulate findings across calls
+   - **Attribute findings at parent level, mapped back to every child row sharing that URL** — "portal opened" on a shared page means ALL sibling location records need the same update.
+4. **Cross-reference** — every finding is checked against the FULL org list including scan=0 orgs (passed in context, no search cost) and tagged: `IN CRG — update existing record` / `NOT in CRG — candidate to add` / `Post as CRG announcement` / `FYI only`.
+
+### Digest format (email + scan_findings rows)
+
+Grouped by category. Per finding: what it is (1-2 sentences), who it serves/eligibility, deadline or window (flag items closing within 2 weeks), source URL, CRG action tag. Header notes which rotation slice ran, or that this was a page-scan run (scan=2 monthly or scan=3 quarterly). Skip empty categories; never pad with permanent/unchanged items. Exclude items outside the 15-county area unless statewide/national programs are open to Houston-area residents.
+
+### Schema changes
+
+```sql
+-- organizations: two new columns (also add to the organizations sheet tab; sync is passthrough)
+-- (Omar is adding these himself to sheet + Supabase, July 2026)
+ALTER TABLE organizations ADD COLUMN scan INTEGER DEFAULT 0;
+ALTER TABLE organizations ADD COLUMN org_url TEXT;
+
+-- scan prompt editable without redeploying the Edge Function
+CREATE TABLE scan_config (
+  id SERIAL PRIMARY KEY,
+  key TEXT UNIQUE NOT NULL,        -- e.g. 'scan_prompt', 'max_searches', 'digest_recipient'
+  value TEXT NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE scan_findings (
+  id SERIAL PRIMARY KEY,
+  run_date DATE NOT NULL,
+  category TEXT NOT NULL,          -- 'window' | 'temporary' | 'opportunity' | 'org_news'
+  title TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  eligibility TEXT,
+  deadline TEXT,                   -- free text; may be a date or "portal open until capacity"
+  source_url TEXT,
+  org_name TEXT,                   -- matched org name if any
+  crg_action TEXT NOT NULL,        -- 'update_existing' | 'candidate_add' | 'announcement' | 'fyi'
+  status TEXT DEFAULT 'new',       -- 'new' | 'reviewed' | 'actioned' | 'dismissed'
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### Cost model & controls
+
+- **web_search:** $10 per 1,000 searches ($0.01 each). One search = one query = one tool call; a batched OR query over 8 org names is still ONE search. Typical weekly run: ~2-3 rotation searches + ~12-20 category searches + ~5-10 follow-ups ≈ 20-30 searches (~$0.20-0.30). Set `max_uses` (e.g. 50) on the web_search tool for a hard ceiling.
+- **web_fetch:** no per-use fee — token cost only. Page-scan-day volume: ≤40 orgs × ~3-5 pages ≈ 120-200 fetches. Cap page content tokens (e.g. ~2k/page); expect a few extra dollars in tokens per page-scan day. Quarter-start months (Jan/Apr/Jul/Oct) have TWO page-scan days (scan=2 first Monday + scan=3 second Monday) — the accepted "heavy month". Rotation weeks use no fetches at all (news search only).
+- **Tokens:** search results flow through context; expect ~$0.50-1.50/run on Sonnet.
+- **Realistic total: ~$1-2/weekly run → ~$4-8/month.** Monitor in Anthropic Console; trim categories or triage with a smaller model if needed.
+
+### Secrets & scheduling
+
+- Edge Function secrets (via `supabase secrets set`): `ANTHROPIC_API_KEY`, `RESEND_API_KEY` (both already exist for Cloudflare — reuse values)
+- pg_cron + pg_net (enable both extensions), e.g.:
+```sql
+SELECT cron.schedule(
+  'weekly-opportunity-scan',
+  '0 13 * * 1',   -- 8am America/Chicago = 13:00 UTC (adjust for DST or run at fixed UTC)
+  $$ SELECT net.http_post(
+       url := 'https://<project-ref>.supabase.co/functions/v1/opportunity-scan',
+       headers := jsonb_build_object('Authorization', 'Bearer ' || '<service-role-key-from-vault>')
+     ) $$
+);
+```
+- Store the service role key in Supabase Vault rather than inline.
+
+### Implementation checklist (for Claude Code)
+
+1. ⬜ (Omar) Add `scan` (0/1/2/3) + `org_url` columns to organizations sheet tab and Supabase (`ALTER TABLE`); set scan=2 monthly page-scan orgs (≤40 distinct homepages), scan=3 quarterly page-scan orgs (≤40 distinct homepages), scan=1 rotating pool, scan=0 skip; `npm run sync`. As of July 2026 Omar's split: ~40 twos, ~40 threes, ~348 ones (moved 26 of the original 106 twos to tier 1).
+2. ⬜ Create `scan_config` + `scan_findings` tables; seed `scan_config` with the scan prompt (adapt from "Scan logic" above), `max_searches=50`, `digest_recipient`
+3. ⬜ Write Edge Function `supabase/functions/opportunity-scan/index.ts` (queries → Anthropic call with web_search/web_fetch → parse → insert findings → Resend digest). Have Claude return findings as structured JSON (tool use or fenced JSON) so parsing into `scan_findings` is reliable.
+4. ⬜ Deploy + set secrets; test manually via `supabase functions invoke opportunity-scan`
+5. ⬜ Enable pg_cron/pg_net; schedule weekly Monday run
+6. ⬜ After 2-3 runs: review digest quality + Anthropic Console spend; tune prompt in `scan_config`
+7. ⬜ Retire the interim Cowork scheduled task (`crg-weekly-opportunity-scan`)
+8. ⬜ (Future) Admin review page: list `scan_findings` where status='new'; approve → generates announcement row / flags directory record for update
 
 ## Hosting & Infrastructure
 

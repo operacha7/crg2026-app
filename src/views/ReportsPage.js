@@ -34,8 +34,8 @@ export default function ReportsPage() {
   // State for organization filter (used by chart reports)
   const [selectedOrg, setSelectedOrg] = useState("All Users");
 
-  // State for daily/monthly toggle
-  const [viewMode, setViewMode] = useState("daily");
+  // State for weekly/monthly toggle
+  const [viewMode, setViewMode] = useState("weekly");
 
   // Coverage Report filter state
   const [coverageCounty, setCoverageCounty] = useState("All Counties");

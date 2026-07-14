@@ -11,11 +11,11 @@ import {
   Tooltip,
   ResponsiveContainer,
   ComposedChart,
-  Line,
   Legend,
 } from "recharts";
 import { ResponsivePie } from "@nivo/pie";
 import { fetchDailyUsage, fetchMonthlyUsage, fetchOrganizations } from "../../services/usageService";
+import { WEEKS_TO_SHOW, WEEKLY_FETCH_DAYS, getWeekStartStr, formatWeekRange } from "../../utils/weekBuckets";
 
 // Intentionally jarring color for any org name that shows up in app_usage_logs
 // but is no longer present in registered_organizations. Black stands out
@@ -34,6 +34,29 @@ function getCentralDate() {
 function getCurrentMonth() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// Get the Central-Time date `daysBack` days ago as YYYY-MM-DD. Used to keep the
+// "Daily Average" donut fixed to the last 30 days even though the Weekly view
+// fetches a wider window (WEEKLY_FETCH_DAYS) to feed the column chart.
+function getCutoffDate(daysBack) {
+  const dt = new Date();
+  dt.setDate(dt.getDate() - daysBack);
+  return dt.toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+}
+
+// Custom two-line X-axis tick for the Weekly column chart: week start on the
+// first line, week end on the second (e.g. 7/5 over 7/11).
+function WeekTick({ x, y, payload }) {
+  const { start, end } = formatWeekRange(payload.value);
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text textAnchor="middle" fill="#666" fontSize={10}>
+        <tspan x={0} dy={12}>{start}</tspan>
+        <tspan x={0} dy={12}>{end}</tspan>
+      </text>
+    </g>
+  );
 }
 
 export default function ChartReport({
@@ -72,10 +95,14 @@ export default function ChartReport({
       };
 
       let result;
-      if (viewMode === "daily") {
-        result = await fetchDailyUsage({ ...params, days: 30 });
-      } else {
+      if (viewMode === "monthly") {
         result = await fetchMonthlyUsage({ ...params, months: 12 });
+      } else {
+        // Weekly view: fetch daily rows over a wider window and tag each with
+        // its Sunday-start week so the column chart can bucket by week. The
+        // donuts still read log_date directly (unchanged from the old Daily view).
+        result = await fetchDailyUsage({ ...params, days: WEEKLY_FETCH_DAYS });
+        result = result.map(row => ({ ...row, week: getWeekStartStr(row.log_date) }));
       }
 
       // Filter out Administrator data (used for testing only)
@@ -97,14 +124,24 @@ export default function ChartReport({
   // Daily: always divide by 30 days (fixed rolling window)
   // Monthly: divide by actual number of months with data (since we won't have months with zero activity)
   const averageData = useMemo(() => {
-    const dateKey = viewMode === "daily" ? "log_date" : "month";
-    const uniquePeriods = [...new Set(data.map(row => row[dateKey]))].filter(d => d != null);
+    const isMonthly = viewMode === "monthly";
+    const dateKey = isMonthly ? "month" : "log_date";
 
-    // Daily uses fixed 30-day window, Monthly uses actual months in data
-    const numPeriods = viewMode === "daily" ? 30 : (uniquePeriods.length || 1);
+    // This donut is intentionally unchanged by the Weekly view: it always shows
+    // the Daily Average over the last 30 days. Since the Weekly fetch pulls a
+    // wider window, restrict the source rows to the last 30 days here.
+    const cutoff30 = isMonthly ? null : getCutoffDate(29);
+    const source = isMonthly
+      ? data
+      : data.filter(row => row.log_date && row.log_date >= cutoff30);
+
+    const uniquePeriods = [...new Set(source.map(row => row[dateKey]))].filter(d => d != null);
+
+    // Daily average uses a fixed 30-day window, Monthly uses actual months in data
+    const numPeriods = isMonthly ? (uniquePeriods.length || 1) : 30;
 
     const orgTotals = {};
-    data.forEach((row) => {
+    source.forEach((row) => {
       const org = row.reg_organization;
       orgTotals[org] = (orgTotals[org] || 0) + row.count;
     });
@@ -126,8 +163,8 @@ export default function ChartReport({
 
   // Get today's/this month's data
   const currentPeriodData = useMemo(() => {
-    const dateKey = viewMode === "daily" ? "log_date" : "month";
-    const currentPeriod = viewMode === "daily" ? getCentralDate() : getCurrentMonth();
+    const dateKey = viewMode === "monthly" ? "month" : "log_date";
+    const currentPeriod = viewMode === "monthly" ? getCurrentMonth() : getCentralDate();
 
     const periodData = data.filter(row => row[dateKey] === currentPeriod);
 
@@ -151,13 +188,17 @@ export default function ChartReport({
     return { pieData, total };
   }, [data, orgColors, viewMode]);
 
-  // Process data for bar chart (by date, stacked by organization)
+  // Process data for bar chart (by period, stacked by organization).
+  // Weekly buckets by Sunday-start week (the `week` field tagged at fetch time);
+  // Monthly buckets by month.
   const barData = useMemo(() => {
-    const dateKey = viewMode === "daily" ? "log_date" : "month";
+    const isMonthly = viewMode === "monthly";
+    const dateKey = isMonthly ? "month" : "week";
     const dateMap = {};
 
     data.forEach((row) => {
       const date = row[dateKey];
+      if (!date) return;
       if (!dateMap[date]) {
         dateMap[date] = { date };
       }
@@ -166,21 +207,33 @@ export default function ChartReport({
     });
 
     // Convert to array and sort by date
-    const result = Object.values(dateMap).sort((a, b) =>
+    const full = Object.values(dateMap).sort((a, b) =>
       a.date.localeCompare(b.date)
     );
 
-    // Calculate running average
-    let runningSum = 0;
-    result.forEach((item, idx) => {
-      const dayTotal = Object.keys(item)
-        .filter(k => k !== "date" && k !== "runningAverage")
+    // Per-period total for each bucket (sum across org bars)
+    const periodTotal = (item) =>
+      Object.keys(item)
+        .filter(k => k !== "date" && !k.startsWith("_"))
         .reduce((sum, k) => sum + (item[k] || 0), 0);
-      runningSum += dayTotal;
-      item.runningAverage = Math.round(runningSum / (idx + 1));
+    full.forEach(item => { item._total = periodTotal(item); });
+
+    // Weekly shows the most recent WEEKS_TO_SHOW complete buckets; Monthly shows all.
+    const displayed = isMonthly ? full : full.slice(-WEEKS_TO_SHOW);
+
+    // Percentage change vs the immediately preceding bucket. Uses the full,
+    // un-sliced array as the neighbor source so the first displayed week still
+    // gets a change value from the (dropped) prior week. null when there's no
+    // prior bucket or the prior total was 0 (avoids divide-by-zero).
+    displayed.forEach((item) => {
+      const fullIdx = full.indexOf(item);
+      const prevTotal = fullIdx > 0 ? full[fullIdx - 1]._total : null;
+      item._pctChange = (prevTotal != null && prevTotal > 0)
+        ? Math.round(((item._total - prevTotal) / prevTotal) * 100)
+        : null;
     });
 
-    return result;
+    return displayed;
   }, [data, viewMode]);
 
   // Get unique organizations from bar data
@@ -188,7 +241,7 @@ export default function ChartReport({
     const orgs = new Set();
     barData.forEach((item) => {
       Object.keys(item).forEach((key) => {
-        if (key !== "date" && key !== "runningAverage") {
+        if (key !== "date" && !key.startsWith("_")) {
           orgs.add(key);
         }
       });
@@ -206,20 +259,28 @@ export default function ChartReport({
                           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       return `${monthNames[month - 1]} '${String(year).slice(-2)}`;
     }
-    // Daily uses "YYYY-MM-DD" format from database
+    // Weekly labels come from the custom WeekTick, not this formatter.
     const [, month, day] = dateStr.split('-').map(Number);
     return `${month}/${day}`;
   };
 
-  // Get period label for current period chart
+  // Tooltip header label for the column chart. Weekly shows the full week range
+  // (e.g. "7/5 – 7/11"); Monthly shows the month (e.g. "Jul '26").
+  const formatTooltipLabel = (dateStr) => {
+    if (viewMode === "monthly") return formatDate(dateStr);
+    const { start, end } = formatWeekRange(dateStr);
+    return `${start} – ${end}`;
+  };
+
+  // Get period label for current period chart. The "Today" donut is intentionally
+  // unchanged by the Weekly view.
   const getCurrentPeriodLabel = () => {
-    if (viewMode === "daily") {
+    if (viewMode !== "monthly") {
       const today = new Date();
       return `Today (${today.toLocaleDateString("en-US", { month: "numeric", day: "numeric" })})`;
-    } else {
-      const now = new Date();
-      return now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
     }
+    const now = new Date();
+    return now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   };
 
   // Wait for both data and organization colors to load
@@ -291,8 +352,8 @@ export default function ChartReport({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Average Donut Chart */}
         <DonutChart
-          title={viewMode === "daily" ? "Daily Average" : "Monthly Average"}
-          subtitle={`Based on last ${averageData.numPeriods} ${viewMode === "daily" ? "days" : "months"}`}
+          title={viewMode === "monthly" ? "Monthly Average" : "Daily Average"}
+          subtitle={`Based on last ${averageData.numPeriods} ${viewMode === "monthly" ? "months" : "days"}`}
           pieData={averageData.pieData}
           total={averageData.total}
         />
@@ -308,7 +369,7 @@ export default function ChartReport({
       {/* Bottom row - Bar chart */}
       <div className="bg-white border rounded p-4">
         <h3 className="text-md font-opensans mb-2" style={{ color: "#4A4E69" }}>
-          {viewMode === "daily" ? "Last 30 Days" : "Last 12 Months"}
+          {viewMode === "monthly" ? "Last 12 Months" : `Last ${WEEKS_TO_SHOW} Weeks`}
         </h3>
 
         <ResponsiveContainer width="100%" height={400}>
@@ -316,39 +377,43 @@ export default function ChartReport({
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
               dataKey="date"
-              tickFormatter={formatDate}
-              angle={-45}
-              textAnchor="end"
+              interval={0}
               height={80}
-              fontSize={10}
+              {...(viewMode === "monthly"
+                ? { tickFormatter: formatDate, angle: -45, textAnchor: "end", fontSize: 10 }
+                : { tick: <WeekTick /> })}
             />
             <YAxis />
             <Tooltip
               content={({ active, payload, label }) => {
                 if (active && payload && payload.length) {
-                  const totalCount = payload.reduce((sum, entry) => {
-                    if (entry.dataKey !== "runningAverage") {
-                      return sum + (entry.value || 0);
-                    }
-                    return sum;
-                  }, 0);
-
-                  const runningAvgEntry = payload.find(
-                    (entry) => entry.dataKey === "runningAverage"
+                  const totalCount = payload.reduce(
+                    (sum, entry) => sum + (entry.value || 0),
+                    0
                   );
+
+                  // Percentage change vs the previous period (week or month),
+                  // shown on hover.
+                  const meta = barData.find((d) => d.date === label);
+                  const pct = meta ? meta._pctChange : null;
+                  const periodWord = viewMode === "monthly" ? "month" : "week";
+                  let pctText = "—";
+                  let pctColor = "#374151"; // neutral gray when no prior period
+                  if (pct != null) {
+                    const sign = pct >= 0 ? "+" : "";
+                    pctText = `${sign}${pct}%`;
+                    pctColor = pct >= 0 ? "#16a34a" : "#dc2626"; // green up / red down
+                  }
 
                   return (
                     <div className="bg-white p-3 border border-gray-300 rounded shadow-lg">
-                      <p className="text-gray-800 mb-2">{formatDate(label)}</p>
+                      <p className="text-gray-800 mb-2">{formatTooltipLabel(label)}</p>
                       <p className="text-sm text-gray-600 mb-2">
                         Total: {totalCount}
                       </p>
 
                       {payload
-                        .filter(
-                          (entry) =>
-                            entry.dataKey !== "runningAverage" && entry.value > 0
-                        )
+                        .filter((entry) => entry.value > 0)
                         .sort((a, b) => b.value - a.value)
                         .map((entry, index) => (
                           <p
@@ -360,11 +425,10 @@ export default function ChartReport({
                           </p>
                         ))}
 
-                      {runningAvgEntry && (
-                        <p className="text-sm text-green-600 mt-2 pt-2 border-t border-gray-200">
-                          Running Average: {runningAvgEntry.value}
-                        </p>
-                      )}
+                      <p className="text-sm text-black mt-2 pt-2 border-t border-gray-200" style={{ fontWeight: 400 }}>
+                        Change from previous {periodWord}:{" "}
+                        <span style={{ fontWeight: 600, color: pctColor }}>{pctText}</span>
+                      </p>
                     </div>
                   );
                 }
@@ -382,16 +446,6 @@ export default function ChartReport({
                 name={org}
               />
             ))}
-
-            <Line
-              type="monotone"
-              dataKey="runningAverage"
-              stroke="#1a1a1a"
-              strokeWidth={2}
-              strokeDasharray="5 5"
-              name="Running Average"
-              dot={false}
-            />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
