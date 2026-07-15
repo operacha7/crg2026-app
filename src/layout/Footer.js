@@ -273,7 +273,7 @@ export default function Footer() {
         <div className="flex items-center gap-2">
           <USFlagIcon size={20} />
           <span>
-            © {currentYear} O Peracha. All Rights Reserved.
+            © {currentYear} Flecha Amarilla, Inc.. All Rights Reserved.
           </span>
         </div>
       </footer>
