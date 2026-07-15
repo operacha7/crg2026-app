@@ -616,7 +616,7 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ counties, pare
       .subtitle { font-size: 10px; color: #B8001F; font-style: italic; padding: 0 10px 6px; }
     </style></head><body>
       <div class="title">CRG Zip Code Data Report</div>
-      <div class="subtitle">Evictions data for 12 months ending April 2026. All other data from 2025 unless stated otherwise. &nbsp;|&nbsp; Generated ${dateStr}</div>
+      <div class="subtitle">Evictions data for 12 months ending June 2026. All other data from 2025 unless stated otherwise. &nbsp;|&nbsp; Generated ${dateStr}</div>
       <table><thead><tr>${thCells}</tr></thead><tbody>${bodyRows.join("")}</tbody></table>
     </body></html>`;
 
