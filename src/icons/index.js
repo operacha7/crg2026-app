@@ -58,7 +58,7 @@ export { LegalIcon } from './LegalIcon';
 export { SeniorsIcon } from './SeniorsIcon';
 export { HandymanIcon } from './HandymanIcon';
 export { AnimalsIcon } from './AnimalsIcon';
-export { ChristmasIcon } from './ChristmasIcon';
+export { SeasonalIcon } from './SeasonalIcon';
 export { OtherIcon } from './OtherIcon';
 export { DentalVisionIcon } from './DentalVisionIcon';
 export { MedicalDentalIcon } from './MedicalDentalIcon';

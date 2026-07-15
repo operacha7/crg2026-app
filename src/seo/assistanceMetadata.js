@@ -162,11 +162,11 @@ const ASSISTANCE_SEO = {
     description:
       "Find low-cost veterinary care, pet food assistance, and adoption support across the Greater Houston Area. Search by zip code for hours and eligibility.",
   },
-  christmas: {
+  seasonal: {
     title:
-      "Christmas Assistance Programs in Houston | Community Resources Guide",
+      "Seasonal Assistance Programs in Houston | Community Resources Guide",
     description:
-      "Find Christmas toy drives, holiday meals, and family support programs across the Greater Houston Area. Search by zip code for sign-up info and eligibility.",
+      "Find back-to-school giveaways, holiday toy drives, seasonal meal distributions, and family support programs across the Greater Houston Area. Search by zip code for sign-up info and eligibility.",
   },
 };
 
