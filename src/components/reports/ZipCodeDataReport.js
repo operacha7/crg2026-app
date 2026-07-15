@@ -797,7 +797,7 @@ const ZipCodeDataReport = forwardRef(function ZipCodeDataReport({ counties, pare
                 paddingBottom: "2px",
               }}
             >
-              Evictions data for 12 months ending April 2026. All other data from 2024 unless stated otherwise.
+              Evictions data for 12 months ending June 2026. All other data from 2024 unless stated otherwise.
             </td>
           </tr>
           {sortedData.map((row, idx) => {
