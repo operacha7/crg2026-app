@@ -84,35 +84,66 @@ export function parseFeed(xml, sourceName) {
   return items;
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Statuses worth a retry: the origin is throttling or briefly unavailable, not
+// refusing us. Google News answers 503 when it dislikes our request rate.
+const RETRYABLE = new Set([429, 500, 502, 503, 504]);
+
 /**
  * Fetch one feed and return normalized items. Never throws — on any error
  * (timeout, 403/429, malformed) it logs and returns [], so one bad feed can't
- * sink a run.
+ * sink a run. Retries throttling responses with exponential backoff + jitter.
+ *
+ * CRITICAL — every response body MUST be read or explicitly cancelled, even on
+ * an error status. An unread body stays in-flight and holds one of the runtime's
+ * limited concurrent-connection slots forever; enough of them and every later
+ * fetch queues until its abort timer fires. That deadlock made a full production
+ * run return ZERO items from all 43 feeds while local dev looked fine (local
+ * never got the 503s that triggered it). Do not "simplify" the cancel() away.
  */
-export async function pollFeed(feed, { timeoutMs = 12000 } = {}) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(feed.url, {
-      headers: {
-        "User-Agent": BROWSER_UA,
-        Accept: "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
-      },
-      signal: controller.signal,
-    });
-    if (!res.ok) {
-      console.log(`⚠️ ${feed.source || feed.name}: HTTP ${res.status}`);
+export async function pollFeed(feed, { timeoutMs = 12000, retries = 2 } = {}) {
+  const label = feed.source || feed.name;
+
+  for (let attempt = 0; ; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let retryAfterMs = null;
+
+    try {
+      const res = await fetch(feed.url, {
+        headers: {
+          "User-Agent": BROWSER_UA,
+          Accept: "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
+        },
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        // Release the connection slot before doing anything else.
+        await res.body?.cancel().catch(() => {});
+        if (RETRYABLE.has(res.status) && attempt < retries) {
+          retryAfterMs = 500 * 2 ** attempt + Math.floor(Math.random() * 400);
+        } else {
+          console.log(`⚠️ ${label}: HTTP ${res.status}`);
+          return [];
+        }
+      } else {
+        const xml = await res.text();
+        const items = parseFeed(xml, label);
+        console.log(`📥 ${label}: ${items.length} items`);
+        return items;
+      }
+    } catch (err) {
+      console.log(`⚠️ ${label}: ${err.name || "error"} ${err.message || ""}`.trim());
       return [];
+    } finally {
+      clearTimeout(timer);
     }
-    const xml = await res.text();
-    const items = parseFeed(xml, feed.source || feed.name);
-    console.log(`📥 ${feed.source || feed.name}: ${items.length} items`);
-    return items;
-  } catch (err) {
-    console.log(`⚠️ ${feed.source || feed.name}: ${err.name || "error"} ${err.message || ""}`.trim());
-    return [];
-  } finally {
-    clearTimeout(timer);
+
+    // Only reached when a retryable status was seen (backoff outside the timer).
+    console.log(`↻ ${label}: retrying after ${retryAfterMs}ms`);
+    await sleep(retryAfterMs);
   }
 }
 

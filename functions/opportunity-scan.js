@@ -35,7 +35,8 @@ import { dedupeKeyFor } from "./_lib/dedupe.js";
 const WINDOW_DAYS = 14;        // how far back to consider candidates
 const MAX_CANDIDATES = 500;    // hard cap before the LLM sees anything
 const PER_FEED_CAP = 30;       // max items any single feed contributes (anti-flood)
-const FEED_TIMEOUT_MS = 15000; // per-feed fetch timeout
+const FEED_TIMEOUT_MS = 15000; // per-feed fetch timeout (starts when the fetch does)
+const FEED_CONCURRENCY = 6;    // feeds in flight at once — see mapWithConcurrency
 const HAIKU_CHUNK = 200;       // candidates per Haiku call (bigger chunk = same # of calls despite higher cap)
 
 // Statewide/national-mix feeds (filterToRegion) are kept only when the item
@@ -171,6 +172,23 @@ async function callClaude(env, { model, system, userText, tool, maxTokens, tempe
 
 // ---- Pipeline steps ----
 
+// Run `fn` over `items` with at most `limit` in flight. NOT a nicety: firing all
+// ~43 feeds at once made Google News 503 the burst, and every queued fetch burned
+// its abort timeout waiting for a connection slot (timers start when pollFeed is
+// CALLED, so a lazy pool is also what keeps each feed's timeout honest).
+async function mapWithConcurrency(items, limit, fn) {
+  const results = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i], i);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
 async function pollAllSources() {
   // Query feeds FIRST (targeted, high-signal) so the backbone always clears the
   // cap; direct outlet feeds after. Each feed is region-filtered if flagged and
@@ -180,15 +198,13 @@ async function pollAllSources() {
     ...GDELT_QUERIES.map((q, i) => ({ name: `GDELT ${i + 1}`, url: gdeltRssUrl(q) })),
   ];
   const feeds = [...queryFeeds, ...DIRECT_FEEDS.map((f) => ({ ...f }))];
-  const results = await Promise.all(
-    feeds.map(async (f) => {
-      let items = await pollFeed(f, { timeoutMs: FEED_TIMEOUT_MS });
-      if (f.filterToRegion) {
-        items = items.filter((it) => mentionsRegion(`${it.title} ${it.summary}`));
-      }
-      return items.slice(0, PER_FEED_CAP);
-    })
-  );
+  const results = await mapWithConcurrency(feeds, FEED_CONCURRENCY, async (f) => {
+    let items = await pollFeed(f, { timeoutMs: FEED_TIMEOUT_MS });
+    if (f.filterToRegion) {
+      items = items.filter((it) => mentionsRegion(`${it.title} ${it.summary}`));
+    }
+    return items.slice(0, PER_FEED_CAP);
+  });
   return results.flat();
 }
 

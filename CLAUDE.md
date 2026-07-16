@@ -1368,6 +1368,17 @@ the next week's publish; `pinned` overrides expiry (evergreen until unpinned).
   and the second run re-inserted 12 rows. It is deliberately absent from the Sonnet tool schema.
 - **Geography is a HARD GATE, not a recall-favoring judgment.** "When uncertain, include" applies to
   RELEVANCE ONLY. Loose wording once surfaced a South Carolina shelter story.
+- **EVERY response body must be read or `cancel()`ed — even on an error status.** The original
+  `pollFeed` did `if (!res.ok) return []` without touching the body. On Cloudflare those unread
+  responses stayed in-flight forever, holding the runtime's limited connection slots ("A stalled
+  HTTP response was canceled to prevent deadlock"), so the remaining feeds never got a slot and
+  died on their own abort timers. **Result: `raw 0` from all 43 feeds in production while local dev
+  was perfect** — local never got the 503s that triggered it. Fixed 2026-07-16.
+- **Poll feeds through `mapWithConcurrency` (6), never `Promise.all` over all 43.** Two reasons:
+  Google News 503s a burst of ~24 simultaneous requests from a datacenter IP (your laptop's
+  residential IP is never throttled, so this is invisible in dev), and `pollFeed` starts its abort
+  timer when *called* — under `Promise.all` all 43 timers start at t=0 and queued fetches time out
+  before they ever dial. Retryable statuses (429/5xx) get exponential backoff + jitter.
 - **Candidate flooding:** without `PER_FEED_CAP` + query-feeds-first ordering, a handful of chatty
   direct feeds filled the entire cap and **zero Google News queries were evaluated**. The
   `filterToRegion` flag on statewide feeds must stay wired.
