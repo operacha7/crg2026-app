@@ -28,7 +28,8 @@ Results display format is consistent regardless of filters applied.
 - ⬜ Simplify usage reporting
 - ⬜ LLM search (Anthropic API)
 - ⬜ Announcement popup redesign (typewriter/memo style)
-- ⬜ Opportunity Scan system (Supabase pg_cron + Edge Function) — see "Opportunity Scan System (PLANNED)" section
+- ✅ Opportunity Scan system + News feed — BUILT and live July 2026 (Cloudflare, not a Supabase Edge
+  Function). See "Opportunity Scan System (BUILT)" for the as-built design, gotchas, and what's deferred.
 
 ## Components Reference
 
@@ -1261,135 +1262,171 @@ The Quick Tips pattern can be reused for other contextual help. When a feature c
 
 **Note:** Avoid overusing auto-open. Reserve for truly new or confusing features. Manual access via lightbulb should be the primary discovery method.
 
-## Opportunity Scan System (PLANNED — not yet implemented)
+## Opportunity Scan System (BUILT — live July 2026)
 
-> **⚠️ SUPERSEDED BY v2 DESIGN (July 2026).** The detailed spec below is kept for historical
-> context but its **core assumption is wrong**. Two years of manual monitoring showed org
-> websites are the *worst* signal (stale, closures invisible, buried press releases), so the
-> page-scan tiers (`scan` 0/1/2/3 + rotation math) are **demoted to a minor net**. The v2
-> design re-centers on **push feeds** (Google Alerts, GDELT/local TV+newspaper news, org
-> newsletters) + **closure/existence registries** (Google "permanently closed", ProPublica/IRS,
-> TX charity registration) + **gov enrollment calendars**, with **Claude as triager/synthesizer,
-> not crawler**. Runtime consolidates on **Cloudflare** (not a new Supabase Edge Function).
-> Two lanes: weekly wide-net (Batch API, −50%) + daily fast-lane (sync). Cost target ≤ $10/mo.
-> The `scan` tier system collapses to a single `organizations.reliable_updater` flag.
-> **Read the full v2 design before implementing:**
-> `~/.claude/plans/claude-md-includes-an-opportunity-woolly-music.md`. When build begins,
-> replace this entire section with that design.
+A weekly automated scan that sweeps 15-county Houston-area news for new/changed assistance
+resources, drafts findings, and holds them for Omar's review. Approved findings publish to a
+**public News feed** (chyron + `/news` page). Replaces discovering opportunities by chance.
 
-An autonomous weekly scan that finds new, temporary, or time-sensitive assistance opportunities online so Omar can add/update CRG records or post announcements — instead of discovering them by chance.
+> **Design history:** the original plan made **org-website page-scanning** the centerpiece with a
+> `scan` 0/1/2/3 tier system and rotation math. That was **abandoned** — two years of manual
+> monitoring showed org sites are the *worst* signal (stale; closures structurally invisible since
+> a closed org keeps a live donation page; announcements buried and late). v2 re-centered on **news
+> feeds + Claude as triager/synthesizer, not crawler**. Page-diff is deferred (see bottom).
+> Full design rationale: `~/.claude/plans/claude-md-includes-an-opportunity-woolly-music.md`.
 
-**Motivating examples:**
-- BakerRipley opens its utility-assistance portal ~4x/year for a capped number of applications (e.g. opened July 13, 2026 for 3,000 applications, then closed until Sept 14). Omar needs to know when portals open.
-- DoD accepted applications for paid cyber internships (no IT experience required) through July 17 — a broader opportunity worth highlighting on CRG that was found by chance.
-
-### Architecture
+### Pipeline (`functions/opportunity-scan.js`)
 
 ```
-Supabase pg_cron (weekly, Monday morning)
-  └─> pg_net http_post → Supabase Edge Function `opportunity-scan`
-        ├─ 1. Query `organizations` (full org list + scan tiers + org_url)
-        ├─ 2. Query `directory` (distinct webpage values for page-scan tier orgs, by org name)
-        ├─ 3. Read scan prompt from `scan_config` table (editable without redeploy)
-        ├─ 4. Call Anthropic Messages API (Claude Sonnet) with server tools:
-        │      - web_search (capped via max_uses — hard cost ceiling)
-        │      - web_fetch (page-scan days: scan=2 monthly, scan=3 quarterly)
-        ├─ 5. Parse findings → insert rows into `scan_findings`
-        └─ 6. Email digest via Resend (from info@crghouston.org → Omar)
+pg_cron (Mon 13:00 UTC) ──net.http_post──> POST /opportunity-scan  {"async": true}
+                                              │  (x-scan-secret header)
+                                              ├─ 202 ack immediately, work continues in waitUntil
+                                              │
+  1. Poll feeds (RSS/Google News RSS/GDELT)   │  free, dependency-free parser
+  2. 14-day window → dedupe by link → cap 500
+  3. Haiku 4.5 relevance cull (RELEVANCE_RUBRIC)
+  4. Sonnet 5 synthesis: cluster same-event stories → ONE finding + best link;
+       cross-reference CRG org list (prompt-cached); tag category + crg_action
+  5. Upsert scan_findings status='new'  ON CONFLICT (dedupe_key) DO NOTHING
+  6. Resend digest → operacha@sbcglobal.net ("N new to review")
+
+Omar reviews at /admin → dismiss, or attach resource + publish
+Published + unexpired → /news-feed → chyron + /news page
 ```
 
-**Why Supabase-triggered (vs. Cowork/desktop scheduled task):** runs even when Omar's computer is off; queries live org data directly (no stale CSV export); findings land in the DB where a future review UI can turn them into announcements. An interim Cowork scheduled task (`crg-weekly-opportunity-scan`, Mondays 8am) exists and should be retired once this ships.
+**Tuning constants** (top of `opportunity-scan.js`): `WINDOW_DAYS=14`, `MAX_CANDIDATES=500`,
+`PER_FEED_CAP=30`, `FEED_TIMEOUT_MS=15000`, `HAIKU_CHUNK=200`.
 
-### Scan logic (what each weekly run does)
+**Why a 14-day window on a 7-day cadence:** every article gets two chances to be seen. A single run
+is not exhaustive (live feeds shift, recall is generous), so the overlap is deliberate — `dedupe_key`
+prevents the second look from creating duplicates.
 
-1. **Broad category scan — EVERY Monday, including page-scan days** (items from roughly the last 7-14 days, 15-county greater Houston area). The `scan` field governs org checks only; this part always runs:
-   - **Time-limited application windows** — utility assistance portal openings (BakerRipley, LIHEAP/CEAP rounds, CenterPoint/Reliant bill help), rent assistance rounds, back-to-school distributions, holiday assistance signups (Angel Tree, Toys for Tots), Medicaid/CHIP/SNAP/Marketplace enrollment windows
-   - **New/temporary resources** — pop-up clinics, one-time food/supply distributions, mobile health events, new orgs/programs launching, disaster-relief resources after storms/floods/heat events
-   - **Broader opportunities** — paid internships, job training, apprenticeships, scholarships open to low-income / no-experience applicants (federal programs open to Houston-area residents count)
-   - **General org news** — "Houston nonprofit closing OR suspends program" type queries
-2. **Rotating by-name org check (scan = 1) — rotation Mondays only** (any Monday that isn't a page-scan day). Target: full cycle **twice a YEAR**. Math: 52 weeks − 12 first Mondays − 4 quarterly Mondays = 36 rotation weeks → each org every 18 weeks → slice size = ceil(count(scan=1) × 2 / 36), e.g. 348 orgs → ~19-20/week. Alphabetical slices; derive slice index deterministically (e.g. rotation-run count mod number of slices). Batch ~8 org names per query with OR: `"Org A" OR "Org B" ... Houston news` (~20 orgs ≈ 2-3 searches/week). Looking for: closures, suspended programs, relocations, portal openings, changed hours/eligibility. Compute slice size from live counts so re-flagging in the sheet never requires a code change.
-3. **Page scans (scan = 2 monthly, scan = 3 quarterly).** Two kinds of page-scan days, each deterministic from the date, each ≤40 distinct homepages (managed by Omar in the sheet):
-   - **scan = 2:** first Monday of EVERY month
-   - **scan = 3:** second Monday of each quarter's FIRST month (Jan/Apr/Jul/Oct) — so quarter-start months have two heavy Mondays back-to-back; this is accepted
-   - On a page-scan day, rotation pauses and ONLY that tier gets org checks (broad category scan still runs). Identical treatment for both tiers. Per org:
-   - Fetch the homepage (`SELECT DISTINCT org_url FROM organizations WHERE scan = <tier being run>`)
-   - Fetch that org's resource/program pages: `DISTINCT directory.webpage` joined by org name. These hand-curated URLs are where "applications open/closed" usually appears — a homepage-only fetch would MISS a change buried on e.g. abccharities.org/gethelp when abccharities.org itself is unchanged.
-   - Follow assistance-related links found on fetched pages 1 level deep (get help / apply / programs / news) — ~3-5 pages per org total. Catches new programs CRG doesn't know about yet.
-   - **Diff against CRG's current data:** pass the org's directory records (requirements, org_hours, status) in context and ask Claude to report anything that would change what a caseworker tells a client — eligibility, application windows/portal status, hours, closures, relocations. This is the working definition of "important"; expect to tune it in `scan_config` after the first few runs.
-   - One batched news search over that tier's org names as backup
-   - **Batch across multiple Anthropic calls** (~10-15 orgs per call), accumulate findings across calls
-   - **Attribute findings at parent level, mapped back to every child row sharing that URL** — "portal opened" on a shared page means ALL sibling location records need the same update.
-4. **Cross-reference** — every finding is checked against the FULL org list including scan=0 orgs (passed in context, no search cost) and tagged: `IN CRG — update existing record` / `NOT in CRG — candidate to add` / `Post as CRG announcement` / `FYI only`.
+### Key files
 
-### Digest format (email + scan_findings rows)
+| File | Role |
+|------|------|
+| `functions/opportunity-scan.js` | The scan. `runScan()` = pipeline; `onRequest` = transport |
+| `functions/_lib/scan-sources.js` | `DIRECT_FEEDS`, `GOOGLE_NEWS_QUERIES`, `GDELT_QUERIES`, `COUNTIES` (15), `RELEVANCE_RUBRIC`, paywall tokens |
+| `functions/_lib/rss.js` | Dependency-free fetch + tolerant RSS/Atom parser; `pollFeed` never throws |
+| `functions/_lib/dedupe.js` | `normalizeUrl()` / `dedupeKeyFor()` — shared by scan + admin manual-add |
+| `functions/news-feed.js` | Public GET: published + unexpired findings (+ `paywalled` flag) |
+| `functions/admin-findings.js` | Admin GET/PATCH; `WRITABLE` allowlist; `requireAdmin` |
+| `src/views/NewsPage.js` | `/news` — public feed, grouped by category |
+| `src/views/AdminReviewPage.js` | `/admin` — Queue / Published tabs, resource picker |
+| `src/data/newsCategories.js` | Client mirror of the category enum (icon + accent per category) |
+| `src/layout/Footer.js` | `NewsChyron` — scrolling published headlines → `/news` |
+| `scripts/schedule-opportunity-scan.sql` | pg_cron/pg_net setup + operating queries |
 
-Grouped by category. Per finding: what it is (1-2 sentences), who it serves/eligibility, deadline or window (flag items closing within 2 weeks), source URL, CRG action tag. Header notes which rotation slice ran, or that this was a page-scan run (scan=2 monthly or scan=3 quarterly). Skip empty categories; never pad with permanent/unchanged items. Exclude items outside the 15-county area unless statewide/national programs are open to Houston-area residents.
+**Source curation notes:** `docs/scan-sources-draft.md` (provenance; which feeds were verified live).
 
-### Schema changes
+### Categories
 
-```sql
--- organizations: two new columns (also add to the organizations sheet tab; sync is passthrough)
--- (Omar is adding these himself to sheet + Supabase, July 2026)
-ALTER TABLE organizations ADD COLUMN scan INTEGER DEFAULT 0;
-ALTER TABLE organizations ADD COLUMN org_url TEXT;
+`food` · `housing` · `utilities` · `health` · `mother_child` · `jobs_education` · `seasonal` ·
+`disaster` · `news_policy` · `other`
 
--- scan prompt editable without redeploying the Edge Function
-CREATE TABLE scan_config (
-  id SERIAL PRIMARY KEY,
-  key TEXT UNIQUE NOT NULL,        -- e.g. 'scan_prompt', 'max_searches', 'digest_recipient'
-  value TEXT NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+**Mirrored in FOUR places — keep in sync when tuning:** `CATEGORY_ENUM` + the tool schema
+description + the synthesis prompt (all in `opportunity-scan.js`) + the digest label map, plus
+`NEWS_CATEGORIES` in `src/data/newsCategories.js`.
+(`disaster` and `news_policy` currently fall back to `OtherIcon` — Omar is drawing art for both.)
 
-CREATE TABLE scan_findings (
-  id SERIAL PRIMARY KEY,
-  run_date DATE NOT NULL,
-  category TEXT NOT NULL,          -- 'window' | 'temporary' | 'opportunity' | 'org_news'
-  title TEXT NOT NULL,
-  summary TEXT NOT NULL,
-  eligibility TEXT,
-  deadline TEXT,                   -- free text; may be a date or "portal open until capacity"
-  source_url TEXT,
-  org_name TEXT,                   -- matched org name if any
-  crg_action TEXT NOT NULL,        -- 'update_existing' | 'candidate_add' | 'announcement' | 'fyi'
-  status TEXT DEFAULT 'new',       -- 'new' | 'reviewed' | 'actioned' | 'dismissed'
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
+### Review workflow (`/admin`, admin org only)
 
-### Cost model & controls
+`ADMIN_ACCOUNT_ID = 10000` (`functions/config.js`). Hiding the nav icon is convenience, not
+security — both `/admin-findings` and the page enforce the account check.
 
-- **web_search:** $10 per 1,000 searches ($0.01 each). One search = one query = one tool call; a batched OR query over 8 org names is still ONE search. Typical weekly run: ~2-3 rotation searches + ~12-20 category searches + ~5-10 follow-ups ≈ 20-30 searches (~$0.20-0.30). Set `max_uses` (e.g. 50) on the web_search tool for a hard ceiling.
-- **web_fetch:** no per-use fee — token cost only. Page-scan-day volume: ≤40 orgs × ~3-5 pages ≈ 120-200 fetches. Cap page content tokens (e.g. ~2k/page); expect a few extra dollars in tokens per page-scan day. Quarter-start months (Jan/Apr/Jul/Oct) have TWO page-scan days (scan=2 first Monday + scan=3 second Monday) — the accepted "heavy month". Rotation weeks use no fetches at all (news search only).
-- **Tokens:** search results flow through context; expect ~$0.50-1.50/run on Sonnet.
-- **Realistic total: ~$1-2/weekly run → ~$4-8/month.** Monitor in Anthropic Console; trim categories or triage with a smaller model if needed.
+- **Queue tab** (`status='new'`): read the finding, optionally add a note and attach a CRG resource,
+  then Publish or Dismiss. Deliberately one-at-a-time — no bulk select. Omar tested bulk and
+  rejected it: *"Clicking Publish individually makes me look at each story."*
+- **Published tab**: published **and unexpired** only (not everything) — for fixing a live item.
+- **Resource picker** accepts an **id_no OR an org name**. Attaching reuses the announcement
+  mechanism (`buildResourceLink()` / `useResourceLinkHandler.js`) → a same-tab "Show me id_no …"
+  Ask-a-Question search landing on the record, ready to Email/PDF. Works for guests; preserves session.
+- **Manual add** = the real-time fast lane (`origin='manual'`). The weekly scan is the wide net;
+  manual adds are the highest-value training signal (they are, by definition, the scan's blind spots).
 
-### Secrets & scheduling
+### `scan_findings` schema
 
-- Edge Function secrets (via `supabase secrets set`): `ANTHROPIC_API_KEY`, `RESEND_API_KEY` (both already exist for Cloudflare — reuse values)
-- pg_cron + pg_net (enable both extensions), e.g.:
-```sql
-SELECT cron.schedule(
-  'weekly-opportunity-scan',
-  '0 13 * * 1',   -- 8am America/Chicago = 13:00 UTC (adjust for DST or run at fixed UTC)
-  $$ SELECT net.http_post(
-       url := 'https://<project-ref>.supabase.co/functions/v1/opportunity-scan',
-       headers := jsonb_build_object('Authorization', 'Bearer ' || '<service-role-key-from-vault>')
-     ) $$
-);
-```
-- Store the service role key in Supabase Vault rather than inline.
+Core: `id`, `run_date`, `created_at`, `source`, `source_url`, `dedupe_key` (UNIQUE), `category`,
+`title`, `summary`, `eligibility`, `deadline` (free text), `county`, `org_name`,
+`directory_id_no` (int4), `crg_action`, `confidence`, `status`, `notes`,
+plus `origin` ('scan'|'manual'), `published_at`, `expires_at`, `pinned`.
 
-### Implementation checklist (for Claude Code)
+`category`/`crg_action`/`status`/`origin` are **conventions, not DB enums** — new values need no
+migration. Findings insert with `expires_at` = run date + 7 days, so each week's stories age off as
+the next week's publish; `pinned` overrides expiry (evergreen until unpinned).
 
-1. ⬜ (Omar) Add `scan` (0/1/2/3) + `org_url` columns to organizations sheet tab and Supabase (`ALTER TABLE`); set scan=2 monthly page-scan orgs (≤40 distinct homepages), scan=3 quarterly page-scan orgs (≤40 distinct homepages), scan=1 rotating pool, scan=0 skip; `npm run sync`. As of July 2026 Omar's split: ~40 twos, ~40 threes, ~348 ones (moved 26 of the original 106 twos to tier 1).
-2. ⬜ Create `scan_config` + `scan_findings` tables; seed `scan_config` with the scan prompt (adapt from "Scan logic" above), `max_searches=50`, `digest_recipient`
-3. ⬜ Write Edge Function `supabase/functions/opportunity-scan/index.ts` (queries → Anthropic call with web_search/web_fetch → parse → insert findings → Resend digest). Have Claude return findings as structured JSON (tool use or fenced JSON) so parsing into `scan_findings` is reliable.
-4. ⬜ Deploy + set secrets; test manually via `supabase functions invoke opportunity-scan`
-5. ⬜ Enable pg_cron/pg_net; schedule weekly Monday run
-6. ⬜ After 2-3 runs: review digest quality + Anthropic Console spend; tune prompt in `scan_config`
-7. ⬜ Retire the interim Cowork scheduled task (`crg-weekly-opportunity-scan`)
-8. ⬜ (Future) Admin review page: list `scan_findings` where status='new'; approve → generates announcement row / flags directory record for update
+### ⚠️ Hard-won gotchas (each one cost a debugging cycle — do not re-learn)
+
+- **`temperature` is DEPRECATED on `claude-sonnet-5`** and errors if sent. `callClaude` only
+  attaches it when it's a number; Haiku gets `temperature: 0`, Sonnet gets none. Don't "helpfully"
+  add it back.
+- **Sonnet `max_tokens` must stay generous (8000).** At 4096 it truncated mid-tool-call while
+  clustering 20+ items → no complete tool call → parsed as `[]`. Symptom is **zero findings from a
+  healthy run**, not an error. `stop_reason` is logged for exactly this.
+- **`dedupe_key` is derived IN CODE** (`dedupeKeyFor()` — normalized host+path, lowercased, no
+  query/trailing slash), **not** LLM-generated. An earlier LLM-authored key was non-deterministic
+  and the second run re-inserted 12 rows. It is deliberately absent from the Sonnet tool schema.
+- **Geography is a HARD GATE, not a recall-favoring judgment.** "When uncertain, include" applies to
+  RELEVANCE ONLY. Loose wording once surfaced a South Carolina shelter story.
+- **Candidate flooding:** without `PER_FEED_CAP` + query-feeds-first ordering, a handful of chatty
+  direct feeds filled the entire cap and **zero Google News queries were evaluated**. The
+  `filterToRegion` flag on statewide feeds must stay wired.
+- **RLS on `scan_findings`: enabled with NO policies — this is correct and intentional.** It locks
+  the browser/anon key out entirely; the Functions use the **secret key, which bypasses RLS**. If a
+  write fails, RLS is *not* the cause (it cannot allow one column and block another).
+- **`/news-feed` is named that way on purpose** — a function at `/news` would shadow the `/news`
+  page route. Both `/news-feed` and `/admin-findings` must be in the **explicit Vite proxy
+  allowlist** (`vite.config.mjs`) or they 404 in dev.
+- **Dev is `localhost:3000`** (Vite), which proxies API paths to wrangler on `:8788`. Wrangler's
+  `--proxy` is broken in v4 and serves a stale `./build`. Don't browse :8788.
+
+### Cron / secrets
+
+`scripts/schedule-opportunity-scan.sql` — run once in the Supabase SQL editor.
+
+- **`{"async": true}` is REQUIRED.** pg_net abandons the response after a few seconds; a real run
+  takes minutes. The flag makes the endpoint ack 202 and finish under `waitUntil`, so the run isn't
+  cancelled when pg_net hangs up. Verified live 2026-07-16 (digest arrived after the ack).
+- `SCAN_TRIGGER_SECRET` in Cloudflare env vars ↔ same value in Supabase Vault (`scan_trigger_secret`).
+  **Cloudflare stores the value literally — no quotes.** SQL quotes are delimiters and aren't stored.
+- **Editing a Cloudflare env var does nothing until you REDEPLOY** (Functions read env at deploy time).
+- `vault.create_secret` is **one-shot** (unique name). To rotate: `vault.update_secret((SELECT id
+  FROM vault.secrets WHERE name='scan_trigger_secret'), 'NEW')`.
+- **`cron.job_run_details` success only means the POST was accepted**, not that the scan worked —
+  the run outlives the request. Real signals: the digest email + Cloudflare logs.
+- Optional: `SCAN_DIGEST_RECIPIENT` (defaults to Omar).
+
+### Copyright — the aggregator pattern (non-negotiable)
+
+Own summary in CRG's words (never the outlet's text or verbatim headline) · link out, don't host ·
+attribute the outlet · **no scraped images/thumbnails/logos** · prefer RSS/sanctioned feeds.
+Paywalled outlets (Chronicle, HBJ) are still surfaced but badged.
+
+### News feed vs. announcements — separate channels (decided July 2026)
+
+Two independent systems; the feed does **not** absorb announcements.
+- **Announcements = push.** "I need you to know this." Keeps its login popup. Unchanged.
+- **News feed = pull.** "Here's what's happening, browse if you want." Chyron + `/news`.
+
+This split is what removes the hard problems (no personalization, no audience targeting, no
+priority-pop logic). Only the Training **chyron** was repurposed — everything else Training does is
+untouched.
+
+### Deferred / next
+
+- ⬜ **Unattended "vacation mode"** (auto-publish while Omar is away 3-8 weeks hiking) — **TABLED
+  July 2026**, possible October trip. Scenario, Claude's recommendation (a date not a boolean; the
+  confidence-gate question), and Omar's counter-position ("I'd rather have a bad story published
+  than a good story not published") are all documented in the plan file. Revisit with real
+  confidence-distribution data.
+- ⬜ After a few runs: review digest quality + Anthropic Console spend; tune the source list + rubric.
+- ⬜ Source scorecard (which outlets produce findings Omar actually publishes).
+- ⬜ `scan_config` table (prompt/limits editable without redeploy) — the vacation switch is its
+  likely forcing function.
+- ⬜ **Org-website page-diff ("Model A")** — later, and only after the news scan is proven. Single
+  source of truth = `organizations.scan` as a simple 1/0 (NOT the old 0/1/2/3 tiers) → dedup URLs →
+  fetch + extract/normalize main content → hash → Haiku only on *changed* pages. Needs a `scan_pages`
+  tripwire table. Cost scales with pages that change, not page count.
 
 ## Hosting & Infrastructure
 

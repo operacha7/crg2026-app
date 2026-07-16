@@ -17,11 +17,23 @@ CREATE EXTENSION IF NOT EXISTS pg_net;
 -- 2. Store the trigger secret in Vault — NOT inline in the cron command, which
 --    would otherwise sit in cron.job in plaintext for anyone with DB access.
 --    Replace the first argument with the same value set as SCAN_TRIGGER_SECRET
---    in Cloudflare. Safe to re-run: delete the old row first if rotating.
+--    in Cloudflare. Keep the single quotes — they are SQL string delimiters and
+--    are NOT stored; the Cloudflare value must be bare (no quotes) to match.
+--
+--    FIRST TIME ONLY. `create_secret` inserts, and the name is unique, so
+--    re-running it errors with "duplicate key ... secrets_name_idx". To CHANGE
+--    the value later (rotation, or fixing a bad paste), update in place instead:
+--
+--      SELECT vault.update_secret(
+--        (SELECT id FROM vault.secrets WHERE name = 'scan_trigger_secret'),
+--        'THE_NEW_SECRET');
 SELECT vault.create_secret('REPLACE_WITH_SCAN_TRIGGER_SECRET', 'scan_trigger_secret');
 
 -- 3. Sanity-check the secret reads back before scheduling anything against it.
---    Expect exactly one row matching what you set above.
+--    Expect exactly one row matching what you set above. Do not skip this: the
+--    cron command reads the secret via a subquery, and jsonb_build_object turns
+--    a NULL result into 'x-scan-secret': null WITHOUT erroring — which the
+--    endpoint rejects as a 401 that looks exactly like a wrong secret.
 SELECT name, decrypted_secret
 FROM vault.decrypted_secrets
 WHERE name = 'scan_trigger_secret';

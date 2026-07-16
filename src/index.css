@@ -101,8 +101,13 @@
    just off the right viewport edge (100vw) and ends fully off the left (-100% of
    its own width). Pure transform → cheap, no layout thrash.
    Unlike the old training chyron (which ran a fixed number of passes then
-   collapsed), this LOOPS continuously and runs slower, since it carries several
-   headlines rather than one line. */
+   collapsed), this LOOPS continuously.
+
+   animation-duration is set from JS (see NewsChyron) — it MUST scale with the
+   track's width or the scroll speed becomes a function of how many stories are
+   published: the distance travelled is 100vw + the track's own width, so a fixed
+   duration makes 20 headlines fly past several times faster than 3. The 60s here
+   is only a pre-measurement fallback. */
 @keyframes chyron-scroll {
   from {
     transform: translateX(100vw);

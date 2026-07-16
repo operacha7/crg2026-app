@@ -21,7 +21,7 @@
 // teal tier is hidden, so the day-of button appears as a full-width bar above the
 // copyright line.
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { USFlagIcon } from "../icons";
 import { useTraining } from "../Contexts/TrainingContext";
@@ -102,6 +102,12 @@ function TrainingFooterButton({ session, state, now, fullWidth, buttonRef }) {
   );
 }
 
+// Chyron scroll speed. THE readability dial: raise to scroll faster, lower to
+// linger. 60px/s reads comfortably; much past ~90 the headlines start to blur.
+// A full loop therefore takes longer on busy weeks — correct for a ticker, which
+// repeats anyway.
+const CHYRON_SPEED_PX_PER_SEC = 60;
+
 // Published news headlines are fetched ONCE per page load and shared — Footer is
 // mounted per page, so without this cache every navigation would refetch.
 let newsHeadlinesPromise = null;
@@ -123,6 +129,8 @@ function fetchNewsHeadlines() {
 // static label instead of a scroll (the full headline reel would overflow).
 function NewsChyron() {
   const [items, setItems] = useState([]);
+  const trackRef = useRef(null);
+  const [duration, setDuration] = useState(null);
   const reduce =
     typeof window !== "undefined" &&
     window.matchMedia &&
@@ -137,6 +145,32 @@ function NewsChyron() {
       cancelled = true;
     };
   }, []);
+
+  // Hold the scroll SPEED constant instead of the duration. The keyframe travels
+  // 100vw + the track's own width, so a fixed duration silently turns "how many
+  // stories are published" into "how fast they scroll" — a busy week becomes
+  // unreadable. Measure the track and derive the duration from it.
+  // ResizeObserver (not just a resize listener) because the track also changes
+  // width when webfonts finish loading, after the first measurement.
+  useLayoutEffect(() => {
+    if (reduce || items.length === 0) return undefined;
+    const el = trackRef.current;
+    if (!el) return undefined;
+
+    const measure = () => {
+      const distance = window.innerWidth + el.scrollWidth;
+      setDuration(distance / CHYRON_SPEED_PX_PER_SEC);
+    };
+    measure();
+
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [items, reduce]);
 
   if (items.length === 0) return null;
 
@@ -181,7 +215,11 @@ function NewsChyron() {
           // whitespace, so a padded separator in a plain string renders as a
           // single space and the headlines read as one long line. The gold
           // bullet (matching the NEWS badge) carries the gap.
-          <span className="news-chyron-track">
+          <span
+            className="news-chyron-track"
+            ref={trackRef}
+            style={duration ? { animationDuration: `${duration}s` } : undefined}
+          >
             {items.map((item, i) => (
               <React.Fragment key={item.id}>
                 {i > 0 && (
