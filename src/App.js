@@ -39,7 +39,10 @@ const GUEST_USER = {
 // (org-level usage analytics). /announcements is reachable by guests:
 // AnnouncementService filters by audience — guests see audience_code 1 plus any
 // code-3 announcement that targets "Guest" — matching the popup behavior on load.
-const PUBLIC_MAIN_PATH_PREFIXES = ['/assistance/', '/support', '/find', '/announcements'];
+// /news is public by design: it's the Opportunity Scan news feed, readable by
+// anyone (and a fresh-content SEO surface). Its data comes from /news-feed, which
+// only ever returns published, unexpired items.
+const PUBLIC_MAIN_PATH_PREFIXES = ['/assistance/', '/support', '/find', '/announcements', '/news'];
 
 const isPublicMainPath = (pathname) =>
   PUBLIC_MAIN_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));

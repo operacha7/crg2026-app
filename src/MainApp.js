@@ -23,6 +23,8 @@ import ZipCodePage from "./views/ZipCodePage";
 const ReportsPage = lazy(() => import("./views/ReportsPage"));
 const SupportPage = lazy(() => import("./views/SupportPage"));
 const AnnouncementsPage = lazy(() => import("./views/AnnouncementsPage"));
+const NewsPage = lazy(() => import("./views/NewsPage"));
+const AdminReviewPage = lazy(() => import("./views/AdminReviewPage"));
 
 // Training reminders: the /find popup (shown after announcements, once per day)
 // + the transforming footer "Training Session" button, both driven by
@@ -221,6 +223,11 @@ function AppContent({ loggedInUser, announcementsDone }) {
             path="/announcements"
             element={<AnnouncementsPage loggedInUser={loggedInUser} />}
           />
+          {/* Public news feed of published Opportunity Scan findings. */}
+          <Route path="/news" element={<NewsPage />} />
+          {/* Opportunity Scan review queue — admin org only (the page itself
+              redirects non-admins; /admin-findings enforces it server-side). */}
+          <Route path="/admin" element={<AdminReviewPage loggedInUser={loggedInUser} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
           <Route
             path="/reports"

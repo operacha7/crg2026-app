@@ -10,6 +10,7 @@ export { USFlagIcon } from './USFlagIcon';
 export { InformationIcon } from './InformationIcon';
 export { ReportsIcon } from './ReportsIcon';
 export { AnnouncementsIcon } from './AnnouncementsIcon';
+export { AdminIcon } from './AdminIcon';
 export { PrivacyPolicyIcon } from './PrivacyPolicyIcon';
 export { ContactSupportIcon } from './ContactSupportIcon';
 export { DistanceIcon } from './DistanceIcon';

@@ -11,6 +11,9 @@
 // Edit this list once and both hamburgers update, so they can't drift apart.
 
 export const SHARED_NAV_LINKS = [
+  // News is how mobile reaches the feed — the chyron that carries it on desktop
+  // sits above the teal tier, which is hidden on mobile.
+  { label: "News", path: "/news" },
   { label: "Training", path: "/training" },
   { label: "Privacy Policy", path: "/privacy" },
   { label: "Terms of Service", path: "/terms" },

@@ -8,10 +8,12 @@ import {
   HelpBubbleIcon,
   ReportsIcon,
   AnnouncementsIcon,
+  AdminIcon,
   HomeIcon,
   QuickTipsIcon,
   LogoutIcon,
 } from "../icons";
+import { ADMIN_ACCOUNT_ID } from "../data/constants";
 import Tooltip from "../components/Tooltip";
 import { useAppData } from "../Contexts/AppDataContext";
 import HelpPanel from "../components/HelpPanel";
@@ -28,10 +30,17 @@ const navItems = [
   { id: "announcements", Icon: AnnouncementsIcon, label: "Announcements" },
 ];
 
+// The Opportunity Scan review queue — prepended to navItems for the admin org
+// only (see isAdmin below), so it sits above Quick Tips and the established
+// icon order below it never shifts. Hiding it is convenience, not security: the
+// /admin-findings API and the /admin page both enforce the account check.
+const ADMIN_NAV_ITEM = { id: "admin", Icon: AdminIcon, label: "Admin Review" };
+
 // Map nav item ids to their routes
 const navRoutes = {
   reports: "/reports",
   announcements: "/announcements",
+  admin: "/admin",
 };
 
 export default function VerticalNavBar({
@@ -81,6 +90,11 @@ export default function VerticalNavBar({
   // filtering already happens server-side in AnnouncementService.
   const isGuest = loggedInUser?.isGuest === true;
   const GUEST_GATED_IDS = new Set(["reports"]);
+
+  // The Admin Review icon exists only for the admin org. Everyone else never
+  // sees it — and couldn't use it anyway (the API checks the session).
+  const isAdmin = Number(loggedInUser?.account_id) === ADMIN_ACCOUNT_ID;
+  const visibleNavItems = isAdmin ? [ADMIN_NAV_ITEM, ...navItems] : navItems;
 
   // Home is active when we're on the working ZipCodePage URL.
   const isHomeActive = location.pathname === "/find";
@@ -217,7 +231,7 @@ export default function VerticalNavBar({
             paddingBottom: "var(--padding-vertical-nav-bottom)",
           }}
         >
-          {navItems.map(({ id, Icon, label }) => {
+          {visibleNavItems.map(({ id, Icon, label }) => {
             const isGated = isGuest && GUEST_GATED_IDS.has(id);
             const tooltipText = isGated ? "You need an account. Contact Support." : label;
             return (

@@ -4,22 +4,28 @@
 //   2. Red copyright bar (unchanged from prior versions)
 // Renders on every page — homepage, public pages, and in-app.
 //
-// Training notice splits by timing (in-app, where TrainingProvider is mounted):
-//   - In the WEEK BEFORE a session (not its day): a yellow "breaking news"
-//     chyron scrolls above the teal tier telling users to click "Training" to
-//     schedule. The teal tier keeps its plain "Training" link as the target.
+// The chyron above the teal tier carries the NEWS feed — published Opportunity
+// Scan headlines on a continuous loop, click → /news. It previously carried the
+// training advance notice; that was handed over deliberately (July 2026). Only
+// the chyron changed — every other part of Training is untouched.
+//
+// Training notice (in-app, where TrainingProvider is mounted):
+//   - In the WEEK BEFORE a session: the teal tier's "Training" link becomes the
+//     amber pulsing beacon link. NOTE: the teal tier is desktop-only, so since
+//     the chyron went to news there is no week-before notice on mobile; mobile
+//     still gets the day-of bar below.
 //   - On the session's OWN DAY: the "Training" link transforms into the enlarged
 //     "Training Session — …" button carrying the live state (gray/yellow/green/
 //     orange) that glow-pulses on green/orange. The teal tier auto-grows for it.
 // Public pages (no provider) show the plain "Training" link only. On mobile the
 // teal tier is hidden, so the day-of button appears as a full-width bar above the
-// copyright line, and the advance chyron still shows full-width.
+// copyright line.
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { USFlagIcon } from "../icons";
 import { useTraining } from "../Contexts/TrainingContext";
-import { sessionToInstants, getSessionDisplayParts, formatCountdown } from "../utils/calendar";
+import { sessionToInstants, formatCountdown } from "../utils/calendar";
 
 const SECONDARY_LINKS = [
   { label: "Training", to: "/training" },
@@ -35,10 +41,6 @@ const SECONDARY_LINKS = [
 
 // Glow ring color (rgb triplet for the .training-pulse keyframe) for the live state.
 const GLOW = { live: "8, 255, 8" };
-
-// How many right→left passes the advance chyron makes before it collapses for
-// the rest of the visit. Tunable.
-const CHYRON_PASSES = 1;
 
 // Amber "emergency beacon" used on the teal-footer Training link whenever a
 // session is in the look-ahead window (a slow pulse — deliberately well under the
@@ -100,55 +102,100 @@ function TrainingFooterButton({ session, state, now, fullWidth, buttonRef }) {
   );
 }
 
-// Advance-notice "breaking news" chyron — amber bar (same amber as the Training
-// beacon, so the whole "upcoming — plan ahead" story is one color) that scrolls
-// the schedule reminder a few times then collapses for the rest of the visit.
-// Shown only in the days BEFORE a session (the day-of button replaces it).
-// Reduced-motion users get the message statically (no scroll, no auto-hide).
-function TrainingChyron({ session }) {
-  const [done, setDone] = useState(false);
+// Published news headlines are fetched ONCE per page load and shared — Footer is
+// mounted per page, so without this cache every navigation would refetch.
+let newsHeadlinesPromise = null;
+function fetchNewsHeadlines() {
+  newsHeadlinesPromise ||= fetch("/news-feed")
+    .then((res) => res.json())
+    .then((data) => (data.ok ? data.items || [] : []))
+    // The chyron is decorative-adjacent: a feed failure must never break the
+    // footer on every page. Fall back to rendering nothing.
+    .catch(() => []);
+  return newsHeadlinesPromise;
+}
+
+// News chyron — the ticker above the teal tier. Scrolls the current published
+// headlines on a continuous loop; the whole bar links to /news. Charcoal (not
+// the Training amber) so it can't be mistaken for the training beacon, with a
+// gold "NEWS" badge pinned at the left as a stable identifier.
+// Renders nothing when there's no published news. Reduced-motion users get a
+// static label instead of a scroll (the full headline reel would overflow).
+function NewsChyron() {
+  const [items, setItems] = useState([]);
   const reduce =
     typeof window !== "undefined" &&
     window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const parts = getSessionDisplayParts(session);
-  if (!parts || done) return null;
+  useEffect(() => {
+    let cancelled = false;
+    fetchNewsHeadlines().then((list) => {
+      if (!cancelled) setItems(list);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const message = `Next Live Training Session on ${parts.weekdayDate} at ${parts.startTime}  —  Click on “Training” to attend.`;
+  if (items.length === 0) return null;
 
   return (
-    <div
-      className="w-full overflow-hidden"
-      role="status"
-      aria-live="polite"
+    <Link
+      to="/news"
+      aria-label={`Weekly Briefing — ${items.length} stories. Open the news page.`}
+      className="w-full overflow-hidden flex items-stretch hover:brightness-125"
       style={{
-        background: BEACON_AMBER,
-        color: "#1A1A1A",
+        background: "#222831",
+        color: "#FFFFFF",
         height: 30,
-        display: "flex",
-        alignItems: "center",
-        fontWeight: 700,
+        fontWeight: 500,
         fontSize: 14,
         letterSpacing: "0.3px",
+        textDecoration: "none",
         borderTop: "1px solid rgba(0,0,0,0.18)",
         borderBottom: "1px solid rgba(0,0,0,0.18)",
       }}
     >
-      {reduce ? (
-        <span style={{ width: "100%", textAlign: "center", padding: "0 12px" }}>
-          {message}
-        </span>
-      ) : (
-        <span
-          className="training-chyron-track"
-          style={{ animationIterationCount: CHYRON_PASSES }}
-          onAnimationEnd={() => setDone(true)}
-        >
-          {message}
-        </span>
-      )}
-    </div>
+      <span
+        className="flex items-center"
+        style={{
+          flexShrink: 0,
+          background: "#FFC857",
+          color: "#222831",
+          fontWeight: 800,
+          fontSize: 12,
+          letterSpacing: "0.09em",
+          padding: "0 12px",
+        }}
+      >
+        NEWS
+      </span>
+      <span className="flex items-center" style={{ flex: 1, overflow: "hidden" }}>
+        {reduce ? (
+          <span style={{ padding: "0 12px" }}>
+            {items.length} {items.length === 1 ? "story" : "stories"} in this week's briefing — click to read
+          </span>
+        ) : (
+          // Real elements, not a joined string: HTML collapses runs of
+          // whitespace, so a padded separator in a plain string renders as a
+          // single space and the headlines read as one long line. The gold
+          // bullet (matching the NEWS badge) carries the gap.
+          <span className="news-chyron-track">
+            {items.map((item, i) => (
+              <React.Fragment key={item.id}>
+                {i > 0 && (
+                  <span aria-hidden="true" style={{ color: "#FFC857", margin: "0 26px" }}>
+                    •
+                  </span>
+                )}
+                <span>{item.title}</span>
+              </React.Fragment>
+            ))}
+          </span>
+        )}
+      </span>
+    </Link>
   );
 }
 
@@ -193,8 +240,6 @@ export default function Footer() {
   // There's a surface-able session within the look-ahead window (not past its cutoff).
   const hasUpcomingSession =
     !!upcomingSession && buttonState !== "gone" && buttonState !== "unavailable";
-  // Advance notice (days before the session) → chyron above the teal tier.
-  const showChyron = hasUpcomingSession && !isToday;
   // Day-of → the color-changing button. On DESKTOP it only appears once the popup
   // has been closed (minimized) — the panel "whooshes" down into it; until then
   // the teal tier shows the plain "Training" link. Mobile has no popup, so its
@@ -204,8 +249,9 @@ export default function Footer() {
 
   return (
     <>
-      {/* Advance-notice chyron — sits directly above the teal tier. */}
-      {showChyron && <TrainingChyron session={upcomingSession} />}
+      {/* News chyron — sits directly above the teal tier. Self-hides when there
+          is no published news, so pages just lose the bar rather than break. */}
+      <NewsChyron />
 
       {/* Teal secondary tier — hidden on mobile (links live in the hamburger).
           minHeight (not fixed height) so it auto-grows for the taller training

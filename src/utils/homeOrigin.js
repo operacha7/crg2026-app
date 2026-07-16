@@ -26,6 +26,8 @@ const SECONDARY_PATHS = new Set([
   "/support",
   "/reports",
   "/announcements",
+  "/news",
+  "/admin",
 ]);
 
 // Record the current location as the home origin, unless it's a secondary page.

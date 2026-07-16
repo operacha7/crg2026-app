@@ -37,6 +37,12 @@ export default defineConfig({
       '/sendSupportEmail': 'http://localhost:8788',
       '/training-request': 'http://localhost:8788',
       '/track-calendar-add': 'http://localhost:8788',
+      // News feed data for the /news page + chyron. NOTE: proxy '/news-feed',
+      // never '/news' — /news is the React page route and must stay with Vite.
+      '/news-feed': 'http://localhost:8788',
+      // Admin review API (behind the session cookie + admin account gate).
+      // Same rule: '/admin-findings', never '/admin' (that's the page route).
+      '/admin-findings': 'http://localhost:8788',
       // Auth endpoints (Set-Cookie / Cookie pass through fine; default
       // proxy preserves them, and we don't set Domain on the cookie so the
       // browser ties it to the request origin — localhost:3000 in dev).
