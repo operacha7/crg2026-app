@@ -1262,7 +1262,29 @@ The Quick Tips pattern can be reused for other contextual help. When a feature c
 
 **Note:** Avoid overusing auto-open. Reserve for truly new or confusing features. Manual access via lightbulb should be the primary discovery method.
 
-## Opportunity Scan System (BUILT — live July 2026)
+## Opportunity Scan System (BUILT — runs on Omar's home desktop via launchd)
+
+> **⚠️ STATUS 2026-07-16 — the runtime lives OFF Cloudflare. Read before touching the scan.**
+> The pipeline runs from Node on Omar's **always-on home desktop**, scheduled **Mondays 2pm local**
+> by `launchd` (`scripts/launchd/`). It was migrated off Cloudflare because two blockers made a
+> datacenter fundamentally unable to run it — both are the *reason for the current architecture*:
+> 1. **Google News RSS refuses Cloudflare** — every query 503s from Cloudflare's (shared, heavily-
+>    used) egress IPs, while the identical query returns fresh items from a residential IP, same
+>    minute. Not rate limiting, not fixable by backoff. That's ~half the feeds and the curated
+>    "workhorse" of the source design. A residential IP (home desktop) gets them fine — **verified
+>    2026-07-16**: a Node dry-run polled all the Google News queries live and returned items.
+> 2. **`waitUntil` is capped at ~30s** — a real run takes minutes (LLM latency), so Cloudflare
+>    cancels it. Node has no such cap.
+>
+> Rationale for accepting a home-machine's reliability downsides: the news feed is **nice-to-have,
+> not mission-critical** — CRG's core purpose is resource referrals, a stale feed for a few weeks
+> harms nobody, so **"best data" beats "best uptime."** Later, optionally a Raspberry Pi (kills the
+> macOS-specific fragility: login-session requirement, FileVault, forced update restarts, sleep —
+> but NOT house power/internet). See "Runtime (home desktop / launchd)" below.
+>
+> The engine (`runScan()` and everything it calls) is transport-free and unchanged from the
+> Cloudflare build; only the trigger + transport moved. The Cloudflare `/opportunity-scan` route is
+> **deleted** (git history has it if a degraded cloud fallback is ever built).
 
 A weekly automated scan that sweeps 15-county Houston-area news for new/changed assistance
 resources, drafts findings, and holds them for Omar's review. Approved findings publish to a
@@ -1275,27 +1297,29 @@ resources, drafts findings, and holds them for Omar's review. Approved findings 
 > feeds + Claude as triager/synthesizer, not crawler**. Page-diff is deferred (see bottom).
 > Full design rationale: `~/.claude/plans/claude-md-includes-an-opportunity-woolly-music.md`.
 
-### Pipeline (`functions/opportunity-scan.js`)
+### Pipeline (`functions/_lib/scan-pipeline.js`, run by `scripts/run-scan.mjs`)
 
 ```
-pg_cron (Mon 13:00 UTC) ──net.http_post──> POST /opportunity-scan  {"async": true}
-                                              │  (x-scan-secret header)
-                                              ├─ 202 ack immediately, work continues in waitUntil
-                                              │
-  1. Poll feeds (RSS/Google News RSS/GDELT)   │  free, dependency-free parser
-  2. 14-day window → dedupe by link → cap 500
+launchd (Mon 2pm local) ──> node scripts/run-scan.mjs ──> runScan({env, supabase, …})
+                                                            │  (loads .dev.vars, builds env + client)
+  1. Poll feeds (RSS/Google News RSS/GDELT)                 │  free, dependency-free parser
+  2. 14-day window → dedupe by link → cap 500               │  concurrency-pooled (6)
   3. Haiku 4.5 relevance cull (RELEVANCE_RUBRIC)
   4. Sonnet 5 synthesis: cluster same-event stories → ONE finding + best link;
        cross-reference CRG org list (prompt-cached); tag category + crg_action
   5. Upsert scan_findings status='new'  ON CONFLICT (dedupe_key) DO NOTHING
-  6. Resend digest → operacha@sbcglobal.net ("N new to review")
+  6. Resend digest → operacha@sbcglobal.net ("N new to review")   [+ crash email on failure]
 
-Omar reviews at /admin → dismiss, or attach resource + publish
+Omar (or a volunteer reviewer) reviews at /admin → dismiss, or attach resource + publish
 Published + unexpired → /news-feed → chyron + /news page
 ```
 
-**Tuning constants** (top of `opportunity-scan.js`): `WINDOW_DAYS=14`, `MAX_CANDIDATES=500`,
-`PER_FEED_CAP=30`, `FEED_TIMEOUT_MS=15000`, `HAIKU_CHUNK=200`.
+`runScan()` throws on failure; `run-scan.mjs` catches it and emails a "⚠️ FAILED" notice (the
+digest is the heartbeat, so a crash-before-digest must announce itself). `--dry-run` skips the DB
+insert + digest and prints the findings.
+
+**Tuning constants** (top of `scan-pipeline.js`): `WINDOW_DAYS=14`, `MAX_CANDIDATES=500`,
+`PER_FEED_CAP=30`, `FEED_TIMEOUT_MS=15000`, `FEED_CONCURRENCY=6`, `HAIKU_CHUNK=200`.
 
 **Why a 14-day window on a 7-day cadence:** every article gets two chances to be seen. A single run
 is not exhaustive (live feeds shift, recall is generous), so the overlap is deliberate — `dedupe_key`
@@ -1305,17 +1329,23 @@ prevents the second look from creating duplicates.
 
 | File | Role |
 |------|------|
-| `functions/opportunity-scan.js` | The scan. `runScan()` = pipeline; `onRequest` = transport |
+| `functions/_lib/scan-pipeline.js` | **The scan engine.** `runScan()` = the transport-free pipeline (poll → Haiku → Sonnet → upsert → digest). Underscore dir = library, not a route |
+| `scripts/run-scan.mjs` | **Node entry point.** Loads `.dev.vars`, builds env + Supabase client, calls `runScan()`, emails on crash. `--dry-run` supported |
+| `scripts/launchd/org.crghouston.opportunity-scan.plist` | launchd schedule — Mondays 2pm local |
+| `scripts/launchd/README.md` | Install / test / update / remove commands + reliability notes |
 | `functions/_lib/scan-sources.js` | `DIRECT_FEEDS`, `GOOGLE_NEWS_QUERIES`, `GDELT_QUERIES`, `COUNTIES` (15), `RELEVANCE_RUBRIC`, paywall tokens |
 | `functions/_lib/rss.js` | Dependency-free fetch + tolerant RSS/Atom parser; `pollFeed` never throws |
 | `functions/_lib/dedupe.js` | `normalizeUrl()` / `dedupeKeyFor()` — shared by scan + admin manual-add |
-| `functions/news-feed.js` | Public GET: published + unexpired findings (+ `paywalled` flag) |
-| `functions/admin-findings.js` | Admin GET/PATCH; `WRITABLE` allowlist; `requireAdmin` |
+| `functions/news-feed.js` | Public GET: published + unexpired findings (+ `paywalled` flag) — **still on Cloudflare** |
+| `functions/admin-findings.js` | Admin GET/PATCH; `WRITABLE` allowlist; `requireAdmin` — **still on Cloudflare** |
 | `src/views/NewsPage.js` | `/news` — public feed, grouped by category |
 | `src/views/AdminReviewPage.js` | `/admin` — Queue / Published tabs, resource picker |
 | `src/data/newsCategories.js` | Client mirror of the category enum (icon + accent per category) |
 | `src/layout/Footer.js` | `NewsChyron` — scrolling published headlines → `/news` |
-| `scripts/schedule-opportunity-scan.sql` | pg_cron/pg_net setup + operating queries |
+
+Only the **scan trigger + pipeline** moved to the home desktop. Everything user-facing (News page,
+chyron, Admin Review) and its two read/write Functions (`news-feed.js`, `admin-findings.js`) stay
+on Cloudflare — they read/write `scan_findings` and don't care what populated it.
 
 **Source curation notes:** `docs/scan-sources-draft.md` (provenance; which feeds were verified live).
 
@@ -1325,7 +1355,7 @@ prevents the second look from creating duplicates.
 `disaster` · `news_policy` · `other`
 
 **Mirrored in FOUR places — keep in sync when tuning:** `CATEGORY_ENUM` + the tool schema
-description + the synthesis prompt (all in `opportunity-scan.js`) + the digest label map, plus
+description + the synthesis prompt (all in `scan-pipeline.js`) + the digest label map, plus
 `NEWS_CATEGORIES` in `src/data/newsCategories.js`.
 (`disaster` and `news_policy` currently fall back to `OtherIcon` — Omar is drawing art for both.)
 
@@ -1346,14 +1376,23 @@ security — both `/admin-findings` and the page enforce the account check.
 
 ### `scan_findings` schema
 
-Core: `id`, `run_date`, `created_at`, `source`, `source_url`, `dedupe_key` (UNIQUE), `category`,
-`title`, `summary`, `eligibility`, `deadline` (free text), `county`, `org_name`,
-`directory_id_no` (int4), `crg_action`, `confidence`, `status`, `notes`,
-plus `origin` ('scan'|'manual'), `published_at`, `expires_at`, `pinned`.
+**Actual live columns (verified 2026-07-16):** `id`, `run_date`, `created_at`, `source`,
+`source_url`, `dedupe_key` (UNIQUE), `category`, `title`, `summary`, `eligibility`, `deadline`
+(free text), `county`, `org_name`, `directory_id_no` (int4), `confidence`, `status`, `notes`,
+`expires_at`.
 
-`category`/`crg_action`/`status`/`origin` are **conventions, not DB enums** — new values need no
-migration. Findings insert with `expires_at` = run date + 7 days, so each week's stories age off as
-the next week's publish; `pinned` overrides expiry (evergreen until unpinned).
+`category`/`status` are **conventions, not DB enums** — new values need no migration. Findings
+insert with `status='new'` + `expires_at` = run date + 7 days; the feed shows
+`status='published'` rows whose `expires_at` is in the future, so each week's stories age off as
+the next week's publish.
+
+> **⚠️ Documented-but-NOT-in-live-table (verified absent 2026-07-16):** `crg_action`, `origin`
+> ('scan'|'manual'), `published_at`, `pinned`. The v2.x plan said these were added; they were not.
+> Nothing is broken — the app code (`news-feed.js`, `admin-findings.js`, NewsPage, AdminReviewPage)
+> only ever touches the live columns above, driving freshness off `status` + `expires_at`, not
+> `published_at`. The deferred features that need them (`pinned`/evergreen, `origin`/manual-add
+> tagging) are simply unbuilt. Add the column **and** wire the feature together if/when wanted —
+> don't add bare columns.
 
 ### ⚠️ Hard-won gotchas (each one cost a debugging cycle — do not re-learn)
 
@@ -1366,6 +1405,17 @@ the next week's publish; `pinned` overrides expiry (evergreen until unpinned).
 - **`dedupe_key` is derived IN CODE** (`dedupeKeyFor()` — normalized host+path, lowercased, no
   query/trailing slash), **not** LLM-generated. An earlier LLM-authored key was non-deterministic
   and the second run re-inserted 12 rows. It is deliberately absent from the Sonnet tool schema.
+- **URL dedup can't catch same-story-different-URL** (found 2026-07-16). A story reaches us via a
+  direct outlet link one week and an opaque `news.google.com/rss/articles/CBMi…` **redirect** the
+  next (Google News URLs ≠ the article's real URL and aren't locally decodable), so `dedupe_key`
+  sees two different strings and `ON CONFLICT` misses it. Mitigation is **flag, not drop** (recall
+  beats dedup — a false MERGE would silently lose a story; a false flag is an ignorable note):
+  `annotateDuplicates()` sets `_dupOf` on a new finding whose title Jaccard ≥ 0.5 AND same category
+  as a recent row. **Surfaced in the digest email ONLY — never written to `notes`, which is PUBLIC**
+  (renders on `/news`). The `/admin` queue and DB are unaffected; the reviewer one-click-dismisses.
+- **The digest reports NEW findings, not everything found.** Built from the rows actually inserted
+  (`.select("dedupe_key")` after the ignore-duplicates upsert returns only genuinely-new keys), so a
+  story already in `scan_findings` no longer reappears in the email. Footer shows `found N → new M`.
 - **Geography is a HARD GATE, not a recall-favoring judgment.** "When uncertain, include" applies to
   RELEVANCE ONLY. Loose wording once surfaced a South Carolina shelter story.
 - **EVERY response body must be read or `cancel()`ed — even on an error status.** The original
@@ -1388,24 +1438,46 @@ the next week's publish; `pinned` overrides expiry (evergreen until unpinned).
 - **`/news-feed` is named that way on purpose** — a function at `/news` would shadow the `/news`
   page route. Both `/news-feed` and `/admin-findings` must be in the **explicit Vite proxy
   allowlist** (`vite.config.mjs`) or they 404 in dev.
-- **Dev is `localhost:3000`** (Vite), which proxies API paths to wrangler on `:8788`. Wrangler's
-  `--proxy` is broken in v4 and serves a stale `./build`. Don't browse :8788.
+- **Anthropic 429/5xx/529 "Overloaded" are transient — `callClaude` retries them** (exponential
+  backoff + jitter; Sonnet gets `retries: 5` ≈ up to ~30s because it's the one critical, expensive
+  call). Verified 2026-07-16: Sonnet 5 was in a sustained overload and every retry 529'd — that's an
+  Anthropic capacity event, not a bug; re-running later succeeds. A hard 4xx (bad request/auth)
+  rethrows immediately. Don't "simplify" the retry loop away.
+- **`dev == prod` now.** The scan runs on the same home machine you'd dev on, with the same
+  residential IP — so the whole class of "worked locally, failed on Cloudflare" bugs (the 503s, the
+  connection-slot deadlock) can no longer hide. The flip side: there is **no staging** — a bad edit
+  to `scan-pipeline.js`/`run-scan.mjs` runs live next Monday. Keep the working tree clean.
 
-### Cron / secrets
+### Runtime (home desktop / launchd)
 
-`scripts/schedule-opportunity-scan.sql` — run once in the Supabase SQL editor.
+Full install/test/update/remove commands + reliability notes: **`scripts/launchd/README.md`**.
 
-- **`{"async": true}` is REQUIRED.** pg_net abandons the response after a few seconds; a real run
-  takes minutes. The flag makes the endpoint ack 202 and finish under `waitUntil`, so the run isn't
-  cancelled when pg_net hangs up. Verified live 2026-07-16 (digest arrived after the ack).
-- `SCAN_TRIGGER_SECRET` in Cloudflare env vars ↔ same value in Supabase Vault (`scan_trigger_secret`).
-  **Cloudflare stores the value literally — no quotes.** SQL quotes are delimiters and aren't stored.
-- **Editing a Cloudflare env var does nothing until you REDEPLOY** (Functions read env at deploy time).
-- `vault.create_secret` is **one-shot** (unique name). To rotate: `vault.update_secret((SELECT id
-  FROM vault.secrets WHERE name='scan_trigger_secret'), 'NEW')`.
-- **`cron.job_run_details` success only means the POST was accepted**, not that the scan worked —
-  the run outlives the request. Real signals: the digest email + Cloudflare logs.
-- Optional: `SCAN_DIGEST_RECIPIENT` (defaults to Omar).
+- **Schedule:** `~/Library/LaunchAgents/org.crghouston.opportunity-scan.plist` → `node
+  scripts/run-scan.mjs`, **Mondays 2pm local** (launchd handles DST; no UTC drift).
+- **Absolute node path** in the plist (`/usr/local/bin/node`) — launchd's PATH is minimal. Verify
+  with `which node` if node ever moves.
+- **Secrets** come from `.dev.vars` (same file wrangler uses), loaded by dotenv and resolved
+  relative to the script (not cwd). Needs `ANTHROPIC_API_KEY`, `RESEND_API_KEY`,
+  `VITE_SUPABASE_URL`, `VITE_SUPABASE_SECRET_KEY`. Optional `SCAN_DIGEST_RECIPIENT` (defaults to Omar).
+- **Logs:** `logs/scan.out.log` / `logs/scan.err.log` (gitignored). **Silence = broken** — even a
+  0-findings run emails the digest; a crash emails a "⚠️ FAILED" notice. A Monday with *no* email of
+  either kind = check the logs.
+- **Test now:** `node scripts/run-scan.mjs --dry-run` (no writes), or
+  `launchctl kickstart -k gui/$(id -u)/org.crghouston.opportunity-scan` (real run).
+- **Reliability trade-off:** a per-user LaunchAgent only runs in a logged-in GUI session, so a
+  powered-off machine or a post-update FileVault/login screen at 2pm = a skipped week (accepted;
+  nice-to-have feed). Hardening options (LaunchDaemon / auto-login / Raspberry Pi) deferred.
+
+### Cloudflare teardown — remaining manual steps (Omar, in the dashboards)
+
+The `/opportunity-scan` route + `scripts/schedule-opportunity-scan.sql` are **deleted from the
+repo**. Still to remove outside the repo (none are urgent — they're just dead weight now):
+
+1. **Unschedule the pg_cron job:** `SELECT cron.unschedule('weekly-opportunity-scan');` in the
+   Supabase SQL editor.
+2. **Delete the Vault secret:** `DELETE FROM vault.secrets WHERE name = 'scan_trigger_secret';`
+3. **Delete the `SCAN_TRIGGER_SECRET`** Cloudflare env var (Pages → Settings → env vars) + redeploy.
+4. **Delete the Cowork task** `crg-weekly-opportunity-scan` (the interim reminder), if still around.
 
 ### Copyright — the aggregator pattern (non-negotiable)
 
@@ -1422,6 +1494,30 @@ Two independent systems; the feed does **not** absorb announcements.
 This split is what removes the hard problems (no personalization, no audience targeting, no
 priority-pop logic). Only the Training **chyron** was repurposed — everything else Training does is
 untouched.
+
+### Runtime migration — Cloudflare → home desktop (DONE 2026-07-16)
+
+Done: `runScan()` extracted to `functions/_lib/scan-pipeline.js`; `scripts/run-scan.mjs` +
+`scripts/launchd/` added; the Cloudflare `/opportunity-scan` route and `schedule-opportunity-scan.sql`
+deleted. **~90% of the system was reused untouched** — the whole pipeline (`pollAllSources` → Haiku →
+Sonnet → upsert → Resend digest), all prompts/rubric/tool schemas, `_lib/rss.js` / `_lib/dedupe.js` /
+`_lib/scan-sources.js`, the Supabase schema, and everything user-facing (NewsPage, chyron, Admin
+Review, `news-feed.js`, `admin-findings.js`, all still on Cloudflare reading `scan_findings`). The
+`runScan()` transport-free split (`{env, supabase, runDate, expiresDate, dryRun}`) — originally cut
+for the `waitUntil` fix — was exactly the seam this needed. Google News queries came back live
+(verified from Node on the residential IP).
+
+**Known trade-offs, accepted:** single point of failure (house power/internet/machine); runs the
+working tree, not a built artifact (an uncommitted half-edit will run — no build gate); no staging;
+no remote fix while away; DIY observability. Accepted because **the news feed is nice-to-have, not
+mission-critical**. **Wins:** no deploys to tune the rubric/sources (the slowest loop in the
+project), no 30s ceiling, no shared secret/Vault, local-time scheduling.
+
+**Later:** Raspberry Pi — kills the macOS-specific fragility (login session, FileVault, update
+restarts, sleep) but NOT house power/internet. Portable by design: same Node script, swap launchd
+for a systemd timer. Optional safety net (NOT now): a degraded Cloudflare scan (direct feeds +
+GDELT, no Google) that runs only if home hasn't reported in — a scraping-proxy (e.g. ScraperAPI free
+tier) is what would let *that* cloud fallback reach Google News from a datacenter, if ever built.
 
 ### Deferred / next
 

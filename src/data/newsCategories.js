@@ -2,7 +2,7 @@
 // Topical buckets for the Opportunity Scan news feed. The ORDER here drives the
 // section order on the News page and the Admin Review page.
 //
-// Mirrors CATEGORY_ENUM in functions/opportunity-scan.js (the values Claude
+// Mirrors CATEGORY_ENUM in functions/_lib/scan-pipeline.js (the values Claude
 // assigns) — keep the two in sync when categories are tuned.
 //
 // `icon`   — a name from src/icons/iconMap.js (the same assistance-type icons

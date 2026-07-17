@@ -23,3 +23,5 @@ dist
 
 # Credentials
 scripts/google-credentials.json
+# Opportunity Scan launchd logs (written on the home desktop)
+logs/

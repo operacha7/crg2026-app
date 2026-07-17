@@ -42,6 +42,19 @@ export const DIRECT_FEEDS = [
   { name: "Bay City Tribune", url: "https://baycitytribune.com/search/?f=rss&t=article&c=news&l=50&s=start_time&sd=desc", verified: false },
   { name: "Baytown Sun", url: "https://baytownsun.com/search/?f=rss&t=article&c=news&l=50&s=start_time&sd=desc", verified: false },
   { name: "¡Que Onda Magazine!", url: "https://queondamagazine.com/feed/", verified: true, lang: "es" },
+
+  // ---- Tier 2b: Eventbrite events via Google Alerts RSS ----
+  // Eventbrite killed its public event-search API (2019) and isn't in Google
+  // News, so a Google Alert scoped to site:eventbrite.com is the only no-scrape
+  // intake. Region is anchored in the alert query ("Houston") + the Sonnet geo
+  // gate, so NO filterToRegion (recall over precision, same as the News queries).
+  // Created 2026-07-16 — a brand-new alert feed is EMPTY until Google indexes
+  // fresh matches, so 0 items for the first days/weeks is normal, not a failure.
+  // Coverage is at Google's discretion; drop any feed that stays dry. The alert
+  // queries themselves live in the Omar-owned Google Alerts UI, not in code.
+  { name: "Eventbrite (Alerts): food", url: "https://www.google.com/alerts/feeds/12754812464787472241/16445363784846772496", verified: false },
+  { name: "Eventbrite (Alerts): health", url: "https://www.google.com/alerts/feeds/12754812464787472241/10200803674982736340", verified: false },
+  { name: "Eventbrite (Alerts): jobs", url: "https://www.google.com/alerts/feeds/12754812464787472241/3270987030989507185", verified: false },
 ];
 
 // Tier 3a — Google News RSS query backbone (the workhorse; indexes ~every

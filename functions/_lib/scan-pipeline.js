@@ -1,11 +1,15 @@
-// Cloudflare Pages Function: POST /opportunity-scan
-// Endpoint: http(s)://<host>/opportunity-scan
+// functions/_lib/scan-pipeline.js
+// The weekly Opportunity Scan pipeline — the transport-free engine.
 //
-// The weekly Opportunity Scan. Triggered server-side by Supabase pg_cron +
-// pg_net (http_post) — NOT the browser — so it's gated by a shared secret
-// (X-Scan-Secret === env.SCAN_TRIGGER_SECRET) rather than the session cookie.
+// This file is a LIBRARY (underscore dir → not a Cloudflare route). It runs from
+// Node on Omar's always-on home desktop via scripts/run-scan.mjs, scheduled by
+// launchd (Mondays 2pm local). It moved OFF Cloudflare because the two things a
+// datacenter can't do are exactly what this needs: reach Google News RSS (which
+// 503s Cloudflare's shared egress IPs but serves a residential IP fine) and run
+// for minutes (Cloudflare cancels waitUntil at ~30s; a real run takes minutes of
+// LLM latency). See CLAUDE.md → "Opportunity Scan System" for the full history.
 //
-// Pipeline:
+// Pipeline (runScan):
 //   1. Poll curated news sources (direct RSS + Google News RSS + GDELT)   [free]
 //   2. Date-window (14d), dedupe by link, cap the candidate set
 //   3. Haiku: cheap relevance cull against the rubric
@@ -17,8 +21,7 @@
 //
 // Design of record: ~/.claude/plans/claude-md-includes-an-opportunity-woolly-music.md
 
-import { createClient } from "@supabase/supabase-js";
-import { HAIKU_MODEL, SONNET_MODEL } from "./config.js";
+import { HAIKU_MODEL, SONNET_MODEL } from "../config.js";
 import {
   DIRECT_FEEDS,
   GOOGLE_NEWS_QUERIES,
@@ -28,9 +31,9 @@ import {
   RELEVANCE_RUBRIC,
   COUNTIES,
   isPaywalledSource,
-} from "./_lib/scan-sources.js";
-import { pollFeed, withinDays, dedupeByLink } from "./_lib/rss.js";
-import { dedupeKeyFor } from "./_lib/dedupe.js";
+} from "./scan-sources.js";
+import { pollFeed, withinDays, dedupeByLink } from "./rss.js";
+import { dedupeKeyFor } from "./dedupe.js";
 
 const WINDOW_DAYS = 14;        // how far back to consider candidates
 const MAX_CANDIDATES = 500;    // hard cap before the LLM sees anything
@@ -140,7 +143,13 @@ const SONNET_TOOL = {
 };
 
 // ---- Anthropic call helper (forced tool use) ----
-async function callClaude(env, { model, system, userText, tool, maxTokens, temperature }) {
+
+// Anthropic statuses worth a retry: rate-limit (429), transient server errors,
+// and 529 "Overloaded" (the API is momentarily busy). Everything else — a bad
+// request, auth, etc. — is a hard fail and rethrows immediately.
+const ANTHROPIC_RETRYABLE = new Set([429, 500, 502, 503, 504, 529]);
+
+async function callClaude(env, { model, system, userText, tool, maxTokens, temperature, retries = 3 }) {
   const payload = {
     model,
     max_tokens: maxTokens,
@@ -152,22 +161,34 @@ async function callClaude(env, { model, system, userText, tool, maxTokens, tempe
   // Claude 5 models (Sonnet 5) deprecated the `temperature` knob and 400 if it's
   // sent; Haiku 4.5 still supports it. Callers pass temperature only where valid.
   if (typeof temperature === "number") payload.temperature = temperature;
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: ANTHROPIC_HEADERS(env),
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(`Anthropic ${model} error: ${data.error?.message || res.status}`);
+
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: ANTHROPIC_HEADERS(env),
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const msg = data.error?.message || res.status;
+      // A momentary overload must NOT sink the whole unattended run — back off
+      // and retry. Weekly cadence means we can afford to wait several seconds.
+      if (ANTHROPIC_RETRYABLE.has(res.status) && attempt < retries) {
+        const waitMs = 1000 * 2 ** attempt + Math.floor(Math.random() * 500);
+        console.log(`↻ ${model} HTTP ${res.status} (${msg}) — retry ${attempt + 1}/${retries} in ${waitMs}ms`);
+        await new Promise((r) => setTimeout(r, waitMs));
+        continue;
+      }
+      throw new Error(`Anthropic ${model} error: ${msg}`);
+    }
+    if (data.usage) console.log(`📊 ${model} usage:`, JSON.stringify(data.usage));
+    console.log(`   ${model} stop_reason: ${data.stop_reason}`);
+    const block = data.content?.find((b) => b.type === "tool_use");
+    if (!block) {
+      console.log(`   ⚠️ ${model} no tool_use block. content:`, JSON.stringify(data.content).slice(0, 600));
+    }
+    return block?.input || null;
   }
-  if (data.usage) console.log(`📊 ${model} usage:`, JSON.stringify(data.usage));
-  console.log(`   ${model} stop_reason: ${data.stop_reason}`);
-  const block = data.content?.find((b) => b.type === "tool_use");
-  if (!block) {
-    console.log(`   ⚠️ ${model} no tool_use block. content:`, JSON.stringify(data.content).slice(0, 600));
-  }
-  return block?.input || null;
 }
 
 // ---- Pipeline steps ----
@@ -270,6 +291,10 @@ ${orgContext}`;
     tool: SONNET_TOOL,
     system,
     userText: `Synthesize findings from these ${survivors.length} candidate items:\n\n${list}`,
+    // The one critical, expensive call of an unattended weekly job — be extra
+    // patient through an Anthropic capacity dip (5 retries ≈ up to ~30s of
+    // backoff) rather than crash the whole run over a transient 529.
+    retries: 5,
   });
   console.log(`   sonnet returned ${out?.findings?.length ?? "null"} findings, ${out?.also_considered?.length ?? 0} also-considered`);
   return { findings: out?.findings || [], alsoConsidered: out?.also_considered || [] };
@@ -291,6 +316,67 @@ async function loadOrgContext(supabase) {
   return Array.from(names).sort().join("\n");
 }
 
+// ---- Possible-duplicate flagging (digest-only; never stored on the row) ----
+// A story can reach us via different URLs on different runs — e.g. a direct
+// outlet link one week, an opaque news.google.com redirect the next — so the
+// URL-derived dedupe_key can't tell they're the same event and ON CONFLICT
+// misses it. Rather than risk silently dropping a genuinely-new story (recall
+// beats dedupe here — Omar's call), we FLAG a new finding that closely resembles
+// a recent one. The flag lives ONLY in the digest email — NOT in `notes`, which
+// is public (it renders on the /news page).
+const DUP_STOPWORDS = new Set(
+  "a an and the of for to in on with at by from as is are be or new amid could after over into".split(" ")
+);
+function titleTokens(t) {
+  return new Set(
+    (t || "").toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !DUP_STOPWORDS.has(w))
+  );
+}
+function jaccard(a, b) {
+  if (!a.size || !b.size) return 0;
+  let inter = 0;
+  for (const x of a) if (b.has(x)) inter++;
+  return inter / (a.size + b.size - inter);
+}
+const DUP_TITLE_THRESHOLD = 0.5; // same category + this title overlap → flag
+
+async function loadRecentFindings(supabase) {
+  const since = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("scan_findings")
+    .select("id, title, category, status, run_date")
+    .gte("created_at", since);
+  if (error) {
+    console.log("⚠️ recent-findings load failed (dup-flagging skipped):", error.message);
+    return [];
+  }
+  return data || [];
+}
+
+// Mutates each finding: sets `_dupOf` to the best-matching recent row (same
+// category + title Jaccard ≥ threshold), if any. A false flag is cheap (an
+// ignorable note); a false MERGE would lose a story — so we only ever annotate.
+// Exported for unit testing.
+export function annotateDuplicates(findings, recentRows) {
+  const existing = recentRows.map((r) => ({ ...r, tokens: titleTokens(r.title) }));
+  for (const f of findings) {
+    const ftok = titleTokens(f.title);
+    let best = null;
+    let bestScore = 0;
+    for (const e of existing) {
+      if (e.category !== f.category) continue;
+      const s = jaccard(ftok, e.tokens);
+      if (s > bestScore) {
+        bestScore = s;
+        best = e;
+      }
+    }
+    if (best && bestScore >= DUP_TITLE_THRESHOLD) {
+      f._dupOf = { id: best.id, title: best.title, status: best.status, run_date: best.run_date };
+    }
+  }
+}
+
 function buildDigestHtml(findings, alsoConsidered, stats) {
   const CATEGORY_LABELS = {
     food: "Food",
@@ -309,10 +395,16 @@ function buildDigestHtml(findings, alsoConsidered, stats) {
 
   let html = `<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;color:#222">`;
   html += `<h2 style="color:#B8001F">CRG Opportunity Scan — ${stats.runDate}</h2>`;
-  html += `<p><strong>${findings.length}</strong> new finding(s) await review. Approve on the Admin Review page (or in Supabase <code>scan_findings</code> for now): flip <code>status</code> to <code>published</code>, optionally attach <code>directory_id_no</code> and adjust <code>expires_at</code>.</p>`;
+  const dupNote = stats.duplicatesSkipped
+    ? ` <span style="color:#888">(${stats.duplicatesSkipped} more found this run were already in the system and skipped — not shown.)</span>`
+    : "";
+  const flagNote = stats.flaggedDupes
+    ? ` <span style="color:#B8001F">${stats.flaggedDupes} flagged below as a possible duplicate (⚠) — check before publishing.</span>`
+    : "";
+  html += `<p><strong>${findings.length}</strong> new finding(s) await review.${dupNote}${flagNote} Approve on the Admin Review page (or in Supabase <code>scan_findings</code> for now): flip <code>status</code> to <code>published</code>, optionally attach <code>directory_id_no</code> and adjust <code>expires_at</code>.</p>`;
 
   if (findings.length === 0) {
-    html += `<p style="color:#666">No new findings this run.</p>`;
+    html += `<p style="color:#666">No new findings this run${stats.duplicatesSkipped ? " (everything found was already in the system)" : ""}.</p>`;
   }
   for (const cat of Object.keys(CATEGORY_LABELS)) {
     const items = byCat[cat];
@@ -321,6 +413,9 @@ function buildDigestHtml(findings, alsoConsidered, stats) {
     for (const f of items) {
       html += `<div style="margin:0 0 16px">`;
       html += `<div style="font-weight:bold;font-size:15px">${escapeHtml(f.title)}</div>`;
+      if (f._dupOf) {
+        html += `<div style="font-size:12px;color:#B8001F;font-weight:bold">⚠ Possible duplicate of #${f._dupOf.id} "${escapeHtml(f._dupOf.title)}" (${escapeHtml(f._dupOf.status)}${f._dupOf.run_date ? " · " + escapeHtml(f._dupOf.run_date) : ""}) — dismiss if the same story.</div>`;
+      }
       html += `<div style="margin:2px 0">${escapeHtml(f.summary)}</div>`;
       const meta = [];
       if (f.eligibility) meta.push(`<em>Eligibility:</em> ${escapeHtml(f.eligibility)}`);
@@ -351,7 +446,7 @@ function buildDigestHtml(findings, alsoConsidered, stats) {
     html += `<li>${escapeHtml(src)}: ${n} candidate(s), ${kept} kept</li>`;
   }
   html += `</ul>`;
-  html += `<p style="font-size:12px;color:#888">Candidates ${stats.candidates} → relevant ${stats.relevant} → findings ${findings.length}.</p>`;
+  html += `<p style="font-size:12px;color:#888">Candidates ${stats.candidates} → relevant ${stats.relevant} → found ${stats.found ?? findings.length} → new ${findings.length}${stats.duplicatesSkipped ? ` (${stats.duplicatesSkipped} already in system)` : ""}.</p>`;
   html += `</div>`;
   return html;
 }
@@ -382,10 +477,10 @@ async function sendDigest(env, html, runDate) {
 
 // ---- Entry point ----
 
-// The scan pipeline. Returns a plain result object rather than a Response so the
-// caller can either serialize it (manual invocation) or just log it (cron, where
-// nobody is listening by the time it finishes). Throws on failure.
-async function runScan({ env, supabase, runDate, expiresDate, dryRun }) {
+// The scan pipeline. Transport-free: the caller (scripts/run-scan.mjs) loads env,
+// builds the Supabase client, and picks runDate/expiresDate. Returns a plain
+// result object; throws on failure so the caller can email a crash notice.
+export async function runScan({ env, supabase, runDate, expiresDate, dryRun }) {
   // 1-2. Poll + window + dedupe + cap
   const raw = await pollAllSources();
   const windowed = withinDays(raw, WINDOW_DAYS);
@@ -404,6 +499,11 @@ async function runScan({ env, supabase, runDate, expiresDate, dryRun }) {
   const { findings, alsoConsidered } = await sonnetSynthesize(env, survivors, orgContext);
   console.log(`✅ findings ${findings.length}, also-considered ${alsoConsidered.length}`);
 
+  // Load recent findings (BEFORE this run's insert, so no self-match) for the
+  // possible-duplicate flag — catches same-story-different-URL cases the URL
+  // dedupe_key can't. Digest-only; never written to the row.
+  const recentRows = await loadRecentFindings(supabase);
+
   const stats = {
     runDate,
     candidates: candidates.length,
@@ -417,7 +517,11 @@ async function runScan({ env, supabase, runDate, expiresDate, dryRun }) {
   }
 
   // 5. Insert (dedupe on dedupe_key). expires_at defaults to +7d (editable at review).
+  //    Findings whose dedupe_key already exists (a prior run within the 14-day
+  //    window) are blocked and return NOTHING from .select(), so the returned
+  //    keys are exactly the genuinely-new findings this run.
   let inserted = 0;
+  let newFindings = findings;
   if (findings.length) {
     const rows = findings.map((f) => ({
       run_date: runDate,
@@ -438,85 +542,35 @@ async function runScan({ env, supabase, runDate, expiresDate, dryRun }) {
     const { data, error } = await supabase
       .from("scan_findings")
       .upsert(rows, { onConflict: "dedupe_key", ignoreDuplicates: true })
-      .select("id");
+      .select("dedupe_key");
     if (error) throw new Error(`Insert failed: ${error.message}`);
     inserted = data?.length || 0;
+    const insertedKeys = new Set((data || []).map((r) => r.dedupe_key));
+    // The digest must mirror the /admin review queue: only findings actually
+    // inserted as status='new'. Anything blocked as a duplicate was already
+    // reviewed (or is already queued), so re-showing it in the email is noise.
+    newFindings = findings.filter((f) => insertedKeys.has(dedupeKeyFor(f)));
   }
+  const duplicatesSkipped = findings.length - newFindings.length;
 
-  // 6. Digest email
-  const html = buildDigestHtml(findings, alsoConsidered, stats);
+  // Flag (don't drop) new findings that resemble a recent one but slipped past
+  // the URL dedupe_key (e.g. a Google News redirect this week vs a direct outlet
+  // link last week). Sets `_dupOf` on the finding — surfaced in the digest ONLY.
+  annotateDuplicates(newFindings, recentRows);
+  const flaggedDupes = newFindings.filter((f) => f._dupOf).length;
+  console.log(`🔁 flagged ${flaggedDupes} possible duplicate(s) of recent findings`);
+
+  // 6. Digest email — NEW findings only (what actually needs review this run).
+  const digestStats = { ...stats, found: findings.length, duplicatesSkipped, flaggedDupes };
+  const html = buildDigestHtml(newFindings, alsoConsidered, digestStats);
   let emailId = null;
   if (env.RESEND_API_KEY) emailId = await sendDigest(env, html, runDate);
 
-  return { ok: true, stats, findings: findings.length, inserted, emailId };
-}
-
-export async function onRequest({ request, env, waitUntil }) {
-  if (request.method === "OPTIONS") {
-    return new Response("", { status: 200 });
-  }
-  if (request.method !== "POST") {
-    return json({ ok: false, error: "Method Not Allowed" }, 405);
-  }
-
-  // Shared-secret gate (skip only if no secret configured, e.g. local dev).
-  if (env.SCAN_TRIGGER_SECRET) {
-    const provided = request.headers.get("x-scan-secret");
-    if (provided !== env.SCAN_TRIGGER_SECRET) {
-      return json({ ok: false, error: "Unauthorized" }, 401);
-    }
-  }
-  if (!env.ANTHROPIC_API_KEY) return json({ ok: false, error: "ANTHROPIC_API_KEY missing" }, 500);
-
-  const body = await request.json().catch(() => ({}));
-  const dryRun = body?.dryRun === true; // skip DB insert + email, return findings
-
-  // A full run takes minutes (feed polling + two LLM passes), but pg_net gives up
-  // on the response after a few seconds. `async:true` — what the cron sends — acks
-  // immediately and finishes under waitUntil, so the run survives the caller
-  // hanging up rather than being cancelled with it. Manual invocations omit the
-  // flag and wait for the real result; a dryRun always waits (its output IS the
-  // point), so the two flags are mutually exclusive.
-  const background = body?.async === true && !dryRun;
-
-  const runDate = new Date().toISOString().slice(0, 10);
-  const expiresDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10); // default 1-week shelf life (DATE, editable at review)
-  const supabaseUrl = env.SUPABASE_URL || env.VITE_SUPABASE_URL;
-  const supabaseKey = env.SUPABASE_SECRET_KEY || env.VITE_SUPABASE_SECRET_KEY;
-  const supabase = createClient(supabaseUrl, supabaseKey);
-
-  const args = { env, supabase, runDate, expiresDate, dryRun };
-
-  if (background) {
-    // Nothing is awaiting this, so an unhandled rejection would vanish silently —
-    // the catch is what makes a failed cron run visible in the CF logs.
-    waitUntil(
-      runScan(args)
-        .then((r) => console.log("🏁 scan complete:", JSON.stringify(r)))
-        .catch((err) => console.error("🚨 scan error:", err))
-    );
-    return json({ ok: true, started: true, runDate }, 202);
-  }
-
-  try {
-    return json(await runScan(args));
-  } catch (err) {
-    console.error("🚨 scan error:", err);
-    return json({ ok: false, error: err.message }, 500);
-  }
+  return { ok: true, stats, found: findings.length, inserted, duplicatesSkipped, flaggedDupes, emailId };
 }
 
 function tally(arr) {
   const m = {};
   for (const x of arr) m[x] = (m[x] || 0) + 1;
   return m;
-}
-
-function json(obj, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
 }
