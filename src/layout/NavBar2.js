@@ -1602,10 +1602,13 @@ export default function NavBar2() {
     setClientCoordinates,
   ]);
 
-  // Keep the ref in sync so the deep-link auto-search effect can call the latest handler.
-  useEffect(() => {
-    handleLLMSearchRef.current = handleLLMSearch;
-  }, [handleLLMSearch]);
+  // Keep the ref in sync so the deep-link auto-search effect can call the latest
+  // handler. Assign during render (not in an effect) so the ref is populated
+  // BEFORE the auto-search effect runs on a fresh mount — otherwise, when NavBar2
+  // mounts with assistance/zipCodes already loaded (e.g. clicking a resource link
+  // from the News page or an announcement popup), the auto-search effect fires
+  // first, finds a null ref, no-ops, and clears pendingLlmAutoSearch forever.
+  handleLLMSearchRef.current = handleLLMSearch;
 
   // Memoize zip code options as {value, label} objects so the dropdown can
   // show the city alongside the zip ("77002 — Houston") while still using the
