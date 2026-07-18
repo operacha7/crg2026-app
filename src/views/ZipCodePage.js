@@ -561,12 +561,18 @@ export default function ZipCodePage({
   // Generate header text for email/PDF preview based on search mode
   const headerText = generateSearchHeader(buildSearchContext());
 
-  // Orange counter reflects what's actually surfaced in the table.
-  // ResultsList's default status filter is "all", so when no inline filter
-  // row is engaged we count every record in displayDirectory.
+  // Orange counter / Send-Text chip counts only Active (1) + Limited (2) —
+  // Inactive (3) and Closed (4) resources can't be sent, so they're excluded
+  // from the count even though they still appear in the table.
+  // When an inline filter row is engaged, ResultsList reports the already
+  // status-filtered count; otherwise we count active+limited in displayDirectory.
+  const displayActiveLimitedCount = useMemo(
+    () => displayDirectory.filter((r) => r.status_id === 1 || r.status_id === 2).length,
+    [displayDirectory]
+  );
   const visibleFilteredCount = inlineFilteredCount !== null
     ? inlineFilteredCount
-    : displayDirectory.length;
+    : displayActiveLimitedCount;
 
   // Two distinct signals for the Send-Text button. The user wants the
   // filtered-count chip to appear as soon as *any* filter is engaged (early

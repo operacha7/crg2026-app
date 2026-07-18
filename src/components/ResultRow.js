@@ -5,6 +5,7 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { getIconByName, getIconNames } from "../icons/iconMap";
 import { HomeMarkerIcon, TransitIcon } from "../icons";
+import Tooltip from "./Tooltip";
 import {
   formatHoursFromJson,
   formatAddress,
@@ -162,6 +163,7 @@ function ResultRow({
   isSelected,
   onSelect,
   selectionDisabled = false,
+  selectionDisabledTooltip = null,
   assistanceIcon,
   allAssistanceTypes = [],
   orgAssistanceMap = {},
@@ -214,6 +216,16 @@ function ResultRow({
   // (bare, muted). Solo orgs → null. Same rule on screen, in email, and in PDF.
   const displayParent = getDisplayParent(record);
 
+  // When a checkbox is disabled for a reason worth explaining (inactive/closed
+  // resources can't be emailed/PDF'd), wrap it in an instant tooltip. Guests
+  // pass no tooltip, so their grayed checkboxes are unchanged.
+  const withSelectionTooltip = (node, position) =>
+    selectionDisabled && selectionDisabledTooltip ? (
+      <Tooltip text={selectionDisabledTooltip} position={position} multiline maxWidth="260px">
+        {node}
+      </Tooltip>
+    ) : node;
+
   // Format address
   const addressLines = useMemo(() => formatAddress(record), [record]);
 
@@ -258,19 +270,22 @@ function ResultRow({
       >
         {/* Top row: Checkbox + Org name + Distance */}
         <div className="flex items-start gap-2 mb-2">
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={(e) => onSelect(record.id, e.target.checked)}
-            disabled={selectionDisabled}
-            className={`mt-1 flex-shrink-0 ${selectionDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
-            style={{
-              width: "20px",
-              height: "20px",
-              accentColor: "var(--color-results-checkbox-checked)",
-              opacity: selectionDisabled ? 0.4 : 1,
-            }}
-          />
+          {withSelectionTooltip(
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={(e) => onSelect(record.id, e.target.checked)}
+              disabled={selectionDisabled}
+              className={`mt-1 flex-shrink-0 ${selectionDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+              style={{
+                width: "20px",
+                height: "20px",
+                accentColor: "var(--color-results-checkbox-checked)",
+                opacity: selectionDisabled ? 0.4 : 1,
+              }}
+            />,
+            "bottom-right"
+          )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1">
               {isPriority && <PriorityStar size={15} />}
@@ -509,6 +524,7 @@ function ResultRow({
           className="flex items-end"
           style={{ height: AssistanceIconComponents.length > 0 ? "25px" : "auto" }}
         >
+          {withSelectionTooltip(
           <input
             type="checkbox"
             checked={isSelected}
@@ -524,7 +540,9 @@ function ResultRow({
               opacity: selectionDisabled ? 0.4 : 1,
             }}
             onClick={(e) => e.stopPropagation()}
-          />
+          />,
+          "bottom-right"
+          )}
         </div>
       </div>
 

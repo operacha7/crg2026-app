@@ -71,10 +71,13 @@ export const dataService = {
   // Cheap row-count for the homepage chip. Uses `head: true` so Supabase
   // returns no rows, just the count header — avoids dragging the full
   // directory across the wire when all we need is the number.
+  // Counts only Active (1) + Limited (2) — the "verified assistance programs"
+  // headline should exclude Inactive (3) and Closed (4).
   async getDirectoryCount() {
     const { count, error } = await supabase
       .from('directory')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'exact', head: true })
+      .in('status_id', [1, 2]);
 
     if (error) {
       console.error("Error fetching directory count:", error);

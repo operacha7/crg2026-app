@@ -291,12 +291,18 @@ export default function ResultsList({
     [filteredRecords, state.sortColumn, state.sortDirection, activeSearchMode]
   );
 
-  // Report filtered count back to parent.
-  // Status filter is part of filteredRecords now, so count reflects what user sees.
+  // Report filtered count back to parent. Counts only Active (1) + Limited (2)
+  // to match the orange counter / Send-Text chip rule (Inactive/Closed excluded
+  // — they can't be sent). Status filter is part of filteredRecords, so the
+  // count reflects what the user sees, minus the unsendable statuses.
+  const activeLimitedFilteredCount = useMemo(
+    () => filteredRecords.filter((r) => r.status_id === 1 || r.status_id === 2).length,
+    [filteredRecords]
+  );
   useEffect(() => {
     // Only override count when inline filters are active; null = use parent's default
-    onFilteredCountChange?.(hasActiveFilters ? filteredRecords.length : null);
-  }, [filteredRecords, hasActiveFilters, onFilteredCountChange]);
+    onFilteredCountChange?.(hasActiveFilters ? activeLimitedFilteredCount : null);
+  }, [activeLimitedFilteredCount, hasActiveFilters, onFilteredCountChange]);
 
   // Handlers
   const handleSort = useCallback((column) => {
@@ -461,12 +467,24 @@ export default function ResultsList({
           increaseViewportBy={400}
           itemContent={(index, record) => {
             const assistanceInfo = getAssistanceInfo(record);
+            // Inactive (3) and Closed (4) resources can't be selected for Email/PDF.
+            // The old "are you sure?" warning was being clicked through, so stale
+            // resources went out; disabling the checkbox is the hard gate. The
+            // warning path in EmailPanel is left intact — re-enabling is just
+            // dropping the status_id condition here.
+            const statusDisabled = record.status_id === 3 || record.status_id === 4;
+            const rowSelectionDisabled = selectionDisabled || statusDisabled;
+            // Explain the status-based disable on hover (guests get no tooltip).
+            const rowSelectionDisabledTooltip = statusDisabled
+              ? `This resource is marked ${record.status_id === 4 ? "Closed" : "Inactive"}, so it can't be emailed or added to a PDF. Contact CRG if you believe it's currently open.`
+              : null;
             return (
               <ResultRow
                 record={record}
                 isSelected={selectedIds.has(record.id)}
                 onSelect={handleSelect}
-                selectionDisabled={selectionDisabled}
+                selectionDisabled={rowSelectionDisabled}
+                selectionDisabledTooltip={rowSelectionDisabledTooltip}
                 assistanceIcon={assistanceInfo.icon}
                 assistanceLabel={assistanceInfo.label}
                 allAssistanceTypes={assistanceData}
