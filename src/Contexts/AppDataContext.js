@@ -7,6 +7,7 @@ import { dataService } from '../services/dataService';
 import { readPhase1Cache, writePhase1Cache } from '../services/dataCache';
 import { resolveSavedChild, saveChildId } from '../services/senderIdentity';
 import { setLogOrganization } from '../services/usageService';
+import { getDisplayParent } from '../utils/formatters';
 
 const AppDataContext = createContext();
 
@@ -426,6 +427,10 @@ export const AppDataProvider = ({ children, loggedInUser, onLogout }) => {
     if (!selectedSenderChild) return null;
     return {
       name: selectedSenderChild.organization || "",
+      // Parent org name for a real multi-child parent (account_id > 20000), else
+      // null. Same rule as the per-resource parent line. Shown under the sender
+      // name in the email/PDF/SMS signature.
+      parent: getDisplayParent(selectedSenderChild),
       phone: (selectedSenderChild.org_telephone || "").trim(),
       email: (selectedSenderChild.org_email || "").trim(),
     };

@@ -12,6 +12,7 @@ import {
   formatHoursFromJson,
   parseRequirements,
   parsePhoneNumbers,
+  getDisplayParent,
 } from "../utils/formatters";
 import { buildTransitDirectionsUrl } from "../utils/transitUrl";
 import { ResourceEmail } from "../emails";
@@ -217,6 +218,7 @@ function renderAssistanceGroupsHtml(items, includeAssistanceHeaders, nextIndex) 
         <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px;">
           ${runningIndex}.&nbsp;&nbsp;<a href="${e.webpage || "#"}" target="_blank" style="color: #0066cc; text-decoration: underline;">${e.organization || "N/A"}</a>
         </div>
+        ${getDisplayParent(e) ? `<div style="font-size: 12px; color: #666; padding-left: 20px; margin-bottom: 8px;">${getDisplayParent(e)}</div>` : ""}
         <div style="font-size: 12px; padding-left: 20px;">
           <a href="${e.googlemaps || "#"}" target="_blank" style="color: #0066cc; text-decoration: underline;">${addressHtml}</a>${distanceText ? `<span style="font-style: italic; color: #666; padding-left: 10px;">${distanceText}</span>` : ""}
         </div>
@@ -440,8 +442,13 @@ export async function createPdf({
   const senderEmailPart = senderFooter?.email
     ? ` &middot; <a href="mailto:${senderFooter.email}" style="color: #0066cc; text-decoration: underline;">${senderFooter.email}</a>`
     : "";
+  // Parent org — own line, muted, indented under the sender name (past the
+  // "Prepared by: " label). Real multi-child parents only; null for solo orgs.
+  const senderParentHtml = senderFooter?.name && senderFooter?.parent
+    ? `<div style="font-size: 12px; color: #666; padding-left: 72px;" class="notranslate" translate="no">${senderFooter.parent}</div>`
+    : "";
   const senderLineHtml = senderFooter?.name
-    ? `<div style="font-size: 12px;">Prepared by: <span class="notranslate" translate="no"><strong>${senderFooter.name}</strong>${senderPhonePart}${senderEmailPart}</span></div>`
+    ? `<div style="font-size: 12px;">Prepared by: <span class="notranslate" translate="no"><strong>${senderFooter.name}</strong>${senderPhonePart}${senderEmailPart}</span></div>${senderParentHtml}`
     : "";
 
   const pdfHtml = `<!DOCTYPE html>
@@ -792,9 +799,12 @@ export function buildSmsBody({ searchContext, activeAssistanceChips, senderFoote
     // auto-fill are fragile with special characters. The email is left as a
     // bare address (no mailto:) — phones auto-link it, and mailto: would leak
     // into the GV auto-fill.
+    // Parent org (real multi-child parents only) after the name — the signature
+    // is a single line here, so "directly below" becomes "right after".
+    const parentPart = senderFooter.parent ? `, ${senderFooter.parent}` : "";
     const phonePart = senderFooter.phone ? `, ${senderFooter.phone}` : "";
     const emailPart = senderFooter.email ? `, ${senderFooter.email}` : "";
-    senderPrefix = `Sent by: ${senderFooter.name}${phonePart}${emailPart}. `;
+    senderPrefix = `Sent by: ${senderFooter.name}${parentPart}${phonePart}${emailPart}. `;
   }
 
   // If SMS length ever becomes a problem, drop the header line ("Resources for

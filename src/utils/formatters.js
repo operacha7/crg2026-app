@@ -229,6 +229,36 @@ export function formatAddressHtml(record) {
   return formatAddress(record).join('<br/>');
 }
 
+// ============ ORGANIZATION PARENT ============
+
+// A "real" parent (a parent org that has multiple child organizations) is
+// identified by account_id > 20000 in the directory/organizations data. Solo
+// organizations carry account_id = null and set org_parent === organization, so
+// they must show nothing. Keep in one place so the on-screen row, email, and PDF
+// all decide identically.
+const REAL_PARENT_ACCOUNT_ID_MIN = 20000;
+
+/**
+ * Return the parent organization name to display beneath a resource's own name,
+ * or null when nothing should be shown.
+ *
+ * Shows the parent only for a real multi-child parent (account_id > 20000). The
+ * org_parent-exists / org_parent !== organization guard is belt-and-suspenders:
+ * a mis-keyed row can never render a redundant duplicate line.
+ *
+ * @param {object} record - Directory record (account_id, org_parent, organization)
+ * @returns {string|null} Parent name to display, or null
+ */
+export function getDisplayParent(record) {
+  if (!record) return null;
+  const accountId = Number(record.account_id);
+  if (!Number.isFinite(accountId) || accountId <= REAL_PARENT_ACCOUNT_ID_MIN) return null;
+  const parent = (record.org_parent || "").trim();
+  const org = (record.organization || "").trim();
+  if (!parent || parent === org) return null;
+  return parent;
+}
+
 // ============ DISTANCE FORMATTING ============
 
 /**

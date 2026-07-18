@@ -10,6 +10,7 @@ import {
   formatAddress,
   formatIconName,
   parsePhoneNumbers,
+  getDisplayParent,
 } from "../utils/formatters";
 import { buildTransitDirectionsUrl } from "../utils/transitUrl";
 
@@ -209,6 +210,10 @@ function ResultRow({
   // Priority (featured) records get a gold star next to the org name.
   const isPriority = parseInt(record.priority, 10) === 1;
 
+  // For a real multi-child parent org, show the parent name under the org name
+  // (bare, muted). Solo orgs → null. Same rule on screen, in email, and in PDF.
+  const displayParent = getDisplayParent(record);
+
   // Format address
   const addressLines = useMemo(() => formatAddress(record), [record]);
 
@@ -283,6 +288,11 @@ function ResultRow({
                 <div className="font-semibold text-base leading-tight">{record.organization}</div>
               )}
             </div>
+            {displayParent && (
+              <div className="text-sm mt-0.5" style={{ color: "var(--color-results-distance-label)" }}>
+                {displayParent}
+              </div>
+            )}
             {addressLines.length > 0 && (
               record.googlemaps ? (
                 <a
@@ -584,6 +594,19 @@ function ResultRow({
             </span>
           )}
         </span>
+        {/* Parent org (real multi-child parents only) — bare name, muted, normal size */}
+        {displayParent && (
+          <div
+            style={{
+              fontSize: "var(--font-size-results-default)",
+              letterSpacing: "var(--letter-spacing-results-default)",
+              color: "var(--color-results-distance-label)",
+              marginTop: "2px",
+            }}
+          >
+            {displayParent}
+          </div>
+        )}
         <div
           className="flex"
           style={{

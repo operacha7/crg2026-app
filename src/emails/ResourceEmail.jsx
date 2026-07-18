@@ -239,6 +239,14 @@ export function ResourceEmail({
                   ) : ''}
                 </span>
               </Text>
+              {/* Parent org — its own line, muted, indented under the sender
+                  name (not under the "Sent by:" label). Real multi-child
+                  parents only; null for solo orgs. */}
+              {senderFooter.parent && (
+                <Text style={styles.senderParent} className="notranslate" translate="no">
+                  {senderFooter.parent}
+                </Text>
+              )}
             </Section>
           )}
 
@@ -343,6 +351,14 @@ const styles = {
   senderEmailLink: {
     color: '#0066cc',
     textDecoration: 'underline',
+  },
+  senderParent: {
+    fontSize: '14px',
+    lineHeight: '1.5',
+    color: '#666',
+    // Indent ~ width of "Sent by: " so the parent sits under the sender name.
+    paddingLeft: '52px',
+    margin: '0',
   },
   hr: {
     borderTop: '1px solid #ccc',

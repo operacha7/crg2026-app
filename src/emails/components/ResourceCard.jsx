@@ -5,7 +5,7 @@ import { Section, Text, Link } from '@react-email/components';
 import { HoursTable, HoursNotes } from './HoursTable';
 import { BUS_ICON_URL } from '../../data/constants';
 import { buildTransitDirectionsUrl } from '../../utils/transitUrl';
-import { parsePhoneNumbers } from '../../utils/formatters';
+import { parsePhoneNumbers, getDisplayParent } from '../../utils/formatters';
 
 // Bus Route pill links to Google Maps in transit mode. We intentionally call
 // buildTransitDirectionsUrl WITHOUT clientCoordinates so the sender's local
@@ -20,6 +20,7 @@ export function ResourceCard({
   distanceText,
 }) {
   const transitUrl = buildTransitDirectionsUrl(resource);
+  const displayParent = getDisplayParent(resource);
 
   return (
     <Section style={styles.card}>
@@ -34,6 +35,9 @@ export function ResourceCard({
           {resource.organization || 'N/A'}
         </Link>
       </Text>
+
+      {/* Parent org (real multi-child parents only) — bare name, muted */}
+      {displayParent && <Text style={styles.parentName}>{displayParent}</Text>}
 
       {/* Full address as single Google Maps link + distance */}
       <Text style={styles.addressBlock}>
@@ -114,6 +118,12 @@ const styles = {
   orgLink: {
     color: '#0066cc',
     textDecoration: 'underline',
+  },
+  parentName: {
+    fontSize: '14px',
+    color: '#666666',
+    margin: '2px 0 0 0',
+    paddingLeft: '24px',
   },
   addressBlock: {
     fontSize: '14px',
