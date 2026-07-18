@@ -7,13 +7,21 @@
 //
 // `icon`   — a name from src/icons/iconMap.js (the same assistance-type icons
 //            used throughout the app).
+// `image`  — an <img> src, used INSTEAD of `icon` (e.g. the CRG logo).
 // `accent` — the panel-header tint, drawn from the existing assistance group
 //            palette where a category maps naturally to one.
+// `fg`     — panel-header foreground (icon + text) color; defaults to #222831.
+//            Set it when the accent is dark enough that #222831 would vanish.
 //
 // TODO: `disaster` and `news_policy` have no natural icon in the current set and
 // fall back to OtherIcon — they each want their own (and Admin needs one too).
+//
+// NOTE: `crg_updates` is CRG-authored (manual adds via /admin only) — it is
+// deliberately NOT in CATEGORY_ENUM, so Claude never auto-tags news into it.
+// It's pinned first so it always sits above the topical categories.
 
 export const NEWS_CATEGORIES = [
+  { key: "crg_updates",    label: "CRG Updates",                image: "/images/CRG Logo 2025.webp", accent: "#222831", fg: "#FFFFFF" },
   { key: "food",           label: "Food",                       icon: "FoodPantriesIcon",        accent: "var(--color-assistance-group1)" },
   { key: "housing",        label: "Housing, Rent & Eviction",   icon: "HousingIcon",             accent: "var(--color-assistance-group5)" },
   { key: "utilities",      label: "Utilities & Bill Help",      icon: "UtilitiesIcon",           accent: "var(--color-assistance-group4)" },

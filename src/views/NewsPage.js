@@ -151,7 +151,10 @@ function NewsStory({ item }) {
 }
 
 function CategoryPanel({ section }) {
-  const Icon = getIconByName(section.icon);
+  // A category supplies either an `image` (e.g. the CRG logo) or a component
+  // `icon`. `fg` is the header foreground; defaults to dark on light accents.
+  const Icon = section.image ? null : getIconByName(section.icon);
+  const fg = section.fg || "#222831";
   const count = section.items.length;
 
   return (
@@ -170,7 +173,15 @@ function CategoryPanel({ section }) {
         style={{ backgroundColor: section.accent, padding: "10px 20px" }}
       >
         <div className="flex items-center" style={{ gap: "10px" }}>
-          {Icon && <Icon size={24} color="#222831" />}
+          {section.image ? (
+            <img
+              src={section.image}
+              alt=""
+              style={{ width: "24px", height: "24px", objectFit: "contain" }}
+            />
+          ) : (
+            Icon && <Icon size={24} color={fg} />
+          )}
           <h2
             className="font-opensans"
             style={{
@@ -178,13 +189,13 @@ function CategoryPanel({ section }) {
               fontWeight: 700,
               letterSpacing: "0.07em",
               textTransform: "uppercase",
-              color: "#222831",
+              color: fg,
             }}
           >
             {section.label}
           </h2>
         </div>
-        <span className="font-opensans" style={{ fontSize: "12.5px", color: "#222831", opacity: 0.75 }}>
+        <span className="font-opensans" style={{ fontSize: "12.5px", color: fg, opacity: 0.75 }}>
           {count} {count === 1 ? "story" : "stories"}
         </span>
       </header>
