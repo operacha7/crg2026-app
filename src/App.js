@@ -30,19 +30,23 @@ const GUEST_USER = {
   id: 'guest',
   organization: 'Guest',
   isGuest: true,
-  canEmail: false,
-  canPdf: false,
+  // As of 2026-07-21 guests have the same Email/PDF/Text access as registered
+  // orgs (see src/config/guestAccess.js). These flags are not read anywhere;
+  // the actual gating lives in guestAccess.js + the server functions.
+  canEmail: true,
+  canPdf: true,
 };
 
 // Paths under MainApp that should be reachable without an account. Visitors
-// hitting these get an auto-created guest user. /reports stays auth-gated
-// (org-level usage analytics). /announcements is reachable by guests:
-// AnnouncementService filters by audience — guests see audience_code 1 plus any
-// code-3 announcement that targets "Guest" — matching the popup behavior on load.
-// /news is public by design: it's the Opportunity Scan news feed, readable by
-// anyone (and a fresh-content SEO surface). Its data comes from /news-feed, which
-// only ever returns published, unexpired items.
-const PUBLIC_MAIN_PATH_PREFIXES = ['/assistance/', '/support', '/find', '/announcements', '/news'];
+// hitting these get an auto-created guest user. /reports is reachable by guests
+// (as of 2026-07-21 guests have the same access as registered orgs, Reports
+// included). /announcements is reachable by guests: AnnouncementService filters
+// by audience — guests see audience_code 1 plus any code-3 announcement that
+// targets "Guest" — matching the popup behavior on load. /news is public by
+// design: it's the Opportunity Scan news feed, readable by anyone (and a
+// fresh-content SEO surface). Its data comes from /news-feed, which only ever
+// returns published, unexpired items.
+const PUBLIC_MAIN_PATH_PREFIXES = ['/assistance/', '/support', '/find', '/announcements', '/news', '/reports'];
 
 const isPublicMainPath = (pathname) =>
   PUBLIC_MAIN_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
@@ -191,8 +195,8 @@ export default function App() {
     }).catch((err) => console.error("App: guest session log failed", err));
   }, [authResolved, effectiveUser]);
 
-  // When an auth-gated MainApp path (e.g. /reports, /announcements) is hit
-  // without a user, send them to /find with the login modal open. /find is
+  // When an auth-gated MainApp path (one not in PUBLIC_MAIN_PATH_PREFIXES) is
+  // hit without a user, send them to /find with the login modal open. /find is
   // the public URL for ZipCodePage so the modal stacks over the working app
   // and a successful login lands the user where they can immediately use it.
   // UTMs from the original landing URL are preserved so attribution works.

@@ -82,14 +82,10 @@ export default function VerticalNavBar({
     onLogout,
   } = useAppData();
 
-  // Reports requires a registered organization account (it surfaces usage
-  // analytics across orgs). Guests see the icon grayed out and get the same
-  // "You need an account. Contact Support." treatment used by Send Email,
-  // Create PDF, and Send Text in NavBar1. Announcements is intentionally
-  // NOT gated — guests can view audience-code-1 announcements; the audience
-  // filtering already happens server-side in AnnouncementService.
-  const isGuest = loggedInUser?.isGuest === true;
-  const GUEST_GATED_IDS = new Set(["reports"]);
+  // As of 2026-07-21 guests have the same access as registered orgs, including
+  // Reports, so nothing in this nav is guest-gated. (Announcements was never
+  // gated either — guests can view audience-code-1 announcements; audience
+  // filtering happens server-side in AnnouncementService.)
 
   // The Admin Review icon exists only for the admin org. Everyone else never
   // sees it — and couldn't use it anyway (the API checks the session).
@@ -110,13 +106,6 @@ export default function VerticalNavBar({
   };
 
   const handleClick = (id) => {
-    // Guests can't use Reports — same alert treatment as the gated NavBar1
-    // buttons. Stop before the route navigation so the login panel doesn't
-    // get re-shown as the previous fallback behavior would.
-    if (isGuest && GUEST_GATED_IDS.has(id)) {
-      alert("You need an account. Contact Support.");
-      return;
-    }
     if (id === "quicktips") {
       // Toggle Quick Tips panel, clear expanded section if opening fresh
       if (!quickTipsOpen) {
@@ -232,19 +221,12 @@ export default function VerticalNavBar({
           }}
         >
           {visibleNavItems.map(({ id, Icon, label }) => {
-            const isGated = isGuest && GUEST_GATED_IDS.has(id);
-            const tooltipText = isGated ? "You need an account. Contact Support." : label;
             return (
-              <Tooltip key={id} text={tooltipText} position="left">
+              <Tooltip key={id} text={label} position="left">
                 <button
                   onClick={() => handleClick(id)}
                   className="transition-all duration-200 hover:brightness-125 focus:outline-none"
                   aria-label={label}
-                  // Same opacity treatment as the gated NavBar1 buttons (0.6).
-                  // We deliberately keep the button clickable so the alert can
-                  // fire — matching how Send Email / Create PDF / Send Text
-                  // behave for guests.
-                  style={{ opacity: isGated ? 0.6 : 1 }}
                 >
                   <Icon
                     size={35}

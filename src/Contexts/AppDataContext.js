@@ -422,7 +422,13 @@ export const AppDataProvider = ({ children, loggedInUser, onLogout }) => {
   // Footer payload rendered in email/PDF/SMS. null = no footer (guest, blocked,
   // or multi-child not yet selected). Phone only when non-empty.
   const senderFooter = useMemo(() => {
-    if (!loggedInUser?.account_id || loggedInUser?.isGuest) return null;
+    // Guests have no org of their own — sign sent media simply as "Guest"
+    // (name only; no phone/email/parent). Usage logs already record "Guest"
+    // independently, so this is just the sign-off line.
+    if (loggedInUser?.isGuest) {
+      return { name: "Guest" };
+    }
+    if (!loggedInUser?.account_id) return null;
     if (senderBlocked) return null;
     if (!selectedSenderChild) return null;
     return {

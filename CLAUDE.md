@@ -338,8 +338,9 @@ src/
 - User object passed as `loggedInUser` prop throughout the app
 - Controls email/PDF permissions
 - **Guest access:** Users can browse without login via "Browse Without Account" button
-  - Guest user object: `{ id: 'guest', organization: 'Guest', isGuest: true, canEmail: false, canPdf: false }`
-  - Guests can search and view results but cannot send emails or create PDFs
+  - Guest user object: `{ id: 'guest', organization: 'Guest', isGuest: true, canEmail: true, canPdf: true }`
+    (the `canEmail`/`canPdf` fields are unused/cosmetic — real gating is in `src/config/guestAccess.js` + the server functions)
+  - **As of 2026-07-21 guests have full parity with registered orgs:** they can search, view, Send Email, Create PDF, Send Text, and view Reports — the same as a logged-in org. The ONLY difference is the sender identity on sent media: a guest has no org, so guest-sent email/PDF/text is simply signed **"Sent by: Guest"** / **"Prepared by: Guest"** (name only, no phone/email/parent). This is set in AppDataContext's `senderFooter` (`if guest → { name: "Guest" }`); usage logs record guests as `reg_organization: "Guest"` independently. Levers: `GUEST_EMAIL_OPEN`/`GUEST_PDF_OPEN`/`GUEST_TEXT_OPEN` in `src/config/guestAccess.js`; `GUEST_ACTIONS_OPEN` in `functions/sendEmail.js` + `functions/createPdf.js` (must move in lockstep with the client email/PDF flags); Reports opened via `/reports` in `PUBLIC_MAIN_PATH_PREFIXES` (`src/App.js`) + the unauthed `/list-org-colors` Function. (A brief first pass defaulted guest sends to sign as SVdP D3 with a `(G)` marker — reversed same day; see git history / the guest-actions memory.)
 
 ### Main Routes
 - `/` - Main app (ZipCodePage - single page for all search modes)
@@ -1265,7 +1266,7 @@ The Quick Tips pattern can be reused for other contextual help. When a feature c
 ## Opportunity Scan System (BUILT — runs on Omar's home desktop via launchd)
 
 > **⚠️ STATUS 2026-07-16 — the runtime lives OFF Cloudflare. Read before touching the scan.**
-> The pipeline runs from Node on Omar's **always-on home desktop**, scheduled **Mondays 2pm local**
+> The pipeline runs from Node on Omar's **always-on home desktop**, scheduled **Mondays 7am local**
 > by `launchd` (`scripts/launchd/`). It was migrated off Cloudflare because two blockers made a
 > datacenter fundamentally unable to run it — both are the *reason for the current architecture*:
 > 1. **Google News RSS refuses Cloudflare** — every query 503s from Cloudflare's (shared, heavily-
@@ -1300,7 +1301,7 @@ resources, drafts findings, and holds them for Omar's review. Approved findings 
 ### Pipeline (`functions/_lib/scan-pipeline.js`, run by `scripts/run-scan.mjs`)
 
 ```
-launchd (Mon 2pm local) ──> node scripts/run-scan.mjs ──> runScan({env, supabase, …})
+launchd (Mon 7am local) ──> node scripts/run-scan.mjs ──> runScan({env, supabase, …})
                                                             │  (loads .dev.vars, builds env + client)
   1. Poll feeds (RSS/Google News RSS/GDELT)                 │  free, dependency-free parser
   2. 14-day window → dedupe by link → cap 500               │  concurrency-pooled (6)
@@ -1331,7 +1332,7 @@ prevents the second look from creating duplicates.
 |------|------|
 | `functions/_lib/scan-pipeline.js` | **The scan engine.** `runScan()` = the transport-free pipeline (poll → Haiku → Sonnet → upsert → digest). Underscore dir = library, not a route |
 | `scripts/run-scan.mjs` | **Node entry point.** Loads `.dev.vars`, builds env + Supabase client, calls `runScan()`, emails on crash. `--dry-run` supported |
-| `scripts/launchd/org.crghouston.opportunity-scan.plist` | launchd schedule — Mondays 2pm local |
+| `scripts/launchd/org.crghouston.opportunity-scan.plist` | launchd schedule — Mondays 7am local |
 | `scripts/launchd/README.md` | Install / test / update / remove commands + reliability notes |
 | `functions/_lib/scan-sources.js` | `DIRECT_FEEDS`, `GOOGLE_NEWS_QUERIES`, `GDELT_QUERIES`, `COUNTIES` (15), `RELEVANCE_RUBRIC`, paywall tokens |
 | `functions/_lib/rss.js` | Dependency-free fetch + tolerant RSS/Atom parser; `pollFeed` never throws |
@@ -1382,9 +1383,13 @@ security — both `/admin-findings` and the page enforce the account check.
 `expires_at`.
 
 `category`/`status` are **conventions, not DB enums** — new values need no migration. Findings
-insert with `status='new'` + `expires_at` = run date + 7 days; the feed shows
-`status='published'` rows whose `expires_at` is in the future, so each week's stories age off as
-the next week's publish.
+insert with `status='new'` + `expires_at` = **the upcoming Sunday** (computed in `run-scan.mjs`);
+the feed shows `status='published'` rows whose `expires_at` is in the future. `expires_at` is a
+**DATE** and `news-feed.js` compares `expires_at >= today(UTC)`, so a story drops off at UTC-midnight
+the day after its date ≈ **6–7pm Central that date** — i.e. the coming-Sunday stamp clears each
+week's stories ~6–7pm Central Sunday, a clean slate before Monday's 7am run. The model is
+day-granular (no time-of-day); a literal clock time (e.g. "2am") would need a `timestamptz` migration
+plus a `news-feed.js` timestamp comparison.
 
 > **⚠️ Documented-but-NOT-in-live-table (verified absent 2026-07-16):** `crg_action`, `origin`
 > ('scan'|'manual'), `published_at`, `pinned`. The v2.x plan said these were added; they were not.
@@ -1453,7 +1458,7 @@ the next week's publish.
 Full install/test/update/remove commands + reliability notes: **`scripts/launchd/README.md`**.
 
 - **Schedule:** `~/Library/LaunchAgents/org.crghouston.opportunity-scan.plist` → `node
-  scripts/run-scan.mjs`, **Mondays 2pm local** (launchd handles DST; no UTC drift).
+  scripts/run-scan.mjs`, **Mondays 7am local** (launchd handles DST; no UTC drift).
 - **Absolute node path** in the plist (`/usr/local/bin/node`) — launchd's PATH is minimal. Verify
   with `which node` if node ever moves.
 - **Secrets** come from `.dev.vars` (same file wrangler uses), loaded by dotenv and resolved
@@ -1465,7 +1470,7 @@ Full install/test/update/remove commands + reliability notes: **`scripts/launchd
 - **Test now:** `node scripts/run-scan.mjs --dry-run` (no writes), or
   `launchctl kickstart -k gui/$(id -u)/org.crghouston.opportunity-scan` (real run).
 - **Reliability trade-off:** a per-user LaunchAgent only runs in a logged-in GUI session, so a
-  powered-off machine or a post-update FileVault/login screen at 2pm = a skipped week (accepted;
+  powered-off machine or a post-update FileVault/login screen at 7am = a skipped week (accepted;
   nice-to-have feed). Hardening options (LaunchDaemon / auto-login / Raspberry Pi) deferred.
 
 ### Cloudflare teardown — remaining manual steps (Omar, in the dashboards)

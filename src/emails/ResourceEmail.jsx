@@ -9,6 +9,8 @@ import {
   Body,
   Container,
   Section,
+  Row,
+  Column,
   Text,
   Link,
   Img,
@@ -221,32 +223,46 @@ export function ResourceEmail({
               translates. */}
           {senderFooter?.name && (
             <Section style={styles.senderFooter}>
-              <Text style={styles.senderText}>
-                Sent by:{' '}
-                <span className="notranslate" translate="no">
-                  <strong>{senderFooter.name}</strong>
-                  {senderFooter.phone ? ` · ${senderFooter.phone}` : ''}
-                  {senderFooter.email ? (
+              {/* Two-column row (React Email → layout table) so the parent org
+                  lines up EXACTLY under the sender name, not under the "Sent by:"
+                  label. The label column is content-sized via width:1% + nowrap
+                  (not a hardcoded indent), so alignment is exact regardless of
+                  font/client. Name + parent share the value column so their left
+                  edges are identical by construction. */}
+              <Row>
+                {/* "Sent by:" label — translatable; paddingRight is the gap that
+                    used to be a literal space after the colon. */}
+                <Column style={styles.senderLabelCol}>Sent by:</Column>
+                <Column style={styles.senderValueCol}>
+                  {/* Org name + phone + email — translate="no" keeps them
+                      verbatim under Spanish translation. */}
+                  <span className="notranslate" translate="no">
+                    <strong>{senderFooter.name}</strong>
+                    {senderFooter.phone ? ` · ${senderFooter.phone}` : ''}
+                    {senderFooter.email ? (
+                      <>
+                        {' · '}
+                        <Link
+                          href={`mailto:${senderFooter.email}`}
+                          style={styles.senderEmailLink}
+                        >
+                          {senderFooter.email}
+                        </Link>
+                      </>
+                    ) : ''}
+                  </span>
+                  {/* Parent org — muted, directly under the name. Real
+                      multi-child parents only; null for solo orgs. */}
+                  {senderFooter.parent && (
                     <>
-                      {' · '}
-                      <Link
-                        href={`mailto:${senderFooter.email}`}
-                        style={styles.senderEmailLink}
-                      >
-                        {senderFooter.email}
-                      </Link>
+                      <br />
+                      <span className="notranslate" translate="no" style={styles.senderParentText}>
+                        {senderFooter.parent}
+                      </span>
                     </>
-                  ) : ''}
-                </span>
-              </Text>
-              {/* Parent org — its own line, muted, indented under the sender
-                  name (not under the "Sent by:" label). Real multi-child
-                  parents only; null for solo orgs. */}
-              {senderFooter.parent && (
-                <Text style={styles.senderParent} className="notranslate" translate="no">
-                  {senderFooter.parent}
-                </Text>
-              )}
+                  )}
+                </Column>
+              </Row>
             </Section>
           )}
 
@@ -342,23 +358,30 @@ const styles = {
   senderFooter: {
     marginTop: '32px',
   },
-  senderText: {
+  senderLabelCol: {
+    // width:1% + nowrap shrinks the column to exactly "Sent by:" so the value
+    // column starts right after it — no hardcoded indent that could drift.
+    width: '1%',
+    whiteSpace: 'nowrap',
     fontSize: '14px',
     lineHeight: '1.5',
     color: '#333',
-    margin: '0',
+    verticalAlign: 'top',
+    // The gap that used to be a literal space between "Sent by:" and the name.
+    paddingRight: '5px',
+  },
+  senderValueCol: {
+    fontSize: '14px',
+    lineHeight: '1.5',
+    color: '#333',
+    verticalAlign: 'top',
   },
   senderEmailLink: {
     color: '#0066cc',
     textDecoration: 'underline',
   },
-  senderParent: {
-    fontSize: '14px',
-    lineHeight: '1.5',
+  senderParentText: {
     color: '#666',
-    // Indent ~ width of "Sent by: " so the parent sits under the sender name.
-    paddingLeft: '52px',
-    margin: '0',
   },
   hr: {
     borderTop: '1px solid #ccc',

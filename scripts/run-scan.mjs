@@ -30,10 +30,23 @@ const env = process.env;
 const dryRun = process.argv.includes("--dry-run");
 
 // Local calendar date (YYYY-MM-DD). en-CA formats as ISO; using LOCAL time is
-// correct now that the scan runs on Omar's machine at 2pm Central.
+// correct now that the scan runs on Omar's machine (Mondays 7am Central).
 const localDate = (d = new Date()) => d.toLocaleDateString("en-CA");
 const runDate = localDate();
-const expiresDate = localDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+
+// Default expiration = the UPCOMING SUNDAY. `expires_at` is a DATE and the feed
+// compares `expires_at >= today(UTC)`, so a story stamped with a given date drops
+// off at UTC-midnight the next day ≈ 6–7pm Central THAT date. Stamping the coming
+// Sunday therefore clears each week's stories ~6–7pm Central Sunday — a clean
+// weekly slate before Monday's 7am run. (Day-granular by design; the model has no
+// time-of-day, so "2am" isn't representable without a timestamptz migration.)
+function upcomingSunday(from = new Date()) {
+  const d = new Date(from);
+  const daysUntilSun = (7 - d.getDay()) % 7; // Mon→6 … Sat→1 … Sun→0
+  d.setDate(d.getDate() + (daysUntilSun === 0 ? 7 : daysUntilSun)); // a Sunday run → next Sunday
+  return d;
+}
+const expiresDate = localDate(upcomingSunday());
 
 async function sendFailureEmail(err) {
   if (!env.RESEND_API_KEY) return;

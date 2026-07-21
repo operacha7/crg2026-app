@@ -1,16 +1,19 @@
 // Cloudflare Pages Function: GET /list-org-colors
-// Auth-gated. Returns the (reg_organization, org_color) pairs the Reports
-// page needs to color-code charts and bold registered orgs in coverage
-// tables. Replaces a client-side `select('reg_organization, org_color')` that
-// kept the registered_organizations table publicly readable from the browser.
-// With this endpoint in place, the public SELECT RLS policy can be dropped.
+// Public (no session required). Returns the (reg_organization, org_color) pairs
+// the Reports page needs to color-code charts and bold registered orgs in
+// coverage tables. Replaces a client-side `select('reg_organization, org_color')`
+// that kept the registered_organizations table publicly readable from the
+// browser. With this endpoint in place, the public SELECT RLS policy can be
+// dropped — this Function reads via the secret key, which bypasses RLS.
 //
-// Why auth-gated even though org_color isn't sensitive: Reports is an
-// authed-only feature in the UI, so the data layer should match. Anyone
-// hitting this endpoint without a valid session cookie gets 401.
+// Not auth-gated: org_color is not sensitive, and as of 2026-07-21 Reports is
+// guest-accessible (guests have the same access as registered orgs — see
+// src/config/guestAccess.js). Guests have no session cookie, so gating this on
+// requireSession made every chart render gray for them. The usage data behind
+// the charts is likewise read straight from Supabase views in the browser, so
+// leaving colors unauthed keeps the whole Reports data layer consistent.
 
 import { createClient } from "@supabase/supabase-js";
-import { requireSession } from "./_lib/auth.js";
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -23,9 +26,6 @@ export async function onRequest(context) {
       headers,
     });
   }
-
-  const auth = await requireSession(request, env);
-  if (!auth.ok) return auth.response;
 
   const supabaseUrl = env.VITE_SUPABASE_URL || env.SUPABASE_URL;
   const supabaseKey = env.VITE_SUPABASE_SECRET_KEY || env.SUPABASE_SECRET_KEY;

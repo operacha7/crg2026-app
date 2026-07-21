@@ -16,7 +16,7 @@ import { requireSession } from "./_lib/auth.js";
 // guests, but that's client-side only and has no server gate here.)
 // WARNING: while true, this endpoint is callable by anyone on the internet,
 // not just app guests — it is backed by a paid API (PDFShift).
-const GUEST_ACTIONS_OPEN = false;
+const GUEST_ACTIONS_OPEN = true;
 
 export async function onRequest({ request, env }) {
   const corsHeaders = {

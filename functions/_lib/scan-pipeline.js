@@ -516,7 +516,8 @@ export async function runScan({ env, supabase, runDate, expiresDate, dryRun }) {
     return { ok: true, dryRun: true, stats, findings, alsoConsidered };
   }
 
-  // 5. Insert (dedupe on dedupe_key). expires_at defaults to +7d (editable at review).
+  // 5. Insert (dedupe on dedupe_key). expiresDate is the coming Sunday (set by
+  //    run-scan.mjs; editable per-story at review).
   //    Findings whose dedupe_key already exists (a prior run within the 14-day
   //    window) are blocked and return NOTHING from .select(), so the returned
   //    keys are exactly the genuinely-new findings this run.

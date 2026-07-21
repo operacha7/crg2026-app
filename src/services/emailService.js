@@ -442,13 +442,18 @@ export async function createPdf({
   const senderEmailPart = senderFooter?.email
     ? ` &middot; <a href="mailto:${senderFooter.email}" style="color: #0066cc; text-decoration: underline;">${senderFooter.email}</a>`
     : "";
-  // Parent org — own line, muted, indented under the sender name (past the
-  // "Prepared by: " label). Real multi-child parents only; null for solo orgs.
-  const senderParentHtml = senderFooter?.name && senderFooter?.parent
-    ? `<div style="font-size: 12px; color: #666; padding-left: 72px;" class="notranslate" translate="no">${senderFooter.parent}</div>`
+  // Parent org — muted, aligned EXACTLY under the sender name via the two-column
+  // table below (col 2), not a fixed indent. Real multi-child parents only.
+  const senderParentRow = senderFooter?.name && senderFooter?.parent
+    ? `<tr><td></td><td style="font-size: 12px; color: #666; vertical-align: top; text-align: left;" class="notranslate" translate="no">${senderFooter.parent}</td></tr>`
     : "";
+  // Two-column table centered as a unit (margin: 0 auto) inside the centered
+  // header. Column 1 auto-sizes to "Prepared by:"; the name and parent share
+  // column 2, so they line up exactly regardless of font — no hardcoded indent.
+  // Name + phone are translate="no" so they stay verbatim under Spanish
+  // translation; only the "Prepared by:" label translates.
   const senderLineHtml = senderFooter?.name
-    ? `<div style="font-size: 12px;">Prepared by: <span class="notranslate" translate="no"><strong>${senderFooter.name}</strong>${senderPhonePart}${senderEmailPart}</span></div>${senderParentHtml}`
+    ? `<table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; margin: 0 auto;"><tr><td style="font-size: 12px; vertical-align: top; white-space: nowrap; padding-right: 4px;">Prepared by:</td><td style="font-size: 12px; vertical-align: top; text-align: left;" class="notranslate" translate="no"><strong>${senderFooter.name}</strong>${senderPhonePart}${senderEmailPart}</td></tr>${senderParentRow}</table>`
     : "";
 
   const pdfHtml = `<!DOCTYPE html>

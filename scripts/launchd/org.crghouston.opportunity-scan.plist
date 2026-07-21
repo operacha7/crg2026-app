@@ -3,7 +3,7 @@
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
   Weekly Opportunity Scan — runs functions/_lib/scan-pipeline.js via
-  scripts/run-scan.mjs every Monday at 2:00 PM LOCAL time. launchd follows the
+  scripts/run-scan.mjs every Monday at 7:00 AM LOCAL time. launchd follows the
   machine's timezone and DST on its own, so no UTC drift to reason about.
 
   Install / update / remove: see scripts/launchd/README.md.
@@ -36,7 +36,7 @@
     <key>Weekday</key>
     <integer>1</integer>
     <key>Hour</key>
-    <integer>14</integer>
+    <integer>7</integer>
     <key>Minute</key>
     <integer>0</integer>
   </dict>

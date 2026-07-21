@@ -6,7 +6,7 @@ execution cap. See `CLAUDE.md → Opportunity Scan System` for the full why.
 
 - **Engine:** `functions/_lib/scan-pipeline.js` (`runScan()`)
 - **Runner:** `scripts/run-scan.mjs` (loads `.dev.vars`, builds env + Supabase client, calls `runScan`)
-- **Schedule:** `org.crghouston.opportunity-scan.plist` — **Mondays 2:00 PM local**
+- **Schedule:** `org.crghouston.opportunity-scan.plist` — **Mondays 7:00 AM local**
 
 ## One-time setup
 
@@ -59,8 +59,8 @@ rm ~/Library/LaunchAgents/org.crghouston.opportunity-scan.plist
 
 ## Reliability notes (accepted trade-offs)
 
-- **Asleep at 2pm, awake later →** launchd runs the missed job on wake. Fine.
-- **Powered off / sitting at the FileVault or login screen at 2pm →** the run is
+- **Asleep at 7am, awake later →** launchd runs the missed job on wake. Fine.
+- **Powered off / sitting at the FileVault or login screen at 7am →** the run is
   **skipped** (a per-user LaunchAgent only runs inside a logged-in GUI session).
   Accepted: the news feed is nice-to-have; a skipped week harms nothing. If this
   ever bites, harden with a `LaunchDaemon` (runs without login) or enable
