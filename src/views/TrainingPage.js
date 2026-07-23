@@ -12,7 +12,7 @@
 // Also: universal .ics + Google Calendar links and the anonymous "saved this
 // session" counter (no PII; increment via functions/track-calendar-add.js).
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Toaster } from "react-hot-toast";
 import HomeNavBar from "../layout/HomeNavBar";
@@ -321,16 +321,12 @@ function SessionCalendar({ sessions, onSelectSession, accentMap = {} }) {
       return { year: d.getFullYear(), month: d.getMonth() };
     });
 
-  const monthLabel = new Date(view.year, view.month, 1).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
-  const firstWeekday = new Date(view.year, view.month, 1).getDay();
-  const daysInMonth = new Date(view.year, view.month + 1, 0).getDate();
-
-  const cells = [];
-  for (let i = 0; i < firstWeekday; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  // Two months at a time: the view month and the one after it.
+  const nextMonthDate = new Date(view.year, view.month + 1, 1);
+  const months = [
+    { year: view.year, month: view.month },
+    { year: nextMonthDate.getFullYear(), month: nextMonthDate.getMonth() },
+  ];
 
   const arrowStyle = {
     background: "transparent",
@@ -355,15 +351,80 @@ function SessionCalendar({ sessions, onSelectSession, accentMap = {} }) {
         boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
       }}
     >
+      {months.map(({ year, month }, idx) => (
+        <Fragment key={`${year}-${month}`}>
+          {idx > 0 && (
+            // Hairline between months — inset from both edges so it reads as a
+            // soft separator, not a full-width rule.
+            <div
+              style={{
+                height: 1,
+                margin: "26px auto 24px",
+                width: "70%",
+                background: "var(--color-training-cal-muted)",
+                opacity: 0.35,
+              }}
+            />
+          )}
+          <MonthGrid
+            year={year}
+            month={month}
+            todayKey={todayKey}
+            sessionDayMap={sessionDayMap}
+            onSelectSession={onSelectSession}
+            // Arrows live on the first month's header only — they shift the whole
+            // two-month window, so a second set would be redundant.
+            onPrev={idx === 0 ? goPrev : null}
+            onNext={idx === 0 ? goNext : null}
+            arrowStyle={arrowStyle}
+          />
+        </Fragment>
+      ))}
+    </div>
+  );
+}
+
+// One month block: ‹ Month Year › header, weekday row, day grid.
+function MonthGrid({
+  year,
+  month,
+  todayKey,
+  sessionDayMap,
+  onSelectSession,
+  onPrev,
+  onNext,
+  arrowStyle,
+}) {
+  const monthLabel = new Date(year, month, 1).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const cells = [];
+  for (let i = 0; i < firstWeekday; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  return (
+    <div>
       {/* Header: ‹ Month Year › */}
       <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
-        <button onClick={goPrev} style={arrowStyle} aria-label="Previous month" className="hover:brightness-90">
-          ‹
-        </button>
+        {onPrev ? (
+          <button onClick={onPrev} style={arrowStyle} aria-label="Previous month" className="hover:brightness-90">
+            ‹
+          </button>
+        ) : (
+          <span style={{ ...arrowStyle, visibility: "hidden" }}>‹</span>
+        )}
         <div style={{ fontSize: 15, fontWeight: 700 }}>{monthLabel}</div>
-        <button onClick={goNext} style={arrowStyle} aria-label="Next month" className="hover:brightness-90">
-          ›
-        </button>
+        {onNext ? (
+          <button onClick={onNext} style={arrowStyle} aria-label="Next month" className="hover:brightness-90">
+            ›
+          </button>
+        ) : (
+          <span style={{ ...arrowStyle, visibility: "hidden" }}>›</span>
+        )}
       </div>
 
       {/* Weekday header */}
@@ -387,7 +448,7 @@ function SessionCalendar({ sessions, onSelectSession, accentMap = {} }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
         {cells.map((d, i) => {
           if (d === null) return <div key={`b${i}`} />;
-          const key = `${view.year}-${pad2(view.month + 1)}-${pad2(d)}`;
+          const key = `${year}-${pad2(month + 1)}-${pad2(d)}`;
           const isToday = key === todayKey;
           const hasSession = key in sessionDayMap;
           const ringColor = hasSession
